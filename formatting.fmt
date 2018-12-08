@@ -1,0 +1,196 @@
+% -*- text -*-
+%% Misc lhs2TeX directives
+
+%format family = "\mathbf{family}"
+
+%% spaces (in 18ths of a quad): \, = 3, \: = 4, \; = 5, \! = -3
+
+%format :*: = " \pmb{\times} "
+%format :+: = " \pmb{+} "
+%format :.: = " \pmb{\circ} "
+
+%format :**: = "\otimes"
+
+%format Generic1
+%format Rep1
+%format from1
+%format to1
+%format V1
+%format U1
+%format Par1
+%format Comp1
+%format unComp1
+%format L1
+%format R1
+
+%format liftA2
+
+%format NOP = "{}"
+
+%% %format =~ = " \simeq "
+%format =~= = " \cong "
+
+%% optional double-dollar spelling, to avoid $ confusing emacs latex-mode.
+%format <$$> = <$>
+%format <#> = <$>
+%format <$$ = <$
+%format <# = <$
+
+%format <$> = "\mathbin{<\!\!\!\$\!\!\!>}"
+%format <$ = "\mathbin{<\!\!\!\$}"
+%format <*> = "\mathbin{<\!\!\!*\!\!\!>}"
+
+%% %format <*> = "\circledast"
+
+%% \usepackage{amssymb}
+
+%% hack: add missing space, e.g., before "{" in data type decl
+%format SPC = "\ "
+
+%format mempty = "\emptyset"
+%format <> = " \oplus "
+%format `mappend` = " \oplus "
+%format mappend = "(\oplus)"
+
+%format :* = " \times "
+%format :+ = " + "
+
+%% %format fmap(f)(x) = f <$> x
+
+%format  N0 =  0
+%format  N1 =  1
+%format  N2 =  2
+%format  N3 =  3
+%format  N4 =  4
+%format  N5 =  5
+%format  N6 =  6
+%format  N7 =  7
+%format  N8 =  8
+%format  N9 =  9
+%format  N0 =  0
+%format N11 = 11
+%format N12 = 12
+%format N13 = 13
+%format N14 = 14
+%format N15 = 15
+%format N16 = 16
+
+%format :# = "\mathbin{:\!\!\#}"
+
+%format *** = "\symThree{*}"
+
+%% %format *^ = *"\!\hat{}"
+
+%format *^ = "\cdot"
+%format <.> = "<\!\!\!\cdot\!\!\!>"
+
+%format @ = "{\ @}"
+%format @@ = "@"
+
+%format :< = " \triangleleft "
+%format >: = " \triangleright "
+
+%format ~> = " \leadsto "
+
+%format (toCCC (e)) = "\db{" e "}"
+
+%format *** = "\times"
+%format &&& = "\mathbin{\smalltriangleup}"
+%format ||| = "\mathbin{\smalltriangledown}"
+%format +++ = "\!+\!"
+
+%% %format Prod (k) a b = a "\times_{\hspace{-0.1ex}\scriptscriptstyle{" k "}}" b
+%% %format Prod' (k) = "\times_{\hspace{-0.1ex}\scriptscriptstyle{" k "}}"
+%% %format Coprod (k) a b = a "+_{\hspace{-0.4ex}\scriptscriptstyle{" k "}}" b
+%% %format Coprod' (k) = "+_{\hspace{-0.4ex}\scriptscriptstyle{" k "}}"
+%% %format Exp (k) a b = a "\Rightarrow_{\hspace{-0.4ex}\scriptscriptstyle{" k "}}" b
+%% %format Exp' (k) = "\Rightarrow_{\hspace{-0.4ex}\scriptscriptstyle{" k "}}"
+%% %format (Unit (k)) = " \mathbf{1}_{"k"}"
+%% %format (BoolOf (k)) = Bool"_{"k"}"
+
+%format Void = "\mathbf{0}"
+%format Unit = "\mathbf{1}"
+
+%format ~> = "\leadsto"
+
+%% Handy when |...|||...| chokes lhs2tex
+%format ### = |||
+
+%format H = "\mathcal{H}"
+
+%format Ok2
+%format Ok3
+%format Ok4
+%format Ok5
+%format Ok6
+
+%format Yes1
+
+%% %format Type = "\star"
+%format Type = "*"
+
+%format # = %
+%format ## = %%
+
+%format # = "\mathbin{\#}"
+%format ## = "\mathbin{\#\!\#}"
+
+%% %format src' = "\Varid{src}"
+%% %format trg' = "\Varid{trg}"
+
+%format src' = "("~>")"
+%format trg' = "("-->")"
+%format src a b = a ~> b
+%format trg a b = a --> b
+
+%format --> = "\hookrightarrow"
+
+%format ==> = "\longmapsto"
+
+%% %format :- = "\mathbin{:\!\!-}"
+%format :- = "\vdash"
+
+%format op = "(\odot)"
+%format `op` = "\odot"
+
+%% %format \\ = "\mapsfrom"
+%format \\ = "\mathbin{\backslash\!\;\!\!\backslash}"
+%format <+ = \\
+
+
+%format ldq = "\dq\!\!"
+%format rdq = "\!\!\dq"
+
+%format (qq (op)) = ldq op rdq
+
+%format ^+^ = +
+
+%% %format not = "\Varid{not}"
+
+%format ArgF s a b = a "\to_{"s"}" b
+%format ArgF' s = "\to_{"s"}"
+
+%format ~ = "\mathbin{\sim}"
+
+%format .+^ = "\oplus"
+%format .-. = "\ominus"
+%format zeroD = 0
+
+%format :=> = "\Rightarrow"
+
+%format BACKex = "\hspace{-1ex}"
+%format BACKquad = "\hspace{-2.2ex}"
+
+%format <=< = "\mathbin{<\!\!\!\;=\!\!\!\;<}"
+
+%format == = =
+
+% Got from Andres L:
+\newcommand{\calculationcomments}{%
+  \let\onelinecomment=\onelinecommentchars
+  \def\commentbegin{\ \{ }%
+  \def\commentend{\}}%
+}
+\calculationcomments
+
+%format * = "\times"

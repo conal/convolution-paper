@@ -1,0 +1,207 @@
+\newcommand\nc\newcommand
+\nc\rnc\renewcommand
+
+\usepackage[utf8]{inputenc}
+
+\usepackage{hyperref}
+\usepackage{epsfig}
+\usepackage{latexsym}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{color}
+
+\usepackage{subcaption}
+
+\nc\out[1]{}
+
+%% \nc\noteOut[2]{\note{#1}\out{#2}}
+
+%% To redefine for a non-draft
+\nc\indraft[1]{#1}
+
+\nc\mynote[1]{\indraft{\textcolor{red}{[#1]}}}
+
+% While working, use these defs
+\nc\note[1]{{\em [#1]}}
+\nc\notefoot[1]{\footnote{\mynote{#1}}}
+
+%% % But for the submission, use these
+%% \rnc\mynote\out
+%% \rnc\notefoot\out
+
+\nc\todo[1]{\note{To do: #1}}
+
+\nc\figlabel[1]{\label{fig:#1}}
+\nc\figref[1]{Figure~\ref{fig:#1}}
+\nc\figreftwo[2]{Figures~\ref{fig:#1} and \ref{fig:#2}}
+
+\nc\seclabel[1]{\label{sec:#1}}
+\nc\secref[1]{Section~\ref{sec:#1}}
+\nc\secreftwo[2]{Sections~\ref{sec:#1} and~\ref{sec:#2}}
+
+\nc\appref[1]{Appendix~\ref{sec:#1}}
+
+%% The name \secdef is already taken
+\nc\sectiondef[1]{\section{#1}\seclabel{#1}}
+\nc\subsectiondef[1]{\subsection{#1}\seclabel{#1}}
+\nc\subsubsectiondef[1]{\subsubsection{#1}\seclabel{#1}}
+
+\nc\needcite{\mynote{ref}}
+
+% \nc\myurl\texttt
+
+%% For acmlarge, I have to put my figures side by side
+
+%% http://tex.stackexchange.com/questions/5769/two-figures-side-by-side
+
+\setlength{\fboxsep}{1ex}
+\setlength{\fboxrule}{0.05ex} % gray or dotted might work better
+
+%% \figone{fraction}{label}{caption}{content}
+\nc\figoneW[4]{
+\fbox{%
+\begin{minipage}{#1\linewidth}
+  \centering
+  \setlength\mathindent{0ex}
+  #4
+  \vspace*{-5ex}
+  \captionof{figure}{#3}
+  \label{fig:#2}
+\end{minipage}
+}
+}
+\nc\figone{\figoneW{\stdWidth}}
+
+%% %% \figo{fraction}{content}
+%% \nc\figoW[2]{
+%% \fbox{
+%% \begin{minipage}{#1\linewidth}
+%%   \centering
+%%   \setlength\mathindent{0ex}
+%%   #2
+%% \end{minipage}
+%% }
+%% }
+
+\nc\figo[1]{
+\begin{figure}
+\centering
+#1
+\end{figure}
+}
+
+\nc\figp[2]{\begin{figure}\centering #1 \hspace{-2ex} #2\end{figure}}
+
+%% %% \circdefW{frac}{label/file}{caption}{work}{depth}
+%% \nc\circdefW[5]{\figoneW{#1}{#2}{#3 \stats{#4}{#5}}{\incpic{#2}}}
+%% \nc\circdef{\circdefW{\stdWidth}}
+
+\nc\stdWidth{0.46}
+
+%% \figpair{frac1}{frac2}{label1}{caption1}{content1}{label2}{caption2}{content2}
+\nc\figpairW[8]{
+\begin{figure}
+\centering
+\figoneW{#1}{#3}{#4}{#5}
+%\hspace{.05\linewidth}
+%\hfill
+\figoneW{#2}{#6}{#7}{#8}
+\end{figure}
+}
+%% \figpair{label1}{caption1}{content1}{label2}{caption2}{content2}
+\nc\figpair{\figpairW{\stdWidth}{\stdWidth}}
+
+\nc\incpic[1]{\includegraphics[width=\linewidth]{figures/#1}}
+
+%% \incpicW{frac}{file}
+\nc\incpicW[2]{\includegraphics[width=#1\linewidth]{figures/#2}}
+
+%%%%%%
+
+%% \nc\symTwo[1]{\mathbin{#1\!\!\!#1}}
+%% \nc\symThree[1]{\mathbin{#1\!\!\!#1\!\!\!#1}}
+
+\setlength\mathindent{4ex}
+\nc\db[1]{\llbracket#1\rrbracket}
+
+\nc\smalltriangleup{\triangle}
+\nc\smalltriangledown{\triangledown}
+
+%% Double quote symbol
+\nc\dq{\text{\tt\char34}}
+%% Quoted haskell string with formatted content
+\nc\hquoted[1]{\dq\!#1\!\dq}
+
+\nc\sectionl[1]{\section{#1}\seclabel{#1}}
+\nc\subsectionl[1]{\subsection{#1}\seclabel{#1}}
+
+\nc\oops{\textcolor{red}{Oops}}
+
+\nc\workingHere{
+\vspace{1ex}
+\begin{center}
+\setlength{\fboxsep}{3ex}
+\setlength{\fboxrule}{4pt}
+\huge\textcolor{red}{\framebox{Working here}}
+\end{center}
+\vspace{1ex}
+}
+
+\usepackage{amsthm}
+%% %% Roman font, and drop vertical spacing before & after.
+\theoremstyle{definition} % remark
+
+\newtheoremstyle{plainstyle}
+  {\topsep} % Space above
+  {\topsep} % Space below
+  {} % Body font
+  {} % Indent amount
+  {\bfseries} % Theorem head font
+  {.} % Punctuation after theorem head
+  {.5em} % Space after theorem head
+  {} % Theorem head spec (can be left empty, meaning `normal')
+
+%% \theoremstyle{plainstyle}
+
+\newtheorem{theorem}{Theorem}%[section]
+\nc\thmLabel[1]{\label{theorem:#1}}
+\nc\thmRef[1]{Theorem \ref{theorem:#1}}
+\nc\thmRefTwo[2]{Theorems \ref{theorem:#1} and \ref{theorem:#2}}
+\nc\thmRefs[2]{Theorems \ref{theorem:#1} through \ref{theorem:#2}}
+
+\newtheorem{corollary}{Corollary}[theorem]
+\nc\corLabel[1]{\label{corollary:#1}}
+\nc\corRef[1]{Corollary \ref{corollary:#1}}
+\nc\corRefTwo[2]{Corollaries \ref{corollary:#1} and \ref{corollary:#2}}
+\nc\corRefs[2]{Corollaries \ref{corollary:#1} through \ref{corollary:#2}}
+
+\newtheorem{lemma}[theorem]{Lemma}
+\nc\lemLabel[1]{\label{lemma:#1}}
+\nc\lemRef[1]{Lemma \ref{lemma:#1}}
+\nc\lemRefTwo[2]{Lemmas \ref{lemma:#1} and \ref{lemma:#2}}
+\nc\lemRefs[2]{Lemmas \ref{lemma:#1} through \ref{lemma:#2}}
+
+\newtheorem{exercise}[theorem]{Exercise}
+\nc\excLabel[1]{\label{exercise:#1}}
+\nc\excRef[1]{Exercise \ref{exercise:#1}}
+\nc\excRefTwo[2]{Exercises \ref{exercise:#1} and \ref{exercise:#2}}
+\nc\excRefs[2]{Exercises \ref{exercise:#1} through \ref{exercise:#2}}
+
+\definecolor{codesep}{gray}{0.85}
+\nc\codesep[1]{
+\begin{minipage}[b]{0ex}
+\color{codesep}{\rule[1ex]{0.8pt}{#1}}
+\end{minipage}}
+
+
+%% For multiple footnotes at a point. Adapted to recognize \notefoot as well
+%% as \footnote. See https://tex.stackexchange.com/a/71347,
+\let\oldFootnote\footnote
+\nc\nextToken\relax
+\rnc\footnote[1]{%
+    \oldFootnote{#1}\futurelet\nextToken\isFootnote}
+\nc\footcomma[1]{\ifx#1\nextToken\textsuperscript{,}\fi}
+\nc\isFootnote{%
+    \footcomma\footnote
+    \footcomma\notefoot
+}

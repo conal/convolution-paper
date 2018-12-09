@@ -84,8 +84,9 @@ Languages are commonly built up via a few simple operations:
       In particular, $\bar \eps = \set{\eps}$, where $\eps$ is the empty string.
 \item For two languages $U$ and $V$, the \emph{union} $U \union V = \set{s \mid s \in U \lor s \in V}$.
 \item For two languages $U$ and $V$, the \emph{concatenation} $U \cat V = \set{u \append v \mid u \in U \land v \in V}$, where ``$\append$'' denotes string concatenation.
-\item For a language $U$, the \emph{closure} $ \closure U = \bigcup_{n \ge 0} U^n $, where $U^n$ is $U$ concatenated with itself $n$ times (where $U^0 = \bar{\eps}$ by convention).
+\item For a language $U$, the \emph{closure} $\closure U = \bigcup_{n \ge 0} U^n $, where $U^n$ is $U$ concatenated with itself $n$ times (where $U^0 = \bar{\eps}$ by convention).
 \end{itemize}
+Note that $\closure U$ can also be given a recursive specification: $\closure U = \eps \union (U \cat \closure U)$.
 These operations suffice to describe all \emph{regular} languages.
 The language specifications (language-denoting \emph{expressions} rather than languages themselves) constructed from these operations) are called \emph{regular expressions}.
 (If we allow \emph{recursive} definitions, we get \emph{context-free} languages.)

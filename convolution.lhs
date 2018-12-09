@@ -73,6 +73,7 @@ Conal Elliott
 \nc\append{\mathbin{+\!\!+}}
 \nc\cat{\cdot}
 \nc\union{\cup}
+\nc\single\bar
 
 \mynote{Summarize/review languages as sets, including singleton, union, concatenation, and star/closure.}
 
@@ -80,19 +81,20 @@ A \emph{language} is a set of strings, where a string is a sequence of values of
 Languages are commonly built up via a few simple operations:
 \begin{itemize}
 \item The \emph{empty} language $\emptyset = \set{}$.
-\item For a string $s$, the \emph{singleton} language $\bar s = \set{s}$.
-      In particular, $\bar \eps = \set{\eps}$, where $\eps$ is the empty string.
-\item For two languages $U$ and $V$, the \emph{union} $U \union V = \set{s \mid s \in U \lor s \in V}$.
-\item For two languages $U$ and $V$, the \emph{concatenation} $U \cat V = \set{u \append v \mid u \in U \land v \in V}$, where ``$\append$'' denotes string concatenation.
-\item For a language $U$, the \emph{closure} $\closure U = \bigcup_{n \ge 0} U^n $, where $U^n$ is $U$ concatenated with itself $n$ times (where $U^0 = \bar{\eps}$ by convention).
+\item For a string $s$, the \emph{singleton} language $\single s = \set{s}$.
+      In particular, $\single \eps = \set{\eps}$, where $\eps$ is the empty string.
+\item For two languages $p$ and $q$, the \emph{union} $p \union q = \set{s \mid s \in p \lor s \in q}$.
+\item For two languages $p$ and $q$, the \emph{concatenation} $p \cat q = \set{u \append v \mid u \in p \land v \in q}$, where ``$\append$'' denotes string concatenation.
+\item For a language $p$, the \emph{closure} $\closure p = \bigcup_{n \ge 0} p^n $, where $p^n$ is $p$ concatenated with itself $n$ times (and $p^0 = \single{\eps}$).
 \end{itemize}
-Note that $\closure U$ can also be given a recursive specification: $\closure U = \eps \union (U \cat \closure U)$.
+Note that $\closure p$ can also be given a recursive specification: $\closure p = \eps \union (p \cat \closure p)$.
 These operations suffice to describe all \emph{regular} languages.
 The language specifications (language-denoting \emph{expressions} rather than languages themselves) constructed from these operations) are called \emph{regular expressions}.
 (If we allow \emph{recursive} definitions, we get \emph{context-free} languages.)
 As a Haskell data type parametrized over a type |c| of symbols (characters):%
-%% %format `Union` = "\mathbin{:\!\union}"
-%% %format `Cat` = "\mathbin{:\!\!\cat}"
+%format `Union` = "\mathbin{:\!\union}"
+%format `Cat` = "\mathbin{:\!\!\cat}"
+%format Closure = Star
 \begin{code}
 data RegExp c  =  Empty
                |  Single [c]
@@ -103,34 +105,35 @@ data RegExp c  =  Empty
 Regular expressions have an unsurprising denotation as a language:
 %format Set = "\mathcal P"
 %format empty = "\emptyset"
-%format single (s) = "\bar{"s"}"
+%format single (s) = "\single{"s"}"
 %format `union` = "\union"
 %format `cat` = "\cat"
 %format closure (u) = "\closure{"u"}"
-%format lang (e) = "\db{"e"}"
+%format regexp (e) = "\db{"e"}"
 \begin{code}
-lang Empty          = empty
-lang (Single s)     = single s
-lang (p `Union` q)  = lang p `union` lang q
-lang (p `Cat` q)    = lang p `cat` lang q
-lang (Closure p)    = closure (lang p)
+regexp :: RegExp c -> Set [c]
+regexp Empty          = empty
+regexp (Single s)     = single s
+regexp (p `Union` q)  = regexp p `union` regexp q
+regexp (p `Cat` q)    = regexp p `cat` regexp q
+regexp (Closure p)    = closure (regexp p)
 \end{code}
 
 \emph{Parsing} is the problem of deciding whether $s \in L$ for a string $s$ and a language (set of strings) $L$.\notefoot{Maybe ``matching'' instead of ``parsing''.}
-The vocabulary above for describing regular languages allows infinite languages (thanks to $\closure U$ when $U$ is nonempty), so parsing cannot be implemented simply by comparing $s$ with each string in $L$.
+The vocabulary above for describing regular languages allows infinite languages (thanks to $\closure p$ when $p$ is nonempty), so parsing cannot be implemented simply by comparing $s$ with each string in $L$.
 Fortunately, there are efficient, well-explored techniques for parsing regular languages, given a regular expression.
 One such technique is to generate a finite state machine.
 
-%if True
-A simpler and much less efficient parsing technique closely follows the shape of regular expressions, as shown in \figrefdef{lang}{Semantic function for |RegExp|}{
+%format parse1
+A simpler and much less efficient parsing technique closely follows the shape of regular expressions, as shown in \figrefdef{regexp}{Semantic function for |RegExp|}{
 \centering
 \begin{code}
-parse :: Eq c => RegExp c -> [c] -> Bool
-parse Empty          s = False
-parse (Single s')    s = s == s'
-parse (p `Union` q)  s = parse p s || parse q s
-parse (p `Cat` q)    s = or [ parse p u && parse q v | (u,v) <- splits s ]
-parse (Closure p)    s = parse (Empty `Union` (p `Cat` Closure p)) s
+parse1 :: Eq c => RegExp c -> [c] -> Bool
+parse1 Empty          s = False
+parse1 (Single s')    s = s == s'
+parse1 (p `Union` q)  s = parse1 p s || parse1 q s
+parse1 (p `Cat` q)    s = or [ parse1 p u && parse1 q v | (u,v) <- splits s ]
+parse1 (Closure p)    s = parse1 (Empty `Union` (p `Cat` Closure p)) s
 
 -- All ways to split (\emph{un-append}) a given list.
 splits :: [a] -> [([a],[a])]
@@ -140,13 +143,33 @@ splits (a:as')  = ([],a:as') : [ ((a:ls),rs) | (ls,rs) <- splits as' ]
 \vspace{-4ex}
 % splits (a:as')  = ([],a:as') : map (first (a:)) (splits as')
 }.
-%endif
+The inefficiency of this technique comes from the blind, backtracking search performed for |p `Cat` q| via |splits|.
 \begin{lemma}
-|forall s u v.SP (u,v) `elem` splits s <=> u ++ v == s|. (Proof: exercise.)
+|forall s u v. NOP (u,v) `elem` splits s <=> u ++ v == s|. (Proof: exercise.)
 \end{lemma}
 \begin{theorem}
-|forall e s.SP parse e s <=> s `elem` lang e|. (Proof: exercise.)
+|forall e s. NOP parse1 e s <=> s `elem` regexp e|. (Proof: exercise.)
 \end{theorem}
+\noindent
+
+\mynote{Next, get from |regexp| or |parse1| to something close to Brzozowski's method, I think via memoization.}
+
+Following \cite{Brzozowski64}, define
+\nc\del[1]{\delta\,#1}
+\nc\der[2]{\mathcal D_{#1}\,#2}
+Define
+$$\del p =
+ \begin{cases}
+ \single \eps & \text{if $\eps \in p$} \\
+ \emptyset & \text{otherwise}
+ \end{cases}$$
+and
+$$\der c p = \set {s \mid c:s \in p}$$
+Then \citep[Theorem 4.4]{Brzozowski64}
+$$ p = \del p \union \bigcup_{c\,\in A} \single c \cdot \der c p $$
+
+
+\sectionl{Stuff}
 
 \mynote{Survey some representations for parsing, including a naive one as predicates (requiring nondeterministic splitting).
 For regular languages specified in this vocabulary, the classic technique for efficient parsing is to generate a finite state machine.

@@ -19,7 +19,6 @@
 %% \usepackage{amssymb}
 
 %% hack: add missing space, e.g., before "{" in data type decl
-%format SP = "\:\!"
 %format SPC = "\ "
 
 %format mempty = "\varepsilon"
@@ -38,7 +37,7 @@
 %% %format @ = "{\ @}"
 %% %format @@ = "@"
 
-%format <=> = "\Longleftrightarrow"
+%format <=> = "\Leftrightarrow"
 
 %format ldq = "\dq\!\!"
 %format rdq = "\!\!\dq"

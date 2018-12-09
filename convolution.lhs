@@ -157,7 +157,6 @@ The inefficiency of this technique comes from the blind, backtracking search per
 Following \cite{Brzozowski64}, define
 \nc\del[1]{\delta\,#1}
 \nc\der[2]{\mathcal D_{#1}\,#2}
-Define
 $$\del p =
  \begin{cases}
  \single \eps & \text{if $\eps \in p$} \\
@@ -167,7 +166,25 @@ and
 $$\der c p = \set {s \mid c:s \in p}$$
 Then \citep[Theorem 4.4]{Brzozowski64}
 $$ p = \del p \union \bigcup_{c\,\in A} \single c \cdot \der c p $$
-
+The proof follows from the observations that (a) any string in $p$ is either $\eps$ or is $c:s$ for some symbol $c$ and string $s$, and (b) $\single c \cdot \der c p$ contains exactly the strings of $p$ that begin with $c$.
+First, generalize $\del p$ to test \emph{any} string for membership:
+\newcommand\has[2]{\delta_{#1}\,#2}
+$$
+\has s p =
+ \begin{cases}
+ \single s & \text{if $s \in p$} \\
+ \emptyset & \text{otherwise}
+ \end{cases}
+$$
+Then
+\begin{align}
+ p &= \bigcup_s \has s p
+\\ &= \del p \cup (\bigcup_{c,s} \has{c:s} p)
+\\ &= \del p \cup (\bigcup_{c,s} \single c \cdot \has s {\der c p})
+\\ &= \del p \cup (\bigcup_c \bigcup_s \single c \cdot \has s {\der c p})
+\\ &= \del p \cup (\bigcup_c \single c \cdot \bigcup_s \has s {\der c p})
+\\ &= \del p \cup (\bigcup_c \single c \cdot \der c p)
+\end{align}
 
 \sectionl{Stuff}
 

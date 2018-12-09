@@ -176,15 +176,18 @@ $$
  \emptyset & \text{otherwise}
  \end{cases}
 $$
-Then
+Then, for all languages $p$ and strings $s$, $p = \bigcup\limits_s \has s p$.
+Thus
 \begin{align}
  p &= \bigcup_s \has s p
-\\ &= \del p \cup (\bigcup_{c,s} \has{c:s} p)
-\\ &= \del p \cup (\bigcup_{c,s} \single c \cdot \has s {\der c p})
-\\ &= \del p \cup (\bigcup_c \bigcup_s \single c \cdot \has s {\der c p})
-\\ &= \del p \cup (\bigcup_c \single c \cdot \bigcup_s \has s {\der c p})
+\\ &= \del p \cup (\bigcup_{s \neq \eps} \has{s} p)
+\\ &= \del p \cup (\bigcup_{c,s'} \has{c:s'} p)
+\\ &= \del p \cup (\bigcup_{c,s'} \single c \cdot \has {s'} {(\der c p)})
+\\ &= \del p \cup (\bigcup_c \bigcup_s \single c \cdot \has {s'} {(\der c p)})
+\\ &= \del p \cup (\bigcup_c \single c \cdot \bigcup_s \has {s'} {(\der c p)})
 \\ &= \del p \cup (\bigcup_c \single c \cdot \der c p)
 \end{align}
+
 
 \sectionl{Stuff}
 

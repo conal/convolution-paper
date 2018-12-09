@@ -92,6 +92,22 @@
 
 \nc\figp[2]{\begin{figure}\centering #1 \hspace{-2ex} #2\end{figure}}
 
+% Arguments: env, label, caption, body
+\nc\figdefG[4]{\begin{#1}[tbp]
+#4
+\caption{#3}
+\figlabel{#2}
+\end{#1}}
+
+% Arguments: label, caption, body
+\nc\figdef{\figdefG{figure}}
+\nc\figdefwide{\figdefG{figure*}}
+
+% Arguments: label, caption, body
+\nc\figrefdef[3]{\figref{#1}\figdef{#1}{#2}{#3}}
+
+\nc\figrefdefwide[3]{\figref{#1}\figdefwide{#1}{#2}{#3}}
+
 %% %% \circdefW{frac}{label/file}{caption}{work}{depth}
 %% \nc\circdefW[5]{\figoneW{#1}{#2}{#3 \stats{#4}{#5}}{\incpic{#2}}}
 %% \nc\circdef{\circdefW{\stdWidth}}

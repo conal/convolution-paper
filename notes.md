@@ -24,9 +24,10 @@ Generalize and unify:
 ### Languages and parsing
 
 Summarize/review languages as sets, including singleton, union, concatenation, and star/closure.
+Survey some representations for parsing, including a naive one as predicates (requiring nondeterministic splitting).
 For regular languages specified in this vocabulary, the classic technique for efficient parsing is to generate a finite state machine.
 Another technique is Brzozowski's "derivatives of regular expressions", extended much more recently to context-free languages.
-Revisit Brzozowski's technique.
+Maybe revisit Brzozowski's technique; alternatively just mention, and compare in related work.
 Calculate a generalized variant from a simple specification.
 Key is a known but not widely used monadic structure, namely that of *free semimodules*.
 
@@ -38,6 +39,16 @@ Key is a known but not widely used monadic structure, namely that of *free semim
 
 ## Miscellaneous notes
 
+*   Once I have a restricted `Applicative` instance, I can make language itself be a monoid in a perfectly standard way, with `mempty = pure mempty` and `mappend = liftA2 mappend`.
+    Likewise, temporal and (multidimensional) spatial convolution is simply `liftA2 (+)`, which is a standard definition for `(+)` on applicatives.
+    We can give full instances for numeric classes in this style.
+*   For multivariate polynomials, I was thinking of using maps from exponent tuples.
+    Alternatively, replace tuples by statically sized vectors.
+    More generally, use a representable functor or even zippable.
+    I guess anything "summable", i.e., a monoid.
+    Perhaps whatever simplifies parsing and unparsing.
+*   What symbol to use for `mappend`?
+    Some candidates: \\cdot, \\diamond, \\ast, \\circledast, \\APLstar, several dingbats choices (\\ding), \\Snowflake.
 *   The `Comonad` interface captures Brzozowski's two main operations: contains-empty and derivative
     ([notes](11-25#Parsing-with-derivatives-(A))).
 *   There's also a `Monad` for functions that's unlike the usual one and seems to support convolution

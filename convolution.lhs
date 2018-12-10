@@ -74,7 +74,7 @@ Conal Elliott
 \nc\mappend{\diamond}
 \nc\cat{\cdot}
 \nc\union{\cup}
-\nc\single\bar
+\nc\single\overline
 
 \mynote{Summarize/review languages as sets, including singleton, union, concatenation, and star/closure.}
 
@@ -90,7 +90,7 @@ Languages are commonly built up via a few simple operations:
 \end{itemize}
 Note that $\closure p$ can also be given a recursive specification: $\closure p = \eps \union (p \cat \closure p)$.
 These operations suffice to describe all \emph{regular} languages.
-The language specifications (language-denoting \emph{expressions} rather than languages themselves) constructed from these operations) are called \emph{regular expressions}.
+The language specifications (language-denoting \emph{expressions} rather than languages themselves) constructed from these operations are called \emph{regular expressions}.
 (If we allow \emph{recursive} definitions, we get \emph{context-free} languages.)
 As a Haskell data type parametrized over a type |c| of symbols (characters):%
 %format `Union` = "\mathbin{:\!\union}"
@@ -189,6 +189,19 @@ Thus
 \\ &= \del p \cup (\bigcup_c \single c \cdot \der c p)
 \end{align}
 
+Again but with ``$\single{[c]}$'' instead of ``$\single c$'':
+Thus
+\begin{align}
+ p &= \bigcup_s \has s p
+\\ &= \del p \cup (\bigcup_{s \neq \eps} \has{s} p)
+\\ &= \del p \cup (\bigcup_{c,s'} \has{c:s'} p)
+\\ &= \del p \cup (\bigcup_{c,s'} \single{[c]} \cdot \has {s'} {(\der c p)})
+\\ &= \del p \cup (\bigcup_c \bigcup_s \single{[c]} \cdot \has {s'} {(\der c p)})
+\\ &= \del p \cup (\bigcup_c \single{[c]} \cdot \bigcup_s \has {s'} {(\der c p)})
+\\ &= \del p \cup (\bigcup_c \single{[c]} \cdot \der c p)
+\end{align}
+
+Note: $\single{qwerty}$.
 
 \sectionl{Stuff}
 

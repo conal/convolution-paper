@@ -118,14 +118,13 @@ $$ \has s p =
      0 & \text{otherwise.}
      \end{cases} $$
 \end{lemma}
-\begin{lemma}[\provedIn{lemma:empty or cons}] \lemLabel{empty or cons}
+\begin{lemma}[\provedIn{lemma:empty or cons}]\notefoot{Split this lemma in two, where the first one refers to the set of strings in $p$ that start with a prefix $s$, and the second says that this subset equals $s \cat (\lquot s p)$. Proofs are easy.} \lemLabel{empty or cons}
 $$p = \del p \union \bigcup\limits_c \conslp{c}{\lquoto c p},$$
 where $\lquot s p$ is the \emph{left quotient} of the language $p$ by the string $s$:
 $$\lquot s p = \set{t \mid s \mappend t \in S}.$$
 \end{lemma}
 \noindent
-This lemma was stated and used by \citet[Theorem 4.4]{Brzozowski64}.
-He used the notation ``$D_s\,p$'' (``the derivative of $p$ with respect to $s$'') instead of ``$\lquot s p$''.\notefoot{I don't think $\lquot s p$ is a derivative, but I'm still unsure. The product/convolution rule somewhat resembles the Leibniz rule, but the two appear to be inconsistent.}
+This lemma was stated and used by \citet[Theorem 4.4]{Brzozowski64}, who used the notation ``$D_s\,p$'' (``the derivative of $p$ with respect to $s$'') instead of ``$\lquot s p$''.\notefoot{I don't think $\lquot s p$ is a derivative, but I'm still unsure. The product/convolution rule somewhat resembles the Leibniz rule, but the two appear to be inconsistent.}
 
 \appendix
 

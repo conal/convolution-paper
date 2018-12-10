@@ -5,6 +5,15 @@ substMap: [("<+>","+"),("<.>","·")]
 
 [*Derivatives of Regular Expressions*]: http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.98.4378 "paper by Janusz Brzozowski (1964"
 
+\newcommand\set[1]{\{\,#1\,\}}
+\newcommand\eps{\varepsilon}
+\newcommand\single\bar
+\newcommand\cat\cdot
+\newcommand\has[2]{\delta_{#1}\,#2}
+\newcommand\union{\cup}
+\newcommand\del[1]{\delta\,#1}
+\newcommand\der[2]{\mathcal D_{#1}\,#2}
+
 ## Paper outline
 
 ### Contributions
@@ -21,15 +30,43 @@ Generalize and unify:
 *   Convolution: higher dimensions, continuous and discrete, and other shaped spaces.
 *   Super-memoization.
 
-### Languages and parsing
+### Languages
 
-Summarize/review languages as sets, including singleton, union, concatenation, and star/closure.
-Survey some representations for parsing, including a naive one as predicates (requiring nondeterministic splitting).
-For regular languages specified in this vocabulary, the classic technique for efficient parsing is to generate a finite state machine.
-Another technique is Brzozowski's "derivatives of regular expressions", extended much more recently to context-free languages.
-Maybe revisit Brzozowski's technique; alternatively just mention, and compare in related work.
-Calculate a generalized variant from a simple specification.
-Key is a known but not widely used monadic structure, namely that of *free semimodules*.
+*   Identify the vocabulary of a "language" (singleton plus semiring).
+*   Define where a language is set of strings.
+*   First decomposition law: $p = \bigcup\limits_{s \in p} \single s$.
+*   Second decomposition law: $p = \bigcup\limits_s \has s p$, where
+    $\has s p =
+    \begin{cases}
+    \single s & \text{if $s \in p$} \\
+    \emptyset & \text{otherwise}
+    \end{cases}$.
+    Specialize to empty strings: $\del p = \has \eps p$.
+*   So far we can accommodate any monoid.
+    Now focus on sequences.
+*   "Derivative": $\der c p = \set {s \mid c:s \in p}$.
+*   Third decomposition law [Brzozowski, 1964, Theorem 4.4]:
+    $p = \del p \union \bigcup\limits_{c\,\in\,A} \single c \cat \der c p$.
+    Holds for all languages, not just regular.
+
+### Parsing
+
+*   The set-based language definition doesn't give an implementation, because the sets may be infinite.
+*   Change to a predicate, and specify the new method definitions via homomorphism equations.
+    Easy to solve, and gets an effective implementation (thanks to laziness).
+*   Maybe same for a free representation (regular expressions), though trivial.
+*   Rephrase in terms of string predicates/recognizers, where $\der c p$ becomes $p \circ (c:)$.
+*   Review (string) tries.
+    Note the appearance of $p \eps$ and $p \circ (c:)$.
+    Define the homomorphism equations, which are easy to solve, via trie isomorphism.
+    Simplifying yields a simple and efficient implementation.
+
+### Generalizing
+
+*   Semirings.
+*   Convolution.
+*   Beyond convolution: the free semimodule monad.
+*   Variations: counting, probability distributions, temporal/spatial convolution.
 
 ### Other applications
 
@@ -38,6 +75,14 @@ Key is a known but not widely used monadic structure, namely that of *free semim
 *   2D parsing?
 
 ## Miscellaneous notes
+
+*   Summarize/review languages as sets, including singleton, union, concatenation, and star/closure.
+    Survey some representations for parsing, including a naive one as predicates (requiring nondeterministic splitting).
+    For regular languages specified in this vocabulary, the classic technique for efficient parsing is to generate a finite state machine.
+    Another technique is Brzozowski's "derivatives of regular expressions", extended much more recently to context-free languages.
+    Maybe revisit Brzozowski's technique; alternatively just mention, and compare in related work.
+    Calculate a generalized variant from a simple specification.
+    Key is a known but not widely used monadic structure, namely that of *free semimodules*.
 
 *   Once I have a restricted `Applicative` instance, I can make language itself be a monoid in a perfectly standard way, with `mempty = pure mempty` and `mappend = liftA2 mappend`.
     Likewise, temporal and (multidimensional) spatial convolution is simply `liftA2 (+)`, which is a standard definition for `(+)` on applicatives.
@@ -69,8 +114,6 @@ Key is a known but not widely used monadic structure, namely that of *free semim
     Needn't be monoidal.
     Trees?
 
-
 ## Super-memoization
 
 I suspect that my take on Brzozowski's technique is just one example of a much more general technique akin to memoization but in which we get partial sharing of work across calls to a function with *different* arguments (unlike regular memoization).
-

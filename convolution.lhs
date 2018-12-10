@@ -118,26 +118,32 @@ $$ \has s p =
      0 & \text{otherwise.}
      \end{cases} $$
 \end{lemma}
-\begin{lemma} \lemLabel{empty or cons}
+\begin{lemma}[\provedIn{lemma:empty or cons}] \lemLabel{empty or cons}
 $$p = \del p \union \bigcup\limits_c \conslp{c}{\lquoto c p},$$
 where $\lquot s p$ is the \emph{left quotient} of the language $p$ by the string $s$:
 $$\lquot s p = \set{t \mid s \mappend t \in S}.$$
 \end{lemma}
-The proof \citep[Theorem 4.4]{Brzozowski64} follows from the observations that (a) any string in $p$ is either $\eps$ or is $c:s$ for some symbol $c$ and string $s$, and (b) $s \cat (\lquot s p)$ contains exactly the strings of $p$ that begin with $s$:\notefoot{Define $c:s$ somewhere.}
-\begin{align*}
- p &= \bigunion_s \has s p
-\\ &= \del p \cup (\bigunion_{s \neq \eps} \has{s} p)
-\\ &= \del p \cup (\bigunion_{c,s'} \has{c:s'} p)
-\\ &= \del p \cup (\bigunion_{c,s'} \single{[c]} \cdot \has {s'} {(\lquoto c p)})
-\\ &= \del p \cup (\bigunion_c \bigunion_s \single{[c]} \cdot \has {s'} {(\lquoto c p)})
-\\ &= \del p \cup (\bigunion_c \single{[c]} \cdot \bigunion_s \has {s'} {(\lquoto c p)})
-\\ &= \del p \cup (\bigunion_c \single{[c]} \cdot (\lquoto c p))
-\end{align*}
-
+\noindent
+This lemma was stated and used by \citet[Theorem 4.4]{Brzozowski64}.
+He used the notation ``$D_s\,p$'' (``the derivative of $p$ with respect to $s$'') instead of ``$\lquot s p$''.\notefoot{I don't think $\lquot s p$ is a derivative, but I'm still unsure. The product/convolution rule somewhat resembles the Leibniz rule, but the two appear to be inconsistent.}
 
 \appendix
 
 \sectionl{Proofs}
+
+\subsection{\lemRef{empty or cons}}\proofLabel{lemma:empty or cons}
+
+The proof follows from the observations that (a) any string in $p$ is either $\eps$ or is $c:s$ for some symbol $c$ and string $s$, and (b) $s \cat (\lquot s p)$ contains exactly the strings of $p$ that begin with $s$:
+\begin{align*}
+ p &= \bigunion_s \has s p
+\\ &= \del p \cup (\bigunion_{s \neq \eps} \has{s} p)
+\\ &= \del p \cup (\bigunion_{c,s'} \has{c:s'} p)
+\\ &= \del p \cup (\bigunion_{c,s'} \single{[c]} \cat \has {s'} {(\lquoto c p)})
+\\ &= \del p \cup (\bigunion_c \bigunion_s \single{[c]} \cat \has {s'} {(\lquoto c p)})
+\\ &= \del p \cup (\bigunion_c \single{[c]} \cat \bigunion_s \has {s'} {(\lquoto c p)})
+\\ &= \del p \cup (\bigunion_c \single{[c]} \cat (\lquoto c p))
+\end{align*}
+
 
 \bibliography{bib}
 

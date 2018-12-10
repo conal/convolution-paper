@@ -85,7 +85,7 @@ Conal Elliott
 
 \sectionl{Introduction}
 
-\sectionl{Languages and parsing}
+\sectionl{Languages}
 
 \mynote{Summarize/review languages as sets, including singleton, union, concatenation, and star/closure.}
 
@@ -118,13 +118,50 @@ $$ \has s p =
      0 & \text{otherwise.}
      \end{cases} $$
 \end{lemma}
-\begin{lemma}[\provedIn{lemma:empty or cons}]\notefoot{Split this lemma in two, where the first one refers to the set of strings in $p$ that start with a prefix $s$, and the second says that this subset equals $s \cat (\lquot s p)$. Proofs are easy.} \lemLabel{empty or cons}
+\mynote{So far we can accommodate any monoid.
+Now focus on sequences.}
+\begin{lemma}[\provedIn{lemma:empty or cons}]\notefoot{Split this lemma in two, where the first one refers to the set of strings in $p$ that start with a prefix $s$, and the second says that this set equals $s \cat (\lquot s p)$. Proofs are easy. I think we have an embedding-projection pair. Useful?} \lemLabel{empty or cons}
 $$p = \del p \union \bigcup\limits_c \conslp{c}{\lquoto c p},$$
 where $\lquot s p$ is the \emph{left quotient} of the language $p$ by the string $s$:
 $$\lquot s p = \set{t \mid s \mappend t \in S}.$$
 \end{lemma}
 \noindent
 This lemma was stated and used by \citet[Theorem 4.4]{Brzozowski64}, who used the notation ``$D_s\,p$'' (``the derivative of $p$ with respect to $s$'') instead of ``$\lquot s p$''.\notefoot{I don't think $\lquot s p$ is a derivative, but I'm still unsure. The product/convolution rule somewhat resembles the Leibniz rule, but the two appear to be inconsistent.}
+
+\sectionl{Parsing}
+\mynote{Outline:}
+\begin{itemize}
+\item
+  The set-based language definition doesn't give an implementation, because the sets may be infinite.
+\item
+  Change to a predicate, and specify the new method definitions via homomorphism equations.
+  Easy to solve, and gets an effective implementation (thanks to laziness).
+\item
+  Maybe same for a free representation (regular expressions), though trivial.
+\item
+  Rephrase in terms of string predicates/recognizers, where $\lquot c p$ becomes $p \circ (c:)$.
+\item
+  Review (string) tries.
+  Note the appearance of $p \eps$ and $p \circ (c:)$.
+  Define the homomorphism equations, which are easy to solve, via trie isomorphism.
+  Simplifying yields a simple and efficient implementation.
+\end{itemize}
+
+\sectionl{Generalizing}
+\mynote{Outline:}
+\begin{itemize}
+\item
+  Semirings.
+\item
+  Convolution.
+\item
+  Beyond convolution: the free semimodule monad.
+\item
+  Variations: counting, probability distributions, temporal/spatial convolution.
+\end{itemize}
+
+
+% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
 
 \appendix
 

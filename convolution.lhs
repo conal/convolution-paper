@@ -70,7 +70,8 @@ Conal Elliott
 \nc\eps{\varepsilon}
 \nc\closure[1]{#1^{\ast}}
 \nc\Ltau{L_\tau}
-\nc\append{\mathbin{+\!\!+}}
+% \nc\mappend{\mathbin{+\!\!+}}
+\nc\mappend{\diamond}
 \nc\cat{\cdot}
 \nc\union{\cup}
 \nc\single\bar
@@ -84,7 +85,7 @@ Languages are commonly built up via a few simple operations:
 \item For a string $s$, the \emph{singleton} language $\single s = \set{s}$.
       In particular, $\single \eps = \set{\eps}$, where $\eps$ is the empty string.
 \item For two languages $p$ and $q$, the \emph{union} $p \union q = \set{s \mid s \in p \lor s \in q}$.
-\item For two languages $p$ and $q$, the \emph{concatenation} $p \cat q = \set{u \append v \mid u \in p \land v \in q}$, where ``$\append$'' denotes string concatenation.
+\item For two languages $p$ and $q$, the \emph{concatenation} $p \cat q = \set{u \mappend v \mid u \in p \land v \in q}$, where ``$\mappend$'' denotes string concatenation.
 \item For a language $p$, the \emph{closure} $\closure p = \bigcup_{n \ge 0} p^n $, where $p^n$ is $p$ concatenated with itself $n$ times (and $p^0 = \single{\eps}$).
 \end{itemize}
 Note that $\closure p$ can also be given a recursive specification: $\closure p = \eps \union (p \cat \closure p)$.

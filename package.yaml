@@ -1,0 +1,39 @@
+name:                convolution-paper
+version:             0.1.0.0
+github:              "conal/convolution-paper"
+license:             BSD3
+author:              "Conal Elliott"
+maintainer:          "conal@conal.net"
+copyright:           "2018 Conal Elliott"
+
+synopsis:            Language recognition in the spirit of Brzowski's derivatives
+category:            language, math
+
+description:         Please see the README on GitHub at <https://github.com/conal/convolution-paper#readme>
+
+library:
+  dependencies:
+    - base >= 4.7 && < 5
+    - data-inttrie
+    # - containers
+    # - distributive
+    # - adjunctions
+    # - comonad
+    # - semiring-num
+    # - newtype-generics
+  # source-dirs: src
+  exposed-modules:
+      Code
+
+# tests:
+#   test:
+#     main:                GoldTests.hs
+#     source-dirs:         test
+#     ghc-options:
+#     dependencies:
+#     - Cabal >= 1.24.0.0
+#     - bytestring
+#     - tasty
+#     - tasty-golden
+#     - semiring-num
+#     - convolution-paper

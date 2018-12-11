@@ -7,6 +7,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 {-# OPTIONS_GHC -Wall #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
@@ -153,33 +154,6 @@ instance Eq c => HasSingle (Resid c) [c] where
                              Just s' -> [s']
                              Nothing -> [])
 
-#if 0
-
-{--------------------------------------------------------------------
-    String tries
---------------------------------------------------------------------}
-
-data STrie c = STrie Bool (Map c (STrie c))
-
-trieFun :: Ord c => STrie c -> ([c] -> Bool)
-trieFun (STrie e _ ) [] = e
-trieFun (STrie _ ts) (c:cs) =
-  case Map.lookup c ts of
-    Nothing -> False
-    Just t  -> trieFun t cs
-
--- funSTrie :: ([c] -> Bool) -> STrieFun c
--- funSTrie f = STrieFun (f []) ...
-
--- How to construct the Map c?
-
-triePred :: Ord c => STrie c -> Pred [c]
-triePred = Pred . trieFun
-
--- predSTrie :: Ord c => Pred [c] -> STrie c
-
-#endif
-                     
 
 {--------------------------------------------------------------------
     Memoization via generalized tries
@@ -258,11 +232,11 @@ instance HasTrie Bool where
   trie f = (f False :# f True)
   untrie (f :# t) c = if c then t else f
 
-HasTrieIsomorph( (HasTrie a,HasTrie b, HasTrie c)
+HasTrieIsomorph( (HasTrie a, HasTrie b, HasTrie c)
                , (a,b,c), ((a,b),c)
                , \ (a,b,c) -> ((a,b),c), \ ((a,b),c) -> (a,b,c))
 
-HasTrieIsomorph( (HasTrie a,HasTrie b,HasTrie c, HasTrie d)
+HasTrieIsomorph( (HasTrie a, HasTrie b, HasTrie c, HasTrie d)
                , (a,b,c,d), ((a,b,c),d)
                , \ (a,b,c,d) -> ((a,b,c),d), \ ((a,b,c),d) -> (a,b,c,d))
 
@@ -295,7 +269,43 @@ instance HasTrie Type where { \
   untrie = IT.apply; \
 }
 
---  enumerate = enumerateEnum;
-
 HasTrieIntegral(Int)
 HasTrieIntegral(Integer)
+
+-- HasTrieIntegral(Char)  -- Oops. Needs Num
+
+HasTrieIsomorph((),Char,Int,fromEnum,toEnum)
+
+
+#if 1
+
+{--------------------------------------------------------------------
+    String tries
+--------------------------------------------------------------------}
+
+data STrie c a = STrie a (c :->: STrie c a)
+
+deriving instance HasTrie c => Functor (STrie c)
+
+strieFun :: HasTrie c => STrie c a -> ([c] -> a)
+strieFun (STrie e _ ) [] = e
+strieFun (STrie _ ts) (c:cs) = strieFun (untrie ts c) cs
+
+funSTrie :: HasTrie c => ([c] -> a) -> STrie c a
+funSTrie f = STrie (f []) (trie (\ c -> funSTrie (f . (c :))))
+
+instance HasTrie c => HasTrie [c] where
+  type Trie [c] = STrie c
+  trie = funSTrie
+  untrie = strieFun
+
+-- How to construct the Map c?
+
+triePred :: HasTrie c => STrie c Bool -> Pred [c]
+triePred = Pred . strieFun
+
+predSTrie :: HasTrie c => Pred [c] -> STrie c Bool
+predSTrie (Pred f) = funSTrie f
+
+#endif
+                     

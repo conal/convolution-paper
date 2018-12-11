@@ -1,3 +1,9 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE DeriveFoldable #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -13,8 +19,26 @@ import Data.Monoid ((<>))
 import Control.Applicative (liftA2)
 import Control.Monad ((>=>))
 import Data.List (stripPrefix)
-import Data.Map (Map)
-import qualified Data.Map as Map
+-- import Data.Map (Map)
+-- import qualified Data.Map as Map
+import GHC.Generics
+
+import qualified Data.IntTrie as IT  -- data-inttrie
+
+{--------------------------------------------------------------------
+    Miscellany
+--------------------------------------------------------------------}
+
+infixl 7 :*
+infixl 6 :+
+
+type (:*)  = (,)
+type (:+)  = Either
+
+type Unop a = a -> a
+
+bool :: a -> a -> Bool -> a
+bool t e b = if b then t else e
 
 {--------------------------------------------------------------------
     Abstract interface
@@ -128,7 +152,8 @@ instance Eq c => HasSingle (Resid c) [c] where
   single x = Resid (\ s -> case stripPrefix x s of
                              Just s' -> [s']
                              Nothing -> [])
-                     
+
+#if 0
 
 {--------------------------------------------------------------------
     String tries
@@ -153,4 +178,124 @@ triePred = Pred . trieFun
 
 -- predSTrie :: Ord c => Pred [c] -> STrie c
 
+#endif
+                     
 
+{--------------------------------------------------------------------
+    Memoization via generalized tries
+--------------------------------------------------------------------}
+
+infixr 0 :->:
+
+-- | Memo trie from k to v
+type k :->: v = Trie k v
+
+-- | Domain types with associated memo tries
+class Functor (Trie k) => HasTrie k where
+    type Trie k :: * -> *
+    trie   :: (k  ->  v) -> (k :->: v)
+    untrie :: (k :->: v) -> (k  ->  v)
+
+-- | Indexing. Synonym for 'untrie'.
+(!) :: HasTrie k => (k :->: v) -> k  ->  v
+(!) = untrie
+
+-- Identity trie. To do: make idTrie the method, and define trie via idTrie.
+idTrie :: HasTrie k => k :->: k
+idTrie = trie id
+
+-- | Trie-based function memoizer
+memo :: HasTrie k => Unop (k -> v)
+memo = untrie . trie
+
+-- | Memoize a binary function, on its first argument and then on its
+-- second.  Take care to exploit any partial evaluation.
+memo2 :: (HasTrie s,HasTrie t) => Unop (s -> t -> a)
+
+-- | Memoize a ternary function on successive arguments.  Take care to
+-- exploit any partial evaluation.
+memo3 :: (HasTrie r,HasTrie s,HasTrie t) => Unop (r -> s -> t -> a)
+
+-- | Lift a memoizer to work with one more argument.
+mup :: HasTrie t => (b -> c) -> (t -> b) -> (t -> c)
+mup mem f = memo (mem . f)
+
+memo2 = mup memo
+memo3 = mup memo2
+
+instance HasTrie () where
+  type Trie () = Par1
+  trie f = Par1 (f ())
+  untrie (Par1 v) = \ () -> v
+
+instance (HasTrie a, HasTrie b) => HasTrie (Either a b) where
+  type Trie (Either a b) = Trie a :*: Trie b
+  trie   f           = trie (f . Left) :*: trie (f . Right)
+  untrie (ta :*: tb) = untrie ta `either` untrie tb
+
+instance (HasTrie a, HasTrie b) => HasTrie (a :* b) where
+  type Trie (a :* b) = Trie a :.: Trie b
+  trie   f = Comp1 (trie (trie . curry f))
+  untrie (Comp1 tt) = uncurry (untrie (fmap untrie tt))
+
+#define HasTrieIsomorph(Context,Type,IsoType,toIso,fromIso) \
+instance Context => HasTrie (Type) where {\
+  type Trie (Type) = Trie (IsoType); \
+  trie f = trie (f . (fromIso)); \
+  untrie t = untrie t . (toIso); \
+}
+
+--  enumerate = (result.fmap.first) (fromIso) enumerate;
+
+-- HasTrieIsomorph( (), Bool, Either () ()
+--                , bool (Right ()) (Left ())
+--                , either (\ () -> False) (\ () -> True))
+
+data Pair a = a :# a deriving (Functor,Foldable)
+
+instance HasTrie Bool where
+  type Trie Bool = Pair
+  trie f = (f False :# f True)
+  untrie (f :# t) c = if c then t else f
+
+HasTrieIsomorph( (HasTrie a,HasTrie b, HasTrie c)
+               , (a,b,c), ((a,b),c)
+               , \ (a,b,c) -> ((a,b),c), \ ((a,b),c) -> (a,b,c))
+
+HasTrieIsomorph( (HasTrie a,HasTrie b,HasTrie c, HasTrie d)
+               , (a,b,c,d), ((a,b,c),d)
+               , \ (a,b,c,d) -> ((a,b,c),d), \ ((a,b,c),d) -> (a,b,c,d))
+
+#if 0
+
+-- As well as the functor combinators themselves
+
+HasTrieIsomorph( HasTrie x, Const x a, x, getConst, Const )
+
+HasTrieIsomorph( HasTrie a, Id a, a, unId, Id )
+
+HasTrieIsomorph( ( HasTrie f a, HasTrie (g a) )
+               , (f :*: g) a, (f a,g a)
+               , \ (fa :*: ga) -> (fa,ga), \ (fa,ga) -> (fa :*: ga) )
+
+HasTrieIsomorph( (HasTrie (f a), HasTrie (g a))
+               , (f :+: g) a, Either (f a) (g a)
+               , eitherF Left Right, either InL InR )
+
+HasTrieIsomorph( HasTrie (g (f a))
+               , (g :. f) a, g (f a) , unComp1, Comp1 )
+
+#endif
+
+
+#define HasTrieIntegral(Type) \
+instance HasTrie Type where { \
+  type Trie Type = IT.IntTrie; \
+  trie   = (<$> IT.identity); \
+  untrie = IT.apply; \
+}
+
+--  enumerate = enumerateEnum;
+
+HasTrieIntegral(Int)
+HasTrieIntegral(Integer)

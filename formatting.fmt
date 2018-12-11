@@ -67,3 +67,5 @@
 \calculationcomments
 
 %% %format * = "\times"
+
+%format >=> = "\mathbin{>\!\!=\!\!\!>}"

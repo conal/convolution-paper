@@ -154,9 +154,9 @@ All we needed from strings is that they form a monoid, generalize to sets of val
 
 \mynote{On second thought, postpone generalization from lists to monoids later.}
 
-\sectionl{Recognition}
+\sectionl{Matching}
 
-Now consider how we can computably \emph{recognize} whether a string belongs to a language described in the vocabulary given in the previous section.
+Now consider how we can computably \emph{match} a string for membership in a language described in the vocabulary given in the previous section.
 The set-based language definition does not lead directly to effective string matching, because the sets may be infinite.
 We can get around this difficulty easily enough by a change of representation.
 Sets are isomorphic to membership predicates.
@@ -172,10 +172,10 @@ predSet (Pred f) = set (a | f a)
 It's easy to show that |setPred . predSet == id| and |predSet . setPred == id|.
 % See 2018-12-10 notes.
 
-This isomorphism suggests a simple specification for effective language recognition, namely the requirement that |setPred| (or |predSet|) is a \emph{homomorphism} with respect to the vocabulary defined in the previous section.
+This isomorphism suggests a simple specification for effective matching, namely the requirement that |setPred| (or |predSet|) is a \emph{homomorphism} with respect to the vocabulary defined in the previous section.
 (This style of specification has proved useful for a range of problems \cite{Elliott-2009-tcm, Elliott-2018-ad-icfp}.)
-\begin{theorem}[\provedIn{theorem:pred}]\thmLabel{cont}
-Given the definitions in \figrefdef{pred}{Predicates as a semiring (specified by homomorphicity of |predSet|/|setPred|)}{
+\begin{theorem}[\provedIn{theorem:pred}]\thmLabel{pred}
+Given the definitions in \figrefdef{pred}{Predicates as a language (specified by homomorphicity of |predSet|/|setPred|)}{
 \begin{code}
 instance Semiring (Pred [c]) where
   zero = Pred (const False)
@@ -196,6 +196,54 @@ splits (a:as')  = ([],a:as') : [((a:l),r) | (l,r) <- splits as']
 \vspace{-4ex}
 }, |setPred| and |predSet| are homomorphisms with respect to each instantiated class.
 \end{theorem}
+
+\mynote{Try some examples, including |star| and even the classic non-regular language $a^n b^n$ or \href{https://en.wikipedia.org/wiki/Dyck_language}{the Dyck language}.}
+
+\sectionl{List of successes}
+
+Although the predicate-based language implementation in \secref{Matching} is effective, it is terribly inefficient, due to the backtracking search involved in the definitions of |(<.>)| and |splits| in \figref{pred}.
+An alternative technique commonly used in monadic parsing involves matching a language against \emph{prefixes} of a given string, yielding a corresponding ``residual'' suffix for each successful match \cite{Wadler-85-successes, HuttonMeijer-98-parsing}.
+If there is some way to match an \emph{entire} given string (i.e., if any matching residual is empty), then that string is in the language.
+As with |Pred|, we can package this technique in a new data type with an interpretation function that relates it to an already understood language representation:
+\begin{code}
+newtype Resid c = Resid ([c] -> [[c]])
+
+residPred :: Resid c -> Pred [c]
+residPred (Resid f) = Pred (any null . f)
+\end{code}
+\begin{theorem}[\provedIn{theorem:resid}]\thmLabel{resid}
+Given the definitions in \figrefdef{resid}{List-of-successes as a language (specified by homomorphicity of |residPred|)}{
+\begin{code}
+instance Semiring (Resid c) where
+  zero = Resid (const [])
+  one = Resid (\ s -> [s])
+  Resid f  <+>  Resid g = Resid (\ s -> f s <> g s)
+  Resid f  <.>  Resid g = Resid (\ s -> [s'' | s' <- f s, s'' <- g s'])
+
+-- Equivalent definition in monadic style
+instance Semiring (Resid c) where
+  zero = Resid (fail "no match")
+  one = Resid return
+  Resid f  <+>  Resid g = Resid (liftA2 (<>) f g)
+  Resid f  <.>  Resid g = Resid (f >=> g)
+
+instance ClosedSemiring (Resid c)
+
+instance Eq c => HasSingle (Resid c) [c] where
+  single x = Resid (\ s ->  case stripPrefix x s of
+                              Just s' -> [s']
+                              Nothing -> [])
+-- From |Data.List|
+stripPrefix :: Eq a => [a] -> [a] -> Maybe [a]
+stripPrefix []      ys               = Just ys
+stripPrefix (x:xs)  (y:ys) | x == y  = stripPrefix xs ys
+stripPrefix _ _                      = Nothing
+\end{code}
+\vspace{-4ex}
+}, |residPred| is a homomorphism with respect to each instantiated class.
+\end{theorem}
+
+\sectionl{Efficient matching}
 
 \workingHere
 
@@ -245,6 +293,10 @@ This lemma was stated and used by \citet[Theorem 4.4]{Brzozowski64}, who used th
 \sectionl{Proofs}
 
 \subsection{\thmRef{pred}}\proofLabel{theorem:pred}
+
+\mynote{Fill in.}
+
+\subsection{\thmRef{resid}}\proofLabel{theorem:resid}
 
 \mynote{Fill in.}
 

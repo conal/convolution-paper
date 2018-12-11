@@ -43,12 +43,17 @@ Generalize and unify:
 *   Define where a language is set of strings.
 *   Note the semiring interface.
 
-### Parsing
+### Matching
 
 *   The set-based language definition doesn't give an implementation, because the sets may be infinite.
 *   Change to a predicate, and specify the new method definitions via homomorphism equations.
     Easy to solve, and gets an effective implementation (thanks to laziness).
 *   Rephrase in terms of string predicates/recognizers, where $s \lquot p$ becomes $p \circ (s\,\mappend)$, which specializes to $p \circ (c:)$ when $s=[c]$.
+
+### List of successes
+
+### Efficient matching
+
 *   First decomposition law: $p = \bigcup\limits_{s \in p} \single s$.
 *   Second decomposition law: $p = \bigcup\limits_s \has s p$, where
     $\has s p =

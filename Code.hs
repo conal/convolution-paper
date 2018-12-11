@@ -9,6 +9,15 @@
 
 module Code where
 
+import Data.Monoid ((<>))
+import Control.Applicative (liftA2)
+import Control.Monad ((>=>))
+import Data.List (stripPrefix)
+
+{--------------------------------------------------------------------
+    Abstract interface
+--------------------------------------------------------------------}
+
 class Semiring a where
   infixl 7 <.>
   infixl 6 <+>
@@ -27,6 +36,10 @@ instance Semiring Integer where
   one = 1
   (<+>) = (+)
   (<.>) = (*)
+
+{--------------------------------------------------------------------
+    Sets of strings (or other monoidal values)
+--------------------------------------------------------------------}
 
 #if 0
 
@@ -56,6 +69,10 @@ predSet (Pred f) = set (a | f a)
 
 #endif
 
+{--------------------------------------------------------------------
+    Predicates
+--------------------------------------------------------------------}
+
 instance Semiring (Pred [c]) where
   zero = Pred (const False)
   one = Pred null
@@ -73,3 +90,40 @@ splits []       = [([],[])]
 splits (a:as')  = ([],a:as') : [((a:l),r) | (l,r) <- splits as']
 
 -- splits as@(a:as') = ([],as) : map (first (a:)) (splits as')
+
+{--------------------------------------------------------------------
+    Classic list-of-successes
+--------------------------------------------------------------------}
+
+-- Match a prefix of given string and yield corresponding suffixes for all
+-- successful matches.
+newtype Resid c = Resid ([c] -> [[c]])
+
+residPred :: Resid c -> Pred [c]
+residPred (Resid f) = Pred (any null . f)
+
+#if 1
+
+instance Semiring (Resid c) where
+  zero = Resid (fail "no match")
+  one = Resid return
+  Resid f <+> Resid g = Resid (liftA2 (<>) f g)
+  Resid f <.> Resid g = Resid (f >=> g)
+
+#else
+
+instance Semiring (Resid c) where
+  zero = Resid (const [])
+  one = Resid (\ s -> [s])
+  Resid f <+> Resid g = Resid (\ s -> f s <> g s)
+  Resid f <.> Resid g = Resid (\ s -> [s'' | s' <- f s, s'' <- g s'])
+
+#endif
+
+instance ClosedSemiring (Resid c)
+
+instance Eq c => HasSingle (Resid c) [c] where
+  single x = Resid (\ s -> case stripPrefix x s of
+                             Just s' -> [s']
+                             Nothing -> [])
+                     

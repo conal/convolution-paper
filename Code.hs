@@ -276,6 +276,8 @@ HasTrieIntegral(Integer)
 
 HasTrieIsomorph((),Char,Int,fromEnum,toEnum)
 
+-- TODO: clean up the isomorphism stuff with a type class similar to Generic but
+-- without functors. Use for default definitions of Trie, trie, and untrie.
 
 #if 1
 
@@ -283,29 +285,31 @@ HasTrieIsomorph((),Char,Int,fromEnum,toEnum)
     String tries
 --------------------------------------------------------------------}
 
-data STrie c a = STrie a (c :->: STrie c a)
+data LTrie c a = LTrie a (c :->: LTrie c a)
 
-deriving instance HasTrie c => Functor (STrie c)
-
-strieFun :: HasTrie c => STrie c a -> ([c] -> a)
-strieFun (STrie e _ ) [] = e
-strieFun (STrie _ ts) (c:cs) = strieFun (untrie ts c) cs
-
-funSTrie :: HasTrie c => ([c] -> a) -> STrie c a
-funSTrie f = STrie (f []) (trie (\ c -> funSTrie (f . (c :))))
+deriving instance HasTrie c => Functor (LTrie c)
 
 instance HasTrie c => HasTrie [c] where
-  type Trie [c] = STrie c
-  trie = funSTrie
-  untrie = strieFun
+  type Trie [c] = LTrie c
+  trie f = LTrie (f []) (trie (\ c -> trie (f . (c :))))
+  untrie (LTrie e ts) = list e (untrie . untrie ts)
 
--- How to construct the Map c?
+-- Equivalently:
+-- 
+--   untrie (LTrie e _ ) [] = e
+--   untrie (LTrie _ ts) (c:cs) = untrie (untrie ts c) cs
+--
+--   untrie (LTrie e ts) = list e (\ c cs -> untrie (untrie ts c) cs)
 
-triePred :: HasTrie c => STrie c Bool -> Pred [c]
-triePred = Pred . strieFun
+list :: b -> (a -> [a] -> b) -> [a] -> b
+list b _ [] = b
+list _ f (a:as) = f a as
 
-predSTrie :: HasTrie c => Pred [c] -> STrie c Bool
-predSTrie (Pred f) = funSTrie f
+triePred :: HasTrie c => LTrie c Bool -> Pred [c]
+triePred = Pred . untrie
+
+predLTrie :: HasTrie c => Pred [c] -> LTrie c Bool
+predLTrie (Pred f) = trie f
 
 #endif
                      

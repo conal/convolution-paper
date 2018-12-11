@@ -245,16 +245,25 @@ stripPrefix _ _                      = Nothing
 
 \sectionl{Efficient matching}
 
-\workingHere
+The language matching algorithms embodied in the |Pred| and |Resid| types (defined in \secreftwo{Matching}{List of successes}) both perform backtracking.
+We can do much better.
+A classic solution is to add token lookahead, as in LR, LL, and LALR parsers \needcite{}.
+While such parser generators typically have relatively complex implementations and look a fixed number of tokens ahead, Janusz Brzozowski discovered a simple and efficient technique that looks arbitrarily far ahead and eliminates all backtracking.
+He applied this technique only to regular languages and expressed it as a transformation that he termed ``derivatives of regular expressions'' \citep{Brzozowski64} \mynote{additional references}.
+Much more recently \citet{Might2010YaccID} extended the technique from regular to \emph{context-free} languages as a transformation on context-free grammars.
+
+This section review Brzozowski's technique and then recasts it as yet another language representation (closed semiring with singletons).
+
+\mynote{Review Brzozowski's technique.}
 
 We will have use for some decomposition laws.
 \begin{lemma} \lemLabel{sum of singletons}
-A language is the sum of singleton languages:
-$$p = \bigunion\limits_{s \in p} \single s.$$
+A predicate is the sum of singleton predicates, i.e., |forall p :: Pred [c]|,
+$$p = \sum\limits_{s \in p} \single s.$$
 \end{lemma}
 \begin{lemma} \lemLabel{sum of deltas}
 A language is the sum of singleton or empty languages:
-$$p = \bigunion\limits_s \has s p ,$$
+$$p = \sum\limits_s \has s p ,$$
 where
 $$ \has s p =
      \begin{cases}
@@ -262,10 +271,9 @@ $$ \has s p =
      0 & \text{otherwise.}
      \end{cases} $$
 \end{lemma}
-\mynote{So far we can accommodate any monoid.
-Now focus on sequences.}
+%% \mynote{So far we can accommodate any monoid. Now focus on sequences.}
 \begin{lemma}[\provedIn{lemma:empty or cons}]\notefoot{Split this lemma in two, where the first one refers to the set of strings in $p$ that start with a prefix $s$, and the second says that this set equals $s \cat (s \lquot p)$. Proofs are easy. I think we have an embedding-projection pair. Useful?} \lemLabel{empty or cons}
-$$p = \del p \union \bigcup\limits_c \conslp{c}{[c] \lquot p},$$
+$$p = \del p \ \union \ \bigcup\limits_c \conslp{c}{[c] \lquot p},$$
 where $s \lquot p$ is the \emph{left quotient} of the language $p$ by the string $s$:
 $$s \lquot p = \set{t \mid s \mappend t \in p}.$$
 \end{lemma}
@@ -276,7 +284,7 @@ This lemma was stated and used by \citet[Theorem 4.4]{Brzozowski64}, who used th
 \mynote{Outline:}
 \begin{itemize}
 \item
-  Semirings.
+  Beyond booleans.
 \item
   Convolution.
 \item
@@ -304,13 +312,13 @@ This lemma was stated and used by \citet[Theorem 4.4]{Brzozowski64}, who used th
 
 The proof follows from the observations that (a) any string in $p$ is either $\eps$ or is $c:s$ for some symbol $c$ and string $s$, and (b) $s \cat (s \lquot p)$ contains exactly the strings of $p$ that begin with $s$:
 \begin{align*}
- p &= \bigunion_s \has s p
-\\ &= \del p \cup (\bigunion_{s \neq \eps} \has{s} p)
-\\ &= \del p \cup (\bigunion_{c,s'} \has{c:s'} p)
-\\ &= \del p \cup (\bigunion_{c,s'} \single{[c]} \cat \has {s'} {([c] \lquot p)})
-\\ &= \del p \cup (\bigunion_c \bigunion_s \single{[c]} \cat \has {s'} {([c] \lquot p)})
-\\ &= \del p \cup (\bigunion_c \single{[c]} \cat \bigunion_s \has {s'} {([c] \lquot p)})
-\\ &= \del p \cup (\bigunion_c \single{[c]} \cat ([c] \lquot p))
+ p &= \sum_s \has s p
+\\ &= \del p \cup (\sum_{s \neq \eps} \has{s} p)
+\\ &= \del p \cup (\sum_{c,s'} \has{c:s'} p)
+\\ &= \del p \cup (\sum_{c,s'} \single{[c]} \cat \has {s'} {([c] \lquot p)})
+\\ &= \del p \cup (\sum_c \sum_s \single{[c]} \cat \has {s'} {([c] \lquot p)})
+\\ &= \del p \cup (\sum_c \single{[c]} \cat \sum_s \has {s'} {([c] \lquot p)})
+\\ &= \del p \cup (\sum_c \single{[c]} \cat ([c] \lquot p))
 \end{align*}
 
 

@@ -109,7 +109,6 @@ Some observations:
 \end{itemize}
 These observations are the defining properties of a \emph{star semiring} (also called a \emph{closed semiring}) \needcite{}.
 \figrefdef{classes}{Abstract interface for languages (and later generalizations)}{
-\begin{center}
 \begin{code}
 class Semiring a where
   infixl 7 <.>
@@ -124,7 +123,7 @@ class Semiring a => ClosedSemiring a where
 class HasSingle a x where
   single :: x -> a
 \end{code}
-\end{center}
+\vspace{-4ex}
 } shows Haskell classes for representations of languages (and later generalizations), combining the star semiring vocabulary with an operation for singletons.
 
 %format Set = "\mathcal P"
@@ -135,7 +134,6 @@ class HasSingle a x where
 %format pow a (b) = a "^{" b "}"
 
 Languages fulfill this combined interface as described above and again in the pseudocode in \figrefdef{set as language}{Sets as a ``language''}{
-\begin{center}
 \begin{code}
 instance Monoid s => Semiring (Set s) where
   zero  = emptyset
@@ -143,14 +141,14 @@ instance Monoid s => Semiring (Set s) where
   p  <+>  q = set (s | s `elem` p || s `elem` q)
   p  <.>  q = set (p <> q | u `elem` p && v `elem` q)
 
-instance ClosedSemiring (Set a) where
+instance ClosedSemiring (Set s) where
   closure p = q where q = one <+> p <.> q
 
-instance HasSingle (Set a) a where
-  single a = set a
+instance HasSingle (Set s) s where
+  single s = set s
 \end{code}
+\vspace{-4ex}
 %%  closure p = bigunion (n >= 0) (pow p n)
-\end{center}
 }.
 All we needed from strings is that they form a monoid, generalize to sets of values from any monoid.\footnote{The |Monoid| class defines $\mappend$ and $\eps$.}
 
@@ -177,18 +175,13 @@ It's easy to show that |setPred . predSet == id| and |predSet . setPred == id|.
 This isomorphism suggests a simple specification for effective language recognition, namely the requirement that |setPred| (or |predSet|) is a \emph{homomorphism} with respect to the vocabulary defined in the previous section.
 (This style of specification has proved useful for a range of problems \cite{Elliott-2009-tcm, Elliott-2018-ad-icfp}.)
 \begin{theorem}[\provedIn{theorem:pred}]\thmLabel{cont}
-Given the definitions in \figref{pred}, |setPred| and |predSet| are homomorphisms with respect to each instantiated class.
-\end{theorem}
-
-\begin{figure}
-\begin{center}
+Given the definitions in \figrefdef{pred}{Predicates as a semiring (specified by homomorphicity of |predSet|/|setPred|)}{
 \begin{code}
-
 instance Semiring (Pred [c]) where
   zero = Pred (const False)
   one = Pred null
-  Pred f <+> Pred g = Pred (\ x -> f x || g x)
-  Pred f <.> Pred g = Pred (\ x -> or [ f u && g v | (u,v) <- splits x ] )
+  Pred f  <+>  Pred g = Pred (\ x -> f x || g x)
+  Pred f  <.>  Pred g = Pred (\ x -> or [ f u && g v | (u,v) <- splits x ] )
 
 instance ClosedSemiring (Pred [c])  -- default |closure|
 
@@ -199,13 +192,10 @@ instance Eq s => HasSingle (Pred s) s where
 splits :: [a] -> [([a],[a])]
 splits []       = [([],[])]
 splits (a:as')  = ([],a:as') : [((a:l),r) | (l,r) <- splits as']
-
 \end{code}
-\caption{Predicates as a semiring (specified by homomorphicity of |predSet|/|setPred|)}
-\figlabel{pred}
-\end{center}
-\end{figure}
-
+\vspace{-4ex}
+}, |setPred| and |predSet| are homomorphisms with respect to each instantiated class.
+\end{theorem}
 
 \workingHere
 

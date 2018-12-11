@@ -13,6 +13,8 @@ import Data.Monoid ((<>))
 import Control.Applicative (liftA2)
 import Control.Monad ((>=>))
 import Data.List (stripPrefix)
+import Data.Map (Map)
+import qualified Data.Map as Map
 
 {--------------------------------------------------------------------
     Abstract interface
@@ -127,3 +129,28 @@ instance Eq c => HasSingle (Resid c) [c] where
                              Just s' -> [s']
                              Nothing -> [])
                      
+
+{--------------------------------------------------------------------
+    String tries
+--------------------------------------------------------------------}
+
+data STrie c = STrie Bool (Map c (STrie c))
+
+trieFun :: Ord c => STrie c -> ([c] -> Bool)
+trieFun (STrie e _ ) [] = e
+trieFun (STrie _ ts) (c:cs) =
+  case Map.lookup c ts of
+    Nothing -> False
+    Just t  -> trieFun t cs
+
+-- funSTrie :: ([c] -> Bool) -> STrieFun c
+-- funSTrie f = STrieFun (f []) ...
+
+-- How to construct the Map c?
+
+triePred :: Ord c => STrie c -> Pred [c]
+triePred = Pred . trieFun
+
+-- predSTrie :: Ord c => Pred [c] -> STrie c
+
+

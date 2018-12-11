@@ -108,7 +108,8 @@ Some observations:
 \item The $\closure P$ operation satisfies the equation $\closure P = \eps \union (P \cat \closure P)$.
 \end{itemize}
 These observations are the defining properties of a \emph{star semiring} (also called a \emph{closed semiring}) \needcite{}.
-Expressed as a Haskell type class,
+\figrefdef{classes}{Abstract interface for languages (and later generalizations)}{
+\begin{center}
 \begin{code}
 class Semiring a where
   infixl 7 <.>
@@ -119,16 +120,22 @@ class Semiring a where
 class Semiring a => ClosedSemiring a where
   closure :: a -> a
   closure p = q where q = one <+> p <.> q  -- default
+
+class HasSingle a x where
+  single :: x -> a
 \end{code}
-Numerical types form semirings in the usual way (but not star semirings).
-Languages form a star semiring as described above and again in the following pseudocode.
-All we needed from strings is that they form a monoid, generalize to sets of values from any monoid:\footnote{The |Monoid| class defines $\mappend$ and $\eps$.}
+\end{center}
+} shows Haskell classes for representations of languages (and later generalizations), combining the star semiring vocabulary with an operation for singletons.
+
 %format Set = "\mathcal P"
 %format emptyset = "\emptyset"
 %format single (s) = "\single{"s"}"
 %format set (e) = "\set{"e"}"
 %format bigunion (lim) (body) = "\bigunion_{" lim "}{" body "}"
 %format pow a (b) = a "^{" b "}"
+
+Languages fulfill this combined interface as described above and again in the pseudocode in \figrefdef{set as language}{Sets as a ``language''}{
+\begin{center}
 \begin{code}
 instance Monoid s => Semiring (Set s) where
   zero  = emptyset
@@ -138,16 +145,14 @@ instance Monoid s => Semiring (Set s) where
 
 instance ClosedSemiring (Set a) where
   closure p = q where q = one <+> p <.> q
-\end{code}
-%%  closure p = bigunion (n >= 0) (pow p n)
-In addition, we'll an abstract operation for singletons:
-\begin{code}
-class HasSingle a x where
-  single :: x -> a
 
 instance HasSingle (Set a) a where
   single a = set a
 \end{code}
+%%  closure p = bigunion (n >= 0) (pow p n)
+\end{center}
+}.
+All we needed from strings is that they form a monoid, generalize to sets of values from any monoid.\footnote{The |Monoid| class defines $\mappend$ and $\eps$.}
 
 \mynote{On second thought, postpone generalization from lists to monoids later.}
 

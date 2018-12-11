@@ -58,10 +58,11 @@ Conal Elliott
 \nc\eps{\varepsilon}
 \nc\closure[1]{#1^{\ast}}
 \nc\mappend{\diamond}
-\nc\cat{\cdot}
+% \nc\cat{\cdot}
+\nc\cat{\,}
 \nc\single\overline
-\nc\union{+}
-\nc\bigunion{\sum}
+\nc\union{\cup}
+\nc\bigunion{\bigcup}
 \nc\has[2]{\delta_{#1}\,#2}
 \nc\del[1]{\has\eps{#1}}
 \nc\lquot{\setminus}
@@ -85,17 +86,124 @@ Conal Elliott
 A \emph{language} is a set of strings, where a string is a sequence of values of some given type (``symbols'' from an ``alphabet'').
 Languages are commonly built up via a few simple operations:\notefoot{I may want to parametrize by a monoid instead of an alphabet.}
 \begin{itemize}
-\item The \emph{empty} language $0 = \set{}$.
+\item The \emph{empty} language $\emptyset = \set{}$.
 \item For a string $s$, the \emph{singleton} language $\single s = \set{s}$.
-      In particular, $1 = \single \eps = \set{\eps}$, where $\eps$ is the empty string.
-\item For two languages $p$ and $q$, the \emph{union} $p \union q = \set{s \mid s \in p \lor s \in q}$.
-\item For two languages $p$ and $q$, the element-wise \emph{concatenation} $p \cat q = \set{u \mappend v \mid u \in p \land v \in q}$, where ``$\mappend$'' denotes string concatenation.
-\item For a language $p$, the \emph{closure} $\closure p = \bigunion\limits_{n \ge 0} p^n $, where $p^n$ is $p$ concatenated with itself $n$ times (and $p^0 = \single{\eps}$).
+\item For two languages $P$ and $Q$, the \emph{union} $P \union Q = \set{s \mid s \in P \lor s \in Q}$.
+\item For two languages $P$ and $Q$, the element-wise \emph{concatenation} $P \cat Q = \set{p \mappend q \mid p \in P \land q \in Q}$, where ``$\mappend$'' denotes string concatenation.
+\item For a language $P$, the \emph{closure} $\closure P = \bigunion_{n \ge 0} P^n $, where $P^n$ is $P$ concatenated with itself $n$ times (and $P^0 = \single{\eps}$).
 \end{itemize}
-Note that $\closure p$ can also be given a recursive specification: $\closure p = \eps \union p \cat \closure p$.\footnote{Syntactically, we'll take concatenation (``$\cat$'') to bind more tightly than union (``$\union$''), so the RHS of this definition is equivalent to $\eps \union (p \cat \closure p)$}
+%if False
+\out{Note that $\closure P$ can also be given a recursive specification: $\closure P = \eps \union P \cat \closure P$.{Syntactically, we'll take concatenation (``$\cat$'') to bind more tightly than union (``$\union$''), so the RHS of this definition is equivalent to $\eps \union (P \cat \closure P)$}
+%endif
 These operations suffice to describe all \emph{regular} languages.
-The language specifications (language-denoting \emph{expressions} rather than languages themselves) constructed from these operations are called \emph{regular expressions}.
-(If we allow \emph{recursive} definitions, we get \emph{context-free} languages.)
+The language specifications (language-denoting \emph{expressions} rather than languages themselves) finitely constructed from these operations are called \emph{regular expressions}.
+%(If we allow \emph{recursive} definitions, we get \emph{context-free} languages.)
+
+Some observations:
+\begin{itemize}
+\item Union is associative, with $\emptyset$ as its identity.\notefoot{Maybe state equations for this observations and the next two.}
+\item Element-Wise concatenation is associative and commutative, with $\single \eps$ as its identity, where $\eps$ is the empty string.
+\item Left- and right-concatenation distributes over union.
+\item The empty language annihilates under concatenation, i.e., $P \cat \emptyset = \emptyset \cat Q = \emptyset$.
+\item The $\closure P$ operation satisfies the equation $\closure P = \eps \union (P \cat \closure P)$.
+\end{itemize}
+These observations are the defining properties of a \emph{star semiring} (also called a \emph{closed semiring}) \needcite{}.
+Expressed as a Haskell type class,
+\begin{code}
+class Semiring a where
+  infixl 7 <.>
+  infixl 6 <+>
+  zero   , one    :: a
+  (<+>)  , (<.>)  :: a -> a -> a
+
+class Semiring a => ClosedSemiring a where
+  closure :: a -> a
+  closure p = q where q = one <+> p <.> q  -- default
+\end{code}
+Numerical types form semirings in the usual way (but not star semirings).
+Languages form a star semiring as described above and again in the following pseudocode.
+All we needed from strings is that they form a monoid, generalize to sets of values from any monoid:\footnote{The |Monoid| class defines $\mappend$ and $\eps$.}
+%format Set = "\mathcal P"
+%format emptyset = "\emptyset"
+%format single (s) = "\single{"s"}"
+%format set (e) = "\set{"e"}"
+%format bigunion (lim) (body) = "\bigunion_{" lim "}{" body "}"
+%format pow a (b) = a "^{" b "}"
+\begin{code}
+instance Monoid s => Semiring (Set s) where
+  zero  = emptyset
+  one   = single mempty
+  p  <+>  q = set (s | s `elem` p || s `elem` q)
+  p  <.>  q = set (p <> q | u `elem` p && v `elem` q)
+
+instance ClosedSemiring (Set a) where
+  closure p = q where q = one <+> p <.> q
+\end{code}
+%%  closure p = bigunion (n >= 0) (pow p n)
+In addition, we'll an abstract operation for singletons:
+\begin{code}
+class HasSingle a x where
+  single :: x -> a
+
+instance HasSingle (Set a) a where
+  single a = set a
+\end{code}
+
+\mynote{On second thought, postpone generalization from lists to monoids later.}
+
+\sectionl{Recognition}
+
+Now consider how we can computably \emph{recognize} whether a string belongs to a language described in the vocabulary given in the previous section.
+The set-based language definition does not lead directly to effective string matching, because the sets may be infinite.
+We can get around this difficulty easily enough by a change of representation.
+Sets are isomorphic to membership predicates.
+\begin{code}
+newtype Pred s = Pred (s -> Bool)
+
+setPred :: Set a -> Pred a
+setPred as = Pred (\ a -> a `elem` as)
+
+predSet :: Pred a -> Set a
+predSet (Pred f) = set (a | f a)
+\end{code}
+It's easy to show that |setPred . predSet == id| and |predSet . setPred == id|.
+% See 2018-12-10 notes.
+
+This isomorphism suggests a simple specification for effective language recognition, namely the requirement that |setPred| (or |predSet|) is a \emph{homomorphism} with respect to the vocabulary defined in the previous section.
+(This style of specification has proved useful for a range of problems \cite{Elliott-2009-tcm, Elliott-2018-ad-icfp}.)
+\begin{theorem}[\provedIn{theorem:pred}]\thmLabel{cont}
+Given the definitions in \figref{pred}, |setPred| and |predSet| are homomorphisms with respect to each instantiated class.
+\end{theorem}
+
+\begin{figure}
+\begin{center}
+\begin{code}
+
+instance Semiring (Pred [c]) where
+  zero = Pred (const False)
+  one = Pred null
+  Pred f <+> Pred g = Pred (\ x -> f x || g x)
+  Pred f <.> Pred g = Pred (\ x -> or [ f u && g v | (u,v) <- splits x ] )
+
+instance ClosedSemiring (Pred [c])  -- default |closure|
+
+instance Eq s => HasSingle (Pred s) s where
+  single s = Pred (== s)
+
+-- All ways of splitting a given list (inverting |(<>)|).
+splits :: [a] -> [([a],[a])]
+splits []       = [([],[])]
+splits (a:as')  = ([],a:as') : [((a:l),r) | (l,r) <- splits as']
+
+\end{code}
+\caption{Predicates as a semiring (specified by homomorphicity of |predSet|/|setPred|)}
+\figlabel{pred}
+\end{center}
+\end{figure}
+
+
+\workingHere
+
 We will have use for some decomposition laws.
 \begin{lemma} \lemLabel{sum of singletons}
 A language is the sum of singleton languages:
@@ -116,29 +224,10 @@ Now focus on sequences.}
 \begin{lemma}[\provedIn{lemma:empty or cons}]\notefoot{Split this lemma in two, where the first one refers to the set of strings in $p$ that start with a prefix $s$, and the second says that this set equals $s \cat (s \lquot p)$. Proofs are easy. I think we have an embedding-projection pair. Useful?} \lemLabel{empty or cons}
 $$p = \del p \union \bigcup\limits_c \conslp{c}{[c] \lquot p},$$
 where $s \lquot p$ is the \emph{left quotient} of the language $p$ by the string $s$:
-$$s \lquot p = \set{t \mid s \mappend t \in S}.$$
+$$s \lquot p = \set{t \mid s \mappend t \in p}.$$
 \end{lemma}
 \noindent
 This lemma was stated and used by \citet[Theorem 4.4]{Brzozowski64}, who used the notation ``$D_s\,p$'' (``the derivative of $p$ with respect to $s$'') instead of ``$s \lquot p$''.\notefoot{I don't think $s \lquot p$ is a derivative, but I'm still unsure. The product/convolution rule somewhat resembles the Leibniz rule, but the two appear to be inconsistent.}
-
-\sectionl{Parsing}
-\mynote{Outline:}
-\begin{itemize}
-\item
-  The set-based language definition doesn't give an implementation, because the sets may be infinite.
-\item
-  Change to a predicate, and specify the new method definitions via homomorphism equations.
-  Easy to solve, and gets an effective implementation (thanks to laziness).
-\item
-  Maybe same for a free representation (regular expressions), though trivial.
-\item
-  Rephrase in terms of string predicates/recognizers, where $c \lquot p$ becomes $p \circ (c:)$.
-\item
-  Review (string) tries.
-  Note the appearance of $p \eps$ and $p \circ (c:)$.
-  Define the homomorphism equations, which are easy to solve, via trie isomorphism.
-  Simplifying yields a simple and efficient implementation.
-\end{itemize}
 
 \sectionl{Generalizing}
 \mynote{Outline:}
@@ -159,6 +248,10 @@ This lemma was stated and used by \citet[Theorem 4.4]{Brzozowski64}, who used th
 \appendix
 
 \sectionl{Proofs}
+
+\subsection{\thmRef{pred}}\proofLabel{theorem:pred}
+
+\mynote{Fill in.}
 
 \subsection{\lemRef{empty or cons}}\proofLabel{lemma:empty or cons}
 

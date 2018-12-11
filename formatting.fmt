@@ -30,9 +30,14 @@
 %format :+ = " + "
 
 %% %format *^ = *"\!\hat{}"
+%% %format *^ = "\cdot"
 
-%format *^ = "\cdot"
-%format <.> = "<\!\!\!\cdot\!\!\!>"
+%% %format <.> = "<\!\!\!\cdot\!\!\!>"
+
+%format <+> = "+"
+%format <.> = "\ast"
+%format zero = 0
+%format one = 1
 
 %% %format @ = "{\ @}"
 %% %format @@ = "@"

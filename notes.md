@@ -6,13 +6,20 @@ substMap: [("<+>","+"),("<.>","·")]
 [*Derivatives of Regular Expressions*]: http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.98.4378 "paper by Janusz Brzozowski (1964"
 
 \newcommand\set[1]{\{\,#1\,\}}
+\newcommand\Pow{\mathcal{P}}
+\newcommand\setop[1]{\mathbin{\hat{#1}}}
 \newcommand\eps{\varepsilon}
-\newcommand\single\bar
-\newcommand\cat\cdot
+\newcommand\closure[1]{#1^{\ast}}
+\newcommand\mappend{\diamond}
+\newcommand\cat{\cdot}
+\newcommand\single\overline
+\newcommand\union{+}
+\newcommand\bigunion{\sum}
 \newcommand\has[2]{\delta_{#1}\,#2}
-\newcommand\union{\cup}
-\newcommand\del[1]{\delta\,#1}
-\newcommand\der[2]{\mathcal D_{#1}\,#2}
+\newcommand\del[1]{\has\eps{#1}}
+\newcommand\consl[2]{\single{[#1]} \cat #2}
+\newcommand\conslp[2]{\consl{#1}{(#2)}}
+\newcommand\lquot{\setminus}
 
 ## Paper outline
 
@@ -34,6 +41,14 @@ Generalize and unify:
 
 *   Identify the vocabulary of a "language" (singleton plus semiring).
 *   Define where a language is set of strings.
+*   Note the semiring interface.
+
+### Parsing
+
+*   The set-based language definition doesn't give an implementation, because the sets may be infinite.
+*   Change to a predicate, and specify the new method definitions via homomorphism equations.
+    Easy to solve, and gets an effective implementation (thanks to laziness).
+*   Rephrase in terms of string predicates/recognizers, where $s \lquot p$ becomes $p \circ (s\,\mappend)$, which specializes to $p \circ (c:)$ when $s=[c]$.
 *   First decomposition law: $p = \bigcup\limits_{s \in p} \single s$.
 *   Second decomposition law: $p = \bigcup\limits_s \has s p$, where
     $\has s p =
@@ -44,18 +59,11 @@ Generalize and unify:
     Specialize to empty strings: $\del p = \has \eps p$.
 *   So far we can accommodate any monoid.
     Now focus on sequences.
-*   "Derivative": $\der c p = \set {s \mid c:s \in p}$.
+*   "Derivative": $c \lquot p = \set {s \mid c:s \in p}$.
 *   Third decomposition law [Brzozowski, 1964, Theorem 4.4]:
-    $p = \del p \union \bigcup\limits_{c\,\in\,A} \single c \cat \der c p$.
+    $p = \del p \union \bigcup\limits_{c\,\in\,A} \single c \cat (c \lquot p)$.
     Holds for all languages, not just regular.
-
-### Parsing
-
-*   The set-based language definition doesn't give an implementation, because the sets may be infinite.
-*   Change to a predicate, and specify the new method definitions via homomorphism equations.
-    Easy to solve, and gets an effective implementation (thanks to laziness).
 *   Maybe same for a free representation (regular expressions), though trivial.
-*   Rephrase in terms of string predicates/recognizers, where $\der c p$ becomes $p \circ (c:)$.
 *   Review (string) tries.
     Note the appearance of $p \eps$ and $p \circ (c:)$.
     Define the homomorphism equations, which are easy to solve, via trie isomorphism.

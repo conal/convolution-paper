@@ -8,6 +8,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE FunctionalDependencies #-}
 
 {-# OPTIONS_GHC -Wall #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
@@ -58,11 +59,21 @@ class Semiring a => ClosedSemiring a where
 class HasSingle a x where
   single :: x -> a
 
+class HasDecomp s c | s -> c where
+  delta :: s -> s
+  deriv :: c -> s -> s
+
 instance Semiring Integer where
   zero = 0
   one = 1
   (<+>) = (+)
   (<.>) = (*)
+
+instance Semiring Bool where
+  zero = False
+  one = True
+  (<+>) = (||)
+  (<.>) = (&&)
 
 {--------------------------------------------------------------------
     Sets of strings (or other monoidal values)
@@ -73,7 +84,7 @@ instance Semiring Integer where
 instance Semiring (Set a) where
   zero = emptyset
   one = single mempty
-  p + q = set (s | s `elem` p || s `elem` q)
+  p + q = set (a | a `elem` p || a `elem` q)
   p <.> q = set (p <> q | u `elem` p && v `elem` q)
 
 instance ClosedSemiring (Set a) where
@@ -81,6 +92,11 @@ instance ClosedSemiring (Set a) where
 
 instance HasSingle (Set a) a where
   single a = set a
+
+instance HasDecomp (Set [c]) c where
+  delta p | [] `elem` p = one
+          | otherwise   = zero
+  deriv c p = set (cs | c : cs `elem` p)
 
 #endif
 
@@ -125,20 +141,25 @@ splits' as = ([],as) : go as
    go []       = []
    go (a:as')  = [((a:l),r) | (l,r) <- splits' as']
 
+instance HasDecomp (Pred [c]) c where
+  delta (Pred f) | f []      = one
+                 | otherwise = zero
+  deriv c (Pred f) = Pred (f . (c :))
+
 {--------------------------------------------------------------------
     Classic list-of-successes
 --------------------------------------------------------------------}
 
 -- Match a prefix of given string and yield corresponding suffixes for all
 -- successful matches.
-newtype Resid c = Resid ([c] -> [[c]])
+newtype Resid s = Resid ([s] -> [[s]])
 
-residPred :: Resid c -> Pred [c]
+residPred :: Resid s -> Pred [s]
 residPred (Resid f) = Pred (any null . f)
 
 #if 1
 
-instance Semiring (Resid c) where
+instance Semiring (Resid s) where
   zero = Resid (fail "no match")
   one = Resid return
   Resid f <+> Resid g = Resid (liftA2 (<>) f g)
@@ -146,7 +167,7 @@ instance Semiring (Resid c) where
 
 #else
 
-instance Semiring (Resid c) where
+instance Semiring (Resid s) where
   zero = Resid (const [])
   one = Resid (\ s -> [s])
   Resid f <+> Resid g = Resid (\ s -> f s <> g s)
@@ -154,13 +175,37 @@ instance Semiring (Resid c) where
 
 #endif
 
-instance ClosedSemiring (Resid c)
+instance ClosedSemiring (Resid s)
 
-instance Eq c => HasSingle (Resid c) [c] where
+instance Eq s => HasSingle (Resid s) [s] where
   single x = Resid (\ s -> case stripPrefix x s of
                              Just s' -> [s']
                              Nothing -> [])
 
+instance HasDecomp (Resid s) s where
+  delta (Resid f) | any null (f []) = one
+                  | otherwise       = zero
+  deriv c (Resid f) = Resid (f . (c :)) -- TODO: check
+
+{--------------------------------------------------------------------
+    List trie as a language
+--------------------------------------------------------------------}
+
+instance HasTrie c => Semiring (LTrie c Bool) where
+  zero = pure zero
+  one = LTrie True (pure zero)
+  -- LTrie a as <+> LTrie b bs = LTrie (a || b) (liftA2 (<+>) as bs)
+  (<+>) = liftA2 (<+>)
+  (<.>) = error "(<.>) not yet defined on LTrie"
+
+-- Oops: I think I'll have to wrap LTrie to make it a language instance, because
+-- I'll want a different Applicative.
+
+instance HasTrie c => ClosedSemiring (LTrie c Bool)
+
+instance (HasTrie c, Eq c) => HasSingle (LTrie c Bool) [c] where
+  single [] = LTrie True (pure zero)
+  single (c:cs) = LTrie False (trie (\ c' -> if c==c' then single cs else zero))
 
 {--------------------------------------------------------------------
     Memoization via generalized tries
@@ -172,7 +217,7 @@ infixr 0 :->:
 type k :->: v = Trie k v
 
 -- | Domain types with associated memo tries
-class Functor (Trie k) => HasTrie k where
+class Applicative (Trie k) => HasTrie k where
     type Trie k :: * -> *
     trie   :: (k  ->  v) -> (k :->: v)
     untrie :: (k :->: v) -> (k  ->  v)
@@ -233,6 +278,10 @@ instance Context => HasTrie (Type) where {\
 --                , either (\ () -> False) (\ () -> True))
 
 data Pair a = a :# a deriving (Functor,Foldable)
+
+instance Applicative Pair where
+  pure a = a :# a
+  (f :# g) <*> (a :# b) = f a :# g b
 
 instance HasTrie Bool where
   type Trie Bool = Pair
@@ -295,6 +344,10 @@ HasTrieIsomorph((),Char,Int,fromEnum,toEnum)
 data LTrie c a = LTrie a (c :->: LTrie c a)
 
 deriving instance HasTrie c => Functor (LTrie c)
+
+instance HasTrie c => Applicative (LTrie c) where
+  pure a = t where t = LTrie a (pure t)
+  liftA2 h (LTrie a as) (LTrie b bs) = LTrie (h a b) ((liftA2.liftA2) h as bs)
 
 instance HasTrie c => HasTrie [c] where
   type Trie [c] = LTrie c

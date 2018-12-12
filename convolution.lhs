@@ -142,8 +142,7 @@ instance Monoid s => Semiring (Set s) where
   p  <+>  q = set (s | s `elem` p || s `elem` q)
   p  <.>  q = set (p <> q | u `elem` p && v `elem` q)
 
-instance ClosedSemiring (Set s) where
-  closure p = q where q = one <+> p <.> q
+instance ClosedSemiring (Set s)  -- default |closure|
 
 instance HasSingle (Set s) s where
   single s = set s
@@ -180,7 +179,7 @@ predSet (Pred f) = set (a | f a)
 It's easy to show that |setPred . predSet == id| and |predSet . setPred == id|.
 % See 2018-12-10 notes.
 
-This isomorphism suggests a simple specification for effective matching, namely the requirement that |setPred| (or |predSet|) is a \emph{homomorphism} with respect to the vocabulary defined in the previous section.
+This isomorphism suggests a simple specification for effective matching, namely the requirement that |setPred| (or |predSet|) is a \emph{homomorphism} with respect to the vocabulary of \figref{classes}.
 (This style of specification has proved useful for a range of problems \cite{Elliott-2009-tcm, Elliott-2018-ad-icfp}.)
 \begin{theorem}[\provedIn{theorem:pred}]\thmLabel{pred}
 Given the definitions in \figrefdef{pred}{Predicates as a language (specified by homomorphicity of |predSet|/|setPred|)}{
@@ -354,7 +353,7 @@ instance HasDecomp (Resid s) s where
 
 \subsection{\thmRef{resid}}\proofLabel{theorem:resid}
 
-\subsection{\thmRef{resid}}\proofLabel{theorem:HasDecomp}
+\subsection{\thmRef{HasDecomp}}\proofLabel{theorem:HasDecomp}
 
 \bibliography{bib}
 

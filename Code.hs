@@ -118,6 +118,13 @@ splits (a:as')  = ([],a:as') : [((a:l),r) | (l,r) <- splits as']
 
 -- splits as@(a:as') = ([],as) : map (first (a:)) (splits as')
 
+-- Equivalently
+splits' :: [a] -> [([a],[a])]
+splits' as = ([],as) : go as
+ where
+   go []       = []
+   go (a:as')  = [((a:l),r) | (l,r) <- splits' as']
+
 {--------------------------------------------------------------------
     Classic list-of-successes
 --------------------------------------------------------------------}
@@ -305,8 +312,8 @@ list :: b -> (a -> [a] -> b) -> [a] -> b
 list b _ [] = b
 list _ f (a:as) = f a as
 
-triePred :: HasTrie c => LTrie c Bool -> Pred [c]
-triePred = Pred . untrie
+ltriePred :: HasTrie c => LTrie c Bool -> Pred [c]
+ltriePred = Pred . untrie
 
 predLTrie :: HasTrie c => Pred [c] -> LTrie c Bool
 predLTrie (Pred f) = trie f

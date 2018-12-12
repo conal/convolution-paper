@@ -93,9 +93,9 @@ instance ClosedSemiring (Set a) where
 instance HasSingle (Set a) a where
   single a = set a
 
-instance HasDecomp (Set [c]) c where
-  delta p | [] `elem` p = one
-          | otherwise   = zero
+instance Eq a => HasDecomp (Set a) a where
+  hasEps p | [] `elem` p = one
+           | otherwise   = zero
   deriv c p = set (cs | c : cs `elem` p)
 
 #endif
@@ -142,8 +142,8 @@ splits' as = ([],as) : go as
    go (a:as')  = [((a:l),r) | (l,r) <- splits' as']
 
 instance HasDecomp (Pred [c]) c where
-  delta (Pred f) | f []      = one
-                 | otherwise = zero
+  hasEps (Pred f) | f []      = one
+                  | otherwise = zero
   deriv c (Pred f) = Pred (f . (c :))
 
 {--------------------------------------------------------------------
@@ -183,8 +183,8 @@ instance Eq s => HasSingle (Resid s) [s] where
                              Nothing -> [])
 
 instance HasDecomp (Resid s) s where
-  delta (Resid f) | any null (f []) = one
-                  | otherwise       = zero
+  hasEps (Resid f) | any null (f []) = one
+                   | otherwise       = zero
   deriv c (Resid f) = Resid (f . (c :)) -- TODO: check
 
 {--------------------------------------------------------------------

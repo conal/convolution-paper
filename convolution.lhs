@@ -59,15 +59,16 @@ Conal Elliott
 \nc\closure[1]{#1^{\ast}}
 \nc\mappend{\diamond}
 % \nc\cat{\cdot}
-\nc\cat{\,}
+\nc\cat{\mathop{}}
 \nc\single\overline
 \nc\union{\cup}
 \nc\bigunion{\bigcup}
-\nc\has[2]{\delta_{#1}\,#2}
-\nc\del[1]{\has\eps{#1}}
+\nc\has[1]{\mathop{\delta_{#1}}}
+\nc\del{\has{}}
 \nc\lquot{\setminus}
-\nc\consl[2]{\single{[#1]} \cat #2}
-\nc\conslp[2]{\consl{#1}{(#2)}}
+%% \nc\consl[2]{\single{[#1]} \cat #2}
+%% \nc\conslp[2]{\consl{#1}{(#2)}}
+\nc\der[1]{\mathop{\mathcal{D}_{#1}}}
 
 \begin{document}
 
@@ -250,7 +251,7 @@ stripPrefix _ _                      = Nothing
 }, |residPred| is a homomorphism with respect to each instantiated class.
 \end{theorem}
 
-\sectionl{Efficient matching}
+\sectionl{Derivatives of languages}
 
 The language matching algorithms embodied in the |Pred| and |Resid| types (defined in \secreftwo{Matching}{List of successes}) both perform backtracking.
 We can do much better.
@@ -259,33 +260,75 @@ While such parser generators typically have relatively complex implementations a
 He applied this technique only to regular languages and expressed it as a transformation that he termed ``derivatives of regular expressions'' \citep{Brzozowski64} \mynote{additional references}.
 Much more recently \citet{Might2010YaccID} extended the technique from regular to \emph{context-free} languages as a transformation on context-free grammars.
 
-This section review Brzozowski's technique and then recasts it as yet another language representation (closed semiring with singletons).
-
-\mynote{Review Brzozowski's technique.}
-
-We will have use for some decomposition laws.
-\begin{lemma} \lemLabel{sum of singletons}
-A predicate is the sum of singleton predicates, i.e., |forall p :: Pred [c]|,
-$$p = \sum\limits_{s \in p} \single s.$$
-\end{lemma}
-\begin{lemma} \lemLabel{sum of deltas}
-A language is the sum of singleton or empty languages:
-$$p = \sum\limits_s \has s p ,$$
-where
-$$ \has s p =
-     \begin{cases}
-     \single s & \text{if $s \in p$}, \\
-     0 & \text{otherwise.}
-     \end{cases} $$
-\end{lemma}
-%% \mynote{So far we can accommodate any monoid. Now focus on sequences.}
-\begin{lemma}[\provedIn{lemma:empty or cons}]\notefoot{Split this lemma in two, where the first one refers to the set of strings in $p$ that start with a prefix $s$, and the second says that this set equals $s \cat (s \lquot p)$. Proofs are easy. I think we have an embedding-projection pair. Useful?} \lemLabel{empty or cons}
-$$p = \del p \ \union \ \bigcup\limits_c \conslp{c}{[c] \lquot p},$$
-where $s \lquot p$ is the \emph{left quotient} of the language $p$ by the string $s$:
-$$s \lquot p = \set{t \mid s \mappend t \in p}.$$
-\end{lemma}
+\begin{definition}
+The \emph{derivative} $\der u p$ of a language $p$ with respect to a string $u$ is the subset of $u$-suffixes of strings in $p$, i.e.,
+$$ \der u p = \set{ v \mid u \mappend v \in p } $$
+%% Given a single value (``symbol'') $c$, define $\der c$ to be $\der{[c]}$.
+%% Equivalently, $\der c p = \set{v \mid c:v \in p}$, where ``$c:v$''.
+\end{definition}
 \noindent
-This lemma was stated and used by \citet[Theorem 4.4]{Brzozowski64}, who used the notation ``$D_s\,p$'' (``the derivative of $p$ with respect to $s$'') instead of ``$s \lquot p$''.\notefoot{I don't think $s \lquot p$ is a derivative, but I'm still unsure. The product/convolution rule somewhat resembles the Leibniz rule, but the two appear to be inconsistent.}
+An effective implementation of $\der u$ would allow test for membership, as follows:
+\begin{lemma}
+For a string $u$ and language $p$,
+$$ u \in p \iff \eps \in \der u p .$$
+\end{lemma}
+%% Consider empty and non-empty strings separately:
+\begin{definition} \defLabel{delta}
+Let $\del p$ be a set containing just the empty string $\eps$ if $\eps \in p$ and otherwise the empty set itself:
+$$
+\del p =
+        \begin{cases}
+        1 & \text{if $\eps \in p$} \\
+        0 & \text{otherwise}
+        \end{cases} .
+$$
+\end{definition}
+
+The following decomposition lemma is by \citet[Theorem 4.4]{Brzozowski64}:
+\begin{lemma}\lemLabel{Brzozowski decomposition}
+For any language (set of sequences) $p$, any member of $p$ is either empty or has the form $c:s$, i.e., a first element $c$ followed by a sequence $s$, i.e.,
+$$ p = \del p + \sum_c c \cat \der c p ,$$
+where, for a value (``symbol'') $c$ and language $q$, $c \cat q = \single{[c]} \cat q$, and $\der c q = \der{[c]}q$, i.e.,
+\begin{align*}
+c \cat q & = \set{c:v \mid v \in q} \\
+\der c q & = \set{v \mid c:v \in q}
+\end{align*}
+\end{lemma}
+Note that $c \cat \der c p$ contains exactly the strings in $p$ that begin with $c$, so \lemRef{Brzozowski decomposition} partitions $p$ into subsets for the empty string and for each possible leading symbol.
+
+%format hasEps = delta
+%format deriv (p) = "\der{"p"}"
+
+Let's package up these operations as another abstract interface for language representations to implement, with a pseudocode (non-effective) instance for sets:
+\begin{code}
+class HasDecomp s c | s -> c where
+  hasEps  :: s -> s
+  deriv   :: c -> s -> s
+
+instance Eq a => HasDecomp (Set a) a where
+  hasEps p  | mempty `elem` p  = one
+            | otherwise        = zero
+  deriv c p = set (cs | c : cs `elem` p)
+\end{code}
+
+As with the other classes above, we can calculate instances of |HasDecomp|:
+\begin{theorem}[\provedIn{theorem:HasDecomp}]\thmLabel{HasDecomp}
+Given the definitions in \figrefdef{HasDecomp}{Decomposition language representations (specified by homomorphicity)}{
+\begin{code}
+instance HasDecomp (Pred [c]) c where
+  hasEps (Pred f)  | f []       = one
+                   | otherwise  = zero
+  deriv c (Pred f) = Pred (f . (c :))
+
+instance HasDecomp (Resid s) s where
+  hasEps (Resid f)  | any null (f [])  = one
+                    | otherwise        = zero
+  deriv c (Resid f) = Resid (f . (c :)) -- \mynote{Check}
+\end{code}
+\vspace{-4ex}
+}, |predSet| and |residPred| are |HasDecomp| homomorphisms.
+\end{theorem}
+
 
 \sectionl{Generalizing}
 \mynote{Outline:}
@@ -309,25 +352,9 @@ This lemma was stated and used by \citet[Theorem 4.4]{Brzozowski64}, who used th
 
 \subsection{\thmRef{pred}}\proofLabel{theorem:pred}
 
-\mynote{Fill in.}
-
 \subsection{\thmRef{resid}}\proofLabel{theorem:resid}
 
-\mynote{Fill in.}
-
-\subsection{\lemRef{empty or cons}}\proofLabel{lemma:empty or cons}
-
-The proof follows from the observations that (a) any string in $p$ is either $\eps$ or is $c:s$ for some symbol $c$ and string $s$, and (b) $s \cat (s \lquot p)$ contains exactly the strings of $p$ that begin with $s$:
-\begin{align*}
- p &= \sum_s \has s p
-\\ &= \del p \cup (\sum_{s \neq \eps} \has{s} p)
-\\ &= \del p \cup (\sum_{c,s'} \has{c:s'} p)
-\\ &= \del p \cup (\sum_{c,s'} \single{[c]} \cat \has {s'} {([c] \lquot p)})
-\\ &= \del p \cup (\sum_c \sum_s \single{[c]} \cat \has {s'} {([c] \lquot p)})
-\\ &= \del p \cup (\sum_c \single{[c]} \cat \sum_s \has {s'} {([c] \lquot p)})
-\\ &= \del p \cup (\sum_c \single{[c]} \cat ([c] \lquot p))
-\end{align*}
-
+\subsection{\thmRef{resid}}\proofLabel{theorem:HasDecomp}
 
 \bibliography{bib}
 

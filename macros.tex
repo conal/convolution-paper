@@ -184,6 +184,12 @@
 
 %% \theoremstyle{plainstyle}
 
+\newtheorem{definition}{Definition}%[section]
+\nc\defLabel[1]{\label{definition:#1}}
+\nc\defRef[1]{Definition \ref{definition:#1}}
+\nc\defRefTwo[2]{Definitions \ref{definition:#1} and \ref{definition:#2}}
+\nc\defRefs[2]{Definitions \ref{definition:#1} through \ref{definition:#2}}
+
 \newtheorem{theorem}{Theorem}%[section]
 \nc\thmLabel[1]{\label{theorem:#1}}
 \nc\thmRef[1]{Theorem \ref{theorem:#1}}

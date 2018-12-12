@@ -154,6 +154,13 @@ All we needed from strings is that they form a monoid, generalize to sets of val
 
 \mynote{On second thought, postpone generalization from lists to monoids later.}
 
+\section{Regular expressions}
+
+\mynote{Definition, instances, and universal conversion to arbitrary language representation.}
+
+\mynote{Maybe the ``derivative'' (left quotient) should be a language method.
+Alternatively, use |Comonad|, where |coreturn| and |cojoin| are |single| and |deriv|.}
+
 \sectionl{Matching}
 
 Now consider how we can computably \emph{match} a string for membership in a language described in the vocabulary given in the previous section.

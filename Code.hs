@@ -193,7 +193,7 @@ instance HasDecomp (Resid s) s where
 
 instance HasTrie c => Semiring (LTrie c Bool) where
   zero = pure zero
-  one = LTrie True (pure zero)
+  one = True :< pure zero
   -- LTrie a as <+> LTrie b bs = LTrie (a || b) (liftA2 (<+>) as bs)
   (<+>) = liftA2 (<+>)
   (<.>) = error "(<.>) not yet defined on LTrie"
@@ -204,8 +204,8 @@ instance HasTrie c => Semiring (LTrie c Bool) where
 instance HasTrie c => ClosedSemiring (LTrie c Bool)
 
 instance (HasTrie c, Eq c) => HasSingle (LTrie c Bool) [c] where
-  single [] = LTrie True (pure zero)
-  single (c:cs) = LTrie False (trie (\ c' -> if c==c' then single cs else zero))
+  single [] = True :< pure zero
+  single (c:cs) = False :< trie (\ c' -> if c==c' then single cs else zero)
 
 {--------------------------------------------------------------------
     Memoization via generalized tries
@@ -341,25 +341,25 @@ HasTrieIsomorph((),Char,Int,fromEnum,toEnum)
     String tries
 --------------------------------------------------------------------}
 
-data LTrie c a = LTrie a (c :->: LTrie c a)
+data LTrie c a = a :< (c :->: LTrie c a)
 
 deriving instance HasTrie c => Functor (LTrie c)
 
 instance HasTrie c => Applicative (LTrie c) where
-  pure a = t where t = LTrie a (pure t)
-  liftA2 h (LTrie a as) (LTrie b bs) = LTrie (h a b) ((liftA2.liftA2) h as bs)
+  pure a = t where t = a :< pure t
+  liftA2 h (a :< as) (b :< bs) = h a b :< (liftA2.liftA2) h as bs
 
 instance HasTrie c => HasTrie [c] where
   type Trie [c] = LTrie c
-  trie f = LTrie (f []) (trie (\ c -> trie (f . (c :))))
-  untrie (LTrie e ts) = list e (untrie . untrie ts)
+  trie f = f [] :< trie (\ c -> trie (f . (c :)))
+  untrie (e :< ts) = list e (untrie . untrie ts)
 
 -- Equivalently:
 -- 
---   untrie (LTrie e _ ) [] = e
---   untrie (LTrie _ ts) (c:cs) = untrie (untrie ts c) cs
---
---   untrie (LTrie e ts) = list e (\ c cs -> untrie (untrie ts c) cs)
+--   untrie (e :< _ ) [] = e
+--   untrie (_ :< ts) (c:cs) = untrie (untrie ts c) cs
+--   
+--   untrie (e :< ts) = list e (\ c cs -> untrie (untrie ts c) cs)
 
 list :: b -> (a -> [a] -> b) -> [a] -> b
 list b _ [] = b

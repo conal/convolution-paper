@@ -60,7 +60,7 @@ class HasSingle a x where
   single :: x -> a
 
 class HasDecomp s c | s -> c where
-  delta :: s -> s
+  hasEps :: s -> s
   deriv :: c -> s -> s
 
 instance Semiring Integer where

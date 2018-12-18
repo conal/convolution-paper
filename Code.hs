@@ -335,13 +335,14 @@ HasTrieIsomorph((),Char,Int,fromEnum,toEnum)
 -- TODO: clean up the isomorphism stuff with a type class similar to Generic but
 -- without functors. Use for default definitions of Trie, trie, and untrie.
 
-#if 1
-
 {--------------------------------------------------------------------
     String tries
 --------------------------------------------------------------------}
 
 data LTrie c a = a :< (c :->: LTrie c a)
+
+-- TODO: Use HasTrieIsomorph for [c]. I'll probably have to add instances of
+-- Semiring etc for generics.
 
 deriving instance HasTrie c => Functor (LTrie c)
 
@@ -370,6 +371,3 @@ ltriePred = Pred . untrie
 
 predLTrie :: HasTrie c => Pred [c] -> LTrie c Bool
 predLTrie (Pred f) = trie f
-
-#endif
-                     

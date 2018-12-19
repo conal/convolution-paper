@@ -9,6 +9,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE ConstraintKinds #-}
 
 {-# OPTIONS_GHC -Wall #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
@@ -56,12 +57,14 @@ class Semiring a => ClosedSemiring a where
   closure :: a -> a
   closure p = q where q = one <+> p <.> q
 
-class HasSingle a x where
-  single :: x -> a
+class HasSingle a s where
+  single :: s -> a
 
-class HasDecomp s c | s -> c where
-  hasEps :: s -> s
-  deriv :: c -> s -> s
+class HasDecomp a c | a -> c where
+  delta :: a -> a
+  deriv :: c -> a -> a
+
+type Language a c = (ClosedSemiring a, HasSingle a [c], HasDecomp a c)
 
 instance Semiring Integer where
   zero = 0
@@ -94,7 +97,7 @@ instance HasSingle (Set a) a where
   single a = set a
 
 instance Eq a => HasDecomp (Set a) a where
-  hasEps p | [] `elem` p = one
+  delta p | [] `elem` p = one
            | otherwise   = zero
   deriv c p = set (cs | c : cs `elem` p)
 
@@ -142,7 +145,7 @@ splits' as = ([],as) : go as
    go (a:as')  = [((a:l),r) | (l,r) <- splits' as']
 
 instance HasDecomp (Pred [c]) c where
-  hasEps (Pred f) | f []      = one
+  delta (Pred f) | f []      = one
                   | otherwise = zero
   deriv c (Pred f) = Pred (f . (c :))
 
@@ -183,9 +186,102 @@ instance Eq s => HasSingle (Resid s) [s] where
                              Nothing -> [])
 
 instance HasDecomp (Resid s) s where
-  hasEps (Resid f) | any null (f []) = one
+  delta (Resid f) | any null (f []) = one
                    | otherwise       = zero
   deriv c (Resid f) = Resid (f . (c :)) -- TODO: check
+
+{--------------------------------------------------------------------
+    Regular expressions
+--------------------------------------------------------------------}
+
+infixl 6 :<+>
+infixl 7 :<.>
+
+-- | Regular expression
+data RegExp s =
+    Single s
+  | Zero
+  | One
+  | RegExp s :<+> RegExp s
+  | RegExp s :<.> RegExp s
+  | Closure (RegExp s)
+ deriving Show
+
+-- TODO: instantiate Show manually, using the method names instead of constructors.
+
+-- TODO: consider returning to Char instead of Single. Otherwise, we have
+-- redundant representations. On the other hand, regular expressions over
+-- general monoids is a pretty cool idea.
+
+#if 0
+
+instance Semiring (RegExp s) where
+  zero  = Zero
+  one   = One
+  (<+>) = (:<+>)
+  (<.>) = (:<.>)
+
+instance ClosedSemiring (RegExp s) where
+  closure = Closure
+
+#else
+
+-- Optimize RegExp methods via semiring laws
+
+instance Semiring (RegExp s) where
+  zero  = Zero
+  one   = One
+  Zero <+> b = b
+  a <+> Zero = a
+  a <+> b = a :<+> b
+  Zero <.> _ = Zero
+  _ <.> Zero = Zero
+  One <.> b = b
+  a <.> One = a
+  a <.> b = a :<.> b
+
+instance ClosedSemiring (RegExp s) where
+  closure Zero = One
+  closure e = Closure e
+
+#endif
+
+instance HasSingle (RegExp s) s where
+  single = Single
+
+instance Eq c => HasDecomp (RegExp [c]) c where
+  delta (Single s) | null s = one
+                   | otherwise = zero
+  delta Zero = zero
+  delta One = one
+  delta (p :<+> q) = delta p <+> delta q
+  delta (p :<.> q) = delta p <.> delta q
+  delta (Closure p) = closure (delta p)
+  deriv _ (Single []) = zero
+  deriv c (Single (c':s)) | c == c' = Single s
+                          | otherwise = zero
+  deriv _ Zero = zero
+  deriv _ One = zero
+  deriv c (p :<+> q) = deriv c p <+> deriv c q
+  deriv c (p :<.> q) = delta p <.> deriv c q <+> deriv c p <.> q
+  deriv c (Closure p) = deriv c (p <.> Closure p) -- since deriv c one = zero
+                        -- deriv c (one <+> p <.> Closure p)
+
+re0, re1 :: RegExp String
+re0 = zero
+re1 = one
+
+re2 :: RegExp String
+re2 = single "a" <+> single "b"
+
+-- | Interpret a regular expression
+regexp :: (ClosedSemiring a, HasSingle a s) => RegExp s -> a
+regexp (Single s)  = single s
+regexp Zero        = zero
+regexp One         = one
+regexp (u :<+> v)  = regexp u <+> regexp v
+regexp (u :<.> v)  = regexp u <.> regexp v
+regexp (Closure u) = closure (regexp u)
 
 {--------------------------------------------------------------------
     List trie as a language
@@ -362,9 +458,26 @@ instance HasTrie c => HasTrie [c] where
 --   
 --   untrie (e :< ts) = list e (\ c cs -> untrie (untrie ts c) cs)
 
-list :: b -> (a -> [a] -> b) -> [a] -> b
-list b _ [] = b
-list _ f (a:as) = f a as
+list :: a -> (c -> [c] -> a) -> [c] -> a
+list a _ [] = a
+list _ f (c:as) = f c as
+
+unlist :: ([c] -> a) -> a :* (c -> [c] -> a)
+unlist f = (f [], \ c as -> f (c:as))
+
+--   \ c cs -> f (c:cs)
+-- = \ c cs -> (f . (c :)) cs
+-- = \ c -> f . (c :)
+-- = \ c -> der c f
+-- = flip der f
+
+-- TODO: rewrite trie @[c] vis unlist.
+
+-- TODO: rename list & unlist.
+
+-- TODO: Rewrite trie/untrie via list/unlist.
+-- Maybe change HasTrie to have one isomorphism-valued method.
+-- Or save for the isomorphism paper.
 
 ltriePred :: HasTrie c => LTrie c Bool -> Pred [c]
 ltriePred = Pred . untrie

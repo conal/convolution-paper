@@ -80,6 +80,13 @@ Conal Elliott
 
 \sectionl{Introduction}
 
+%format <+> = "+"
+%format <.> = "\ast"
+%format zero = 0
+%format one = 1
+%format zero = "\boldsymbol{0}"
+%format one = "\boldsymbol{1}"
+
 \sectionl{Languages}
 
 \mynote{Summarize/review languages as sets, including singleton, union, concatenation, and star/closure.}
@@ -153,13 +160,6 @@ instance HasSingle (Set s) s where
 All we needed from strings is that they form a monoid, generalize to sets of values from any monoid.\footnote{The |Monoid| class defines $\mappend$ and $\eps$.}
 
 \mynote{On second thought, postpone generalization from lists to monoids later.}
-
-\section{Regular expressions}
-
-\mynote{Definition, instances, and universal conversion to arbitrary language representation.}
-
-\mynote{Maybe the ``derivative'' (left quotient) should be a language method.
-Alternatively, use |Comonad|, where |coreturn| and |cojoin| are |single| and |deriv|.}
 
 \sectionl{Matching}
 
@@ -250,6 +250,65 @@ stripPrefix _ _                      = Nothing
 }, |residPred| is a homomorphism with respect to each instantiated class.
 \end{theorem}
 
+\section{Regular expressions}
+
+%format :<+> = "\mathbin{:\!\!+}"
+%format :<.> = "\mathbin{:\!\!\ast}"
+
+Regular expressions are widely used as a syntactic description of regular languages and can be represented as an algebraic data type:
+\begin{code}
+infixl 6  :<+>
+infixl 7  :<.>
+
+data RegExp c  =  Char c
+               |  Zero
+               |  One
+               |  RegExp c  :<+>  RegExp c
+               |  RegExp c  :<.>  RegExp c
+               |  Closure (RegExp c)
+  deriving Show
+\end{code}
+We can convert regular expressions  to \emph{any} closed semiring with singletons:
+\begin{code}
+regexp :: (ClosedSemiring a, HasSingle a [c]) => RegExp c -> a
+regexp (Char c)      = single [c]
+regexp Zero          = zero
+regexp One           = one
+regexp (u  :<+>  v)  = regexp u  <+>  regexp v
+regexp (u  :<.>  v)  = regexp u  <.>  regexp v
+regexp (Closure u)   = closure (regexp u)
+\end{code}
+
+\begin{theorem}[\provedIn{theorem:regexp}]\thmLabel{regexp}
+Given the definitions in \figrefdef{regexp}{Regular expressions as a language (specified by homomorphicity of |regexp|)}{
+\begin{code}
+instance Semiring (RegExp c) where
+  zero  = Zero
+  one   = One
+  Zero <+> b = b
+  a <+> Zero = a
+  a <+> b = a :<+> b
+  Zero <.> _ = Zero
+  _ <.> Zero = Zero
+  One <.> b = b
+  a <.> One = a
+  a <.> b = a :<.> b
+
+instance ClosedSemiring (RegExp c) where
+  closure Zero = one
+  closure e    = Closure e
+
+instance HasSingle (RegExp c) [c] where
+  single s = foldr (\ c e -> Char c <.> e) one s
+\end{code}
+\vspace{-4ex}
+}, |regexp| is a homomorphism with respect to each instantiated class.\notefoot{The |HasSingle| instance can use any |Foldable| in place of |[]|. 
+One could also define balanced folding of sums and products via two monoid wrappers, probably a good idea.}
+(Note that the semiring laws allow optimization.\footnote{For idempotent semirings, one could also optimize |closure One| to |one|, but later interpretations will need a different value.})
+
+\end{theorem}
+
+
 \sectionl{Derivatives of languages}
 
 The language matching algorithms embodied in the |Pred| and |Resid| types (defined in \secreftwo{Matching}{List of successes}) both perform backtracking.
@@ -311,7 +370,7 @@ instance Eq a => HasDecomp (Set a) a where
 
 As with the other classes above, we can calculate instances of |HasDecomp|:
 \begin{theorem}[\provedIn{theorem:HasDecomp}]\thmLabel{HasDecomp}
-Given the definitions in \figrefdef{HasDecomp}{Decomposition language representations (specified by homomorphicity)}{
+Given the definitions in \figrefdef{HasDecomp}{Decomposition of language representations (specified by homomorphicity)}{
 \begin{code}
 instance HasDecomp (Pred [c]) c where
   delta (Pred f)  | f []       = one
@@ -323,8 +382,25 @@ instance HasDecomp (Resid s) s where
                    | otherwise        = zero
   deriv c (Resid f) = Resid (f . (c :)) -- \mynote{Check}
 \end{code}
+\begin{code}
+instance Eq c => HasDecomp (RegExp c) c where
+  delta (Char _)                  = zero
+  delta Zero                      = zero
+  delta One                       = one
+  delta (p  :<+>  q)              = delta p  <+>  delta q
+  delta (p  :<.>  q)              = delta p  <.>  delta q
+  delta (Closure p)               = closure (delta p)
+  
+  deriv c (Char c')  | c == c'    = one
+                     | otherwise  = zero
+  deriv _ Zero                    = zero
+  deriv _ One                     = zero
+  deriv c (p  :<+>  q)            = deriv c p <+> deriv c q
+  deriv c (p  :<.>  q)            = delta p <.> deriv c q  <+>  deriv c p <.> q
+  deriv c (Closure p)             = deriv c (p <.> Closure p)
+\end{code}
 \vspace{-4ex}
-}, |predSet| and |residPred| are |HasDecomp| homomorphisms.
+}, |predSet|, |residPred|, and |regexp| are |HasDecomp| homomorphisms.
 \end{theorem}
 \noindent
 With this new vocabulary, \lemRef{Brzozowski decomposition} can be interpreted much more broadly than languages as sets of sequences.
@@ -352,6 +428,8 @@ With this new vocabulary, \lemRef{Brzozowski decomposition} can be interpreted m
 \subsection{\thmRef{pred}}\proofLabel{theorem:pred}
 
 \subsection{\thmRef{resid}}\proofLabel{theorem:resid}
+
+\subsection{\thmRef{regexp}}\proofLabel{theorem:regexp}
 
 \subsection{\thmRef{HasDecomp}}\proofLabel{theorem:HasDecomp}
 

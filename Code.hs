@@ -198,13 +198,13 @@ infixl 6 :<+>
 infixl 7 :<.>
 
 -- | Regular expression
-data RegExp s =
-    Single s
+data RegExp c =
+    Char c
   | Zero
   | One
-  | RegExp s :<+> RegExp s
-  | RegExp s :<.> RegExp s
-  | Closure (RegExp s)
+  | RegExp c :<+> RegExp c
+  | RegExp c :<.> RegExp c
+  | Closure (RegExp c)
  deriving Show
 
 -- TODO: instantiate Show manually, using the method names instead of constructors.
@@ -215,20 +215,20 @@ data RegExp s =
 
 #if 0
 
-instance Semiring (RegExp s) where
+instance Semiring (RegExp c) where
   zero  = Zero
   one   = One
   (<+>) = (:<+>)
   (<.>) = (:<.>)
 
-instance ClosedSemiring (RegExp s) where
+instance ClosedSemiring (RegExp c) where
   closure = Closure
 
 #else
 
 -- Optimize RegExp methods via semiring laws
 
-instance Semiring (RegExp s) where
+instance Semiring (RegExp c) where
   zero  = Zero
   one   = One
   Zero <+> b = b
@@ -240,48 +240,58 @@ instance Semiring (RegExp s) where
   a <.> One = a
   a <.> b = a :<.> b
 
-instance ClosedSemiring (RegExp s) where
+instance ClosedSemiring (RegExp c) where
   closure Zero = One
-  closure e = Closure e
+  closure e    = Closure e
 
 #endif
 
-instance HasSingle (RegExp s) s where
-  single = Single
+#if 0
 
-instance Eq c => HasDecomp (RegExp [c]) c where
-  delta (Single s) | null s = one
-                   | otherwise = zero
-  delta Zero = zero
-  delta One = one
-  delta (p :<+> q) = delta p <+> delta q
-  delta (p :<.> q) = delta p <.> delta q
-  delta (Closure p) = closure (delta p)
-  deriv _ (Single []) = zero
-  deriv c (Single (c':s)) | c == c' = Single s
-                          | otherwise = zero
-  deriv _ Zero = zero
-  deriv _ One = zero
-  deriv c (p :<+> q) = deriv c p <+> deriv c q
-  deriv c (p :<.> q) = delta p <.> deriv c q <+> deriv c p <.> q
-  deriv c (Closure p) = deriv c (p <.> Closure p) -- since deriv c one = zero
+instance HasSingle (RegExp c) [c] where
+  single = foldr (\ c e -> Char c <.> e) One
+
+#else
+-- Or from an arbitrary foldable
+instance Foldable f => HasSingle (RegExp c) (f c) where
+  single = foldr (\ c e -> Char c <.> e) One
+
+-- We could even define balanced folding of sums and products via two monoid
+-- wrappers.
+
+#endif
+
+instance Eq c => HasDecomp (RegExp c) c where
+  delta (Char _)                = zero
+  delta Zero                    = zero
+  delta One                     = one
+  delta (p :<+> q)              = delta p <+> delta q
+  delta (p :<.> q)              = delta p <.> delta q
+  delta (Closure p)             = closure (delta p)
+  deriv c (Char c') | c == c'   = one
+                    | otherwise = zero
+  deriv _ Zero                  = zero
+  deriv _ One                   = zero
+  deriv c (p :<+> q)            = deriv c p <+> deriv c q
+  deriv c (p :<.> q)            = delta p <.> deriv c q <+> deriv c p <.> q
+  deriv c (Closure p)           = deriv c (p <.> Closure p) -- since deriv c one = zero
                         -- deriv c (one <+> p <.> Closure p)
 
-re0, re1 :: RegExp String
+re0, re1 :: RegExp Char
 re0 = zero
 re1 = one
 
-re2 :: RegExp String
+re2 :: RegExp Char
 re2 = single "a" <+> single "b"
 
 -- | Interpret a regular expression
-regexp :: (ClosedSemiring a, HasSingle a s) => RegExp s -> a
-regexp (Single s)  = single s
-regexp Zero        = zero
-regexp One         = one
-regexp (u :<+> v)  = regexp u <+> regexp v
-regexp (u :<.> v)  = regexp u <.> regexp v
-regexp (Closure u) = closure (regexp u)
+regexp :: (ClosedSemiring a, HasSingle a [c]) => RegExp c -> a
+regexp (Char c)      = single [c]
+regexp Zero          = zero
+regexp One           = one
+regexp (u  :<+>  v)  = regexp u <+> regexp v
+regexp (u  :<.>  v)  = regexp u <.> regexp v
+regexp (Closure u)   = closure (regexp u)
 
 {--------------------------------------------------------------------
     List trie as a language

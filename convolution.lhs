@@ -75,6 +75,7 @@ Conal Elliott
 \nc\zero{\boldsymbol{0}}
 \nc\one{\boldsymbol{1}}
 \nc\hasEps{\mathop{\delta}}
+\nc\id{\mathop{id}}
 
 \begin{document}
 
@@ -139,6 +140,12 @@ class HasSingle a x where
 \end{code}
 \vspace{-4ex}
 } shows Haskell classes for representations of languages (and later generalizations), combining the star semiring vocabulary with an operation for singletons.
+The singleton-forming operation must satisfy the following properties:
+\begin{align*}
+\single \eps &= \one \\
+\single {u \mappend v} &= \single u \conv \single v
+\end{align*}
+i.e., |single| is a monoid homomorphism (targeting the product monoid).
 
 %format Set = "\mathcal P"
 %format emptyset = "\emptyset"
@@ -338,13 +345,14 @@ $$
 \end{definition}
 
 \begin{theorem}[\provedIn{theorem:hasEps}]\thmLabel{hasEps}
-The $\hasEps$ function is a closed-semiring homomorphism, i.e.,
+The $\hasEps$ function is a closed-semiring homomorphism, i.e.,\notefoot{Do I really want |hasEps p| to be the method rather than $\eps \in p$?}
 %if True
 \begin{align*}
 \hasEps \zero       &= \zero \\
 \hasEps \one        &= \one \\
 \hasEps (p + q)     &= \hasEps p + \hasEps q \\
 \hasEps (p \conv q) &= \hasEps p \conv \hasEps q \\
+\hasEps (\closure p) &= \closure{(\hasEps p)}\\
 \end{align*}
 %else
 {\mathindent8ex
@@ -358,26 +366,38 @@ hasEps (p  <.>  q)  = hasEps p  <.>  hasEps q
 %endif
 \end{theorem}
 
-\begin{definition}
-The \emph{derivative} $\derivs u p$ of a language $p$ with respect to a string $u$ is the subset of $u$-suffixes of strings in $p$, i.e.,
+%format deriv (c) = "\deriv{"c"}"
+%format derivs (s) = "\derivs{"s"}"
+
+\begin{definition} \defLabel{derivs}
+The \emph{derivative} $\derivs u p$ of a language $p$ with respect to a string $u$ is the set of $u$-suffixes of strings in $p$, i.e.,
 $$ \derivs u p = \set{ v \mid u \mappend v \in p } $$
 \end{definition}
-\begin{theorem}[\provedIn{theorem:deriv-monoid}]\thmLabel{deriv-monoid}
-The $\derivOp$ operation satisfies the following properties:
-$$ \derivs\eps p = p $$
-$$ \derivs{u \mappend v} p = \derivs u (\derivs v p) $$
+\begin{lemma}\lemLabel{deriv-member}
+For a string $s$ and language $p$,
+$$ s \in p \iff \eps \in \derivs s p .$$
+Proof: immediate from \defRef{derivs}.
+\end{lemma}
+\begin{lemma}[\provedIn{lemma:deriv-monoid}]\lemLabel{deriv-monoid}
+|derivs| satisfies the following properties:
+\begin{align*}
+\derivs\eps p &= p \\
+\derivs{u \mappend v} p &= \derivs u (\derivs v p)
+\end{align*}
 Equivalently,
-$$ \derivs\eps = \mathop{id} $$
-$$ \derivs{u \mappend v} = \derivs u \circ \derivs v $$
-In other words, $\derivOp$ is a monoid homomorphism (targeting the monoid of endo-functions).
-\end{theorem}
+\begin{align*}
+\derivs\eps &= \id \\
+\derivs{u \mappend v} &= \derivs u \circ \derivs v
+\end{align*}
+where $\id$ is the identity function.
+In other words, |derivs| is a monoid homomorphism (targeting the monoid of endo-functions).
+\end{lemma}
 
 \begin{definition}
-Given a single value (``symbol'') $c$, the derivative $\deriv c p$ of a language $p$ with respect to a single value (``symbol'') $c$ is the derivative of $p$ with respect to the singleton sequence $[c]$.
+The derivative $\deriv c p$ of a language $p$ with respect to a single value (``symbol'') $c$ is the derivative of $p$ with respect to the singleton sequence $[c]$.
 Equivalently, $\deriv c p = \set{v \mid c:v \in p}$, where ``$c:v$'' is the result of prepending $c$ to the sequence $v$ (so that $c:v = [c] \mappend v$).
 \end{definition}
-
-\begin{theorem}[\provedIn{theorem:deriv}]\thmLabel{deriv}
+\begin{lemma}[\citet{Brzozowski64}, Theorem 3.1]\lemLabel{deriv}
 The $\derivOp$ function has the following properties:
 \begin{align*}
 \deriv c \zero        &= \zero \\
@@ -386,16 +406,12 @@ The $\derivOp$ function has the following properties:
 \deriv c (p \conv q)  &= \hasEps p \conv \deriv c q + \deriv c p \conv q \\
 \deriv c (\closure p) &= \deriv c (p \conv \closure p) \\
 \end{align*}
-\end{theorem}
-\mynote{Hm. Do I mean derivative with respect to a single symbol or an arbitrary string?}
+\end{lemma}
 
 \noindent
-An effective implementation of $\deriv u$ would allow test for membership, as follows:
-\begin{lemma}
-For a string $u$ and language $p$,
-$$ u \in p \iff \eps \in \deriv u p .$$
-\end{lemma}
-%% Consider empty and non-empty strings separately:
+With this new vocabulary, \lemRefThree{deriv-member}{deriv-monoid}{deriv} can be interpreted much more broadly than languages as sets of sequences.
+
+%if False
 
 \mynote{Do we need the following here?}
 
@@ -411,7 +427,7 @@ c \cat q & = \set{c:v \mid v \in q} \\
 \end{lemma}
 Note that $c \cat \deriv c p$ contains exactly the strings in $p$ that begin with $c$, so \lemRef{Brzozowski decomposition} partitions $p$ into subsets for the empty string and for each possible leading symbol.
 
-%format deriv (c) = "\deriv{"c"}"
+%endif
 
 Let's package up these operations as another abstract interface for language representations to implement, with a pseudocode (non-effective) instance for sets:
 \begin{code}
@@ -460,9 +476,8 @@ instance Eq c => HasDecomp (RegExp c) c where
 }, |predSet|, |residPred|, and |regexp| are |HasDecomp| homomorphisms.
 \end{theorem}
 \noindent
-With this new vocabulary, \lemRef{Brzozowski decomposition} can be interpreted much more broadly than languages as sets of sequences.
 
-
+Combined, \lemRefThree{deriv-member}{deriv-monoid}{deriv} give us an effective test for whether $s \in p$ for a sequence $s$ and language $p$, assuming that $p$ is expressed via |Semiring|, |ClosedSemiring|, and |HasSingle| and that it's possible to decide whether |hasEps q| is |zero| or not for a given language |q| (here |derivs s p|).
 
 \sectionl{Generalizing}
 \mynote{Outline:}
@@ -504,9 +519,7 @@ With this new vocabulary, \lemRef{Brzozowski decomposition} can be interpreted m
 
 \subsection{\thmRef{hasEps}}\proofLabel{theorem:hasEps}
 
-\subsection{\thmRef{deriv-monoid}}\proofLabel{theorem:deriv-monoid}
-
-\subsection{\thmRef{deriv}}\proofLabel{theorem:deriv}
+\subsection{\lemRef{deriv-monoid}}\proofLabel{lemma:deriv-monoid}
 
 \subsection{\thmRef{HasDecomp}}\proofLabel{theorem:HasDecomp}
 

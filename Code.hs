@@ -61,7 +61,7 @@ class HasSingle a s where
   single :: s -> a
 
 class HasDecomp a c | a -> c where
-  delta :: a -> a
+  hasEps :: a -> a
   deriv :: c -> a -> a
 
 type Language a c = (ClosedSemiring a, HasSingle a [c], HasDecomp a c)
@@ -97,7 +97,7 @@ instance HasSingle (Set a) a where
   single a = set a
 
 instance Eq a => HasDecomp (Set a) a where
-  delta p | [] `elem` p = one
+  hasEps p | [] `elem` p = one
            | otherwise   = zero
   deriv c p = set (cs | c : cs `elem` p)
 
@@ -145,7 +145,7 @@ splits' as = ([],as) : go as
    go (a:as')  = [((a:l),r) | (l,r) <- splits' as']
 
 instance HasDecomp (Pred [c]) c where
-  delta (Pred f) | f []      = one
+  hasEps (Pred f) | f []      = one
                   | otherwise = zero
   deriv c (Pred f) = Pred (f . (c :))
 
@@ -186,7 +186,7 @@ instance Eq s => HasSingle (Resid s) [s] where
                              Nothing -> [])
 
 instance HasDecomp (Resid s) s where
-  delta (Resid f) | any null (f []) = one
+  hasEps (Resid f) | any null (f []) = one
                    | otherwise       = zero
   deriv c (Resid f) = Resid (f . (c :)) -- TODO: check
 
@@ -262,18 +262,18 @@ instance Foldable f => HasSingle (RegExp c) (f c) where
 #endif
 
 instance Eq c => HasDecomp (RegExp c) c where
-  delta (Char _)                = zero
-  delta Zero                    = zero
-  delta One                     = one
-  delta (p :<+> q)              = delta p <+> delta q
-  delta (p :<.> q)              = delta p <.> delta q
-  delta (Closure p)             = closure (delta p)
+  hasEps (Char _)                = zero
+  hasEps Zero                    = zero
+  hasEps One                     = one
+  hasEps (p :<+> q)              = hasEps p <+> hasEps q
+  hasEps (p :<.> q)              = hasEps p <.> hasEps q
+  hasEps (Closure p)             = closure (hasEps p)
   deriv c (Char c') | c == c'   = one
                     | otherwise = zero
   deriv _ Zero                  = zero
   deriv _ One                   = zero
   deriv c (p :<+> q)            = deriv c p <+> deriv c q
-  deriv c (p :<.> q)            = delta p <.> deriv c q <+> deriv c p <.> q
+  deriv c (p :<.> q)            = hasEps p <.> deriv c q <+> deriv c p <.> q
   deriv c (Closure p)           = deriv c (p <.> Closure p) -- since deriv c one = zero
                         -- deriv c (one <+> p <.> Closure p)
 

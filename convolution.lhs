@@ -66,8 +66,8 @@ Conal Elliott
 \nc\has[1]{\mathop{\delta_{#1}}}
 \nc\del{\has{}}
 \nc\lquot{\setminus}
-%% \nc\consl[2]{\single{[#1]} \cat #2}
-%% \nc\conslp[2]{\consl{#1}{(#2)}}
+\nc\consl[2]{\single{[#1]} \cat #2}
+\nc\conslp[2]{\consl{#1}{(#2)}}
 \nc\der[1]{\mathop{\mathcal{D}_{#1}}}
 
 \begin{document}
@@ -286,8 +286,8 @@ $$
 The following decomposition lemma is by \citet[Theorem 4.4]{Brzozowski64}:
 \begin{lemma}\lemLabel{Brzozowski decomposition}
 For any language (set of sequences) $p$, any member of $p$ is either empty or has the form $c:s$, i.e., a first element $c$ followed by a sequence $s$, i.e.,
-$$ p = \del p + \sum_c c \cat \der c p ,$$
-where, for a value (``symbol'') $c$ and language $q$, $c \cat q = \single{[c]} \cat q$, and $\der c q = \der{[c]}q$, i.e.,
+$$ p = \del p + \sum_c c : \der c p ,$$
+where, for a value (``symbol'') $c$ and language $q$, $c : q = \single{[c]} \ast q$, and $\der c q = \der{[c]}q$, i.e.,
 \begin{align*}
 c \cat q & = \set{c:v \mid v \in q} \\
 \der c q & = \set{v \mid c:v \in q}
@@ -295,18 +295,17 @@ c \cat q & = \set{c:v \mid v \in q} \\
 \end{lemma}
 Note that $c \cat \der c p$ contains exactly the strings in $p$ that begin with $c$, so \lemRef{Brzozowski decomposition} partitions $p$ into subsets for the empty string and for each possible leading symbol.
 
-%format hasEps = delta
 %format deriv (p) = "\der{"p"}"
 
 Let's package up these operations as another abstract interface for language representations to implement, with a pseudocode (non-effective) instance for sets:
 \begin{code}
-class HasDecomp s c | s -> c where
-  hasEps  :: s -> s
-  deriv   :: c -> s -> s
+class HasDecomp a c | a -> c where
+  delta  :: a -> a
+  deriv  :: c -> a -> a
 
 instance Eq a => HasDecomp (Set a) a where
-  hasEps p  | mempty `elem` p  = one
-            | otherwise        = zero
+  delta p  | mempty `elem` p  = one
+           | otherwise        = zero
   deriv c p = set (cs | c : cs `elem` p)
 \end{code}
 
@@ -315,19 +314,20 @@ As with the other classes above, we can calculate instances of |HasDecomp|:
 Given the definitions in \figrefdef{HasDecomp}{Decomposition language representations (specified by homomorphicity)}{
 \begin{code}
 instance HasDecomp (Pred [c]) c where
-  hasEps (Pred f)  | f []       = one
-                   | otherwise  = zero
+  delta (Pred f)  | f []       = one
+                  | otherwise  = zero
   deriv c (Pred f) = Pred (f . (c :))
 
 instance HasDecomp (Resid s) s where
-  hasEps (Resid f)  | any null (f [])  = one
-                    | otherwise        = zero
+  delta (Resid f)  | any null (f [])  = one
+                   | otherwise        = zero
   deriv c (Resid f) = Resid (f . (c :)) -- \mynote{Check}
 \end{code}
 \vspace{-4ex}
 }, |predSet| and |residPred| are |HasDecomp| homomorphisms.
 \end{theorem}
-
+\noindent
+With this new vocabulary, \lemRef{Brzozowski decomposition} can be interpreted much more broadly than languages as sets of sequences.
 
 \sectionl{Generalizing}
 \mynote{Outline:}

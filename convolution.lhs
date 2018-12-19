@@ -64,11 +64,17 @@ Conal Elliott
 \nc\union{\cup}
 \nc\bigunion{\bigcup}
 \nc\has[1]{\mathop{\delta_{#1}}}
-\nc\del{\has{}}
+% \nc\del{\has{}}
 \nc\lquot{\setminus}
 \nc\consl[2]{\single{[#1]} \cat #2}
 \nc\conslp[2]{\consl{#1}{(#2)}}
-\nc\der[1]{\mathop{\mathcal{D}_{#1}}}
+\nc\derivOp{\mathcal{D}}
+\nc\derivs[1]{\mathop{\derivOp^{\ast}_{#1}}}
+\nc\deriv[1]{\mathop{\derivOp_{#1}}}
+\nc\conv{\ast}
+\nc\zero{\boldsymbol{0}}
+\nc\one{\boldsymbol{1}}
+\nc\hasEps{\mathop{\delta}}
 
 \begin{document}
 
@@ -81,11 +87,11 @@ Conal Elliott
 \sectionl{Introduction}
 
 %format <+> = "+"
-%format <.> = "\ast"
-%format zero = 0
-%format one = 1
-%format zero = "\boldsymbol{0}"
-%format one = "\boldsymbol{1}"
+%format <.> = "\conv"
+%% %format zero = 0
+%% %format one = 1
+%format zero = "\zero"
+%format one = "\one"
 
 \sectionl{Languages}
 
@@ -253,7 +259,7 @@ stripPrefix _ _                      = Nothing
 \section{Regular expressions}
 
 %format :<+> = "\mathbin{:\!\!+}"
-%format :<.> = "\mathbin{:\!\!\ast}"
+%format :<.> = "\mathbin{:\!\!\conv}"
 
 Regular expressions are widely used as a syntactic description of regular languages and can be represented as an algebraic data type:
 \begin{code}
@@ -318,53 +324,104 @@ While such parser generators typically have relatively complex implementations a
 He applied this technique only to regular languages and expressed it as a transformation that he termed ``derivatives of regular expressions'' \citep{Brzozowski64} \mynote{additional references}.
 Much more recently \citet{Might2010YaccID} extended the technique from regular to \emph{context-free} languages as a transformation on context-free grammars.
 
-\begin{definition}
-The \emph{derivative} $\der u p$ of a language $p$ with respect to a string $u$ is the subset of $u$-suffixes of strings in $p$, i.e.,
-$$ \der u p = \set{ v \mid u \mappend v \in p } $$
-%% Given a single value (``symbol'') $c$, define $\der c$ to be $\der{[c]}$.
-%% Equivalently, $\der c p = \set{v \mid c:v \in p}$, where ``$c:v$''.
-\end{definition}
-\noindent
-An effective implementation of $\der u$ would allow test for membership, as follows:
-\begin{lemma}
-For a string $u$ and language $p$,
-$$ u \in p \iff \eps \in \der u p .$$
-\end{lemma}
-%% Consider empty and non-empty strings separately:
-\begin{definition} \defLabel{delta}
-Let $\del p$ be a set containing just the empty string $\eps$ if $\eps \in p$ and otherwise the empty set itself:
+%format hasEps = "\hasEps"
+
+\begin{definition} \defLabel{hasEps}
+Let $\hasEps p$ be a set containing just the empty string $\eps$ if $\eps \in p$ and otherwise the empty set itself:
 $$
-\del p =
+\hasEps p =
         \begin{cases}
-        1 & \text{if $\eps \in p$} \\
-        0 & \text{otherwise}
+        \one & \text{if $\eps \in p$} \\
+        \zero & \text{otherwise}
         \end{cases} .
 $$
 \end{definition}
 
+\begin{theorem}[\provedIn{theorem:hasEps}]\thmLabel{hasEps}
+The $\hasEps$ function is a closed-semiring homomorphism, i.e.,
+%if True
+\begin{align*}
+\hasEps \zero       &= \zero \\
+\hasEps \one        &= \one \\
+\hasEps (p + q)     &= \hasEps p + \hasEps q \\
+\hasEps (p \conv q) &= \hasEps p \conv \hasEps q \\
+\end{align*}
+%else
+{\mathindent8ex
+\begin{code}
+hasEps zero         = zero
+hasEps one          = one
+hasEps (p  <+>  q)  = hasEps p  <+>  hasEps q
+hasEps (p  <.>  q)  = hasEps p  <.>  hasEps q
+\end{code}
+}
+%endif
+\end{theorem}
+
+\begin{definition}
+The \emph{derivative} $\derivs u p$ of a language $p$ with respect to a string $u$ is the subset of $u$-suffixes of strings in $p$, i.e.,
+$$ \derivs u p = \set{ v \mid u \mappend v \in p } $$
+\end{definition}
+\begin{theorem}[\provedIn{theorem:deriv-monoid}]\thmLabel{deriv-monoid}
+The $\derivOp$ operation satisfies the following properties:
+$$ \derivs\eps p = p $$
+$$ \derivs{u \mappend v} p = \derivs u (\derivs v p) $$
+Equivalently,
+$$ \derivs\eps = \mathop{id} $$
+$$ \derivs{u \mappend v} = \derivs u \circ \derivs v $$
+In other words, $\derivOp$ is a monoid homomorphism (targeting the monoid of endo-functions).
+\end{theorem}
+
+\begin{definition}
+Given a single value (``symbol'') $c$, the derivative $\deriv c p$ of a language $p$ with respect to a single value (``symbol'') $c$ is the derivative of $p$ with respect to the singleton sequence $[c]$.
+Equivalently, $\deriv c p = \set{v \mid c:v \in p}$, where ``$c:v$'' is the result of prepending $c$ to the sequence $v$ (so that $c:v = [c] \mappend v$).
+\end{definition}
+
+\begin{theorem}[\provedIn{theorem:deriv}]\thmLabel{deriv}
+The $\derivOp$ function has the following properties:
+\begin{align*}
+\deriv c \zero        &= \zero \\
+\deriv c \one         &= \zero \\
+\deriv c (p + q)      &= \deriv c p + \deriv c q \\
+\deriv c (p \conv q)  &= \hasEps p \conv \deriv c q + \deriv c p \conv q \\
+\deriv c (\closure p) &= \deriv c (p \conv \closure p) \\
+\end{align*}
+\end{theorem}
+\mynote{Hm. Do I mean derivative with respect to a single symbol or an arbitrary string?}
+
+\noindent
+An effective implementation of $\deriv u$ would allow test for membership, as follows:
+\begin{lemma}
+For a string $u$ and language $p$,
+$$ u \in p \iff \eps \in \deriv u p .$$
+\end{lemma}
+%% Consider empty and non-empty strings separately:
+
+\mynote{Do we need the following here?}
+
 The following decomposition lemma is by \citet[Theorem 4.4]{Brzozowski64}:
 \begin{lemma}\lemLabel{Brzozowski decomposition}
 For any language (set of sequences) $p$, any member of $p$ is either empty or has the form $c:s$, i.e., a first element $c$ followed by a sequence $s$, i.e.,
-$$ p = \del p + \sum_c c : \der c p ,$$
-where, for a value (``symbol'') $c$ and language $q$, $c : q = \single{[c]} \ast q$, and $\der c q = \der{[c]}q$, i.e.,
+$$ p = \hasEps p + \sum_c c : \deriv c p ,$$
+where, for a value (``symbol'') $c$ and language $q$, $c : q = \single{[c]} \conv q$, and $\deriv c q = \deriv{[c]}q$, i.e.,
 \begin{align*}
 c \cat q & = \set{c:v \mid v \in q} \\
-\der c q & = \set{v \mid c:v \in q}
+\deriv c q & = \set{v \mid c:v \in q}
 \end{align*}
 \end{lemma}
-Note that $c \cat \der c p$ contains exactly the strings in $p$ that begin with $c$, so \lemRef{Brzozowski decomposition} partitions $p$ into subsets for the empty string and for each possible leading symbol.
+Note that $c \cat \deriv c p$ contains exactly the strings in $p$ that begin with $c$, so \lemRef{Brzozowski decomposition} partitions $p$ into subsets for the empty string and for each possible leading symbol.
 
-%format deriv (p) = "\der{"p"}"
+%format deriv (c) = "\deriv{"c"}"
 
 Let's package up these operations as another abstract interface for language representations to implement, with a pseudocode (non-effective) instance for sets:
 \begin{code}
 class HasDecomp a c | a -> c where
-  delta  :: a -> a
-  deriv  :: c -> a -> a
+  hasEps  :: a -> a
+  deriv   :: c -> a -> a
 
 instance Eq a => HasDecomp (Set a) a where
-  delta p  | mempty `elem` p  = one
-           | otherwise        = zero
+  hasEps p  | mempty `elem` p  = one
+            | otherwise        = zero
   deriv c p = set (cs | c : cs `elem` p)
 \end{code}
 
@@ -373,30 +430,30 @@ As with the other classes above, we can calculate instances of |HasDecomp|:
 Given the definitions in \figrefdef{HasDecomp}{Decomposition of language representations (specified by homomorphicity)}{
 \begin{code}
 instance HasDecomp (Pred [c]) c where
-  delta (Pred f)  | f []       = one
-                  | otherwise  = zero
+  hasEps (Pred f)  | f []       = one
+                   | otherwise  = zero
   deriv c (Pred f) = Pred (f . (c :))
 
 instance HasDecomp (Resid s) s where
-  delta (Resid f)  | any null (f [])  = one
-                   | otherwise        = zero
-  deriv c (Resid f) = Resid (f . (c :)) -- \mynote{Check}
+  hasEps (Resid f)  | any null (f [])  = one
+                    | otherwise        = zero
+  deriv c (Resid f) = Resid (f . (c :))
 \end{code}
 \begin{code}
 instance Eq c => HasDecomp (RegExp c) c where
-  delta (Char _)                  = zero
-  delta Zero                      = zero
-  delta One                       = one
-  delta (p  :<+>  q)              = delta p  <+>  delta q
-  delta (p  :<.>  q)              = delta p  <.>  delta q
-  delta (Closure p)               = closure (delta p)
+  hasEps (Char _)                  = zero
+  hasEps Zero                      = zero
+  hasEps One                       = one
+  hasEps (p  :<+>  q)              = hasEps p  <+>  hasEps q
+  hasEps (p  :<.>  q)              = hasEps p  <.>  hasEps q
+  hasEps (Closure p)               = closure (hasEps p)
   
   deriv c (Char c')  | c == c'    = one
                      | otherwise  = zero
   deriv _ Zero                    = zero
   deriv _ One                     = zero
   deriv c (p  :<+>  q)            = deriv c p <+> deriv c q
-  deriv c (p  :<.>  q)            = delta p <.> deriv c q  <+>  deriv c p <.> q
+  deriv c (p  :<.>  q)            = hasEps p <.> deriv c q  <+>  deriv c p <.> q
   deriv c (Closure p)             = deriv c (p <.> Closure p)
 \end{code}
 \vspace{-4ex}
@@ -404,6 +461,8 @@ instance Eq c => HasDecomp (RegExp c) c where
 \end{theorem}
 \noindent
 With this new vocabulary, \lemRef{Brzozowski decomposition} can be interpreted much more broadly than languages as sets of sequences.
+
+
 
 \sectionl{Generalizing}
 \mynote{Outline:}
@@ -419,6 +478,18 @@ With this new vocabulary, \lemRef{Brzozowski decomposition} can be interpreted m
 \end{itemize}
 
 
+\sectionl{Miscellany}
+\begin{itemize}
+\item State and prove:
+  \begin{itemize}
+  \item |single (u <> v) == single u <.> single v|.
+  \item |hasEps| is a semiring homomorphism.
+  \end{itemize}
+
+\end{itemize}
+
+
+
 % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
 
 \appendix
@@ -430,6 +501,12 @@ With this new vocabulary, \lemRef{Brzozowski decomposition} can be interpreted m
 \subsection{\thmRef{resid}}\proofLabel{theorem:resid}
 
 \subsection{\thmRef{regexp}}\proofLabel{theorem:regexp}
+
+\subsection{\thmRef{hasEps}}\proofLabel{theorem:hasEps}
+
+\subsection{\thmRef{deriv-monoid}}\proofLabel{theorem:deriv-monoid}
+
+\subsection{\thmRef{deriv}}\proofLabel{theorem:deriv}
 
 \subsection{\thmRef{HasDecomp}}\proofLabel{theorem:HasDecomp}
 

@@ -77,6 +77,9 @@ Conal Elliott
 \nc\hasEps{\mathop{\delta}}
 \nc\id{\mathop{id}}
 
+\DeclareMathOperator{\true}{true}
+\DeclareMathOperator{\false}{false}
+
 \begin{document}
 
 \maketitle
@@ -137,6 +140,15 @@ class Semiring a => ClosedSemiring a where
 
 class HasSingle a x where
   single :: x -> a
+
+instance Semiring Bool where
+  zero  = False
+  one   = True
+  (<+>)  = (||)
+  (<.>)  = (&&)
+
+instance ClosedSemiring Bool where
+  closure _ = one
 \end{code}
 \vspace{-4ex}
 } shows Haskell classes for representations of languages (and later generalizations), combining the star semiring vocabulary with an operation for singletons.
@@ -146,6 +158,7 @@ The singleton-forming operation must satisfy the following properties:
 \single {u \mappend v} &= \single u \conv \single v
 \end{align*}
 i.e., |single| is a monoid homomorphism (targeting the product monoid).
+As an example other than numbers and languages, \figref{classes} includes the closed semiring of boolean values.
 
 %format Set = "\mathcal P"
 %format emptyset = "\emptyset"
@@ -344,8 +357,8 @@ $$
 $$
 \end{definition}
 
-\begin{theorem}[\provedIn{theorem:hasEps}]\thmLabel{hasEps}
-The $\hasEps$ function is a closed-semiring homomorphism, i.e.,\notefoot{Do I really want |hasEps p| to be the method rather than $\eps \in p$?}
+\begin{lemma}[\provedIn{lemma:hasEps}]\lemLabel{hasEps}
+The $\hasEps$ function is a closed-semiring homomorphism, i.e.,\notefoot{Do I really want |hasEps p| to be the method rather than $\eps \in p$? I don't think so.}
 %if True
 \begin{align*}
 \hasEps \zero       &= \zero \\
@@ -364,7 +377,31 @@ hasEps (p  <.>  q)  = hasEps p  <.>  hasEps q
 \end{code}
 }
 %endif
-\end{theorem}
+\end{lemma}
+
+\nc\hasEpsB{\mathop{has_{\eps}}}
+\nc\hasEpsC[1]{\eps \in #1}
+
+\mynote{Alternative:}
+\begin{lemma}[\provedIn{lemma:hasEpsB}]\lemLabel{hasEpsB}
+The following properties hold:
+\begin{align*}
+\hasEpsC \zero       &\iff \false \\
+\hasEpsC \one        &\iff \true \\
+\hasEpsC {p + q}     &\iff \hasEpsC p \lor \hasEpsC q \\
+\hasEpsC {p \conv q} &\iff \hasEpsC p \land \hasEpsC q \\
+\hasEpsC {\closure p} &\iff \true \\
+\end{align*}
+Equivalently, containment of $\eps$ is a closed-semiring homomorphism.
+In other words, defining $\hasEpsB p = \eps \in p$, and recalling the nature of the closed-semiring of booleans from \figref{classes},
+\begin{align*}
+\hasEpsB \zero       &= \zero \\
+\hasEpsB \one        &= \one \\
+\hasEpsB (p + q)     &= \hasEpsB p + \hasEpsB q \\
+\hasEpsB (p \conv q) &= \hasEpsB p \conv \hasEpsB q \\
+\hasEpsB (\closure p) &= \closure{(\hasEpsB p)}\\
+\end{align*}
+\end{lemma}
 
 %format deriv (c) = "\deriv{"c"}"
 %format derivs (s) = "\derivs{"s"}"
@@ -398,7 +435,7 @@ The derivative $\deriv c p$ of a language $p$ with respect to a single value (``
 Equivalently, $\deriv c p = \set{v \mid c:v \in p}$, where ``$c:v$'' is the result of prepending $c$ to the sequence $v$ (so that $c:v = [c] \mappend v$).
 \end{definition}
 \begin{lemma}[\citet{Brzozowski64}, Theorem 3.1]\lemLabel{deriv}
-The $\derivOp$ function has the following properties:
+The $\derivOp$ operation has the following properties:
 \begin{align*}
 \deriv c \zero        &= \zero \\
 \deriv c \one         &= \zero \\
@@ -517,7 +554,7 @@ Combined, \lemRefThree{deriv-member}{deriv-monoid}{deriv} give us an effective t
 
 \subsection{\thmRef{regexp}}\proofLabel{theorem:regexp}
 
-\subsection{\thmRef{hasEps}}\proofLabel{theorem:hasEps}
+\subsection{\lemRef{hasEps}}\proofLabel{lemma:hasEps}
 
 \subsection{\lemRef{deriv-monoid}}\proofLabel{lemma:deriv-monoid}
 

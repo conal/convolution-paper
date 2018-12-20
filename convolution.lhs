@@ -513,9 +513,25 @@ acceptD p s = hasEps (derivs s p)
 
 \subsection{\thmRef{regexp}}\proofLabel{theorem:regexp}
 
-\subsection{\lemRef{hasEps}}\proofLabel{lemma:hasEps}
-
 \subsection{\lemRef{derivs-monoid}}\proofLabel{lemma:derivs-monoid}
+
+\begin{code}
+    derivs mempty p
+==  set ( w | mempty <> w `elem` p )  -- definition of |derivs mempty|
+==  set ( w | w `elem` p )            -- monoid law
+==  p                                 -- set notation
+\end{code}
+
+\begin{code}
+    derivs (u <> v) p
+==  set ( w | (u <> v) <> w `elem` p )          -- definition of |derivs (u<>v)|
+==  set ( w | u <> (v <> w) `elem` p )          -- monoid law
+==  set ( w | v <> w `elem` derivs u p )        -- definition of |derivs u|
+==  set ( w | w `elem` derivs v (derivs u p) )  -- definition of |derivs v|
+==  derivs v (derivs u p)
+\end{code}
+
+\subsection{\lemRef{hasEps}}\proofLabel{lemma:hasEps}
 
 \subsection{\thmRef{HasDecomp}}\proofLabel{theorem:HasDecomp}
 

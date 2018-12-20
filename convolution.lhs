@@ -54,27 +54,22 @@ Conal Elliott
 
 \nc\set[1]{\{\,#1\,\}}
 \nc\Pow{\mathcal{P}}
-\nc\setop[1]{\mathbin{\hat{#1}}}
 \nc\eps{\varepsilon}
 \nc\closure[1]{#1^{\ast}}
 \nc\mappend{\diamond}
-% \nc\cat{\cdot}
 \nc\cat{\mathop{}}
 \nc\single\overline
 \nc\union{\cup}
 \nc\bigunion{\bigcup}
 \nc\has[1]{\mathop{\delta_{#1}}}
-% \nc\del{\has{}}
-\nc\lquot{\setminus}
-\nc\consl[2]{\single{[#1]} \cat #2}
-\nc\conslp[2]{\consl{#1}{(#2)}}
 \nc\derivOp{\mathcal{D}}
 \nc\derivs[1]{\mathop{\derivOp^{\ast}_{#1}}}
 \nc\deriv[1]{\mathop{\derivOp_{#1}}}
 \nc\conv{\ast}
 \nc\zero{\mathbf{0}}
 \nc\one{\mathbf{1}}
-% \nc\hasEps{\mathop{\delta}}
+%% \nc\zero{0}
+%% \nc\one{1}
 \nc\hasEps{\mathop{\Varid{has}_{\eps}}}
 \nc\id{\mathop{\Varid{id}}}
 \nc\ite[3]{\text{if}\ #1\ \text{then}\ #2\ \text{else}\ #3}
@@ -348,22 +343,68 @@ While such parser generators typically have relatively complex implementations a
 He applied this technique only to regular languages and expressed it as a transformation that he termed ``derivatives of regular expressions'' \citep{Brzozowski64} \mynote{additional references}.
 Much more recently \citet{Might2010YaccID} extended the technique from regular to \emph{context-free} languages as a transformation on context-free grammars.
 
+%format deriv (c) = "\derivOp_{"c"}"
+%format derivs (s) = "\derivOp^{\ast}_{"s"}"
+
+%% %format deriv (c) = "\deriv{"c"}"
+%% %format derivs (s) = "\derivs{"s"}"
+
+\begin{definition} \defLabel{derivs}
+The \emph{derivative} $\derivs u p$ of a language $p$ with respect to a string $u$ is the set of $u$-suffixes of strings in $p$, i.e.,
+$$ \derivs u p = \set{ v \mid u \mappend v \in p } $$
+\end{definition}
+\begin{lemma}\lemLabel{derivs-member}
+For a string $s$ and language $p$,
+$$ s \in p \iff \eps \in \derivs s p .$$
+Proof: immediate from \defRef{derivs}.
+\end{lemma}
+The practical value of \lemRef{derivs-member} is that |derivs s p| and |mempty|-containment can be computed easily and efficiently, thanks to \lemRefs{derivs-monoid}{hasEps} below.
+\begin{lemma}[\provedIn{lemma:derivs-monoid}]\lemLabel{derivs-monoid}
+|derivs| satisfies the following properties:
+\begin{align*}
+\derivs\eps p &= p \\
+\derivs{u \mappend v} p &= \derivs u (\derivs v p)
+\end{align*}
+Equivalently,
+\begin{align*}
+\derivs\eps &= \id \\
+\derivs{u \mappend v} &= \derivs u \circ \derivs v
+\end{align*}
+where $\id$ is the identity function.
+In other words, |derivs| is a monoid homomorphism (targeting the monoid of endo-functions).
+\end{lemma}
+
 %% %format hasEps = "\hasEps"
 %format hasEps = "\Varid{has_{\eps}}"
 
-\begin{definition} \defLabel{hasEps}
-Let $\hasEps p$ be a set containing just the empty string $\eps$ if $\eps \in p$ and otherwise the empty set itself:\notefoot{Consider eliminating |delta| in favor of just using |hasEps|.}
-$$
-\delta\,p =
-   \begin{cases}
-   \one & \text{if $\eps \in p$} \\
-   \zero & \text{otherwise}
-   \end{cases} .
-$$
-\end{definition}
+\newcommand\iteB[3]{
+\begin{cases}
+#2 & \text{if $#1$} \\
+#3 & \text{otherwise}
+\end{cases}}
 
+\begin{definition}
+The derivative $\deriv c p$ of a language $p$ with respect to a single value (``symbol'') $c$ is the derivative of $p$ with respect to the singleton sequence $[c]$, i.e. $$\deriv c p = \derivs{[c]} p.$$
+Equivalently, $\deriv c p = \set{v \mid c:v \in p}$, where ``$c:v$'' is the result of prepending $c$ to the sequence $v$ (so that $c:v = [c] \mappend v$).
+\end{definition}
+\begin{lemma}[\citet{Brzozowski64}, Theorem 3.1]\lemLabel{deriv}
+The $\derivOp$ operation has the following properties:\footnote{The fourth property can be written more directly as follows:
+$$\deriv c (p \conv q) = (\ite{\eps \in p}{\deriv c q}0) + \deriv c p \conv q $$
+or even
+$$\deriv c (p \conv q) = \iteB{\eps \in p}{\deriv c q + \deriv c p \conv q}{\deriv c p \conv q}. $$}
+\begin{align*}
+\deriv c \zero        &= \zero \\
+\deriv c \one         &= \zero \\
+\deriv c (p + q)      &= \deriv c p + \deriv c q \\
+\deriv c (p \conv q)  &= \delta\, p \conv \deriv c q + \deriv c p \conv q \\
+\deriv c (\closure p) &= \deriv c (p \conv \closure p) \\
+\end{align*}
+where $\delta\,p$ is the set containing just the empty string $\eps$ if $\eps \in p$ and otherwise the empty set itself:\notefoot{Consider eliminating |delta| in favor of just using |hasEps|.}
+$$ \delta\,p = \iteB{\one}{\zero}{\eps \in p} . $$
+\end{lemma}
+All that remains now is to see how to test whether $\eps \in p$ for a language $p$.
 \begin{lemma}[\provedIn{lemma:hasEps}]\lemLabel{hasEps}
-Defining $\hasEps p = \eps \in p$, the following properties hold:\notefoot{Move this definition to after \defRef{derivs} and \lemRef{deriv-member}, which motivate |hasEps|.}
+Defining $\hasEps p = \eps \in p$, the following properties hold:\notefoot{Move this definition to after \defRef{derivs} and \lemRef{derivs-member}, which motivate |hasEps|.}
 \begin{align*}
 \hasEps \zero        &= \false \\
 \hasEps \one         &= \true \\
@@ -381,73 +422,10 @@ Recalling the nature of the closed-semiring of booleans from \figref{classes}, t
 \end{align*}
 \end{lemma}
 
-%% %format deriv (c) = "\deriv{"c"}"
-%format deriv (c) = "\derivOp_{"c"}"
+%% \noindent
+%% With this new vocabulary, \lemRefThree{derivs-member}{derivs-monoid}{deriv} can be interpreted much more broadly than languages as sets of sequences.
 
-%format derivs (s) = "\derivs{"s"}"
-
-\begin{definition} \defLabel{derivs}
-The \emph{derivative} $\derivs u p$ of a language $p$ with respect to a string $u$ is the set of $u$-suffixes of strings in $p$, i.e.,
-$$ \derivs u p = \set{ v \mid u \mappend v \in p } $$
-\end{definition}
-\begin{lemma}\lemLabel{deriv-member}
-For a string $s$ and language $p$,
-$$ s \in p \iff \eps \in \derivs s p .$$
-Proof: immediate from \defRef{derivs}.
-\end{lemma}
-\begin{lemma}[\provedIn{lemma:deriv-monoid}]\lemLabel{deriv-monoid}
-|derivs| satisfies the following properties:
-\begin{align*}
-\derivs\eps p &= p \\
-\derivs{u \mappend v} p &= \derivs u (\derivs v p)
-\end{align*}
-Equivalently,
-\begin{align*}
-\derivs\eps &= \id \\
-\derivs{u \mappend v} &= \derivs u \circ \derivs v
-\end{align*}
-where $\id$ is the identity function.
-In other words, |derivs| is a monoid homomorphism (targeting the monoid of endo-functions).
-\end{lemma}
-
-\begin{definition}
-The derivative $\deriv c p$ of a language $p$ with respect to a single value (``symbol'') $c$ is the derivative of $p$ with respect to the singleton sequence $[c]$.
-Equivalently, $\deriv c p = \set{v \mid c:v \in p}$, where ``$c:v$'' is the result of prepending $c$ to the sequence $v$ (so that $c:v = [c] \mappend v$).
-\end{definition}
-\begin{lemma}[\citet{Brzozowski64}, Theorem 3.1]\lemLabel{deriv}
-The $\derivOp$ operation has the following properties:\footnote{The fourth property can be written in terms of |hasEps| instead of |delta|:
-$$\deriv c (p \conv q) = (\ite{\hasEps p}{\deriv c q}0) + \deriv c p \conv q .$$}
-\begin{align*}
-\deriv c \zero        &= \zero \\
-\deriv c \one         &= \zero \\
-\deriv c (p + q)      &= \deriv c p + \deriv c q \\
-\deriv c (p \conv q)  &= \delta\, p \conv \deriv c q + \deriv c p \conv q \\
-\deriv c (\closure p) &= \deriv c (p \conv \closure p) \\
-\end{align*}
-\end{lemma}
-
-\noindent
-With this new vocabulary, \lemRefThree{deriv-member}{deriv-monoid}{deriv} can be interpreted much more broadly than languages as sets of sequences.
-
-%if False
-
-\mynote{Do we need the following here?}
-
-The following decomposition lemma is by \citet[Theorem 4.4]{Brzozowski64}:
-\begin{lemma}\lemLabel{Brzozowski decomposition}
-For any language (set of sequences) $p$, any member of $p$ is either empty or has the form $c:s$, i.e., a first element $c$ followed by a sequence $s$, i.e.,
-$$ p = \hasEps p + \sum_c c : \deriv c p ,$$
-where, for a value (``symbol'') $c$ and language $q$, $c : q = \single{[c]} \conv q$, and $\deriv c q = \deriv{[c]}q$, i.e.,
-\begin{align*}
-c \cat q & = \set{c:v \mid v \in q} \\
-\deriv c q & = \set{v \mid c:v \in q}
-\end{align*}
-\end{lemma}
-Note that $c \cat \deriv c p$ contains exactly the strings in $p$ that begin with $c$, so \lemRef{Brzozowski decomposition} partitions $p$ into subsets for the empty string and for each possible leading symbol.
-
-%endif
-
-Let's package up these operations as another abstract interface for language representations to implement, with a pseudocode (non-effective) instance for sets:
+Let's package up these new operations as another abstract interface for language representations to implement so that \lemRefs{derivs-member}{hasEps} can be interpreted much more broadly than languages as sets of sequences.
 \begin{code}
 class HasDecomp a c | a -> c where
   hasEps  :: a -> Bool
@@ -457,8 +435,7 @@ instance Eq a => HasDecomp (Set a) a where
   hasEps   p = [] `elem` p
   deriv c  p = set (cs | c : cs `elem` p)
 \end{code}
-As with the other classes above, we can calculate instances of |HasDecomp|.
-
+As with |Semiring|, |ClosedSemiring|, and |HasSingle|, we can calculate instances of |HasDecomp|:
 \begin{theorem}[\provedIn{theorem:HasDecomp}]\thmLabel{HasDecomp}
 Given the definitions in \figrefdef{HasDecomp}{Decomposition of language representations (specified by homomorphicity)}{
 \begin{code}
@@ -493,9 +470,13 @@ instance Eq c => HasDecomp (RegExp c) c where
 }, |predSet|, |residPred|, and |regexp| are |HasDecomp| homomorphisms.
 \end{theorem}
 
-Taken together, \lemRefThree{deriv-member}{deriv-monoid}{deriv} give us an effective test for whether $s \in p$ for a sequence $s$ and language $p$, assuming that $p$ is expressed via |Semiring|, |ClosedSemiring|, and |HasSingle| and that it's possible to decide whether |hasEps q| is |zero| or not for a given language |q| (here |derivs s p|).
+Taken together, \lemRefs{derivs-member}{hasEps} give us an effective test for language membership, assuming that the language is expressed via |Semiring|, |ClosedSemiring|, and |HasSingle|.
+
+\mynote{Show some examples.}
 
 \sectionl{Tries}
+
+\mynote{An independent path to derivatives.}
 
 \sectionl{Generalizing}
 \mynote{Outline:}
@@ -525,7 +506,7 @@ Taken together, \lemRefThree{deriv-member}{deriv-monoid}{deriv} give us an effec
 
 \subsection{\lemRef{hasEps}}\proofLabel{lemma:hasEps}
 
-\subsection{\lemRef{deriv-monoid}}\proofLabel{lemma:deriv-monoid}
+\subsection{\lemRef{derivs-monoid}}\proofLabel{lemma:derivs-monoid}
 
 \subsection{\thmRef{HasDecomp}}\proofLabel{theorem:HasDecomp}
 

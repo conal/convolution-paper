@@ -26,15 +26,14 @@ library:
   exposed-modules:
       Code
 
-# tests:
-#   test:
-#     main:                GoldTests.hs
-#     source-dirs:         test
-#     ghc-options:
-#     dependencies:
-#     - Cabal >= 1.24.0.0
-#     - bytestring
-#     - tasty
-#     - tasty-golden
-#     - semiring-num
-#     - convolution-paper
+tests:
+  test:
+    main:                GoldTests.hs
+    source-dirs:         test
+    dependencies:
+    - base
+    - Cabal >= 1.24.0.0
+    - bytestring
+    - tasty
+    - tasty-golden
+    - paper

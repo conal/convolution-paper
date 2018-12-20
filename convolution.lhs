@@ -72,11 +72,11 @@ Conal Elliott
 \nc\derivs[1]{\mathop{\derivOp^{\ast}_{#1}}}
 \nc\deriv[1]{\mathop{\derivOp_{#1}}}
 \nc\conv{\ast}
-\nc\zero{\boldsymbol{0}}
-\nc\one{\boldsymbol{1}}
+\nc\zero{\mathbf{0}}
+\nc\one{\mathbf{1}}
 % \nc\hasEps{\mathop{\delta}}
-\nc\hasEps{\mathop{has_{\eps}}}
-\nc\id{\mathop{id}}
+\nc\hasEps{\mathop{\Varid{has}_{\eps}}}
+\nc\id{\mathop{\Varid{id}}}
 \nc\ite[3]{\text{if}\ #1\ \text{then}\ #2\ \text{else}\ #3}
 
 \DeclareMathOperator{\true}{true}

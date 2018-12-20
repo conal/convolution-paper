@@ -74,8 +74,10 @@ Conal Elliott
 \nc\conv{\ast}
 \nc\zero{\boldsymbol{0}}
 \nc\one{\boldsymbol{1}}
-\nc\hasEps{\mathop{\delta}}
+% \nc\hasEps{\mathop{\delta}}
+\nc\hasEps{\mathop{has_{\eps}}}
 \nc\id{\mathop{id}}
+\nc\ite[3]{\text{if}\ #1\ \text{then}\ #2\ \text{else}\ #3}
 
 \DeclareMathOperator{\true}{true}
 \DeclareMathOperator{\false}{false}
@@ -308,11 +310,13 @@ regexp (Closure u)   = closure (regexp u)
 \begin{theorem}[\provedIn{theorem:regexp}]\thmLabel{regexp}
 Given the definitions in \figrefdef{regexp}{Regular expressions as a language (specified by homomorphicity of |regexp|)}{
 \begin{code}
-instance Semiring (RegExp c) where
+instance Eq c => Semiring (RegExp c) where
   zero  = Zero
   one   = One
   Zero <+> b = b
   a <+> Zero = a
+  a :<.> c <+> b :<.> d | a == b = a <.> (c <+> d)
+  a :<.> c <+> b :<.> d | c == d = (a <+> b) <.> c
   a <+> b = a :<+> b
   Zero <.> _ = Zero
   _ <.> Zero = Zero
@@ -344,66 +348,42 @@ While such parser generators typically have relatively complex implementations a
 He applied this technique only to regular languages and expressed it as a transformation that he termed ``derivatives of regular expressions'' \citep{Brzozowski64} \mynote{additional references}.
 Much more recently \citet{Might2010YaccID} extended the technique from regular to \emph{context-free} languages as a transformation on context-free grammars.
 
-%format hasEps = "\hasEps"
+%% %format hasEps = "\hasEps"
+%format hasEps = "\Varid{has_{\eps}}"
 
 \begin{definition} \defLabel{hasEps}
-Let $\hasEps p$ be a set containing just the empty string $\eps$ if $\eps \in p$ and otherwise the empty set itself:
+Let $\hasEps p$ be a set containing just the empty string $\eps$ if $\eps \in p$ and otherwise the empty set itself:\notefoot{Consider eliminating |delta| in favor of just using |hasEps|.}
 $$
-\hasEps p =
-        \begin{cases}
-        \one & \text{if $\eps \in p$} \\
-        \zero & \text{otherwise}
-        \end{cases} .
+\delta\,p =
+   \begin{cases}
+   \one & \text{if $\eps \in p$} \\
+   \zero & \text{otherwise}
+   \end{cases} .
 $$
 \end{definition}
 
 \begin{lemma}[\provedIn{lemma:hasEps}]\lemLabel{hasEps}
-The $\hasEps$ function is a closed-semiring homomorphism, i.e.,\notefoot{Do I really want |hasEps p| to be the method rather than $\eps \in p$? I don't think so.}
-%if True
+Defining $\hasEps p = \eps \in p$, the following properties hold:\notefoot{Move this definition to after \defRef{derivs} and \lemRef{deriv-member}, which motivate |hasEps|.}
 \begin{align*}
-\hasEps \zero       &= \zero \\
-\hasEps \one        &= \one \\
-\hasEps (p + q)     &= \hasEps p + \hasEps q \\
-\hasEps (p \conv q) &= \hasEps p \conv \hasEps q \\
+\hasEps \zero        &= \false \\
+\hasEps \one         &= \true \\
+\hasEps (p + q)      &= \hasEps p \lor \hasEps q \\
+\hasEps (p \conv q)  &= \hasEps p \land \hasEps q \\
+\hasEps (\closure p) &= \true \\
+\end{align*}
+Recalling the nature of the closed-semiring of booleans from \figref{classes}, these properties amount to saying that $\hasEps$ is a closed-semiring homomorphism, i.e.,
+\begin{align*}
+\hasEps \zero        &= \zero \\
+\hasEps \one         &= \one \\
+\hasEps (p + q)      &= \hasEps p + \hasEps q \\
+\hasEps (p \conv q)  &= \hasEps p \conv \hasEps q \\
 \hasEps (\closure p) &= \closure{(\hasEps p)}\\
 \end{align*}
-%else
-{\mathindent8ex
-\begin{code}
-hasEps zero         = zero
-hasEps one          = one
-hasEps (p  <+>  q)  = hasEps p  <+>  hasEps q
-hasEps (p  <.>  q)  = hasEps p  <.>  hasEps q
-\end{code}
-}
-%endif
 \end{lemma}
 
-\nc\hasEpsB{\mathop{has_{\eps}}}
-\nc\hasEpsC[1]{\eps \in #1}
+%% %format deriv (c) = "\deriv{"c"}"
+%format deriv (c) = "\derivOp_{"c"}"
 
-\mynote{Alternative:}
-\begin{lemma}[\provedIn{lemma:hasEpsB}]\lemLabel{hasEpsB}
-The following properties hold:
-\begin{align*}
-\hasEpsC \zero       &\iff \false \\
-\hasEpsC \one        &\iff \true \\
-\hasEpsC {p + q}     &\iff \hasEpsC p \lor \hasEpsC q \\
-\hasEpsC {p \conv q} &\iff \hasEpsC p \land \hasEpsC q \\
-\hasEpsC {\closure p} &\iff \true \\
-\end{align*}
-Equivalently, containment of $\eps$ is a closed-semiring homomorphism.
-In other words, defining $\hasEpsB p = \eps \in p$, and recalling the nature of the closed-semiring of booleans from \figref{classes},
-\begin{align*}
-\hasEpsB \zero       &= \zero \\
-\hasEpsB \one        &= \one \\
-\hasEpsB (p + q)     &= \hasEpsB p + \hasEpsB q \\
-\hasEpsB (p \conv q) &= \hasEpsB p \conv \hasEpsB q \\
-\hasEpsB (\closure p) &= \closure{(\hasEpsB p)}\\
-\end{align*}
-\end{lemma}
-
-%format deriv (c) = "\deriv{"c"}"
 %format derivs (s) = "\derivs{"s"}"
 
 \begin{definition} \defLabel{derivs}
@@ -435,12 +415,13 @@ The derivative $\deriv c p$ of a language $p$ with respect to a single value (``
 Equivalently, $\deriv c p = \set{v \mid c:v \in p}$, where ``$c:v$'' is the result of prepending $c$ to the sequence $v$ (so that $c:v = [c] \mappend v$).
 \end{definition}
 \begin{lemma}[\citet{Brzozowski64}, Theorem 3.1]\lemLabel{deriv}
-The $\derivOp$ operation has the following properties:
+The $\derivOp$ operation has the following properties:\footnote{The fourth property can be written in terms of |hasEps| instead of |delta|:
+$$\deriv c (p \conv q) = (\ite{\hasEps p}{\deriv c q}0) + \deriv c p \conv q .$$}
 \begin{align*}
 \deriv c \zero        &= \zero \\
 \deriv c \one         &= \zero \\
 \deriv c (p + q)      &= \deriv c p + \deriv c q \\
-\deriv c (p \conv q)  &= \hasEps p \conv \deriv c q + \deriv c p \conv q \\
+\deriv c (p \conv q)  &= \delta\, p \conv \deriv c q + \deriv c p \conv q \\
 \deriv c (\closure p) &= \deriv c (p \conv \closure p) \\
 \end{align*}
 \end{lemma}
@@ -469,52 +450,52 @@ Note that $c \cat \deriv c p$ contains exactly the strings in $p$ that begin wit
 Let's package up these operations as another abstract interface for language representations to implement, with a pseudocode (non-effective) instance for sets:
 \begin{code}
 class HasDecomp a c | a -> c where
-  hasEps  :: a -> a
+  hasEps  :: a -> Bool
   deriv   :: c -> a -> a
 
 instance Eq a => HasDecomp (Set a) a where
-  hasEps p  | mempty `elem` p  = one
-            | otherwise        = zero
-  deriv c p = set (cs | c : cs `elem` p)
+  hasEps   p = [] `elem` p
+  deriv c  p = set (cs | c : cs `elem` p)
 \end{code}
+As with the other classes above, we can calculate instances of |HasDecomp|.
 
-As with the other classes above, we can calculate instances of |HasDecomp|:
 \begin{theorem}[\provedIn{theorem:HasDecomp}]\thmLabel{HasDecomp}
 Given the definitions in \figrefdef{HasDecomp}{Decomposition of language representations (specified by homomorphicity)}{
 \begin{code}
 instance HasDecomp (Pred [c]) c where
-  hasEps (Pred f)  | f []       = one
-                   | otherwise  = zero
-  deriv c (Pred f) = Pred (f . (c :))
+  hasEps   (Pred f) = f []
+  deriv c  (Pred f) = Pred (f . (c :))
 
 instance HasDecomp (Resid s) s where
-  hasEps (Resid f)  | any null (f [])  = one
-                    | otherwise        = zero
-  deriv c (Resid f) = Resid (f . (c :))
+  hasEps   (Resid f) = any null (f [])
+  deriv c  (Resid f) = Resid (f . (c :))
 \end{code}
 \begin{code}
 instance Eq c => HasDecomp (RegExp c) c where
-  hasEps (Char _)                  = zero
-  hasEps Zero                      = zero
-  hasEps One                       = one
-  hasEps (p  :<+>  q)              = hasEps p  <+>  hasEps q
-  hasEps (p  :<.>  q)              = hasEps p  <.>  hasEps q
-  hasEps (Closure p)               = closure (hasEps p)
+  hasEps (Char _)      = zero
+  hasEps Zero          = zero
+  hasEps One           = one
+  hasEps (p  :<+>  q)  = hasEps p  <+>  hasEps q
+  hasEps (p  :<.>  q)  = hasEps p  <.>  hasEps q
+  hasEps (Closure p)   = closure (hasEps p)
   
-  deriv c (Char c')  | c == c'    = one
-                     | otherwise  = zero
-  deriv _ Zero                    = zero
-  deriv _ One                     = zero
-  deriv c (p  :<+>  q)            = deriv c p <+> deriv c q
-  deriv c (p  :<.>  q)            = hasEps p <.> deriv c q  <+>  deriv c p <.> q
-  deriv c (Closure p)             = deriv c (p <.> Closure p)
+  deriv c (Char c')     = if c == c' then one else zero
+  deriv _ Zero          = zero
+  deriv _ One           = zero
+  deriv c (p  :<+>  q)  = deriv c p <+> deriv c q
+  deriv c (p  :<.>  q)  = delta p <.> deriv c q  <+>  deriv c p <.> q
+  deriv c (Closure p)   = deriv c (p <.> Closure p)
 \end{code}
+%%   deriv c (Char c')     = if c == c' then one else zero
+%%   deriv c (Char c')  | c == c'    = one
+%%                      | otherwise  = zero
 \vspace{-4ex}
 }, |predSet|, |residPred|, and |regexp| are |HasDecomp| homomorphisms.
 \end{theorem}
-\noindent
 
-Combined, \lemRefThree{deriv-member}{deriv-monoid}{deriv} give us an effective test for whether $s \in p$ for a sequence $s$ and language $p$, assuming that $p$ is expressed via |Semiring|, |ClosedSemiring|, and |HasSingle| and that it's possible to decide whether |hasEps q| is |zero| or not for a given language |q| (here |derivs s p|).
+Taken together, \lemRefThree{deriv-member}{deriv-monoid}{deriv} give us an effective test for whether $s \in p$ for a sequence $s$ and language $p$, assuming that $p$ is expressed via |Semiring|, |ClosedSemiring|, and |HasSingle| and that it's possible to decide whether |hasEps q| is |zero| or not for a given language |q| (here |derivs s p|).
+
+\sectionl{Tries}
 
 \sectionl{Generalizing}
 \mynote{Outline:}

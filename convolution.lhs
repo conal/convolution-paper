@@ -404,15 +404,13 @@ $$ \delta\,p = \iteB{\one}{\zero}{\eps \in p} . $$
 \end{lemma}
 All that remains now is to see how to test whether $\eps \in p$ for a language $p$.
 \begin{lemma}[\provedIn{lemma:hasEps}]\lemLabel{hasEps}
-Defining $\hasEps p = \eps \in p$, the following properties hold:\notefoot{Move this definition to after \defRef{derivs} and \lemRef{derivs-member}, which motivate |hasEps|.}
-\begin{align*}
-\hasEps \zero        &= \false \\
-\hasEps \one         &= \true \\
-\hasEps (p + q)      &= \hasEps p \lor \hasEps q \\
-\hasEps (p \conv q)  &= \hasEps p \land \hasEps q \\
-\hasEps (\closure p) &= \true \\
-\end{align*}
-Recalling the nature of the closed-semiring of booleans from \figref{classes}, these properties amount to saying that $\hasEps$ is a closed-semiring homomorphism, i.e.,
+The following properties hold:\notefoot{Move this definition to after \defRef{derivs} and \lemRef{derivs-member}, which motivate |hasEps|.}
+$$ \eps \not\in \zero $$
+$$ \eps \in \one $$
+$$ \eps \in p + q \iff \eps \in p \lor \eps \in q $$
+$$ \eps \in p \conv q \iff \eps \in p \land \eps \in q $$
+$$ \eps \in \closure p $$
+Recalling the nature of the closed-semiring of booleans from \figref{classes}, and defining $\hasEps p = \eps \in p$, these properties amount to saying that $\hasEps$ is a closed-semiring homomorphism, i.e.,
 \begin{align*}
 \hasEps \zero        &= \zero \\
 \hasEps \one         &= \one \\
@@ -425,7 +423,7 @@ Recalling the nature of the closed-semiring of booleans from \figref{classes}, t
 %% \noindent
 %% With this new vocabulary, \lemRefThree{derivs-member}{derivs-monoid}{deriv} can be interpreted much more broadly than languages as sets of sequences.
 
-Let's package up these new operations as another abstract interface for language representations to implement so that \lemRefs{derivs-member}{hasEps} can be interpreted much more broadly than languages as sets of sequences.
+Let's now package up these new operations as another abstract interface for language representations to implement. \lemRefs{derivs-member}{hasEps} can then be interpreted much more broadly than languages as sets of sequences.
 \begin{code}
 class HasDecomp a c | a -> c where
   hasEps  :: a -> Bool

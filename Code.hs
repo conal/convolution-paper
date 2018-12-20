@@ -25,6 +25,7 @@ import Data.List (stripPrefix)
 -- import Data.Map (Map)
 -- import qualified Data.Map as Map
 import GHC.Generics
+import GHC.Types (Constraint)
 
 import qualified Data.IntTrie as IT  -- data-inttrie
 
@@ -61,7 +62,7 @@ class HasSingle a s where
   single :: s -> a
 
 class HasDecomp a c | a -> c where
-  hasEps :: a -> a
+  hasEps :: a -> Bool
   deriv :: c -> a -> a
 
 type Language a c = (ClosedSemiring a, HasSingle a [c], HasDecomp a c)
@@ -100,8 +101,7 @@ instance HasSingle (Set a) a where
   single a = set a
 
 instance Eq a => HasDecomp (Set a) a where
-  hasEps p | [] `elem` p = one
-           | otherwise   = zero
+  hasEps p = [] `elem` p
   deriv c p = set (cs | c : cs `elem` p)
 
 #endif
@@ -148,8 +148,7 @@ splits' as = ([],as) : go as
    go (a:as')  = [((a:l),r) | (l,r) <- splits' as']
 
 instance HasDecomp (Pred [c]) c where
-  hasEps (Pred f) | f []      = one
-                  | otherwise = zero
+  hasEps (Pred f) = f []
   deriv c (Pred f) = Pred (f . (c :))
 
 {--------------------------------------------------------------------
@@ -189,8 +188,7 @@ instance Eq s => HasSingle (Resid s) [s] where
                              Nothing -> [])
 
 instance HasDecomp (Resid s) s where
-  hasEps (Resid f) | any null (f []) = one
-                   | otherwise       = zero
+  hasEps (Resid f) = any null (f [])
   deriv c (Resid f) = Resid (f . (c :)) -- TODO: check
 
 {--------------------------------------------------------------------
@@ -208,7 +206,7 @@ data RegExp c =
   | RegExp c :<+> RegExp c
   | RegExp c :<.> RegExp c
   | Closure (RegExp c)
- deriving Show
+ deriving (Show,Eq)
 
 -- TODO: instantiate Show manually, using the method names instead of constructors.
 
@@ -216,7 +214,35 @@ data RegExp c =
 -- redundant representations. On the other hand, regular expressions over
 -- general monoids is a pretty cool idea.
 
-#if 0
+-- Optimize RegExp methods via semiring laws
+
+-- #define OptimzeRegexp
+
+#ifdef OptimzeRegexp
+
+type OkSym = Eq
+
+instance Eq c => Semiring (RegExp c) where
+  zero  = Zero
+  one   = One
+  Zero <+> b = b
+  a <+> Zero = a
+  a :<.> c <+> b :<.> d | a == b = a <.> (c <+> d)
+  a :<.> c <+> b :<.> d | c == d = (a <+> b) <.> c
+  a <+> b = a :<+> b
+  Zero <.> _ = Zero
+  _ <.> Zero = Zero
+  One <.> b = b
+  a <.> One = a
+  a <.> b = a :<.> b
+
+instance Eq c => ClosedSemiring (RegExp c) where
+  closure Zero = One
+  closure e    = Closure e
+
+#else
+
+type OkSym c = (() :: Constraint)
 
 instance Semiring (RegExp c) where
   zero  = Zero
@@ -227,36 +253,16 @@ instance Semiring (RegExp c) where
 instance ClosedSemiring (RegExp c) where
   closure = Closure
 
-#else
-
--- Optimize RegExp methods via semiring laws
-
-instance Semiring (RegExp c) where
-  zero  = Zero
-  one   = One
-  Zero <+> b = b
-  a <+> Zero = a
-  a <+> b = a :<+> b
-  Zero <.> _ = Zero
-  _ <.> Zero = Zero
-  One <.> b = b
-  a <.> One = a
-  a <.> b = a :<.> b
-
-instance ClosedSemiring (RegExp c) where
-  closure Zero = One
-  closure e    = Closure e
-
 #endif
 
 #if 0
 
-instance HasSingle (RegExp c) [c] where
+instance OkSym c => HasSingle (RegExp c) [c] where
   single = foldr (\ c e -> Char c <.> e) One
 
 #else
 -- Or from an arbitrary foldable
-instance Foldable f => HasSingle (RegExp c) (f c) where
+instance (Foldable f, OkSym c) => HasSingle (RegExp c) (f c) where
   single = foldr (\ c e -> Char c <.> e) One
 
 -- We could even define balanced folding of sums and products via two monoid
@@ -264,28 +270,52 @@ instance Foldable f => HasSingle (RegExp c) (f c) where
 
 #endif
 
+delta :: (Semiring a, HasDecomp a c) => a -> a
+delta a | hasEps a  = one
+        | otherwise = zero
+
 instance Eq c => HasDecomp (RegExp c) c where
-  hasEps (Char _)                = zero
-  hasEps Zero                    = zero
-  hasEps One                     = one
-  hasEps (p :<+> q)              = hasEps p <+> hasEps q
-  hasEps (p :<.> q)              = hasEps p <.> hasEps q
-  hasEps (Closure p)             = closure (hasEps p)
+  hasEps (Char _)    = zero
+  hasEps Zero        = zero
+  hasEps One         = one
+  hasEps (p :<+> q)  = hasEps p <+> hasEps q
+  hasEps (p :<.> q)  = hasEps p <.> hasEps q
+  hasEps (Closure p) = closure (hasEps p)
+  
   deriv c (Char c') | c == c'   = one
                     | otherwise = zero
   deriv _ Zero                  = zero
   deriv _ One                   = zero
   deriv c (p :<+> q)            = deriv c p <+> deriv c q
-  deriv c (p :<.> q)            = hasEps p <.> deriv c q <+> deriv c p <.> q
+#if 1
+  -- This one definition works fine if we have OptimzeRegexp
+  deriv c (p :<.> q)            = delta p <.> deriv c q <+> deriv c p <.> q
+#else
+  deriv c (p :<.> q) | hasEps p  = deriv c q <+> deriv c p <.> q
+                     | otherwise = deriv c p <.> q
+#endif
   deriv c (Closure p)           = deriv c (p <.> Closure p) -- since deriv c one = zero
                         -- deriv c (one <+> p <.> Closure p)
 
-re0, re1 :: RegExp Char
+type RC = RegExp Char
+
+re0, re1 :: RC
 re0 = zero
 re1 = one
 
-re2 :: RegExp Char
+re2 :: RC
 re2 = single "a" <+> single "b"
+
+re3 :: RC
+re3 = closure re2
+
+re4,re5 :: RC
+re4 = single "pink"
+re5 = single "pig"
+
+re6 :: RC
+re6 = re4 <+> re5
+
 
 -- | Interpret a regular expression
 regexp :: (ClosedSemiring a, HasSingle a [c]) => RegExp c -> a

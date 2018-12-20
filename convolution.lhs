@@ -511,18 +511,6 @@ Taken together, \lemRefThree{deriv-member}{deriv-monoid}{deriv} give us an effec
 \end{itemize}
 
 
-\sectionl{Miscellany}
-\begin{itemize}
-\item State and prove:
-  \begin{itemize}
-  \item |single (u <> v) == single u <.> single v|.
-  \item |hasEps| is a semiring homomorphism.
-  \end{itemize}
-
-\end{itemize}
-
-
-
 % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
 
 \appendix

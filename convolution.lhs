@@ -63,8 +63,9 @@ Conal Elliott
 \nc\bigunion{\bigcup}
 \nc\has[1]{\mathop{\delta_{#1}}}
 \nc\derivOp{\mathcal{D}}
-\nc\derivs[1]{\mathop{\derivOp^{\ast}_{#1}}}
+\nc\derivsOp{\derivOp^{\ast}}
 \nc\deriv[1]{\mathop{\derivOp_{#1}}}
+\nc\derivs[1]{\mathop{\derivsOp_{#1}}}
 \nc\conv{\ast}
 \nc\zero{\mathbf{0}}
 \nc\one{\mathbf{1}}
@@ -344,7 +345,7 @@ He applied this technique only to regular languages and expressed it as a transf
 Much more recently \citet{Might2010YaccID} extended the technique from regular to \emph{context-free} languages as a transformation on context-free grammars.
 
 %format deriv (c) = "\derivOp_{"c"}"
-%format derivs (s) = "\derivOp^{\ast}_{"s"}"
+%format derivs (s) = "\derivsOp_{"s"}"
 
 %% %format deriv (c) = "\deriv{"c"}"
 %% %format derivs (s) = "\derivs{"s"}"
@@ -363,15 +364,15 @@ The practical value of \lemRef{derivs-member} is that |derivs s p| and |mempty|-
 |derivs| satisfies the following properties:
 \begin{align*}
 \derivs\eps p &= p \\
-\derivs{u \mappend v} p &= \derivs u (\derivs v p)
+\derivs{u \mappend v} p &= \derivs v (\derivs u p)
 \end{align*}
 Equivalently,
 \begin{align*}
 \derivs\eps &= \id \\
-\derivs{u \mappend v} &= \derivs u \circ \derivs v
+\derivs{u \mappend v} &= \derivs v \circ \derivs u
 \end{align*}
 where $\id$ is the identity function.
-In other words, |derivs| is a monoid homomorphism (targeting the monoid of endo-functions).
+In other words, |derivs| is a contravariant monoid homomorphism (targeting the monoid of endo-functions).
 \end{lemma}
 
 %% %format hasEps = "\hasEps"
@@ -432,8 +433,11 @@ class HasDecomp a c | a -> c where
 instance Eq a => HasDecomp (Set a) a where
   hasEps   p = [] `elem` p
   deriv c  p = set (cs | c : cs `elem` p)
+
+derivs :: HasDecomp a c => [c] -> a -> a
+derivs s p = foldl (flip deriv) p s
 \end{code}
-As with |Semiring|, |ClosedSemiring|, and |HasSingle|, we can calculate instances of |HasDecomp|:
+As with |Semiring|, |ClosedSemiring|, and |HasSingle|, we can calculate instances of |HasDecomp|.
 \begin{theorem}[\provedIn{theorem:HasDecomp}]\thmLabel{HasDecomp}
 Given the definitions in \figrefdef{HasDecomp}{Decomposition of language representations (specified by homomorphicity)}{
 \begin{code}
@@ -468,7 +472,14 @@ instance Eq c => HasDecomp (RegExp c) c where
 }, |predSet|, |residPred|, and |regexp| are |HasDecomp| homomorphisms.
 \end{theorem}
 
-Taken together, \lemRefs{derivs-member}{hasEps} give us an effective test for language membership, assuming that the language is expressed via |Semiring|, |ClosedSemiring|, and |HasSingle|.
+%format acceptD = "\Varid{accept_D}"
+
+Taken together, \lemRefs{derivs-member}{hasEps} give us an effective test for ``language'' membership, assuming that the language is expressed via |Semiring|, |ClosedSemiring|, and |HasSingle| and assuming that the language representation supports |HasDecomp|:
+\begin{code}
+
+acceptD :: HasDecomp a c => a -> [c] -> Bool
+acceptD p s = hasEps (derivs s p)
+\end{code}
 
 \mynote{Show some examples.}
 

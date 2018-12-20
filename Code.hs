@@ -78,6 +78,9 @@ instance Semiring Bool where
   (<+>) = (||)
   (<.>) = (&&)
 
+instance ClosedSemiring Bool where
+  closure _ = one
+
 {--------------------------------------------------------------------
     Sets of strings (or other monoidal values)
 --------------------------------------------------------------------}

@@ -14,6 +14,7 @@ description:         Please see the README on GitHub at <https://github.com/cona
 library:
   dependencies:
     - base >= 4.7 && < 5
+    - ghc-prim
     - data-inttrie
     # - containers
     # - distributive

@@ -65,6 +65,10 @@ class HasDecomp a c | a -> c where
   hasEps :: a -> Bool
   deriv :: c -> a -> a
 
+-- | Derivative of a language w.r.t a string
+derivs :: HasDecomp a c => [c] -> a -> a
+derivs s p = foldl (flip deriv) p s
+
 type Language a c = (ClosedSemiring a, HasSingle a [c], HasDecomp a c)
 
 instance Semiring Integer where
@@ -190,6 +194,15 @@ instance Eq s => HasSingle (Resid s) [s] where
 instance HasDecomp (Resid s) s where
   hasEps (Resid f) = any null (f [])
   deriv c (Resid f) = Resid (f . (c :)) -- TODO: check
+
+#if 0
+            deriv      :: c -> a -> a
+       flip deriv      :: a -> c -> a
+foldl (flip deriv) a s :: a
+#endif
+
+acceptD :: HasDecomp a c => a -> [c] -> Bool
+acceptD p s = hasEps (derivs s p)
 
 {--------------------------------------------------------------------
     Regular expressions

@@ -227,11 +227,10 @@ data RegExp c =
 -- redundant representations. On the other hand, regular expressions over
 -- general monoids is a pretty cool idea.
 
--- Optimize RegExp methods via semiring laws
+-- -- Optimize RegExp methods via semiring laws
+-- #define OptimizeRegexp
 
--- #define OptimzeRegexp
-
-#ifdef OptimzeRegexp
+#ifdef OptimizeRegexp
 
 type OkSym = Eq
 
@@ -301,7 +300,7 @@ instance Eq c => HasDecomp (RegExp c) c where
   deriv _ One                   = zero
   deriv c (p :<+> q)            = deriv c p <+> deriv c q
 #if 1
-  -- This one definition works fine if we have OptimzeRegexp
+  -- This one definition works fine if we have OptimizeRegexp
   deriv c (p :<.> q)            = delta p <.> deriv c q <+> deriv c p <.> q
 #else
   deriv c (p :<.> q) | hasEps p  = deriv c q <+> deriv c p <.> q
@@ -309,26 +308,6 @@ instance Eq c => HasDecomp (RegExp c) c where
 #endif
   deriv c (Closure p)           = deriv c (p <.> Closure p) -- since deriv c one = zero
                         -- deriv c (one <+> p <.> Closure p)
-
-type RC = RegExp Char
-
-re0, re1 :: RC
-re0 = zero
-re1 = one
-
-re2 :: RC
-re2 = single "a" <+> single "b"
-
-re3 :: RC
-re3 = closure re2
-
-re4,re5 :: RC
-re4 = single "pink"
-re5 = single "pig"
-
-re6 :: RC
-re6 = re4 <+> re5
-
 
 -- | Interpret a regular expression
 regexp :: (ClosedSemiring a, HasSingle a [c]) => RegExp c -> a
@@ -340,24 +319,59 @@ regexp (u  :<.>  v)  = regexp u <.> regexp v
 regexp (Closure u)   = closure (regexp u)
 
 {--------------------------------------------------------------------
+    Decomposition as language
+--------------------------------------------------------------------}
+
+infixr 5 :<:
+data Decomp c = Bool :<: (c -> Decomp c)
+
+instance Semiring (Decomp c) where
+  zero = False :<: const zero
+  one  = True  :<: const zero
+  (a :<: ps') <+> (b :<: qs') = (a || b) :<: liftA2 (<+>) ps' qs'
+  -- (<+>) = liftA2 (||)
+  (a :<: ps') <.> q@(b :<: qs') = (a && b) :<: liftA2 h ps' qs'
+   where
+     h p' q' = (if a then q' else zero) <+> (p' <.> q)
+
+instance ClosedSemiring (Decomp c)
+
+instance Eq c => HasSingle (Decomp c) [c] where
+  single [] = True :<: const zero
+  single (c:cs) = False :<: (\ c' -> if c==c' then single cs else zero)
+
+instance HasTrie c => HasDecomp (Decomp c) c where
+  hasEps (a :<: _) = a
+  deriv c (_ :<: ps') = ps' c
+
+{--------------------------------------------------------------------
     List trie as a language
 --------------------------------------------------------------------}
 
 instance HasTrie c => Semiring (LTrie c Bool) where
   zero = pure zero
   one = True :< pure zero
-  -- LTrie a as <+> LTrie b bs = LTrie (a || b) (liftA2 (<+>) as bs)
-  (<+>) = liftA2 (<+>)
-  (<.>) = error "(<.>) not yet defined on LTrie"
+  (a :< ps') <+> (b :< qs') = (a || b) :< liftA2 (<+>) ps' qs'
+  -- (<+>) = liftA2 (||) -- liftA2 (<+>)
+  (a :< ps') <.> q@(b :< qs') = (a && b) :< liftA2 h ps' qs'
+   where
+     -- h p' q' = (if a then q' else zero) <+> (p' <.> q)
+     -- h p' q' = if a then q' <+> p' <.> q else p' <.> q
+     h | a         = \ p' q' -> q' <+> p' <.> q
+       | otherwise = \ p' _  -> p' <.> q
 
 -- Oops: I think I'll have to wrap LTrie to make it a language instance, because
--- I'll want a different Applicative.
+-- I'll want a different Applicative. Wait and see.
 
 instance HasTrie c => ClosedSemiring (LTrie c Bool)
 
 instance (HasTrie c, Eq c) => HasSingle (LTrie c Bool) [c] where
   single [] = True :< pure zero
   single (c:cs) = False :< trie (\ c' -> if c==c' then single cs else zero)
+
+instance HasTrie c => HasDecomp (LTrie c Bool) c where
+  hasEps (a :< _) = a
+  deriv c (_ :< ps') = ps' ! c
 
 {--------------------------------------------------------------------
     Memoization via generalized tries
@@ -491,6 +505,7 @@ HasTrieIsomorph((),Char,Int,fromEnum,toEnum)
     String tries
 --------------------------------------------------------------------}
 
+infixr 5 :<
 data LTrie c a = a :< (c :->: LTrie c a)
 
 -- TODO: Use HasTrieIsomorph for [c]. I'll probably have to add instances of

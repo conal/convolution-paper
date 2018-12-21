@@ -22,10 +22,10 @@ import Data.Monoid ((<>))
 import Control.Applicative (liftA2)
 import Control.Monad ((>=>))
 import Data.List (stripPrefix)
--- import Data.Map (Map)
--- import qualified Data.Map as Map
 import GHC.Generics
 import GHC.Types (Constraint)
+import Data.Map (Map)
+import qualified Data.Map as M
 
 import qualified Data.IntTrie as IT  -- data-inttrie
 
@@ -201,8 +201,8 @@ instance HasDecomp (Resid s) s where
 foldl (flip deriv) a s :: a
 #endif
 
-acceptD :: HasDecomp a c => a -> [c] -> Bool
-acceptD p s = hasEps (derivs s p)
+accept :: HasDecomp a c => a -> [c] -> Bool
+accept p s = hasEps (derivs s p)
 
 {--------------------------------------------------------------------
     Regular expressions
@@ -345,15 +345,55 @@ instance HasTrie c => HasDecomp (Decomp c) c where
   deriv c (_ :<: ps') = ps' c
 
 {--------------------------------------------------------------------
+    List trie with finite maps as language
+--------------------------------------------------------------------}
+
+infixr 5 :|
+data LT c = Bool :| Map c (LT c) deriving Show
+
+trimLT :: Ord c => Int -> LT c -> LT c
+trimLT 0 _ = zero
+trimLT n (a :| m) = a :| (trimLT (n-1) <$> m)
+
+instance Ord c => Semiring (LT c) where
+  zero = False :| M.empty
+  one  = True  :| M.empty
+  (a :| ps') <+> (b :| qs') = (a || b) :| M.unionWith (<+>) ps' qs'
+#if 1
+  (a :| ps') <.> q@(b :| qs') = (a && b) :| M.unionWith (<+>) us vs
+   where
+     us = fmap (<.> q) ps'
+     vs | a = qs'
+        | otherwise = M.empty
+#else
+  (False :| ps') <.> q = False :| fmap (<.> q) ps'
+  (True  :| ps') <.> q@(b :| qs') = b :| M.unionWith (<+>) (fmap (<.> q) ps') qs'
+#endif
+
+instance Ord c => ClosedSemiring (LT c) where
+  closure (_ :| ps') = q
+   where
+     q = True :| fmap (<.> q) ps'
+
+instance (Ord c, Eq c) => HasSingle (LT c) [c] where
+  -- single = foldr (\ c p -> False :| M.singleton c p) one
+  single [] = one
+  single (c:cs) = False :| M.singleton c (single cs)
+
+instance Ord c => HasDecomp (LT c) c where
+  hasEps (a :| _) = a
+  deriv c (_ :| ps') = M.findWithDefault zero c ps'
+
+{--------------------------------------------------------------------
     List trie as a language
 --------------------------------------------------------------------}
 
 instance HasTrie c => Semiring (LTrie c Bool) where
   zero = pure zero
   one = True :< pure zero
-  (a :< ps') <+> (b :< qs') = (a || b) :< liftA2 (<+>) ps' qs'
+  ~(a :< ps') <+> ~(b :< qs') = (a || b) :< liftA2 (<+>) ps' qs'
   -- (<+>) = liftA2 (||) -- liftA2 (<+>)
-  (a :< ps') <.> q@(b :< qs') = (a && b) :< liftA2 h ps' qs'
+  ~(a :< ps') <.> ~q@(b :< qs') = (a && b) :< liftA2 h ps' qs'
    where
      -- h p' q' = (if a then q' else zero) <+> (p' <.> q)
      -- h p' q' = if a then q' <+> p' <.> q else p' <.> q
@@ -365,8 +405,16 @@ instance HasTrie c => Semiring (LTrie c Bool) where
 
 instance HasTrie c => ClosedSemiring (LTrie c Bool)
 
+closureLT :: HasTrie c => LTrie c Bool -> LTrie c Bool
+closureLT t = t'
+ where
+   -- t' = one <+> (t <.> t')  -- diverge
+   -- t' = t <.> t' -- diverge
+   -- t' = t <.> t -- converge
+   t' = one <+> t <.> (one <+> t <.> (one <+> t <.> (one <+> t <.> (one <+> t)))) -- converge
+
 instance (HasTrie c, Eq c) => HasSingle (LTrie c Bool) [c] where
-  single [] = True :< pure zero
+  single [] = one -- True :< pure zero
   single (c:cs) = False :< trie (\ c' -> if c==c' then single cs else zero)
 
 instance HasTrie c => HasDecomp (LTrie c Bool) c where
@@ -515,7 +563,7 @@ deriving instance HasTrie c => Functor (LTrie c)
 
 instance HasTrie c => Applicative (LTrie c) where
   pure a = t where t = a :< pure t
-  liftA2 h (a :< as) (b :< bs) = h a b :< (liftA2.liftA2) h as bs
+  liftA2 h ~(a :< as) ~(b :< bs) = h a b :< (liftA2.liftA2) h as bs
 
 instance HasTrie c => HasTrie [c] where
   type Trie [c] = LTrie c

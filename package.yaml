@@ -16,7 +16,7 @@ library:
     - base >= 4.7 && < 5
     - ghc-prim
     - data-inttrie
-    # - containers
+    - containers
     # - distributive
     # - adjunctions
     # - comonad
@@ -30,6 +30,7 @@ tests:
   test:
     main:                GoldTests.hs
     source-dirs:         test
+    other-modules: []
     dependencies:
     - base
     - Cabal >= 1.24.0.0

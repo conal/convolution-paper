@@ -1,1 +1,1 @@
-Char 'a' :<.> One
+False :| fromList [('a',True :| fromList [])]

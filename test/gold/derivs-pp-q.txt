@@ -1,1 +1,0 @@
-(Zero :<.> (Zero :<.> (Zero :<.> (Zero :<.> Zero :<+> Zero :<.> One) :<+> Zero :<.> (Char 'k' :<.> One)) :<+> Zero :<.> (Char 'n' :<.> (Char 'k' :<.> One))) :<+> Zero :<.> (Char 'i' :<.> (Char 'n' :<.> (Char 'k' :<.> One)))) :<+> (Zero :<.> (Zero :<.> (Zero :<.> Zero :<+> Zero :<.> One) :<+> Zero :<.> (Char 'g' :<.> One)) :<+> Zero :<.> (Char 'i' :<.> (Char 'g' :<.> One)))

@@ -472,13 +472,11 @@ instance Eq c => HasDecomp (RegExp c) c where
 }, |predSet|, |residPred|, and |regexp| are |HasDecomp| homomorphisms.
 \end{theorem}
 
-%format acceptD = "\Varid{accept_D}"
-
 Taken together, \lemRefs{derivs-member}{hasEps} give us an effective test for ``language'' membership, assuming that the language is expressed via |Semiring|, |ClosedSemiring|, and |HasSingle| and assuming that the language representation supports |HasDecomp|:
 \begin{code}
 
-acceptD :: HasDecomp a c => a -> [c] -> Bool
-acceptD p s = hasEps (derivs s p)
+accept :: HasDecomp a c => a -> [c] -> Bool
+accept p s = hasEps (derivs s p)
 \end{code}
 
 \mynote{Show some examples.}

@@ -31,9 +31,9 @@ basicTests = testGroup "various representations"
   [ testGroup "" []
   -- , testGroup "RegExp" [ tests @(RegExp Char) ]
   -- , testGroup "LTrie"  [ tests @(LTrie Char Bool) ]
-
   , gold "a" $ a
   , gold "b" $ b
+  , gold "abcd" $ single @(LT Char) "abcd"
   , gold "aOrb" $ aOrb
   , gold "ab" $ ab
   , gold "der-a-a" $ deriv 'a' a

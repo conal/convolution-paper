@@ -376,9 +376,9 @@ instance Ord c => ClosedSemiring (LT c) where
      q = True :| fmap (<.> q) ps'
 
 instance (Ord c, Eq c) => HasSingle (LT c) [c] where
-  -- single = foldr (\ c p -> False :| M.singleton c p) one
-  single [] = one
-  single (c:cs) = False :| M.singleton c (single cs)
+  single = foldr (\ c p -> False :| M.singleton c p) one
+  -- single [] = one
+  -- single (c:cs) = False :| M.singleton c (single cs)
 
 instance Ord c => HasDecomp (LT c) c where
   hasEps (a :| _) = a

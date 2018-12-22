@@ -18,7 +18,9 @@
 
 module Code where
 
-import Data.Monoid ((<>))
+import Prelude hiding (sum,product)
+
+import Data.Monoid (Monoid(..))
 import Control.Applicative (liftA2)
 import Control.Monad ((>=>))
 import Data.List (stripPrefix)
@@ -85,6 +87,28 @@ instance Semiring Bool where
 
 instance ClosedSemiring Bool where
   closure _ = one
+
+newtype Sum a = Sum { getSum :: a }
+
+instance Semiring a => Semigroup (Sum a) where
+  Sum a <> Sum b = Sum (a <+> b)
+
+instance Semiring a => Monoid (Sum a) where
+  mempty = Sum zero
+
+sum :: (Foldable f, Semiring a) => f a -> a
+sum = getSum . foldMap Sum
+
+newtype Product a = Product { getProduct :: a }
+
+instance Semiring a => Semigroup (Product a) where
+  Product a <> Product b = Product (a <.> b)
+
+instance Semiring a => Monoid (Product a) where
+  mempty = Product one
+
+product :: (Foldable f, Semiring a) => f a -> a
+product = getProduct . foldMap Product
 
 {--------------------------------------------------------------------
     Sets of strings (or other monoidal values)
@@ -270,12 +294,14 @@ instance ClosedSemiring (RegExp c) where
 #if 0
 
 instance OkSym c => HasSingle (RegExp c) [c] where
-  single = foldr (\ c e -> Char c <.> e) One
+  -- single = foldr (\ c e -> Char c <.> e) One
+  single = product . fmap Char
 
 #else
 -- Or from an arbitrary foldable
-instance (Foldable f, OkSym c) => HasSingle (RegExp c) (f c) where
-  single = foldr (\ c e -> Char c <.> e) One
+instance (Functor f, Foldable f, OkSym c) => HasSingle (RegExp c) (f c) where
+  single = product . fmap Char
+  -- single = foldr (\ c e -> Char c <.> e) One
 
 -- We could even define balanced folding of sums and products via two monoid
 -- wrappers.
@@ -359,12 +385,18 @@ instance Ord c => Semiring (LT c) where
   zero = False :| M.empty
   one  = True  :| M.empty
   (a :| ps') <+> (b :| qs') = (a || b) :| M.unionWith (<+>) ps' qs'
-#if 1
+#if 0
+  -- Works, but it leaves many zero entries in the maps, due to (delta p <.>)
+  p@(a :| ps') <.> q@(b :| qs') =
+    (a && b) :| M.unionWith (<+>) (fmap (<.> q) ps') (fmap (delta p <.>) qs')
+#elif 0
   (a :| ps') <.> q@(b :| qs') = (a && b) :| M.unionWith (<+>) us vs
    where
      us = fmap (<.> q) ps'
      vs | a = qs'
         | otherwise = M.empty
+#elif 1
+  ~p@(_ :| ps') <.> q = delta p <.> q <+> (False :| fmap (<.> q) ps')
 #else
   (False :| ps') <.> q = False :| fmap (<.> q) ps'
   (True  :| ps') <.> q@(b :| qs') = b :| M.unionWith (<+>) (fmap (<.> q) ps') qs'
@@ -414,8 +446,9 @@ closureLT t = t'
    t' = one <+> t <.> (one <+> t <.> (one <+> t <.> (one <+> t <.> (one <+> t)))) -- converge
 
 instance (HasTrie c, Eq c) => HasSingle (LTrie c Bool) [c] where
-  single [] = one -- True :< pure zero
-  single (c:cs) = False :< trie (\ c' -> if c==c' then single cs else zero)
+  single = foldr (\ c p -> False :< trie (\ c' -> if c==c' then p else zero)) one
+  -- single [] = one -- True :< pure zero
+  -- single (c:cs) = False :< trie (\ c' -> if c==c' then single cs else zero)
 
 instance HasTrie c => HasDecomp (LTrie c Bool) c where
   hasEps (a :< _) = a

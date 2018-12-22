@@ -637,6 +637,8 @@ ltriePred = Pred . untrie
 predLTrie :: HasTrie c => Pred [c] -> LTrie c Bool
 predLTrie (Pred f) = trie f
 
+#if 0
+
 {--------------------------------------------------------------------
     Temporary tests
 --------------------------------------------------------------------}
@@ -644,3 +646,5 @@ predLTrie (Pred f) = trie f
 lta,ltb :: LT Char
 lta = single "a"
 ltb = single "b"
+
+#endif

@@ -396,7 +396,7 @@ instance Ord c => Semiring (LT c) where
      vs | a = qs'
         | otherwise = M.empty
 #elif 1
-  ~p@(_ :| ps') <.> q = delta p <.> q <+> (False :| fmap (<.> q) ps')
+  (a :| ps') <.> q = (if a then q else zero) <+> (False :| fmap (<.> q) ps')
 #else
   (False :| ps') <.> q = False :| fmap (<.> q) ps'
   (True  :| ps') <.> q@(b :| qs') = b :| M.unionWith (<+>) (fmap (<.> q) ps') qs'
@@ -636,3 +636,11 @@ ltriePred = Pred . untrie
 
 predLTrie :: HasTrie c => Pred [c] -> LTrie c Bool
 predLTrie (Pred f) = trie f
+
+{--------------------------------------------------------------------
+    Temporary tests
+--------------------------------------------------------------------}
+
+lta,ltb :: LT Char
+lta = single "a"
+ltb = single "b"

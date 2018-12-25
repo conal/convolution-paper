@@ -261,9 +261,8 @@ instance Semiring (Resid c) where
 instance ClosedSemiring (Resid c)
 
 instance Eq c => HasSingle (Resid c) [c] where
-  single x = Resid (\ s ->  case stripPrefix x s of
-                              Just s' -> [s']
-                              Nothing -> [])
+  single x = Resid (maybeToList . stripPrefix x)
+
 -- From |Data.List|
 stripPrefix :: Eq a => [a] -> [a] -> Maybe [a]
 stripPrefix []      ys               = Just ys

@@ -26,6 +26,7 @@ import Control.Monad ((>=>))
 import Data.List (stripPrefix)
 import GHC.Generics
 import GHC.Types (Constraint)
+import Data.Maybe (maybeToList)
 import Data.Map (Map)
 import qualified Data.Map as M
 
@@ -211,9 +212,10 @@ instance Semiring (Resid s) where
 instance ClosedSemiring (Resid s)
 
 instance Eq s => HasSingle (Resid s) [s] where
-  single x = Resid (\ s -> case stripPrefix x s of
-                             Just s' -> [s']
-                             Nothing -> [])
+  -- single x = Resid (\ s -> case stripPrefix x s of
+  --                            Just s' -> [s']
+  --                            Nothing -> [])
+  single x = Resid (maybeToList . stripPrefix x)
 
 instance HasDecomp (Resid s) s where
   hasEps (Resid f) = any null (f [])

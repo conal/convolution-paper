@@ -32,6 +32,9 @@ import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Set (Set)
 import qualified Data.Set as S
+import Data.MultiSet (MultiSet)
+import qualified Data.MultiSet as MS
+
 
 import qualified Data.IntTrie as IT  -- data-inttrie
 
@@ -706,5 +709,28 @@ instance ApplicativeC Set where
 
 instance MonadC Set where
   joinC = S.unions . S.elems
+  (>>==) = bindViaJoin
+
+instance FunctorC MultiSet where
+  type Ok MultiSet a = Ord a
+  fmapC = MS.map
+
+instance ApplicativeC MultiSet where
+  pureC = MS.singleton
+#if 1
+  liftA2C h as bs =
+    MS.fromOccurList
+      [(h a b, m*n) | (a,m) <- MS.toOccurList as, (b,n) <- MS.toOccurList bs]
+#else  
+  liftA2C h as bs = fmapC (uncurry h) (multiCart as bs)
+
+multiCart :: (Ord a, Ord b) => MultiSet a -> MultiSet b -> MultiSet (a,b)
+multiCart as bs =
+  MS.fromOccurList
+    [((a,b),m*n) | (a,m) <- MS.toOccurList as, (b,n) <- MS.toOccurList bs]
+#endif
+
+instance MonadC MultiSet where
+  joinC = MS.join
   (>>==) = bindViaJoin
 

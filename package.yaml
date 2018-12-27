@@ -17,6 +17,7 @@ library:
     - ghc-prim
     - data-inttrie
     - containers
+    - multiset
     # - distributive
     # - adjunctions
     # - comonad

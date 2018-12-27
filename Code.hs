@@ -10,6 +10,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 
 {-# OPTIONS_GHC -Wall #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
@@ -22,13 +23,15 @@ import Prelude hiding (sum,product)
 
 import Data.Monoid (Monoid(..))
 import Control.Applicative (liftA2)
-import Control.Monad ((>=>))
+import Control.Monad (join,(>=>))
 import Data.List (stripPrefix)
 import GHC.Generics
 import GHC.Types (Constraint)
 import Data.Maybe (maybeToList)
 import Data.Map (Map)
 import qualified Data.Map as M
+import Data.Set (Set)
+import qualified Data.Set as S
 
 import qualified Data.IntTrie as IT  -- data-inttrie
 
@@ -650,3 +653,58 @@ lta = single "a"
 ltb = single "b"
 
 #endif
+
+{--------------------------------------------------------------------
+    Constrained classes
+--------------------------------------------------------------------}
+
+type Ok2 f a b = (Ok f a, Ok f b)
+type Ok3 f a b c = (Ok2 f a b, Ok f c)
+
+class FunctorC f where
+  type Ok f a :: Constraint
+  type Ok f a = ()
+  fmapC :: Ok2 f a b => (a -> b) -> f a -> f b
+  default fmapC :: Functor f => (a -> b) -> f a -> f b
+  fmapC = fmap
+
+class FunctorC f => ApplicativeC f where
+  pureC :: Ok f a => a -> f a
+  default pureC :: Applicative f => a -> f a
+  pureC = pure
+  liftA2C :: Ok3 f a b c => (a -> b -> c) -> f a -> f b -> f c
+  default liftA2C :: Applicative f => (a -> b -> c) -> f a -> f b -> f c
+  liftA2C = liftA2
+
+infixl 1 >>==
+class ApplicativeC f => MonadC f where
+  joinC :: Ok f a => f (f a) -> f a
+  default joinC :: Monad f => f (f a) -> f a
+  joinC = join
+  (>>==) :: Ok2 f a b => f a -> (a -> f b) -> f b
+  default (>>==) :: Monad f => f a -> (a -> f b) -> f b
+  (>>==) = (>>=)
+
+bindViaJoin :: (MonadC f, Ok3 f a b (f b)) => f a -> (a -> f b) -> f b
+bindViaJoin as f = joinC (fmapC f as)
+
+joinViaBind :: (MonadC f, Ok2 f a (f a)) => f (f a) -> f a
+joinViaBind q = q >>== id
+
+instance FunctorC []
+instance ApplicativeC []
+instance MonadC []
+-- etc
+
+instance FunctorC Set where
+  type Ok Set a = Ord a
+  fmapC = S.map
+
+instance ApplicativeC Set where
+  pureC = S.singleton
+  liftA2C h as bs = fmapC (uncurry h) (S.cartesianProduct as bs)
+
+instance MonadC Set where
+  joinC = S.unions . S.elems
+  (>>==) = bindViaJoin
+

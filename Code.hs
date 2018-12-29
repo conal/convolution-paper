@@ -715,6 +715,10 @@ instance ApplicativeC []
 instance MonadC []
 -- etc
 
+instance MonoidalC [] where
+  unitC = unitViaPure
+  crossC = crossViaLiftA2
+
 instance FunctorC Set where
   type Ok Set a = Ord a
   fmapC = S.map
@@ -737,15 +741,20 @@ instance FunctorC MultiSet where
 
 instance MonoidalC MultiSet where
   unitC = unitViaPure
-  as `crossC` bs =
-    MS.fromOccurList
-      [((a,b),m*n) | (a,m) <- MS.toOccurList as, (b,n) <- MS.toOccurList bs]
+  crossC = crossViaLiftA2
+  -- as `crossC` bs =
+  --   MS.fromOccurList
+  --     [((a,b),m*n) | (a,m) <- MS.toOccurList as, (b,n) <- MS.toOccurList bs]
 
--- To do: use `fromDistinctAscOccurList`.
+-- Maybe use the explicit crossC but with `fromDistinctAscOccurList`, since the
+-- list is ordered and distinct.
 
 instance ApplicativeC MultiSet where
   pureC = MS.singleton
-  liftA2C = liftA2ViaCross
+  liftA2C h as bs =
+    MS.fromOccurList
+      [(h a b,m*n) | (a,m) <- MS.toOccurList as, (b,n) <- MS.toOccurList bs]
+  -- liftA2C = liftA2ViaCross
 
 instance MonadC MultiSet where
   joinC = MS.join

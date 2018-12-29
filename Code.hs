@@ -35,7 +35,6 @@ import qualified Data.Set as S
 import Data.MultiSet (MultiSet)
 import qualified Data.MultiSet as MS
 
-
 import qualified Data.IntTrie as IT  -- data-inttrie
 
 {--------------------------------------------------------------------
@@ -663,6 +662,7 @@ ltb = single "b"
 
 type Ok2 f a b = (Ok f a, Ok f b)
 type Ok3 f a b c = (Ok2 f a b, Ok f c)
+type Ok4 f a b c d = (Ok2 f a b, Ok2 f c d)
 
 class FunctorC f where
   type Ok f a :: Constraint
@@ -694,6 +694,22 @@ bindViaJoin as f = joinC (fmapC f as)
 joinViaBind :: (MonadC f, Ok2 f a (f a)) => f (f a) -> f a
 joinViaBind q = q >>== id
 
+class FunctorC f => MonoidalC f where
+  unitC :: Ok f () => f ()
+  crossC :: Ok2 f a b => f a -> f b -> f (a :* b)
+
+pureViaUnit :: Ok2 f () a => MonoidalC f => a -> f a
+pureViaUnit a = fmapC (const a) unitC
+
+unitViaPure :: Ok f () => ApplicativeC f => f ()
+unitViaPure = pureC ()
+
+liftA2ViaCross :: (MonoidalC f, Ok4 f a b (a :* b) c) => (a -> b -> c) -> f a -> f b -> f c
+liftA2ViaCross h as bs = fmapC (uncurry h) (as `crossC` bs)
+
+crossViaLiftA2 :: (ApplicativeC f, Ok3 f a b (a :* b)) => f a -> f b -> f (a :* b)
+crossViaLiftA2 = liftA2C (,)
+
 instance FunctorC []
 instance ApplicativeC []
 instance MonadC []
@@ -703,9 +719,13 @@ instance FunctorC Set where
   type Ok Set a = Ord a
   fmapC = S.map
 
+instance MonoidalC Set where
+  unitC = unitViaPure
+  crossC = S.cartesianProduct
+
 instance ApplicativeC Set where
   pureC = S.singleton
-  liftA2C h as bs = fmapC (uncurry h) (S.cartesianProduct as bs)
+  liftA2C = liftA2ViaCross
 
 instance MonadC Set where
   joinC = S.unions . S.elems
@@ -715,22 +735,23 @@ instance FunctorC MultiSet where
   type Ok MultiSet a = Ord a
   fmapC = MS.map
 
+instance MonoidalC MultiSet where
+  unitC = unitViaPure
+  as `crossC` bs =
+    MS.fromOccurList
+      [((a,b),m*n) | (a,m) <- MS.toOccurList as, (b,n) <- MS.toOccurList bs]
+
+-- To do: use `fromDistinctAscOccurList`.
+
 instance ApplicativeC MultiSet where
   pureC = MS.singleton
-#if 1
-  liftA2C h as bs =
-    MS.fromOccurList
-      [(h a b, m*n) | (a,m) <- MS.toOccurList as, (b,n) <- MS.toOccurList bs]
-#else  
-  liftA2C h as bs = fmapC (uncurry h) (multiCart as bs)
-
-multiCart :: (Ord a, Ord b) => MultiSet a -> MultiSet b -> MultiSet (a,b)
-multiCart as bs =
-  MS.fromOccurList
-    [((a,b),m*n) | (a,m) <- MS.toOccurList as, (b,n) <- MS.toOccurList bs]
-#endif
+  liftA2C = liftA2ViaCross
 
 instance MonadC MultiSet where
   joinC = MS.join
   (>>==) = bindViaJoin
 
+-- newtype Pred s = Pred (s -> Bool)
+
+-- Can we give a FunctorC instance for Pred? I guess we'd have to sum over the
+-- preimage of the function being mapped.

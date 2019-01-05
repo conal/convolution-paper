@@ -54,7 +54,7 @@ Conal Elliott
 
 \nc\set[1]{\{\,#1\,\}}
 \nc\Pow{\mathcal{P}}
-\nc\eps{\varepsilon}
+\nc\mempty{\varepsilon}
 \nc\closure[1]{#1^{\ast}}
 \nc\mappend{\diamond}
 \nc\cat{\mathop{}}
@@ -66,14 +66,23 @@ Conal Elliott
 \nc\derivsOp{\derivOp^{\ast}}
 \nc\deriv[1]{\mathop{\derivOp_{#1}}}
 \nc\derivs[1]{\mathop{\derivsOp_{#1}}}
-\nc\conv{\ast}
+%% \nc\conv{\ast}
+\nc\conv{*}
 \nc\zero{\mathbf{0}}
 \nc\one{\mathbf{1}}
 %% \nc\zero{0}
 %% \nc\one{1}
-\nc\hasEps{\mathop{\Varid{has}_{\eps}}}
+\nc\hasEps{\mathop{\Varid{has}_{\mempty}}}
 \nc\id{\mathop{\Varid{id}}}
 \nc\ite[3]{\text{if}\ #1\ \text{then}\ #2\ \text{else}\ #3}
+\newcommand\iteB[3]{
+\begin{cases}
+#2 & \text{if $#1$} \\
+#3 & \text{otherwise}
+\end{cases}}
+\nc\lis{\mathop{\Varid{list}}}
+\nc\liftATwo{\mathop{\Varid{liftA_2}}}
+\nc\cons{\mathit{:}}
 
 \DeclareMathOperator{\true}{true}
 \DeclareMathOperator{\false}{false}
@@ -106,10 +115,10 @@ Languages are commonly built up via a few simple operations:\notefoot{I may want
 \item For a string $s$, the \emph{singleton} language $\single s = \set{s}$.
 \item For two languages $P$ and $Q$, the \emph{union} $P \union Q = \set{s \mid s \in P \lor s \in Q}$.
 \item For two languages $P$ and $Q$, the element-wise \emph{concatenation} $P \cat Q = \set{p \mappend q \mid p \in P \land q \in Q}$, where ``$\mappend$'' denotes string concatenation.
-\item For a language $P$, the \emph{closure} $\closure P = \bigunion_{n \ge 0} P^n $, where $P^n$ is $P$ concatenated with itself $n$ times (and $P^0 = \single{\eps}$).
+\item For a language $P$, the \emph{closure} $\closure P = \bigunion_{n \ge 0} P^n $, where $P^n$ is $P$ concatenated with itself $n$ times (and $P^0 = \single{\mempty}$).
 \end{itemize}
 %if False
-\out{Note that $\closure P$ can also be given a recursive specification: $\closure P = \eps \union P \cat \closure P$.{Syntactically, we'll take concatenation (``$\cat$'') to bind more tightly than union (``$\union$''), so the RHS of this definition is equivalent to $\eps \union (P \cat \closure P)$}
+\out{Note that $\closure P$ can also be given a recursive specification: $\closure P = \mempty \union P \cat \closure P$.{Syntactically, we'll take concatenation (``$\cat$'') to bind more tightly than union (``$\union$''), so the RHS of this definition is equivalent to $\mempty \union (P \cat \closure P)$}
 %endif
 These operations suffice to describe all \emph{regular} languages.
 The language specifications (language-denoting \emph{expressions} rather than languages themselves) finitely constructed from these operations are called \emph{regular expressions}.
@@ -118,10 +127,10 @@ The language specifications (language-denoting \emph{expressions} rather than la
 Some observations:
 \begin{itemize}
 \item Union is associative, with $\emptyset$ as its identity.\notefoot{Maybe state equations for this observations and the next two.}
-\item Element-Wise concatenation is associative and commutative, with $\single \eps$ as its identity, where $\eps$ is the empty string.
+\item Element-Wise concatenation is associative and commutative, with $\single \mempty$ as its identity, where $\mempty$ is the empty string.
 \item Left- and right-concatenation distributes over union.
 \item The empty language annihilates under concatenation, i.e., $P \cat \emptyset = \emptyset \cat Q = \emptyset$.
-\item The $\closure P$ operation satisfies the equation $\closure P = \eps \union (P \cat \closure P)$.
+\item The $\closure P$ operation satisfies the equation $\closure P = \mempty \union (P \cat \closure P)$.
 \end{itemize}
 These observations are the defining properties of a \emph{star semiring} (also called a \emph{closed semiring}) \needcite{}.
 \figrefdef{classes}{Abstract interface for languages (and later generalizations)}{
@@ -152,7 +161,7 @@ instance ClosedSemiring Bool where
 } shows Haskell classes for representations of languages (and later generalizations), combining the star semiring vocabulary with an operation for singletons.
 The singleton-forming operation must satisfy the following properties:
 \begin{align*}
-\single \eps &= \one \\
+\single \mempty &= \one \\
 \single {u \mappend v} &= \single u \conv \single v
 \end{align*}
 i.e., |single| is a monoid homomorphism (targeting the product monoid).
@@ -181,7 +190,7 @@ instance HasSingle (Set s) s where
 \vspace{-4ex}
 %%  closure p = bigunion (n >= 0) (pow p n)
 }.
-All we needed from strings is that they form a monoid, generalize to sets of values from any monoid.\footnote{The |Monoid| class defines $\mappend$ and $\eps$.}
+All we needed from strings is that they form a monoid, generalize to sets of values from any monoid.\footnote{The |Monoid| class defines $\mappend$ and $\mempty$.}
 
 \mynote{On second thought, postpone generalization from lists to monoids later.}
 
@@ -355,19 +364,19 @@ $$ \derivs u p = \set{ v \mid u \mappend v \in p } $$
 \end{definition}
 \begin{lemma}\lemLabel{derivs-member}
 For a string $s$ and language $p$,
-$$ s \in p \iff \eps \in \derivs s p .$$
+$$ s \in p \iff \mempty \in \derivs s p .$$
 Proof: immediate from \defRef{derivs}.
 \end{lemma}
 The practical value of \lemRef{derivs-member} is that |derivs s p| and |mempty|-containment can be computed easily and efficiently, thanks to \lemRefs{derivs-monoid}{hasEps} below.
 \begin{lemma}[\provedIn{lemma:derivs-monoid}]\lemLabel{derivs-monoid}
 |derivs| satisfies the following properties:
 \begin{align*}
-\derivs\eps p &= p \\
+\derivs\mempty p &= p \\
 \derivs{u \mappend v} p &= \derivs v (\derivs u p)
 \end{align*}
 Equivalently,
 \begin{align*}
-\derivs\eps &= \id \\
+\derivs\mempty &= \id \\
 \derivs{u \mappend v} &= \derivs v \circ \derivs u
 \end{align*}
 where $\id$ is the identity function.
@@ -375,13 +384,7 @@ In other words, |derivs| is a contravariant monoid homomorphism (targeting the m
 \end{lemma}
 
 %% %format hasEps = "\hasEps"
-%format hasEps = "\Varid{has_{\eps}}"
-
-\newcommand\iteB[3]{
-\begin{cases}
-#2 & \text{if $#1$} \\
-#3 & \text{otherwise}
-\end{cases}}
+%format hasEps = "\Varid{has_{\mempty}}"
 
 \begin{definition}
 The derivative $\deriv c p$ of a language $p$ with respect to a single value (``symbol'') $c$ is the derivative of $p$ with respect to the singleton sequence $[c]$, i.e. $$\deriv c p = \derivs{[c]} p.$$
@@ -389,9 +392,9 @@ Equivalently, $\deriv c p = \set{v \mid c:v \in p}$, where ``$c:v$'' is the resu
 \end{definition}
 \begin{lemma}[\citet{Brzozowski64}, Theorem 3.1]\lemLabel{deriv}
 The $\derivOp$ operation has the following properties:\footnote{The fourth property can be written more directly as follows:
-$$\deriv c (p \conv q) = (\ite{\eps \in p}{\deriv c q}0) + \deriv c p \conv q $$
+$$\deriv c (p \conv q) = (\ite{\mempty \in p}{\deriv c q}0) + \deriv c p \conv q $$
 or even
-$$\deriv c (p \conv q) = \iteB{\eps \in p}{\deriv c q + \deriv c p \conv q}{\deriv c p \conv q}. $$}
+$$\deriv c (p \conv q) = \iteB{\mempty \in p}{\deriv c q + \deriv c p \conv q}{\deriv c p \conv q}. $$}
 \begin{align*}
 \deriv c \zero        &= \zero \\
 \deriv c \one         &= \zero \\
@@ -399,18 +402,18 @@ $$\deriv c (p \conv q) = \iteB{\eps \in p}{\deriv c q + \deriv c p \conv q}{\der
 \deriv c (p \conv q)  &= \delta\, p \conv \deriv c q + \deriv c p \conv q \\
 \deriv c (\closure p) &= \deriv c (p \conv \closure p) \\
 \end{align*}
-where $\delta\,p$ is the set containing just the empty string $\eps$ if $\eps \in p$ and otherwise the empty set itself:\notefoot{Consider eliminating |delta| in favor of just using |hasEps|.}
-$$ \delta\,p = \iteB{\one}{\zero}{\eps \in p} . $$
+where $\delta\,p$ is the set containing just the empty string $\mempty$ if $\mempty \in p$ and otherwise the empty set itself:\notefoot{Consider eliminating |delta| in favor of just using |hasEps|.}
+$$ \delta\,p = \iteB{\one}{\zero}{\mempty \in p} . $$
 \end{lemma}
-All that remains now is to see how to test whether $\eps \in p$ for a language $p$.
+All that remains now is to see how to test whether $\mempty \in p$ for a language $p$.
 \begin{lemma}[\provedIn{lemma:hasEps}]\lemLabel{hasEps}
 The following properties hold:\notefoot{Move this definition to after \defRef{derivs} and \lemRef{derivs-member}, which motivate |hasEps|.}
-$$ \eps \not\in \zero $$
-$$ \eps \in \one $$
-$$ \eps \in p + q \iff \eps \in p \lor \eps \in q $$
-$$ \eps \in p \conv q \iff \eps \in p \land \eps \in q $$
-$$ \eps \in \closure p $$
-Recalling the nature of the closed-semiring of booleans from \figref{classes}, and defining $\hasEps p = \eps \in p$, these properties amount to saying that $\hasEps$ is a closed-semiring homomorphism, i.e.,
+$$ \mempty \not\in \zero $$
+$$ \mempty \in \one $$
+$$ \mempty \in p + q \iff \mempty \in p \lor \mempty \in q $$
+$$ \mempty \in p \conv q \iff \mempty \in p \land \mempty \in q $$
+$$ \mempty \in \closure p $$
+Recalling the nature of the closed-semiring of booleans from \figref{classes}, and defining $\hasEps p = \mempty \in p$, these properties amount to saying that $\hasEps$ is a closed-semiring homomorphism, i.e.,
 \begin{align*}
 \hasEps \zero        &= \zero \\
 \hasEps \one         &= \one \\
@@ -426,12 +429,12 @@ Recalling the nature of the closed-semiring of booleans from \figref{classes}, a
 Let's now package up these new operations as another abstract interface for language representations to implement. \lemRefs{derivs-member}{hasEps} can then be interpreted much more broadly than languages as sets of sequences.
 \begin{code}
 class HasDecomp a c | a -> c where
-  hasEps  :: a -> Bool
-  deriv   :: c -> a -> a
+  hasEps :: a -> Bool
+  deriv :: c -> a -> a
 
 instance Eq a => HasDecomp (Set a) a where
-  hasEps   p = [] `elem` p
-  deriv c  p = set (cs | c : cs `elem` p)
+  hasEps p = [] `elem` p
+  deriv c p = set (cs | c : cs `elem` p)
 
 derivs :: HasDecomp a c => [c] -> a -> a
 derivs s p = foldl (flip deriv) p s
@@ -495,6 +498,38 @@ accept p s = hasEps (derivs s p)
   Beyond convolution: the free semimodule monad.
 \item
   Variations: counting, probability distributions, temporal/spatial convolution.
+\end{itemize}
+
+%if False
+
+Simplify $f * g$ where $f = \lis a\,h$:
+\begin{align*}
+f * g &= \liftATwo\,(\mappend)\,f\,g
+  \\ &= \lambda z.\!\!\sum_{\substack{x,y \\ x \mappend y = z}} f\,x * g\,y
+  \\ &= \lambda z.f\,[] * g\,z +\!\!\!
+        \sum_{\substack{c,x',y \\ c \cons x' \mappend y = z}}\!\!\!\! f\,(c \cons x') * g\,y
+  \\ &= \lambda z.\lis a\,h\,[] * g\,z +\!\!\!
+        \sum_{\substack{c,x',y \\ c \cons x' \mappend y = z}}\!\!\!\! \lis a\,h\,(c \cons x') * g\,y
+  \\ &= \lambda z. a * g\,z +
+        \!\!\!\sum_{\substack{c,x',y \\ c \cons x' \mappend y = z}}\!\!\!\! h\,c\,x' * g\,y
+  \\ &= (\lambda z. a * g\,z) +
+        (\lambda z. \!\!\!\sum_{\substack{c,x',y \\ c \cons x' \mappend y = z}}\!\!\!\! h\,c\,x' * g\,y)
+  \\ &= (\lambda z. a * g\,z) + \lis\,0\,(\lambda c. h\,c * g)
+\end{align*}
+Note that $\lambda z. a * g\,z$ is the scalar/vector product of $a$ and $g$, and $\lambda c. h\,c * g$ is mapping $(*\,g)$ over $h$.
+I'll need to fill in some of the reasoning here.
+
+%endif
+
+\sectionl{What else?}
+
+\begin{itemize}
+\item Other applications:
+\begin{itemize}
+  \item Univariate and multivariate polynomials.
+  \item Convolution: discrete and continuous, one- and multi-dimensional, dense and sparse.
+  \item 2D parsing?
+\end{itemize}
 \end{itemize}
 
 

@@ -22,6 +22,7 @@ module Code where
 import Prelude hiding (sum,product)
 
 import Data.Monoid (Monoid(..))
+import Control.Arrow (second)
 import Control.Applicative (liftA2)
 import Control.Monad (join,(>=>))
 import Data.List (stripPrefix)
@@ -358,20 +359,54 @@ regexp (Closure u)   = closure (regexp u)
 infixr 5 :<:
 data Decomp c = Bool :<: (c -> Decomp c)
 
+decompPred :: Decomp c -> Pred [c]
+decompPred = Pred . decompPred'
+
+decompPred' :: Decomp c -> ([c] -> Bool)
+-- decompPred' (e :<: f) = list e (decompPred' . f)
+decompPred' = list' . second (decompPred' .) . undecomp
+
+-- decompPred' (e :<: f) = list e (\ c cs -> decompPred' (f c) cs)
+
+predDecomp :: Pred [c] -> Decomp c
+predDecomp (Pred p) = predDecomp' p
+
+predDecomp' :: ([c] -> Bool) -> Decomp c
+-- predDecomp' p = p [] :<: (\ c -> predDecomp' (p . (c :)))
+-- predDecomp' p = p [] :<: (\ c -> predDecomp' (\ cs -> p (c : cs)))
+-- predDecomp' p = p [] :<: predDecomp' . (\ c -> \ cs -> p (c : cs))
+
+-- predDecomp' p = e :<: predDecomp' . f
+--  where
+--    (e,f) = unlist p
+
+predDecomp' = decomp . second (predDecomp' .) . unlist
+
+decomp :: Bool :* (c -> Decomp c) -> Decomp c
+decomp (e,f) = e :<: f
+
+undecomp :: Decomp c -> Bool :* (c -> Decomp c)
+undecomp (e :<: f) = (e,f)
+
 instance Semiring (Decomp c) where
   zero = False :<: const zero
   one  = True  :<: const zero
   (a :<: ps') <+> (b :<: qs') = (a || b) :<: liftA2 (<+>) ps' qs'
-  -- (<+>) = liftA2 (||)
   (a :<: ps') <.> q@(b :<: qs') = (a && b) :<: liftA2 h ps' qs'
    where
      h p' q' = (if a then q' else zero) <+> (p' <.> q)
 
+  -- (<+>) = liftA2 (||)
+
 instance ClosedSemiring (Decomp c)
 
 instance Eq c => HasSingle (Decomp c) [c] where
-  single [] = True :<: const zero
-  single (c:cs) = False :<: (\ c' -> if c==c' then single cs else zero)
+  single = product . map symbol
+   where
+     symbol c = False :<: (\ c' -> if c'==c then one else zero)
+
+  -- single [] = one
+  -- single (c:cs) = False :<: (\ c' -> if c==c' then single cs else zero)
 
 instance HasTrie c => HasDecomp (Decomp c) c where
   hasEps (a :<: _) = a
@@ -620,6 +655,9 @@ instance HasTrie c => HasTrie [c] where
 list :: a -> (c -> [c] -> a) -> [c] -> a
 list a _ [] = a
 list _ f (c:as) = f c as
+
+list' :: a :* (c -> [c] -> a) -> ([c] -> a)
+list' = uncurry list
 
 unlist :: ([c] -> a) -> a :* (c -> [c] -> a)
 unlist f = (f [], \ c as -> f (c:as))

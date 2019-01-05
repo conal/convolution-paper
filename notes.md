@@ -126,6 +126,8 @@ Generalize and unify:
 *   Come up with another data type besides lists having a useful binary operation.
     Needn't be monoidal.
     Trees?
+*   Discuss the function-of-monoid perspective explored in my journal notes for 2018-12-29 and 2018-12-30.
+    I like its duality with the *Comonad* instance for the same type.
 
 ## Super-memoization
 

@@ -81,7 +81,7 @@ Conal Elliott
 #3 & \text{otherwise}
 \end{cases}}
 \nc\lis{\mathop{\Varid{list}}}
-\nc\liftATwo{\mathop{\Varid{liftA_2}}}
+\nc\liftA{\mathop{\Varid{liftA}}}
 \nc\cons{\mathit{:}}
 
 \DeclareMathOperator{\true}{true}
@@ -479,13 +479,15 @@ accept p s = hasEps (derivs s p)
 \end{code}
 \mynote{Show some examples.}
 
-The definition of |accept| shows that all recognition needs from a language representation is the methods of |HasDecomp|.
+\sectionl{Tries}
+
+The definition of |accept| works for every language representation that implements the |HasDecomp| methods.
 A natural alternative representation is thus an implementation of those two methods, as shown in \figref{Decomp}.
 \begin{theorem}[\provedIn{theorem:Decomp}]\thmLabel{Decomp}
 Given the definitions in \figrefdef{Decomp}{Language representation as |Decomp| methods}{
-%format :<: = "\mathbin{\Varid{:\!\!\triangleleft}}"
+%format :<: = "\mathbin{\Varid{:\!\blacktriangleleft}}"
+%format LazyPat = "\mathit{\sim}\!\!"
 \begin{code}
-infixr 5 :<:
 data Decomp c = Bool :<: (c -> Decomp c)
 
 decompPred :: Decomp c -> Pred [c]
@@ -497,17 +499,16 @@ decompPred = Pred . go
 instance Semiring (Decomp c) where
   zero  = False  :<: const zero
   one   = True   :<: const zero
-  (a :<: ps') <+>      (b :<: qs') = (a  ||  b) :<: liftA2 (<+>)  ps' qs'
-  (a :<: ps') <.>  q@  (b :<: qs') = (a  &&  b) :<: liftA2 h ps' qs'
+  (a :<: ps')  <+>  (b :<: qs') = (a  ||  b) :<: liftA2 (<+>)  ps' qs'
+  (a :<: ps')  <.>  (b :<: qs') = (a  &&  b) :<: liftA2 h ps' qs'
    where
-     h p' q' = (if a then q' else zero) <+> p' <.> q
+     h p' q' = (if a then b :<: qs' else zero) <+> p' <.> q
 
 instance ClosedSemiring (Decomp c)
 
 instance Eq c => HasSingle (Decomp c) [c] where
   single s = product (map symbol s)
-   where
-     symbol c = False :<: (\ c' -> if c'==c then one else zero)
+   where symbol c = False :<: (\ c' -> if c'==c then one else zero)
 
 instance HasTrie c => HasDecomp (Decomp c) c where
   hasEps (a :<: _)    = a
@@ -517,9 +518,52 @@ instance HasTrie c => HasDecomp (Decomp c) c where
 }, |decompPred| is a homomorphism with respect to each instantiated class.
 \end{theorem}
 
+Although the |Decomp| representation caches |hasEps|, |deriv c| will be recomputed due to the use of a function in the |Decomp| representation.
+To further improve performance, we can \emph{memoize} these functions, e.g., with a generalized trie \needcite{} or a finite map.
+Given the sparseness of typical languages, the latter choice seems preferable as a naturally sparse representation, since we can interpret missing entries as $\zero$, i.e., the empty language.
+\begin{theorem}[\provedIn{theorem:DecompM}]\thmLabel{DecompM}
+Given the definitions in \figrefdef{DecompM}{Caching derivatives}{
+%format :| = "\mathbin{\Varid{:\!\!\triangleleft}}"
+%format `mat` = !
+%format mat = (!)
+%format DecompM = Decomp"\!_"M
+\begin{code}
+data DecompM c = Bool :| Map c (DecompM c)
+
+mat :: (Ord c, Semiring a) => Map c a -> c -> a
+m `mat` c = findWithDefault zero c m
+
+decomp :: Ord c => DecompM c -> Decomp c
+decomp (e :| ds) = e :<: (\ c -> decomp (ds `mat` c))
+
+instance Ord c => Semiring (DecompM c) where
+  zero = False :| empty
+  one  = True  :| empty
+  (a :| ps')  <+>  (b :| qs') = (a || b) :| unionWith (<+>) ps' qs'
+  (a :| ps')  <.>  (b :| qs') = (a && b) :| unionWith (<+>) us vs
+   where
+     us = fmap (<.> NOP (b :| qs')) ps'
+     vs = if a then qs' else empty
+
+instance Ord c => ClosedSemiring (DecompM c) where
+  closure (_ :| ds) = q where q = True :| fmap (<.> NOP q) ds
+
+instance Ord c => HasSingle (DecompM c) [c] where
+  single s = product (map symbol s)
+   where symbol c = False :| singleton c one
+
+instance Ord c => HasDecomp (DecompM c) c where
+  hasEps (a :| _) = a
+  deriv c (_ :| ds) = ds `mat` c
+\end{code}
+\vspace{-4ex}
+}, |decomp| is a homomorphism with respect to each instantiated class.%
+\notefoot{Briefly describe the operations used from |Data.Map|: |empty|, |unionWith|, |singleton|, and |findWithDefault|.}
+\end{theorem}
+
+
 \mynote{Examples, and maybe timing comparisons. Motivate the lazy pattern. Mention sharing work by memoizing the functions of characters.}
 
-\sectionl{Tries}
 
 \mynote{An independent path to derivatives.}
 
@@ -540,7 +584,7 @@ instance HasTrie c => HasDecomp (Decomp c) c where
 
 Simplify $f * g$ where $f = \lis a\,h$:
 \begin{align*}
-f * g &= \liftATwo\,(\mappend)\,f\,g
+f * g &= \liftA_2\,(\mappend)\,f\,g
   \\ &= \lambda z.\!\!\sum_{\substack{x,y \\ x \mappend y = z}} f\,x * g\,y
   \\ &= \lambda z.f\,[] * g\,z +\!\!\!
         \sum_{\substack{c,x',y \\ c \cons x' \mappend y = z}}\!\!\!\! f\,(c \cons x') * g\,y
@@ -604,6 +648,8 @@ I'll need to fill in some of the reasoning here.
 \subsection{\thmRef{HasDecomp}}\proofLabel{theorem:HasDecomp}
 
 \subsection{\thmRef{Decomp}}\proofLabel{theorem:Decomp}
+
+\subsection{\thmRef{DecompM}}\proofLabel{theorem:DecompM}
 
 \bibliography{bib}
 

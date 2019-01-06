@@ -247,8 +247,8 @@ accept p s = hasEps (derivs s p)
 infixl 6 :<+>
 infixl 7 :<.>
 
--- Semiring generalization of regular expressions
-#define SemiRE
+-- -- Semiring generalization of regular expressions
+-- #define SemiRE
 
 #ifdef SemiRE
 
@@ -280,15 +280,14 @@ instance (Functor f, Foldable f, OkSym c, Semiring a) => HasSingle (RegExp c a) 
 #if 0
 instance Eq c => HasDecomp (RegExp c a) c where
   hasEps (Char _)    = zero
-  hasEps (Value a)   = ??
+  hasEps (Value a)   = a  -- need to generalize hasEps
   hasEps (p :<+> q)  = hasEps p <+> hasEps q
   hasEps (p :<.> q)  = hasEps p <.> hasEps q
   hasEps (Closure p) = closure (hasEps p)
   
   deriv c (Char c') | c == c'   = one
                     | otherwise = zero
-  deriv _ Zero                  = zero
-  deriv _ One                   = zero
+  deriv _ (Value _)             = zero
   deriv c (p :<+> q)            = deriv c p <+> deriv c q
 #if 1
   -- This one definition works fine if we have OptimizeRegexp
@@ -422,7 +421,7 @@ regexp (Closure u)   = closure (regexp u)
     Decomposition as language
 --------------------------------------------------------------------}
 
-infixr 5 :<:
+-- infix 1 :<:
 data Decomp c = Bool :<: (c -> Decomp c)
 
 -- A hopefully temporary hack for testing.
@@ -452,10 +451,10 @@ predDecomp' :: ([c] -> Bool) -> Decomp c
 --  where
 --    (e,f) = unlist p
 
-predDecomp' = decomp . second (predDecomp' .) . unlist
+predDecomp' = mkDecomp . second (predDecomp' .) . unlist
 
-decomp :: Bool :* (c -> Decomp c) -> Decomp c
-decomp (e,f) = e :<: f
+mkDecomp :: Bool :* (c -> Decomp c) -> Decomp c
+mkDecomp (e,f) = e :<: f
 
 undecomp :: Decomp c -> Bool :* (c -> Decomp c)
 undecomp (e :<: f) = (e,f)
@@ -482,20 +481,36 @@ instance Eq c => HasSingle (Decomp c) [c] where
 
 instance HasTrie c => HasDecomp (Decomp c) c where
   hasEps (a :<: _) = a
-  deriv c (_ :<: ps') = ps' c
+  deriv c (_ :<: ds) = ds c
 
 {--------------------------------------------------------------------
     List trie with finite maps as language
 --------------------------------------------------------------------}
 
-infixr 5 :|
-data LT c = Bool :| Map c (LT c) deriving Show
+-- infix 1 :|
+data DecompM c = Bool :| Map c (DecompM c) deriving Show
 
--- trimLT :: Ord c => Int -> LT c -> LT c
+mat :: (Ord c, Semiring a) => Map c a -> c -> a
+m `mat` c = M.findWithDefault zero c m
+
+decomp :: Ord c => DecompM c -> Decomp c
+-- decomp (e :| ds) = e :<: (\ c -> decomp (ds `mat` c))
+-- decomp (e :| ds) = e :<: (\ c -> decomp (mat ds c))
+decomp (e :| ds) = e :<: (decomp . (ds `mat`))
+
+mdecompPred :: Ord c => DecompM c -> Pred [c]
+mdecompPred = decompPred . decomp
+
+-- mdecompPred = Pred . go
+--  where
+--    go (e :| _ ) [] = e
+--    go (_ :| ds) (c:cs) = go (M.findWithDefault zero c ds) cs
+
+-- trimLT :: Ord c => Int -> DecompM c -> DecompM c
 -- trimLT 0 _ = zero
 -- trimLT n (a :| m) = a :| (trimLT (n-1) <$> m)
 
-instance Ord c => Semiring (LT c) where
+instance Ord c => Semiring (DecompM c) where
   zero = False :| M.empty
   one  = True  :| M.empty
   (a :| ps') <+> (b :| qs') = (a || b) :| M.unionWith (<+>) ps' qs'
@@ -509,8 +524,7 @@ instance Ord c => Semiring (LT c) where
   (a :| ps') <.> ~q@(b :| qs') = (a && b) :| M.unionWith (<+>) us vs
    where
      us = fmap (<.> q) ps'
-     vs | a = qs'
-        | otherwise = M.empty
+     vs = if a then qs' else M.empty
 #elif 0
   -- Works even for recursive anbn examples.
   (a :| ps') <.> q = (if a then q else zero) <+> (False :| fmap (<.> q) ps')
@@ -520,19 +534,22 @@ instance Ord c => Semiring (LT c) where
   (True  :| ps') <.> q@(b :| qs') = b :| M.unionWith (<+>) (fmap (<.> q) ps') qs'
 #endif
 
-instance Ord c => ClosedSemiring (LT c) where
-  closure (_ :| ps') = q
+instance Ord c => ClosedSemiring (DecompM c) where
+  closure (_ :| ds) = q
    where
-     q = True :| fmap (<.> q) ps'
+     q = True :| fmap (<.> q) ds
 
-instance (Ord c, Eq c) => HasSingle (LT c) [c] where
-  single = foldr (\ c p -> False :| M.singleton c p) one
+instance Ord c => HasSingle (DecompM c) [c] where
+  -- single = foldr (\ c p -> False :| M.singleton c p) one
   -- single [] = one
   -- single (c:cs) = False :| M.singleton c (single cs)
+  single = product . map symbol
+   where
+     symbol c = False :| M.singleton c one
 
-instance Ord c => HasDecomp (LT c) c where
+instance Ord c => HasDecomp (DecompM c) c where
   hasEps (a :| _) = a
-  deriv c (_ :| ps') = M.findWithDefault zero c ps'
+  deriv c (_ :| ds) = ds `mat` c
 
 {--------------------------------------------------------------------
     List trie as a language
@@ -704,7 +721,7 @@ HasTrieIsomorph((),Char,Int,fromEnum,toEnum)
     String tries
 --------------------------------------------------------------------}
 
-infixr 5 :<
+infix 1 :<
 data LTrie c a = a :< (c :->: LTrie c a)
 
 -- TODO: Use HasTrieIsomorph for [c]. I'll probably have to add instances of
@@ -764,7 +781,7 @@ predLTrie (Pred f) = trie f
     Temporary tests
 --------------------------------------------------------------------}
 
-lta,ltb :: LT Char
+lta,ltb :: DecompM Char
 lta = single "a"
 ltb = single "b"
 

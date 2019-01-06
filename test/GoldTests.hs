@@ -25,9 +25,9 @@ main = do
 basicTests :: TestTree
 basicTests = testGroup "Various representations"
   [ testGroup "" []
-  , tests @(RegExp Char) "regexp"
-  , tests @(Decomp Char) "decomp"
-  , tests @(LT Char)     "lt"
+  , tests @(RegExp  Char) "regexp"
+  , tests @(Decomp  Char) "decomp"
+  , tests @(DecompM Char) "decompm"
   ]
 
 tests :: forall z. (Language z Char, Show z) => String -> TestTree

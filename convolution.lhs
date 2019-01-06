@@ -115,7 +115,7 @@ Languages are commonly built up via a few simple operations:\notefoot{I may want
 \item For a string $s$, the \emph{singleton} language $\single s = \set{s}$.
 \item For two languages $P$ and $Q$, the \emph{union} $P \union Q = \set{s \mid s \in P \lor s \in Q}$.
 \item For two languages $P$ and $Q$, the element-wise \emph{concatenation} $P \cat Q = \set{p \mappend q \mid p \in P \land q \in Q}$, where ``$\mappend$'' denotes string concatenation.
-\item For a language $P$, the \emph{closure} $\closure P = \bigunion_{n \ge 0} P^n $, where $P^n$ is $P$ concatenated with itself $n$ times (and $P^0 = \single{\mempty}$).
+\item For a language $P$, the \emph{closure} $\closure P = \bigunion_{n \ge 0} P^n $, where $P^n$ is $P$ concatenated with itself $n$ times\out{ (and $P^0 = \single{\mempty}$)}.
 \end{itemize}
 %if False
 \out{Note that $\closure P$ can also be given a recursive specification: $\closure P = \mempty \union P \cat \closure P$.{Syntactically, we'll take concatenation (``$\cat$'') to bind more tightly than union (``$\union$''), so the RHS of this definition is equivalent to $\mempty \union (P \cat \closure P)$}
@@ -128,7 +128,7 @@ Some observations:
 \begin{itemize}
 \item Union is associative, with $\emptyset$ as its identity.\notefoot{Maybe state equations for this observations and the next two.}
 \item Element-Wise concatenation is associative and commutative, with $\single \mempty$ as its identity, where $\mempty$ is the empty string.
-\item Left- and right-concatenation distributes over union.
+\item Left- and right-concatenation distribute over union.
 \item The empty language annihilates under concatenation, i.e., $P \cat \emptyset = \emptyset \cat Q = \emptyset$.
 \item The $\closure P$ operation satisfies the equation $\closure P = \mempty \union (P \cat \closure P)$.
 \end{itemize}
@@ -189,8 +189,7 @@ instance HasSingle (Set s) s where
 \end{code}
 \vspace{-4ex}
 %%  closure p = bigunion (n >= 0) (pow p n)
-}.
-All we needed from strings is that they form a monoid, generalize to sets of values from any monoid.\footnote{The |Monoid| class defines $\mappend$ and $\mempty$.}
+}, which generalizes from strings to any monoid.\footnote{The |Monoid| class defines $\mappend$ and $\mempty$.}
 
 \mynote{On second thought, postpone generalization from lists to monoids later.}
 
@@ -329,8 +328,8 @@ instance Eq c => Semiring (RegExp c) where
   a <.> b = a :<.> b
 
 instance ClosedSemiring (RegExp c) where
-  closure Zero = one
-  closure e    = Closure e
+  closure Zero  = one
+  closure e     = Closure e
 
 instance HasSingle (RegExp c) [c] where
   single s = foldr (\ c e -> Char c <.> e) one s
@@ -379,8 +378,7 @@ Equivalently,
 \derivs\mempty &= \id \\
 \derivs{u \mappend v} &= \derivs v \circ \derivs u
 \end{align*}
-where $\id$ is the identity function.
-In other words, |derivs| is a contravariant monoid homomorphism (targeting the monoid of endo-functions).
+where $\id$ is the identity function.\footnote{In other words, |derivs| is a contravariant monoid homomorphism (targeting the monoid of endo-functions).}
 \end{lemma}
 
 %% %format hasEps = "\hasEps"
@@ -403,7 +401,7 @@ $$\deriv c (p \conv q) = \iteB{\mempty \in p}{\deriv c q + \deriv c p \conv q}{\
 \deriv c (\closure p) &= \deriv c (p \conv \closure p) \\
 \end{align*}
 where $\delta\,p$ is the set containing just the empty string $\mempty$ if $\mempty \in p$ and otherwise the empty set itself:\notefoot{Consider eliminating |delta| in favor of just using |hasEps|.}
-$$ \delta\,p = \iteB{\one}{\zero}{\mempty \in p} . $$
+$$ \delta\,p = \iteB{\mempty \in p}{\one}{\zero} . $$
 \end{lemma}
 All that remains now is to see how to test whether $\mempty \in p$ for a language $p$.
 \begin{lemma}[\provedIn{lemma:hasEps}]\lemLabel{hasEps}
@@ -439,7 +437,7 @@ instance Eq a => HasDecomp (Set a) a where
 derivs :: HasDecomp a c => [c] -> a -> a
 derivs s p = foldl (flip deriv) p s
 \end{code}
-As with |Semiring|, |ClosedSemiring|, and |HasSingle|, we can calculate instances of |HasDecomp|.
+As with |Semiring|, |ClosedSemiring|, and |HasSingle|, we can calculate instances of |HasDecomp|, as shown in \figref{HasDecomp}.
 \begin{theorem}[\provedIn{theorem:HasDecomp}]\thmLabel{HasDecomp}
 Given the definitions in \figrefdef{HasDecomp}{Decomposition of language representations (specified by homomorphicity)}{
 \begin{code}
@@ -482,7 +480,7 @@ accept p s = hasEps (derivs s p)
 \mynote{Show some examples.}
 
 The definition of |accept| shows that all recognition needs from a language representation is the methods of |HasDecomp|.
-A natural alternative representation, therefore, an implementation of those methods, as shown in \figref{Decomp}.
+A natural alternative representation is thus an implementation of those two methods, as shown in \figref{Decomp}.
 \begin{theorem}[\provedIn{theorem:Decomp}]\thmLabel{Decomp}
 Given the definitions in \figrefdef{Decomp}{Language representation as |Decomp| methods}{
 %format :<: = "\mathbin{\Varid{:\!\!\triangleleft}}"
@@ -492,9 +490,9 @@ data Decomp c = Bool :<: (c -> Decomp c)
 
 decompPred :: Decomp c -> Pred [c]
 decompPred = Pred . go
- where
-   go (e  :<:  _ ) []      = e
-   go (_  :<:  ds) (c:cs)  = go (ds c) cs
+  where
+    go (e  :<:  _ ) []      = e
+    go (_  :<:  ds) (c:cs)  = go (ds c) cs
 
 instance Semiring (Decomp c) where
   zero  = False  :<: const zero

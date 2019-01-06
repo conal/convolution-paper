@@ -479,7 +479,7 @@ instance Eq c => HasSingle (Decomp c) [c] where
   -- single [] = one
   -- single (c:cs) = False :<: (\ c' -> if c==c' then single cs else zero)
 
-instance HasTrie c => HasDecomp (Decomp c) c where
+instance HasDecomp (Decomp c) c where
   hasEps (a :<: _) = a
   deriv c (_ :<: ds) = ds c
 

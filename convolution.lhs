@@ -510,7 +510,7 @@ instance Eq c => HasSingle (Decomp c) [c] where
   single s = product (map symbol s)
    where symbol c = False :<: (\ c' -> if c'==c then one else zero)
 
-instance HasTrie c => HasDecomp (Decomp c) c where
+instance HasDecomp (Decomp c) c where
   hasEps (a :<: _)    = a
   deriv c (_ :<: ds)  = ds c
 \end{code}

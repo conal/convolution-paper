@@ -561,11 +561,10 @@ instance Ord c => HasDecomp (DecompM c) c where
 \notefoot{Briefly describe the operations used from |Data.Map|: |empty|, |unionWith|, |singleton|, and |findWithDefault|.}
 \end{theorem}
 
-
 \mynote{Examples, and maybe timing comparisons. Motivate the lazy pattern. Mention sharing work by memoizing the functions of characters.}
 
-
-\mynote{An independent path to derivatives.}
+Note that |DecompM| is exactly a trie \needcite{}, and |accept| for |DecompM| is the usual membership test for tries.
+Another route to ``derivative''-based language recognition was hiding in the standard notion of tries all along!
 
 \sectionl{Generalizing}
 \mynote{Outline:}

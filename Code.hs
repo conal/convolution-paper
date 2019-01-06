@@ -359,12 +359,18 @@ regexp (Closure u)   = closure (regexp u)
 infixr 5 :<:
 data Decomp c = Bool :<: (c -> Decomp c)
 
+-- A hopefully temporary hack for testing.
+-- (Some of the tests show the language representation.)
+instance Show (Decomp c) where show _ = "<Decomp>"
+
 decompPred :: Decomp c -> Pred [c]
 decompPred = Pred . decompPred'
 
 decompPred' :: Decomp c -> ([c] -> Bool)
+decompPred' (e :<: _ ) [] = e
+decompPred' (_ :<: ds) (c:cs) = decompPred' (ds c) cs
 -- decompPred' (e :<: f) = list e (decompPred' . f)
-decompPred' = list' . second (decompPred' .) . undecomp
+-- decompPred' = list' . second (decompPred' .) . undecomp
 
 -- decompPred' (e :<: f) = list e (\ c cs -> decompPred' (f c) cs)
 
@@ -392,9 +398,9 @@ instance Semiring (Decomp c) where
   zero = False :<: const zero
   one  = True  :<: const zero
   (a :<: ps') <+> (b :<: qs') = (a || b) :<: liftA2 (<+>) ps' qs'
-  (a :<: ps') <.> q@(b :<: qs') = (a && b) :<: liftA2 h ps' qs'
+  (a :<: ps') <.> ~q@(b :<: qs') = (a && b) :<: liftA2 h ps' qs'
    where
-     h p' q' = (if a then q' else zero) <+> (p' <.> q)
+     h p' q' = (if a then q' else zero) <+> p' <.> q
 
   -- (<+>) = liftA2 (||)
 
@@ -419,27 +425,31 @@ instance HasTrie c => HasDecomp (Decomp c) c where
 infixr 5 :|
 data LT c = Bool :| Map c (LT c) deriving Show
 
-trimLT :: Ord c => Int -> LT c -> LT c
-trimLT 0 _ = zero
-trimLT n (a :| m) = a :| (trimLT (n-1) <$> m)
+-- trimLT :: Ord c => Int -> LT c -> LT c
+-- trimLT 0 _ = zero
+-- trimLT n (a :| m) = a :| (trimLT (n-1) <$> m)
 
 instance Ord c => Semiring (LT c) where
   zero = False :| M.empty
   one  = True  :| M.empty
   (a :| ps') <+> (b :| qs') = (a || b) :| M.unionWith (<+>) ps' qs'
 #if 0
-  -- Works, but it leaves many zero entries in the maps, due to (delta p <.>)
-  p@(a :| ps') <.> q@(b :| qs') =
+  -- Works, but it leaves many zero entries in the maps (due to (delta p <.>))
+  -- and wedges for the recursive anbn examples even with the lazy pattern.
+  p@(a :| ps') <.> ~q@(b :| qs') =
     (a && b) :| M.unionWith (<+>) (fmap (<.> q) ps') (fmap (delta p <.>) qs')
-#elif 0
-  (a :| ps') <.> q@(b :| qs') = (a && b) :| M.unionWith (<+>) us vs
+#elif 1
+  -- Wedges for recursive anbn examples with the lazy pattern.
+  (a :| ps') <.> ~q@(b :| qs') = (a && b) :| M.unionWith (<+>) us vs
    where
      us = fmap (<.> q) ps'
      vs | a = qs'
         | otherwise = M.empty
-#elif 1
+#elif 0
+  -- Works even for recursive anbn examples.
   (a :| ps') <.> q = (if a then q else zero) <+> (False :| fmap (<.> q) ps')
 #else
+  -- Works even for recursive anbn examples.
   (False :| ps') <.> q = False :| fmap (<.> q) ps'
   (True  :| ps') <.> q@(b :| qs') = b :| M.unionWith (<+>) (fmap (<.> q) ps') qs'
 #endif

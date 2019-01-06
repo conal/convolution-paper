@@ -26,6 +26,7 @@ basicTests :: TestTree
 basicTests = testGroup "Various representations"
   [ testGroup "" []
   , tests @(RegExp Char) "regexp"
+  , tests @(Decomp Char) "decomp"
   , tests @(LT Char)     "lt"
   ]
 

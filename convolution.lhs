@@ -476,12 +476,50 @@ instance Eq c => HasDecomp (RegExp c) c where
 
 Taken together, \lemRefs{derivs-member}{hasEps} give us an effective test for ``language'' membership, assuming that the language is expressed via |Semiring|, |ClosedSemiring|, and |HasSingle| and assuming that the language representation supports |HasDecomp|:
 \begin{code}
-
 accept :: HasDecomp a c => a -> [c] -> Bool
 accept p s = hasEps (derivs s p)
 \end{code}
-
 \mynote{Show some examples.}
+
+The definition of |accept| shows that all recognition needs from a language representation is the methods of |HasDecomp|.
+A natural alternative representation, therefore, an implementation of those methods, as shown in \figref{Decomp}.
+\begin{theorem}[\provedIn{theorem:Decomp}]\thmLabel{Decomp}
+Given the definitions in \figrefdef{Decomp}{Language representation as |Decomp| methods}{
+%format :<: = "\mathbin{\Varid{:\!\!\triangleleft}}"
+\begin{code}
+infixr 5 :<:
+data Decomp c = Bool :<: (c -> Decomp c)
+
+decompPred :: Decomp c -> Pred [c]
+decompPred = Pred . go
+ where
+   go (e  :<:  _ ) []      = e
+   go (_  :<:  ds) (c:cs)  = go (ds c) cs
+
+instance Semiring (Decomp c) where
+  zero  = False  :<: const zero
+  one   = True   :<: const zero
+  (a :<: ps') <+>      (b :<: qs') = (a  ||  b) :<: liftA2 (<+>)  ps' qs'
+  (a :<: ps') <.>  q@  (b :<: qs') = (a  &&  b) :<: liftA2 h ps' qs'
+   where
+     h p' q' = (if a then q' else zero) <+> p' <.> q
+
+instance ClosedSemiring (Decomp c)
+
+instance Eq c => HasSingle (Decomp c) [c] where
+  single s = product (map symbol s)
+   where
+     symbol c = False :<: (\ c' -> if c'==c then one else zero)
+
+instance HasTrie c => HasDecomp (Decomp c) c where
+  hasEps (a :<: _)    = a
+  deriv c (_ :<: ds)  = ds c
+\end{code}
+\vspace{-4ex}
+}, |decompPred| is a homomorphism with respect to each instantiated class.
+\end{theorem}
+
+\mynote{Examples, and maybe timing comparisons. Motivate the lazy pattern. Mention sharing work by memoizing the functions of characters.}
 
 \sectionl{Tries}
 
@@ -566,6 +604,8 @@ I'll need to fill in some of the reasoning here.
 \subsection{\lemRef{hasEps}}\proofLabel{lemma:hasEps}
 
 \subsection{\thmRef{HasDecomp}}\proofLabel{theorem:HasDecomp}
+
+\subsection{\thmRef{Decomp}}\proofLabel{theorem:Decomp}
 
 \bibliography{bib}
 

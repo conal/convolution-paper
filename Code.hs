@@ -74,6 +74,10 @@ class HasDecomp a c | a -> c where
   hasEps :: a -> Bool
   deriv :: c -> a -> a
 
+delta :: (Semiring a, HasDecomp a c) => a -> a
+delta a | hasEps a  = one
+        | otherwise = zero
+
 -- | Derivative of a language w.r.t a string
 derivs :: HasDecomp a c => [c] -> a -> a
 derivs s p = foldl (flip deriv) p s
@@ -243,6 +247,70 @@ accept p s = hasEps (derivs s p)
 infixl 6 :<+>
 infixl 7 :<.>
 
+-- Semiring generalization of regular expressions
+#define SemiRE
+
+#ifdef SemiRE
+
+-- | Regular expression
+data RegExp c a =
+    Char c
+  | Value a
+  | RegExp c a :<+> RegExp c a
+  | RegExp c a :<.> RegExp c a
+  | Closure (RegExp c a)
+ deriving (Show,Eq)
+
+type OkSym c = (() :: Constraint)
+
+instance Semiring a => Semiring (RegExp c a) where
+  zero  = Value zero
+  one   = Value one
+  (<+>) = (:<+>)
+  (<.>) = (:<.>)
+
+instance Semiring a => ClosedSemiring (RegExp c a) where
+  closure = Closure
+
+-- Or from an arbitrary foldable
+instance (Functor f, Foldable f, OkSym c, Semiring a) => HasSingle (RegExp c a) (f c) where
+  single = product . fmap Char
+  -- single = foldr (\ c e -> Char c <.> e) One
+
+#if 0
+instance Eq c => HasDecomp (RegExp c a) c where
+  hasEps (Char _)    = zero
+  hasEps (Value a)   = ??
+  hasEps (p :<+> q)  = hasEps p <+> hasEps q
+  hasEps (p :<.> q)  = hasEps p <.> hasEps q
+  hasEps (Closure p) = closure (hasEps p)
+  
+  deriv c (Char c') | c == c'   = one
+                    | otherwise = zero
+  deriv _ Zero                  = zero
+  deriv _ One                   = zero
+  deriv c (p :<+> q)            = deriv c p <+> deriv c q
+#if 1
+  -- This one definition works fine if we have OptimizeRegexp
+  deriv c (p :<.> q)            = delta p <.> deriv c q <+> deriv c p <.> q
+#else
+  deriv c (p :<.> q) | hasEps p  = deriv c q <+> deriv c p <.> q
+                     | otherwise = deriv c p <.> q
+#endif
+  deriv c (Closure p)           = deriv c (p <.> Closure p) -- since deriv c one = zero
+                        -- deriv c (one <+> p <.> Closure p)
+#endif
+
+-- | Interpret a regular expression
+regexp :: (ClosedSemiring a, HasSingle a [c]) => RegExp c a -> a
+regexp (Char c)      = single [c]
+regexp (Value a)     = a
+regexp (u  :<+>  v)  = regexp u <+> regexp v
+regexp (u  :<.>  v)  = regexp u <.> regexp v
+regexp (Closure u)   = closure (regexp u)
+
+#else
+
 -- | Regular expression
 data RegExp c =
     Char c
@@ -316,10 +384,6 @@ instance (Functor f, Foldable f, OkSym c) => HasSingle (RegExp c) (f c) where
 
 #endif
 
-delta :: (Semiring a, HasDecomp a c) => a -> a
-delta a | hasEps a  = one
-        | otherwise = zero
-
 instance Eq c => HasDecomp (RegExp c) c where
   hasEps (Char _)    = zero
   hasEps Zero        = zero
@@ -351,6 +415,8 @@ regexp One           = one
 regexp (u  :<+>  v)  = regexp u <+> regexp v
 regexp (u  :<.>  v)  = regexp u <.> regexp v
 regexp (Closure u)   = closure (regexp u)
+
+#endif
 
 {--------------------------------------------------------------------
     Decomposition as language

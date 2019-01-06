@@ -518,15 +518,20 @@ instance HasDecomp (Decomp c) c where
 }, |decompPred| is a homomorphism with respect to each instantiated class.
 \end{theorem}
 
-Although the |Decomp| representation caches |hasEps|, |deriv c| will be recomputed due to the use of a function in the |Decomp| representation.
-To further improve performance, we can \emph{memoize} these functions, e.g., with a generalized trie \needcite{} or a finite map.
-Given the sparseness of typical languages, the latter choice seems preferable as a naturally sparse representation, since we can interpret missing entries as $\zero$, i.e., the empty language.
-\begin{theorem}[\provedIn{theorem:DecompM}]\thmLabel{DecompM}
-Given the definitions in \figrefdef{DecompM}{Caching derivatives}{
 %format :| = "\mathbin{\Varid{:\!\!\triangleleft}}"
 %format `mat` = !
 %format mat = (!)
 %format DecompM = Decomp"\!_"M
+%format DecompM = Trie
+%format decomp = trieDecomp
+
+Although the |Decomp| representation caches |hasEps|, |deriv c| will be recomputed due to the use of a function in the |Decomp| representation.
+To further improve performance, we can \emph{memoize} these functions, e.g., with a generalized trie \needcite{} or a finite map.
+Given the sparseness of typical languages, the latter choice seems preferable as a naturally sparse representation, since we can interpret missing entries as $\zero$, i.e., the empty language.
+The resulting representation is exactly a trie \needcite{}, and |accept| for |DecompM| is the usual membership test for tries.
+Another route to ``derivative''-based language recognition was hiding in the standard notion of tries all along!
+\begin{theorem}[\provedIn{theorem:DecompM}]\thmLabel{DecompM}
+Given the definitions in \figrefdef{DecompM}{Caching derivatives}{
 \begin{code}
 data DecompM c = Bool :| Map c (DecompM c)
 
@@ -562,9 +567,6 @@ instance Ord c => HasDecomp (DecompM c) c where
 \end{theorem}
 
 \mynote{Examples, and maybe timing comparisons. Motivate the lazy pattern. Mention sharing work by memoizing the functions of characters.}
-
-Note that |DecompM| is exactly a trie \needcite{}, and |accept| for |DecompM| is the usual membership test for tries.
-Another route to ``derivative''-based language recognition was hiding in the standard notion of tries all along!
 
 \sectionl{Generalizing}
 \mynote{Outline:}

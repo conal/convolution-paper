@@ -524,6 +524,7 @@ instance HasDecomp (Decomp c) c where
 %format DecompM = Decomp"\!_"M
 %format DecompM = Trie
 %format decomp = trieDecomp
+%format mdecompPred = triePred
 
 Although the |Decomp| representation caches |hasEps|, |deriv c| will be recomputed due to the use of a function in the |Decomp| representation.
 To further improve performance, we can \emph{memoize} these functions, e.g., with a generalized trie \needcite{} or a finite map.
@@ -538,8 +539,11 @@ data DecompM c = Bool :| Map c (DecompM c)
 mat :: (Ord c, Semiring a) => Map c a -> c -> a
 m `mat` c = findWithDefault zero c m
 
-decomp :: Ord c => DecompM c -> Decomp c
-decomp (e :| ds) = e :<: (\ c -> decomp (ds `mat` c))
+mdecompPred :: Ord c => DecompM c -> Pred [c]
+mdecompPred = Pred . go
+  where
+    go (e  :|  _   ) []      = e
+    go (_  :|  ds  ) (c:cs)  = go (ds `mat` c) cs
 
 instance Ord c => Semiring (DecompM c) where
   zero = False :| empty
@@ -562,45 +566,27 @@ instance Ord c => HasDecomp (DecompM c) c where
   deriv c (_ :| ds) = ds `mat` c
 \end{code}
 \vspace{-4ex}
-}, |decomp| is a homomorphism with respect to each instantiated class.%
+}, |mdecompPred| is a homomorphism with respect to each instantiated class.%
 \notefoot{Briefly describe the operations used from |Data.Map|: |empty|, |unionWith|, |singleton|, and |findWithDefault|.}
 \end{theorem}
 
 \mynote{Examples, and maybe timing comparisons. Motivate the lazy pattern. Mention sharing work by memoizing the functions of characters.}
 
-\sectionl{Generalizing}
-\mynote{Outline:}
-\begin{itemize}
-\item
-  Beyond booleans.
-\item
-  Convolution.
-\item
-  Beyond convolution: the free semimodule monad.
-\item
-  Variations: counting, probability distributions, temporal/spatial convolution.
-\end{itemize}
+\sectionl{Beyond booleans}
 
-%if False
+\mynote{Generalize from |Bool| to an arbitrary semiring.}
 
-Simplify $f * g$ where $f = \lis a\,h$:
-\begin{align*}
-f * g &= \liftA_2\,(\mappend)\,f\,g
-  \\ &= \lambda z.\!\!\sum_{\substack{x,y \\ x \mappend y = z}} f\,x * g\,y
-  \\ &= \lambda z.f\,[] * g\,z +\!\!\!
-        \sum_{\substack{c,x',y \\ c \cons x' \mappend y = z}}\!\!\!\! f\,(c \cons x') * g\,y
-  \\ &= \lambda z.\lis a\,h\,[] * g\,z +\!\!\!
-        \sum_{\substack{c,x',y \\ c \cons x' \mappend y = z}}\!\!\!\! \lis a\,h\,(c \cons x') * g\,y
-  \\ &= \lambda z. a * g\,z +
-        \!\!\!\sum_{\substack{c,x',y \\ c \cons x' \mappend y = z}}\!\!\!\! h\,c\,x' * g\,y
-  \\ &= (\lambda z. a * g\,z) +
-        (\lambda z. \!\!\!\sum_{\substack{c,x',y \\ c \cons x' \mappend y = z}}\!\!\!\! h\,c\,x' * g\,y)
-  \\ &= (\lambda z. a * g\,z) + \lis\,0\,(\lambda c. h\,c * g)
-\end{align*}
-Note that $\lambda z. a * g\,z$ is the scalar/vector product of $a$ and $g$, and $\lambda c. h\,c * g$ is mapping $(*\,g)$ over $h$.
-I'll need to fill in some of the reasoning here.
+\sectionl{Convolution}
 
-%endif
+\mynote{Show that |(*)| corresponds to generalized convolution.}
+
+\sectionl{Beyond convolution}
+
+\mynote{The free semimodule monad.}
+
+\sectionl{More variations}
+
+\mynote{Variations: counting, probability distributions, temporal/spatial convolution.}
 
 \sectionl{What else?}
 

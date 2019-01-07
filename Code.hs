@@ -424,20 +424,20 @@ regexp (Closure u)   = closure (regexp u)
 -- infix 1 :<:
 data Decomp c = Bool :<: (c -> Decomp c)
 
+inDecomp :: Decomp c -> ([c] -> Bool)
+inDecomp (e :<: _ ) [] = e
+inDecomp (_ :<: ds) (c:cs) = inDecomp (ds c) cs
+-- inDecomp (e :<: f) = list e (inDecomp . f)
+-- inDecomp = list' . second (inDecomp .) . undecomp
+
+-- decompPred' (e :<: f) = list e (\ c cs -> decompPred' (f c) cs)
+
 -- A hopefully temporary hack for testing.
 -- (Some of the tests show the language representation.)
 instance Show (Decomp c) where show _ = "<Decomp>"
 
 decompPred :: Decomp c -> Pred [c]
-decompPred = Pred . decompPred'
-
-decompPred' :: Decomp c -> ([c] -> Bool)
-decompPred' (e :<: _ ) [] = e
-decompPred' (_ :<: ds) (c:cs) = decompPred' (ds c) cs
--- decompPred' (e :<: f) = list e (decompPred' . f)
--- decompPred' = list' . second (decompPred' .) . undecomp
-
--- decompPred' (e :<: f) = list e (\ c cs -> decompPred' (f c) cs)
+decompPred = Pred . inDecomp
 
 predDecomp :: Pred [c] -> Decomp c
 predDecomp (Pred p) = predDecomp' p
@@ -490,19 +490,20 @@ instance HasDecomp (Decomp c) c where
 -- infix 1 :|
 data DecompM c = Bool :| Map c (DecompM c) deriving Show
 
+inDecompM :: Ord c => DecompM c -> [c] -> Bool
+inDecompM (e :| _ ) [] = e
+inDecompM (_ :| ds) (c:cs) = inDecompM (ds `mat` c) cs
+
 mat :: (Ord c, Semiring a) => Map c a -> c -> a
 m `mat` c = M.findWithDefault zero c m
+
+mdecompPred :: Ord c => DecompM c -> Pred [c]
+mdecompPred = Pred . inDecompM
 
 decomp :: Ord c => DecompM c -> Decomp c
 -- decomp (e :| ds) = e :<: (\ c -> decomp (ds `mat` c))
 -- decomp (e :| ds) = e :<: (\ c -> decomp (mat ds c))
 decomp (e :| ds) = e :<: (decomp . (ds `mat`))
-
-mdecompPred :: Ord c => DecompM c -> Pred [c]
-mdecompPred = Pred . go
- where
-   go (e :| _ ) [] = e
-   go (_ :| ds) (c:cs) = go (ds `mat` c) cs
 
 -- mdecompPred = decompPred . decomp
 

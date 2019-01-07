@@ -499,12 +499,12 @@ decomp :: Ord c => DecompM c -> Decomp c
 decomp (e :| ds) = e :<: (decomp . (ds `mat`))
 
 mdecompPred :: Ord c => DecompM c -> Pred [c]
-mdecompPred = decompPred . decomp
+mdecompPred = Pred . go
+ where
+   go (e :| _ ) [] = e
+   go (_ :| ds) (c:cs) = go (ds `mat` c) cs
 
--- mdecompPred = Pred . go
---  where
---    go (e :| _ ) [] = e
---    go (_ :| ds) (c:cs) = go (M.findWithDefault zero c ds) cs
+-- mdecompPred = decompPred . decomp
 
 -- trimLT :: Ord c => Int -> DecompM c -> DecompM c
 -- trimLT 0 _ = zero

@@ -485,16 +485,17 @@ The definition of |accept| works for every language representation that implemen
 A natural alternative representation is thus an implementation of those two methods, as shown in \figref{Decomp}.
 \begin{theorem}[\provedIn{theorem:Decomp}]\thmLabel{Decomp}
 Given the definitions in \figrefdef{Decomp}{Language representation as |Decomp| methods}{
-%format :<: = "\mathbin{\Varid{:\!\blacktriangleleft}}"
+%format :<: = "\mathrel{\Varid{:\!\blacktriangleleft}}"
 %format LazyPat = "\mathit{\sim}\!\!"
 \begin{code}
 data Decomp c = Bool :<: (c -> Decomp c)
 
+inDecomp :: Decomp c -> [c] -> Bool
+inDecomp (e  :<:  _   ) []      = e
+inDecomp (_  :<:  ds  ) (c:cs)  = inDecomp (ds c) cs
+
 decompPred :: Decomp c -> Pred [c]
-decompPred = Pred . go
-  where
-    go (e  :<:  _ ) []      = e
-    go (_  :<:  ds) (c:cs)  = go (ds c) cs
+decompPred = Pred . inDecomp
 
 instance Semiring (Decomp c) where
   zero  = False  :<: const zero
@@ -518,12 +519,13 @@ instance HasDecomp (Decomp c) c where
 }, |decompPred| is a homomorphism with respect to each instantiated class.
 \end{theorem}
 
-%format :| = "\mathbin{\Varid{:\!\!\triangleleft}}"
+%format :| = "\mathrel{\Varid{:\!\!\triangleleft}}"
 %format `mat` = !
 %format mat = (!)
 %format DecompM = Decomp"\!_"M
 %format DecompM = Trie
 %format decomp = trieDecomp
+%format inDecompM = inTrie
 %format mdecompPred = triePred
 
 Although the |Decomp| representation caches |hasEps|, |deriv c| will be recomputed due to the use of a function in the |Decomp| representation.
@@ -536,20 +538,21 @@ Given the definitions in \figrefdef{DecompM}{Caching derivatives}{
 \begin{code}
 data DecompM c = Bool :| Map c (DecompM c)
 
+inDecompM :: Ord c => DecompM c -> [c] -> Bool
+inDecompM (e   :|  _   ) []      = e
+inDecompM (_   :|  ds  ) (c:cs)  = inDecompM (ds `mat` c) cs
+
 mat :: (Ord c, Semiring a) => Map c a -> c -> a
 m `mat` c = findWithDefault zero c m
 
 mdecompPred :: Ord c => DecompM c -> Pred [c]
-mdecompPred = Pred . go
-  where
-    go (e  :|  _   ) []      = e
-    go (_  :|  ds  ) (c:cs)  = go (ds `mat` c) cs
+mdecompPred = Pred . inDecompM
 
 instance Ord c => Semiring (DecompM c) where
-  zero = False :| empty
-  one  = True  :| empty
-  (a :| ps')  <+>  (b :| qs') = (a || b) :| unionWith (<+>) ps' qs'
-  (a :| ps')  <.>  (b :| qs') = (a && b) :| unionWith (<+>) us vs
+  zero = False  :|  empty
+  one  = True   :|  empty
+  (a :| ps')  <+>   (b :| qs') = (a || b) :| unionWith (<+>) ps' qs'
+  (a :| ps')  <.>   (b :| qs') = (a && b) :| unionWith (<+>) us vs
    where
      us = fmap (<.> NOP (b :| qs')) ps'
      vs = if a then qs' else empty

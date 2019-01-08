@@ -1,27 +1,10 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE DeriveFoldable #-}
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DefaultSignatures #-}
+-- | Languages as sets/predicates
 
-{-# OPTIONS_GHC -Wall #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
-
--- | Code for the paper.
-
-module LanguageAsSet where
+module Set where
 
 import Prelude hiding (sum,product)
 
-import Data.Monoid (Monoid(..))
+-- import Data.Monoid (Monoid(..))
 import Control.Arrow (second)
 import Control.Applicative (liftA2)
 import Control.Monad (join,(>=>))
@@ -38,37 +21,12 @@ import qualified Data.MultiSet as MS
 
 import qualified Data.IntTrie as IT  -- data-inttrie
 
-{--------------------------------------------------------------------
-    Miscellany
---------------------------------------------------------------------}
-
-infixl 7 :*
-infixl 6 :+
-
-type (:*)  = (,)
-type (:+)  = Either
-
-type Unop a = a -> a
-
-bool :: a -> a -> Bool -> a
-bool t e b = if b then t else e
+import Misc
+import Semiring
 
 {--------------------------------------------------------------------
-    Abstract interface
+    Abstract interfaces
 --------------------------------------------------------------------}
-
-class Semiring a where
-  infixl 7 <.>
-  infixl 6 <+>
-  zero, one     :: a
-  (<+>), (<.>)  :: a -> a -> a
-
-class Semiring a => ClosedSemiring a where
-  closure :: a -> a
-  closure p = q where q = one <+> p <.> q
-
-class HasSingle a s where
-  single :: s -> a
 
 class HasDecomp a c | a -> c where
   hasEps :: a -> Bool
@@ -82,44 +40,10 @@ delta a | hasEps a  = one
 derivs :: HasDecomp a c => [c] -> a -> a
 derivs s p = foldl (flip deriv) p s
 
+accept :: HasDecomp a c => a -> [c] -> Bool
+accept p s = hasEps (derivs s p)
+
 type Language a c = (ClosedSemiring a, HasSingle a [c], HasDecomp a c)
-
-instance Semiring Integer where
-  zero = 0
-  one = 1
-  (<+>) = (+)
-  (<.>) = (*)
-
-instance Semiring Bool where
-  zero = False
-  one = True
-  (<+>) = (||)
-  (<.>) = (&&)
-
-instance ClosedSemiring Bool where
-  closure _ = one
-
-newtype Sum a = Sum { getSum :: a }
-
-instance Semiring a => Semigroup (Sum a) where
-  Sum a <> Sum b = Sum (a <+> b)
-
-instance Semiring a => Monoid (Sum a) where
-  mempty = Sum zero
-
-sum :: (Foldable f, Semiring a) => f a -> a
-sum = getSum . foldMap Sum
-
-newtype Product a = Product { getProduct :: a }
-
-instance Semiring a => Semigroup (Product a) where
-  Product a <> Product b = Product (a <.> b)
-
-instance Semiring a => Monoid (Product a) where
-  mempty = Product one
-
-product :: (Foldable f, Semiring a) => f a -> a
-product = getProduct . foldMap Product
 
 {--------------------------------------------------------------------
     Sets of strings (or other monoidal values)
@@ -145,6 +69,10 @@ instance Eq a => HasDecomp (Set a) a where
 
 #endif
 
+{--------------------------------------------------------------------
+    Predicates
+--------------------------------------------------------------------}
+
 newtype Pred s = Pred (s -> Bool)
 
 #if 0
@@ -157,10 +85,6 @@ predSet (Pred f) = set (a | f a)
 
 #endif
 
-{--------------------------------------------------------------------
-    Predicates
---------------------------------------------------------------------}
-
 instance Semiring (Pred [c]) where
   zero = Pred (const False)
   one = Pred null
@@ -171,20 +95,6 @@ instance ClosedSemiring (Pred [c])
 
 instance Eq s => HasSingle (Pred s) s where
   single s = Pred (== s)
-
--- All ways of splitting a given list (inverting |(<>)|).
-splits :: [a] -> [([a],[a])]
-splits []       = [([],[])]
-splits (a:as')  = ([],a:as') : [((a:l),r) | (l,r) <- splits as']
-
--- splits as@(a:as') = ([],as) : map (first (a:)) (splits as')
-
--- Equivalently
-splits' :: [a] -> [([a],[a])]
-splits' as = ([],as) : go as
- where
-   go []       = []
-   go (a:as')  = [((a:l),r) | (l,r) <- splits' as']
 
 instance HasDecomp (Pred [c]) c where
   hasEps (Pred f) = f []
@@ -236,9 +146,6 @@ instance HasDecomp (Resid s) s where
        flip deriv      :: a -> c -> a
 foldl (flip deriv) a s :: a
 #endif
-
-accept :: HasDecomp a c => a -> [c] -> Bool
-accept p s = hasEps (derivs s p)
 
 {--------------------------------------------------------------------
     Regular expressions

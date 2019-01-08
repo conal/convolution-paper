@@ -17,7 +17,7 @@
 
 -- | Code for the paper.
 
-module Code where
+module LanguageAsSet where
 
 import Prelude hiding (sum,product)
 

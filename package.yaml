@@ -25,7 +25,7 @@ library:
     # - newtype-generics
   source-dirs: src
   exposed-modules:
-      Code
+      LanguageAsSet
 
 tests:
   test:

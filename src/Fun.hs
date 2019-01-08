@@ -6,6 +6,9 @@ module Fun where
 
 import Prelude hiding (sum,product)
 
+import Data.Map (Map)
+import qualified Data.Map as M
+
 import Misc
 import Semiring
 
@@ -102,3 +105,46 @@ regexp (Value a)     = a
 regexp (u  :<+>  v)  = regexp u <+> regexp v
 regexp (u  :<.>  v)  = regexp u <.> regexp v
 regexp (Closure u)   = closure (regexp u)
+
+{--------------------------------------------------------------------
+    List trie with finite maps
+--------------------------------------------------------------------}
+
+infix 1 :|
+data Trie c s = s :| Map c (Trie c s) deriving Show
+
+scaleT :: (Ord c, DetectableZero s) => s -> Trie c s -> Trie c s
+scaleT s _ | isZero s = zero
+scaleT s (e :| ts) = (s <.> e) :| fmap (scaleT s) ts
+
+inTrie :: (Ord c, DetectableZero s) => Trie c s -> [c] -> s
+inTrie (e :| _ ) [] = e
+inTrie (_ :| ds) (c:cs) = inTrie (ds `mat` c) cs
+
+mat :: (Ord c, Semiring a) => Map c a -> c -> a
+m `mat` c = M.findWithDefault zero c m
+
+trieFunTo :: (Ord c, DetectableZero s) => Trie c s -> FunTo s [c]
+trieFunTo = FunTo . inTrie
+
+instance (Ord c, DetectableZero s) => Semiring (Trie c s) where
+  zero = zero :| M.empty
+  one  = one  :| M.empty
+  (a :| ps') <+> (b :| qs') = (a <+> b) :| M.unionWith (<+>) ps' qs'
+  -- Wedges for recursive anbn examples with the lazy pattern. (??)
+  (a :| ps') <.> ~q@(b :| qs') = (a <.> b) :| M.unionWith (<+>) us vs
+   where
+     us = fmap (<.> q) ps'
+     vs = fmap (scaleT a) qs'
+
+instance (Ord c, DetectableZero s) => ClosedSemiring (Trie c s) where
+  closure (_ :| ds) = q where q = one :| fmap (<.> q) ds
+
+instance (Ord c, DetectableZero s) => HasSingle (Trie c s) [c] where
+  single = product . map symbol
+   where
+     symbol c = zero :| M.singleton c one
+
+instance (Ord c, DetectableZero s) => HasDecomp (Trie c s) c s where
+  atEps (a :| _) = a
+  deriv c (_ :| ds) = ds `mat` c

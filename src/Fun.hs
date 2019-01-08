@@ -40,6 +40,59 @@ instance HasDecomp (FunTo s [c]) c s where
   deriv c (FunTo f) = FunTo (f . (c :))
 
 {--------------------------------------------------------------------
+    Classic list-of-successes
+--------------------------------------------------------------------}
+
+-- Match a prefix of given string and yield corresponding suffixes for all
+-- successful matches.
+newtype Resid c s = Resid ([c] -> [([c], s)])
+
+residFunTo :: Semiring s => Resid c s -> FunTo s [c]
+residFunTo (Resid f) = FunTo (\ w -> sum [ s | (w',s) <- f w, null w' ])
+
+#if 0
+
+instance Semiring s => Semiring (Resid c s) where
+  zero = Resid (fail "no match")
+  one = Resid return
+  Resid f <+> Resid g = Resid (liftA2 (<>) f g)
+  Resid f <.> Resid g = Resid (f >=> g)
+
+#else
+
+instance Semiring s => Semiring (Resid c s) where
+  zero = Resid (const [])
+  one = Resid (\ s -> [(s,one)])
+  Resid f <+> Resid g = Resid (\ w -> f w <> g w)
+  Resid f <.> Resid g = Resid (\ w -> [(w'', s <.> s') | (w',s) <- f w, (w'',s') <- g w'])
+
+#endif
+
+-- WORKING HERE.
+
+#if 0
+
+instance ClosedSemiring (Resid s)
+
+instance Eq s => HasSingle (Resid s) [s] where
+  -- single x = Resid (\ s -> case stripPrefix x s of
+  --                            Just s' -> [s']
+  --                            Nothing -> [])
+  single x = Resid (maybeToList . stripPrefix x)
+
+instance HasDecomp (Resid s) s Bool where
+  atEps (Resid f) = any null (f [])
+  deriv c (Resid f) = Resid (f . (c :)) -- TODO: check
+
+#if 0
+            deriv      :: c -> a -> a
+       flip deriv      :: a -> c -> a
+foldl (flip deriv) a s :: a
+#endif
+
+#endif
+
+{--------------------------------------------------------------------
     Regular expressions
 --------------------------------------------------------------------}
 

@@ -19,7 +19,7 @@ import qualified Data.IntTrie as IT  -- data-inttrie
 
 import Misc
 import Semiring
-import Set
+import Set hiding (Trie)
 
 {--------------------------------------------------------------------
     List trie as a language

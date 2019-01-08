@@ -23,7 +23,7 @@ library:
     # - comonad
     # - semiring-num
     # - newtype-generics
-  # source-dirs: src
+  source-dirs: src
   exposed-modules:
       Code
 

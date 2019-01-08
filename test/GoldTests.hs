@@ -7,7 +7,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
 {-# OPTIONS_GHC -Wall #-}
--- {-# OPTIONS_GHC -Wno-unused-binds #-}
+{-# OPTIONS_GHC -Wno-unused-binds -Wno-unused-imports #-}
 
 module Main where
 
@@ -17,7 +17,8 @@ import Test.Tasty (defaultMain, TestTree, testGroup)
 import Test.Tasty.Golden
 
 import Semiring
-import Set
+import qualified Set as S
+import qualified Fun as F
 
 main :: IO ()
 main = do
@@ -26,9 +27,12 @@ main = do
 basicTests :: TestTree
 basicTests = testGroup "Various representations"
   [ testGroup "" []
-  , tests @(RegExp  Char) "RegExp"
-  , tests @(Decomp  Char) "Decomp"
-  , tests @(DecompM Char) "DecompM"
+  , tests @(S.RegExp  Char) "SetRegExp"
+  , tests @(S.Decomp  Char) "SetDecomp"
+  , tests @(S.DecompM Char) "SetTrie"
+  , tests @(F.RegExp  Char Bool) "FunRegExp"
+  , tests @(F.Decomp  Char Bool) "FunDecomp"
+  , tests @(F.Trie    Char Bool) "FunTrie"
   ]
 
 tests :: forall z s. (Language z Char s, Show z, Show s) => String -> TestTree
@@ -54,6 +58,7 @@ tests group = testGroup group
   , gold "accept-pps-pigping"           $ apps "pigping"
   , gold "accept-pps-pinkpigpinkpigpig" $ apps "pinkpigpinkpigpig"
 
+  -- These recursive examples are challenging.
   -- OptimizeRegexp in Set.hs causes these recursive examples to diverge.
   , gold "accept-anbn-eps"              $ ranbn ""
   , gold "accept-anbn-ab"               $ ranbn "ab"
@@ -77,6 +82,7 @@ tests group = testGroup group
    anbn  = one <+> (a <.> anbn <.> b)
    ranbn = accept anbn
    gold :: Show a => String -> a -> TestTree
-   gold nm = goldenVsString "basic"
+   gold nm = -- TODO: make directory if missing 
+             goldenVsString "basic"
                 ("test/gold/" <> group <> "/" <> nm <> ".txt")
              . pure . pack . show

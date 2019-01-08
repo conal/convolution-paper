@@ -48,6 +48,7 @@ library:
     - Semiring
     - Set
     - Fun
+    - Other
 
 tests:
   test:

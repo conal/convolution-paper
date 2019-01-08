@@ -62,6 +62,8 @@ product = getProduct . foldMap Product
 class Semiring a => DetectableZero a  where
   isZero :: a -> Bool
 
+instance DetectableZero Bool where isZero = not
+
 {--------------------------------------------------------------------
     Language operations. Move elsewhere.
 --------------------------------------------------------------------}

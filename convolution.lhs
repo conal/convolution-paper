@@ -238,7 +238,7 @@ splits (a:as')  = ([],a:as') : [((a:l),r) | (l,r) <- splits as']
 
 \mynote{Try some examples, including |star| and even the classic non-regular language $a^n b^n$ or \href{https://en.wikipedia.org/wiki/Dyck_language}{the Dyck language}.}
 
-\sectionl{List of successes}
+\sectionl{List of Successes}
 
 Although the predicate-based language implementation in \secref{Matching} is effective, it is terribly inefficient, due to the backtracking search involved in the definitions of |(<.>)| and |splits| in \figref{pred}.
 An alternative technique commonly used in monadic parsing involves matching a language against \emph{prefixes} of a given string, yielding a corresponding ``residual'' suffix for each successful match \cite{Wadler-85-successes, HuttonMeijer-98-parsing}.
@@ -281,7 +281,7 @@ stripPrefix _ _                      = Nothing
 }, |residPred| is a homomorphism with respect to each instantiated class.
 \end{theorem}
 
-\section{Regular expressions}
+\sectionl{Regular Expressions}
 
 %format :<+> = "\mathbin{:\!\!+}"
 %format :<.> = "\mathbin{:\!\!\conv}"
@@ -342,9 +342,9 @@ One could also define balanced folding of sums and products via two monoid wrapp
 \end{theorem}
 
 
-\sectionl{Derivatives of languages}
+\sectionl{Derivatives of Languages}
 
-The language matching algorithms embodied in the |Pred| and |Resid| types (defined in \secreftwo{Matching}{List of successes}) both perform backtracking.
+The language matching algorithms embodied in the |Pred| and |Resid| types (defined in \secreftwo{Matching}{List of Successes}) both perform backtracking.
 We can do much better.
 A classic solution is to add token lookahead, as in LR, LL, and LALR parsers \needcite{}.
 While such parser generators typically have relatively complex implementations and look a fixed number of tokens ahead, Janusz Brzozowski discovered a simple and efficient technique that looks arbitrarily far ahead and eliminates all backtracking.
@@ -575,7 +575,24 @@ instance Ord c => HasDecomp (DecompM c) c where
 
 \mynote{Examples, and maybe timing comparisons. Motivate the lazy pattern. Mention sharing work by memoizing the functions of characters.}
 
-\sectionl{Beyond booleans}
+\sectionl{Beyond Booleans}
+
+We began in with the question of language specification (\secref{Languages}) and recognition/matching (\secref{Matching}) and
+then moved on to regular expressions and language ``derivatives'' (\secreftwo{Regular Expressions}{Derivatives of Languages}).
+These derivatives turn out to arise in the classic \emph{trie} construction, yielding a simple and efficient means of language recognition (\secref{Tries}).
+Let's now \emph{generalize} the notion of languages along with the constructions introduced above for efficient recognition.
+
+%format `suchThat` = "\mid"
+As pointed out in \secref{Matching}, sets and predicates are isomorphic notions.
+For any set |s|, we can construct the membership predicate, |\ x -> x `elem` s|.
+Conversely, for any predicate |p|, we can construct a corresponding set of values, |set (x || p x)|.
+Moreover, these two conversions are inverses.
+
+A predicate over some type |t| is just a function from |t| to |Bool|, so the predicate perspective naturally suggests generalizing the result type beyond booleans.
+Examining the operations defined in \figref{pred}, we can see that the needed operations on |Bool| involve |False|, |(||||)|, and |(&&)|.
+As remarked in \figref{classes}, those operations correspond to |zero|, |(+)|, and |(*)| operations for |Bool|.
+It therefore seems likely that we can generalize from |Bool| to \emph{any} semiring, and indeed we can do just that.
+
 
 \mynote{Generalize from |Bool| to an arbitrary semiring.}
 
@@ -583,11 +600,11 @@ instance Ord c => HasDecomp (DecompM c) c where
 
 \mynote{Show that |(*)| corresponds to generalized convolution.}
 
-\sectionl{Beyond convolution}
+\sectionl{Beyond Convolution}
 
 \mynote{The free semimodule monad.}
 
-\sectionl{More variations}
+\sectionl{More Variations}
 
 \mynote{Variations: counting, probability distributions, temporal/spatial convolution.}
 

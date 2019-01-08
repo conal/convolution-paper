@@ -22,13 +22,13 @@ boolVal :: Semiring s => Bool -> s
 boolVal False = zero
 boolVal True  = one
 
-newtype FunTo b a = FunTo (a -> b)
+newtype FunTo s a = FunTo (a -> s)
 
 instance Semiring s => Semiring (FunTo s [c]) where
   zero = FunTo (const zero)
   one = FunTo (boolVal . null)
-  FunTo f <+> FunTo g = FunTo (\ x -> f x <+> g x)
-  FunTo f <.> FunTo g = FunTo (\ x -> sum [ f u <.> g v | (u,v) <- splits x ] )
+  FunTo f <+> FunTo g = FunTo (\ w -> f w <+> g w)
+  FunTo f <.> FunTo g = FunTo (\ w -> sum [ f u <.> g v | (u,v) <- splits w ] )
 
 instance Semiring s => ClosedSemiring (FunTo s [c])
 
@@ -100,29 +100,29 @@ infixl 6 :<+>
 infixl 7 :<.>
 
 -- | Regular expression
-data RegExp c a =
+data RegExp c s =
     Char c
-  | Value a
-  | RegExp c a :<+> RegExp c a
-  | RegExp c a :<.> RegExp c a
-  | Closure (RegExp c a)
+  | Value s
+  | RegExp c s :<+> RegExp c s
+  | RegExp c s :<.> RegExp c s
+  | Closure (RegExp c s)
  deriving (Show,Eq)
 
-instance Semiring a => Semiring (RegExp c a) where
+instance Semiring s => Semiring (RegExp c s) where
   zero  = Value zero
   one   = Value one
   (<+>) = (:<+>)
   (<.>) = (:<.>)
 
-instance Semiring a => ClosedSemiring (RegExp c a) where
+instance Semiring s => ClosedSemiring (RegExp c s) where
   closure = Closure
 
-instance (Functor f, Foldable f, Semiring a) => HasSingle (RegExp c a) (f c) where
+instance (Functor f, Foldable f, Semiring s) => HasSingle (RegExp c s) (f c) where
   single = product . fmap Char
 
-instance (Eq c, ClosedSemiring a) => HasDecomp (RegExp c a) c a where
+instance (Eq c, ClosedSemiring s) => HasDecomp (RegExp c s) c s where
   atEps (Char _)    = zero
-  atEps (Value a)   = a
+  atEps (Value s)   = s
   atEps (p :<+> q)  = atEps p <+> atEps q
   atEps (p :<.> q)  = atEps p <.> atEps q
   atEps (Closure p) = closure (atEps p)
@@ -136,9 +136,9 @@ instance (Eq c, ClosedSemiring a) => HasDecomp (RegExp c a) c a where
                                   -- deriv c (one <+> p <.> Closure p)
 
 -- | Interpret a regular expression
-regexp :: (ClosedSemiring a, HasSingle a [c]) => RegExp c a -> a
+regexp :: (ClosedSemiring s, HasSingle s [c]) => RegExp c s -> s
 regexp (Char c)      = single [c]
-regexp (Value a)     = a
+regexp (Value s)     = s
 regexp (u  :<+>  v)  = regexp u <+> regexp v
 regexp (u  :<.>  v)  = regexp u <.> regexp v
 regexp (Closure u)   = closure (regexp u)

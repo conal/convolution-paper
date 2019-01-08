@@ -64,6 +64,14 @@ class Semiring a => DetectableZero a  where
 
 instance DetectableZero Bool where isZero = not
 
+-- Variants
+
+sum' :: (Foldable f, Semiring a) => f a -> a
+sum' = foldr (<+>) zero
+
+product' :: (Foldable f, Semiring a) => f a -> a
+product' = foldr (<.>) one
+
 {--------------------------------------------------------------------
     Language operations. Move elsewhere.
 --------------------------------------------------------------------}

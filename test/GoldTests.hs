@@ -29,11 +29,13 @@ basicTests = testGroup "Various representations"
   [ testGroup "" []
   , tests @(S.RegExp  Char) "SetRegExp"
   , tests @(S.Decomp  Char) "SetDecomp"
-  , tests @(S.DecompM Char) "SetTrie"
+  , tests @(S.Trie    Char) "SetTrie"
   , tests @(F.RegExp  Char Bool) "FunRegExp"
   , tests @(F.Decomp  Char Bool) "FunDecomp"
   , tests @(F.Trie    Char Bool) "FunTrie"
   ]
+
+-- TODO: some tests with s other than Bool.
 
 tests :: forall z s. (Language z Char s, Show z, Show s) => String -> TestTree
 tests group = testGroup group

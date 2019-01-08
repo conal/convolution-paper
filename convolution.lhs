@@ -501,7 +501,7 @@ instance Semiring (Decomp c) where
   zero  = False  :<: const zero
   one   = True   :<: const zero
   (a :<: ps')  <+>  (b :<: qs') = (a  ||  b) :<: liftA2 (<+>)  ps' qs'
-  (a :<: ps')  <.>  (b :<: qs') = (a  &&  b) :<: liftA2 h ps' qs'
+  (a :<: ps')  <.>  (b :<: qs') = (a  &&  b) :<: liftA2 h      ps' qs'
    where
      h p' q' = (if a then b :<: qs' else zero) <+> p' <.> q
 
@@ -512,8 +512,8 @@ instance Eq c => HasSingle (Decomp c) [c] where
    where symbol c = False :<: (\ c' -> if c'==c then one else zero)
 
 instance HasDecomp (Decomp c) c where
-  hasEps (a :<: _)    = a
-  deriv c (_ :<: ds)  = ds c
+  hasEps   (a :<: _    )  = a
+  deriv c  (_ :<: ds   )  = ds c
 \end{code}
 \vspace{-4ex}
 }, |decompPred| is a homomorphism with respect to each instantiated class.
@@ -549,8 +549,8 @@ mdecompPred :: Ord c => DecompM c -> Pred [c]
 mdecompPred = Pred . inDecompM
 
 instance Ord c => Semiring (DecompM c) where
-  zero = False  :|  empty
-  one  = True   :|  empty
+  zero = False  :|   empty
+  one  = True   :|   empty
   (a :| ps')  <+>   (b :| qs') = (a || b) :| unionWith (<+>) ps' qs'
   (a :| ps')  <.>   (b :| qs') = (a && b) :| unionWith (<+>) us vs
    where
@@ -588,13 +588,12 @@ For any set |s|, we can construct the membership predicate, |\ x -> x `elem` s|.
 Conversely, for any predicate |p|, we can construct a corresponding set of values, |set (x || p x)|.
 Moreover, these two conversions are inverses.
 
-A predicate over some type |t| is just a function from |t| to |Bool|, so the predicate perspective naturally suggests generalizing the result type beyond booleans.
-Examining the operations defined in \figref{pred}, we can see that the needed operations on |Bool| involve |False|, |(||||)|, and |(&&)|.
-As remarked in \figref{classes}, those operations correspond to |zero|, |(+)|, and |(*)| operations for |Bool|.
+A predicate over some type |a| is just a function from |a| to |Bool|, so the predicate perspective naturally suggests generalizing the result type beyond booleans.
+Examining the operations defined in \figref{pred}, we can see that the needed operations on |Bool| are |False|, |(||||)|, and |(&&)|.
+As shown in \figref{classes}, those operations correspond to |zero|, |(+)|, and |(*)| operations for |Bool|.
 It therefore seems likely that we can generalize from |Bool| to \emph{any} semiring, and indeed we can do just that.
 
-
-\mynote{Generalize from |Bool| to an arbitrary semiring.}
+\workingHere
 
 \sectionl{Convolution}
 

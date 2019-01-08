@@ -322,30 +322,30 @@ instance HasDecomp (Decomp c) c Bool where
 --------------------------------------------------------------------}
 
 -- infix 1 :|
-data DecompM c = Bool :| Map c (DecompM c) deriving Show
+data Trie c = Bool :| Map c (Trie c) deriving Show
 
-inDecompM :: Ord c => DecompM c -> [c] -> Bool
-inDecompM (e :| _ ) [] = e
-inDecompM (_ :| ds) (c:cs) = inDecompM (ds `mat` c) cs
+inTrie :: Ord c => Trie c -> [c] -> Bool
+inTrie (e :| _ ) [] = e
+inTrie (_ :| ds) (c:cs) = inTrie (ds `mat` c) cs
 
 mat :: (Ord c, Semiring a) => Map c a -> c -> a
 m `mat` c = M.findWithDefault zero c m
 
-mdecompPred :: Ord c => DecompM c -> Pred [c]
-mdecompPred = Pred . inDecompM
+triePred :: Ord c => Trie c -> Pred [c]
+triePred = Pred . inTrie
 
-decomp :: Ord c => DecompM c -> Decomp c
+decomp :: Ord c => Trie c -> Decomp c
 -- decomp (e :| ds) = e :<: (\ c -> decomp (ds `mat` c))
 -- decomp (e :| ds) = e :<: (\ c -> decomp (mat ds c))
 decomp (e :| ds) = e :<: (decomp . (ds `mat`))
 
--- mdecompPred = decompPred . decomp
+-- triePred = decompPred . decomp
 
--- trimLT :: Ord c => Int -> DecompM c -> DecompM c
+-- trimLT :: Ord c => Int -> Trie c -> Trie c
 -- trimLT 0 _ = zero
 -- trimLT n (a :| m) = a :| (trimLT (n-1) <$> m)
 
-instance Ord c => Semiring (DecompM c) where
+instance Ord c => Semiring (Trie c) where
   zero = False :| M.empty
   one  = True  :| M.empty
   (a :| ps') <+> (b :| qs') = (a || b) :| M.unionWith (<+>) ps' qs'
@@ -369,10 +369,10 @@ instance Ord c => Semiring (DecompM c) where
   (True  :| ps') <.> q@(b :| qs') = b :| M.unionWith (<+>) (fmap (<.> q) ps') qs'
 #endif
 
-instance Ord c => ClosedSemiring (DecompM c) where
+instance Ord c => ClosedSemiring (Trie c) where
   closure (_ :| ds) = q where q = True :| fmap (<.> q) ds
 
-instance Ord c => HasSingle (DecompM c) [c] where
+instance Ord c => HasSingle (Trie c) [c] where
   -- single = foldr (\ c p -> False :| M.singleton c p) one
   -- single [] = one
   -- single (c:cs) = False :| M.singleton c (single cs)
@@ -380,7 +380,7 @@ instance Ord c => HasSingle (DecompM c) [c] where
    where
      symbol c = False :| M.singleton c one
 
-instance Ord c => HasDecomp (DecompM c) c Bool where
+instance Ord c => HasDecomp (Trie c) c Bool where
   atEps (a :| _) = a
   deriv c (_ :| ds) = ds `mat` c
 

@@ -13,23 +13,6 @@ import Misc
 import Semiring
 
 {--------------------------------------------------------------------
-    Abstract interfaces
---------------------------------------------------------------------}
-
-class HasDecomp a c s | a -> c s where
-  atEps :: a -> s
-  deriv :: c -> a -> a
-
--- | Derivative of a language w.r.t a string
-derivs :: HasDecomp a c s => [c] -> a -> a
-derivs s p = foldl (flip deriv) p s
-
-accept :: HasDecomp a c s => a -> [c] -> s
-accept p s = atEps (derivs s p)
-
-type Language a c s = (ClosedSemiring a, HasSingle a [c], HasDecomp a c s)
-
-{--------------------------------------------------------------------
     Generalized predicates
 --------------------------------------------------------------------}
 

@@ -24,26 +24,9 @@ import qualified Data.IntTrie as IT  -- data-inttrie
 import Misc
 import Semiring
 
-{--------------------------------------------------------------------
-    Abstract interfaces
---------------------------------------------------------------------}
-
-class HasDecomp a c | a -> c where
-  hasEps :: a -> Bool
-  deriv :: c -> a -> a
-
-delta :: (Semiring a, HasDecomp a c) => a -> a
-delta a | hasEps a  = one
+delta :: (Semiring a, HasDecomp a c Bool) => a -> a
+delta a | atEps a   = one
         | otherwise = zero
-
--- | Derivative of a language w.r.t a string
-derivs :: HasDecomp a c => [c] -> a -> a
-derivs s p = foldl (flip deriv) p s
-
-accept :: HasDecomp a c => a -> [c] -> Bool
-accept p s = hasEps (derivs s p)
-
-type Language a c = (ClosedSemiring a, HasSingle a [c], HasDecomp a c)
 
 {--------------------------------------------------------------------
     Sets of strings (or other monoidal values)
@@ -63,8 +46,8 @@ instance ClosedSemiring (Set a) where
 instance HasSingle (Set a) a where
   single a = set a
 
-instance Eq a => HasDecomp (Set a) a where
-  hasEps p = [] `elem` p
+instance Eq a => HasDecomp (Set a) a Bool where
+  atEps p = [] `elem` p
   deriv c p = set (cs | c : cs `elem` p)
 
 #endif
@@ -96,8 +79,8 @@ instance ClosedSemiring (Pred [c])
 instance Eq s => HasSingle (Pred s) s where
   single s = Pred (== s)
 
-instance HasDecomp (Pred [c]) c where
-  hasEps (Pred f) = f []
+instance HasDecomp (Pred [c]) c Bool where
+  atEps (Pred f) = f []
   deriv c (Pred f) = Pred (f . (c :))
 
 {--------------------------------------------------------------------
@@ -137,8 +120,8 @@ instance Eq s => HasSingle (Resid s) [s] where
   --                            Nothing -> [])
   single x = Resid (maybeToList . stripPrefix x)
 
-instance HasDecomp (Resid s) s where
-  hasEps (Resid f) = any null (f [])
+instance HasDecomp (Resid s) s Bool where
+  atEps (Resid f) = any null (f [])
   deriv c (Resid f) = Resid (f . (c :)) -- TODO: check
 
 #if 0
@@ -153,9 +136,6 @@ foldl (flip deriv) a s :: a
 
 infixl 6 :<+>
 infixl 7 :<.>
-
--- -- Semiring generalization of regular expressions
--- #define SemiRE
 
 -- | Regular expression
 data RegExp c =
@@ -230,13 +210,13 @@ instance (Functor f, Foldable f, OkSym c) => HasSingle (RegExp c) (f c) where
 
 #endif
 
-instance Eq c => HasDecomp (RegExp c) c where
-  hasEps (Char _)    = zero
-  hasEps Zero        = zero
-  hasEps One         = one
-  hasEps (p :<+> q)  = hasEps p <+> hasEps q
-  hasEps (p :<.> q)  = hasEps p <.> hasEps q
-  hasEps (Closure p) = closure (hasEps p)
+instance Eq c => HasDecomp (RegExp c) c Bool where
+  atEps (Char _)    = zero
+  atEps Zero        = zero
+  atEps One         = one
+  atEps (p :<+> q)  = atEps p <+> atEps q
+  atEps (p :<.> q)  = atEps p <.> atEps q
+  atEps (Closure p) = closure (atEps p)
   
   deriv c (Char c') | c == c'   = one
                     | otherwise = zero
@@ -247,7 +227,7 @@ instance Eq c => HasDecomp (RegExp c) c where
   -- This one definition works fine if we have OptimizeRegexp
   deriv c (p :<.> q)            = delta p <.> deriv c q <+> deriv c p <.> q
 #else
-  deriv c (p :<.> q) | hasEps p  = deriv c q <+> deriv c p <.> q
+  deriv c (p :<.> q) | atEps p  = deriv c q <+> deriv c p <.> q
                      | otherwise = deriv c p <.> q
 #endif
   deriv c (Closure p)           = deriv c (p <.> Closure p) -- since deriv c one = zero
@@ -324,8 +304,8 @@ instance Eq c => HasSingle (Decomp c) [c] where
   -- single [] = one
   -- single (c:cs) = False :<: (\ c' -> if c==c' then single cs else zero)
 
-instance HasDecomp (Decomp c) c where
-  hasEps (a :<: _) = a
+instance HasDecomp (Decomp c) c Bool where
+  atEps (a :<: _) = a
   deriv c (_ :<: ds) = ds c
 
 {--------------------------------------------------------------------
@@ -391,8 +371,8 @@ instance Ord c => HasSingle (DecompM c) [c] where
    where
      symbol c = False :| M.singleton c one
 
-instance Ord c => HasDecomp (DecompM c) c where
-  hasEps (a :| _) = a
+instance Ord c => HasDecomp (DecompM c) c Bool where
+  atEps (a :| _) = a
   deriv c (_ :| ds) = ds `mat` c
 
 {--------------------------------------------------------------------
@@ -429,8 +409,8 @@ instance (HasTrie c, Eq c) => HasSingle (LTrie c Bool) [c] where
   -- single [] = one -- True :< pure zero
   -- single (c:cs) = False :< trie (\ c' -> if c==c' then single cs else zero)
 
-instance HasTrie c => HasDecomp (LTrie c Bool) c where
-  hasEps (a :< _) = a
+instance HasTrie c => HasDecomp (LTrie c Bool) c Bool where
+  atEps (a :< _) = a
   deriv c (_ :< ps') = ps' ! c
 
 {--------------------------------------------------------------------

@@ -16,7 +16,8 @@ import Data.Semigroup ((<>))
 import Test.Tasty (defaultMain, TestTree, testGroup)
 import Test.Tasty.Golden
 
-import Code
+import Semiring
+import Set
 
 main :: IO ()
 main = do
@@ -30,7 +31,7 @@ basicTests = testGroup "Various representations"
   , tests @(DecompM Char) "DecompM"
   ]
 
-tests :: forall z. (Language z Char, Show z) => String -> TestTree
+tests :: forall z s. (Language z Char s, Show z, Show s) => String -> TestTree
 tests group = testGroup group
   [ testGroup "" []
 
@@ -53,7 +54,7 @@ tests group = testGroup group
   , gold "accept-pps-pigping"           $ apps "pigping"
   , gold "accept-pps-pinkpigpinkpigpig" $ apps "pinkpigpinkpigpig"
 
-  -- OptimizeRegexp in Code.hs causes these recursive examples to diverge.
+  -- OptimizeRegexp in Set.hs causes these recursive examples to diverge.
   , gold "accept-anbn-eps"              $ ranbn ""
   , gold "accept-anbn-ab"               $ ranbn "ab"
   , gold "accept-anbn-ba"               $ ranbn "ba"

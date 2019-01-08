@@ -41,12 +41,13 @@ library:
     # - comonad
     # - semiring-num
     # - newtype-generics
+  other-modules: []
   source-dirs: src
   exposed-modules:
-      # Misc
-      # Semiring
-      Set
-      # Fun
+    - Misc
+    - Semiring
+    - Set
+    - Fun
 
 tests:
   test:

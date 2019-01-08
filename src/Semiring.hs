@@ -58,3 +58,6 @@ instance Semiring a => Monoid (Product a) where
 
 product :: (Foldable f, Semiring a) => f a -> a
 product = getProduct . foldMap Product
+
+class Semiring a => DetectableZero a  where
+  isZero :: a -> Bool

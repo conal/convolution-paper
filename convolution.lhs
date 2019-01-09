@@ -50,7 +50,7 @@ Conal Elliott
 %else
 \nc\proofRef[1]{Appendix \ref{proof:#1}}
 %endif
-\nc\provedIn[1]{\textnormal{See \proofRef{#1}}}
+\nc\provedIn[1]{\textnormal{Proved in \proofRef{#1}}}
 
 \nc\set[1]{\{\,#1\,\}}
 \nc\Pow{\mathcal{P}}
@@ -103,6 +103,9 @@ Conal Elliott
 %% %format one = 1
 %format zero = "\zero"
 %format one = "\one"
+
+%format `elem` = "\mathbin{`\Varid{elem}`}"
+%format `setElem` = "\in"
 
 \sectionl{Languages}
 
@@ -177,7 +180,7 @@ As an example other than numbers and languages, \figref{classes} includes the cl
 %format set (e) = "\set{"e"}"
 %format bigunion (lim) (body) = "\bigunion_{" lim "}{" body "}"
 %format pow a (b) = a "^{" b "}"
-%format `setUnion` = "\cup"
+%format `union` = "\cup"
 
 The semiring interface has a corresponding notion of structure preservation:
 \begin{definition}
@@ -195,8 +198,8 @@ Languages as sets fulfill this combined interface as described above and again i
 instance Monoid s => Semiring (Pow s) where
   zero  = emptyset
   one   = single mempty
-  p  <+>  q  = set (s | s `elem` p || s `elem` q) = p `setUnion` q
-  p  <.>  q  = set (u <> v | u `elem` p && v `elem` q)
+  p  <+>  q  = set (s | s `setElem` p || s `setElem` q) = p `setUnion` q
+  p  <.>  q  = set (u <> v | u `setElem` p && v `setElem` q)
 
 instance ClosedSemiring (Pow s)  -- default |closure|
 instance HasSingle (Pow s) s where single s = set s
@@ -204,7 +207,7 @@ instance HasSingle (Pow s) s where single s = set s
 \vspace{-4ex}
 %%  closure p = bigunion (n >= 0) (pow p n)
 }, which generalizes from strings to any monoid.\footnote{The |Monoid| class defines |mempty| and |mappend|.}\notefoot{On second thought, postpone generalization from lists to monoids later.}\notefoot{Move the |sum| and |product| definitions to their first use.}
-More concretely, we might instead use a type of (possibly infinite) lists or finite sets \needcite{}, as in \figrefdef{list-finite-set}{Finite sets and lists as language representations}{
+More concretely, we might instead use a type of (possibly infinite) lists, as in \figrefdef{list}{Lists as a language representation}{
 \begin{code}
 instance Monoid a => Semiring [a] where
   zero = []
@@ -215,33 +218,20 @@ instance Monoid a => Semiring [a] where
 instance Monoid a => ClosedSemiring [a] -- default
 
 instance HasSingle [a] a where single a = [a]
-
-instance (Monoid a, Ord a) => Semiring (Set a) where
-  zero = empty
-  one = singleton mempty
-  p  <+>  q = p `union` q
-  p  <.>  q = fromList [u <> v | u <- toList p, v <- toList q]
-
-instance HasSingle (Set a) a where single = singleton
 \end{code}
 \vspace{-4ex}
 }.
-\mynote{Briefly explain the operations used from |Data.Set|.}
-
-%format `listElem` = "\mathbin{`\Varid{elem}`}"
-
-The |Semiring| instance definitions in \figreftwo{set}{list-finite-set} bear a family resemblance to each other, which we can readily make precise.
-First, assume function |listElems| and |finSetElems| that extracts the (abstract) \emph{set} of elements of a list or finite set respectively:
+Lists relate to sets as follows:
 \begin{code}
 listElems :: [a] -> Pow a
-listElems as = set (a | a `listElem` as)
-
-finSetElems :: Set a -> Pow a
-finSetElems as  = set (a | a `member` as)
-                = listElems (toList as)
+listElems []      = set ()
+listElems (a:as)  = set a `union` listElems as
 \end{code}
-Then the functions |listElems|, |finSetElems|, and |fromList| are all semiring homomorphisms.\footnote{The |toList| function, however, is \emph{not} a semiring homomorphism. Exercise: why not?}
-Further, one can take these homomorphism properties as algebraic \emph{specifications} and \emph{calculate} the |Semiring| instance definitions in \figreftwo{set}{list-finite-set} from the specifications, explaining the resemblances.
+The instance definitions in \figreftwo{set}{list} bear a family resemblance to each other, which we can readily make precise:
+\begin{theorem}[\provedIn{theorem:list}]\thmLabel{list}
+Given the definitions in \figref{list}, |listElems| is a semiring (and close semiring) homomorphism.
+\end{theorem}
+%% Further, one can take this homomorphism property as an algebraic \emph{specifications} and \emph{calculate} the instance definitions in \figref{list}, explaining the resemblances.
 
 \sectionl{Matching}
 
@@ -251,7 +241,7 @@ The list and finite set types do have computable membership testing so we could 
 Another option is to use membership predicates directly, which are isomorphic to sets:
 \begin{code}
 setPred :: Pow a -> (a -> Bool)
-setPred as = \ a -> a `elem` as
+setPred as = \ a -> a `setElem` as
 
 predSet :: (a -> Bool) -> Pow a
 predSet f = set (a | f a)
@@ -260,32 +250,26 @@ It's easy to show that |setPred . predSet == id| and |predSet . setPred == id|.
 % See 2018-12-10 notes.
 %format exists = "\exists"
 %format DOT = "\!."
-We can require that |predSet| (and thus |setPred|) is semiring homomorphism and solve the required homomorphism equations to yield a |Semiring| instance, as shown in \figrefdef{Pred}{Membership predicate as semiring (language representation)}{
-\begin{code}
-instance (Monoid a, Eq a) => Semiring (a -> Bool) where
-  zero = \ a -> False
-  one = \ a -> a == mempty
-  f  <+>  g  = \ w -> f w || g w
-  f  <.>  g  = \ w -> exists u,v DOT u <> v == w && f u && g v
-
-instance ClosedSemiring (Pred [c])  -- default |closure|
-
-instance Eq s => HasSingle (Pred s) s where
-  single s = Pred (== s)
-\end{code}
-\vspace{-4ex}
-}.
 \nc\bigOrZ[2]{\hspace{-#2ex}\bigvee\limits_{\substack{#1}}\hspace{-#2ex}}
 %format bigOr (lim) = "\bigOrZ{" lim "}{0}"
 %format bigOrQ (lim) = "\bigOrZ{" lim "}{1.5}"
 %format BR = "\\"
-We can also express the product operation as
+We can require that |predSet| (and thus |setPred|) is semiring homomorphism and solve the required homomorphism equations to yield a |Semiring| instance, as shown in \figrefdef{Pred}{Membership predicate as semiring (language representation)}{
 \begin{code}
-  f <.> g  = \ w -> bigOrQ (u,v BR u <> v == w) f u && g v
+instance (Monoid a, Eq a) => Semiring (a -> Bool) where
+  zero = \ w -> False
+  one = \ w -> w == mempty
+  f  <+>  g = \ w -> f w || g w
+  f  <.>  g = \ w -> bigOrQ (u,v BR u <> v == w) f u && g v
+
+instance (Monoid a, Eq a) => ClosedSemiring (a -> Bool)  -- default |closure|
+
+instance Eq a => HasSingle (a -> Bool) a where
+  single w = \ w' -> w' == w
 \end{code}
-%% $$ f * g  = \lambda w \to \bigvee\limits_{u,v \\ u \mappend v = w} (f\,u \land g\,v) $$
-to suggest enumerating over \emph{splittings} of |w|.
-In a more clearly computable form,
+\vspace{-4ex}
+}.
+When the monoid |a| is a list, we can also express the product operation in a more clearly computable form via list \emph{splittings}:
 \begin{code}
   f <.> g  = \ w -> or [ f u && g v | (u,v) <- splits w ]
 \end{code}
@@ -295,6 +279,13 @@ splits :: [a] -> [([a],[a])]
 splits []      = [([],[])]
 splits (a:as)  = ([],a:as) : [((a:l),r) | (l,r) <- splits as]
 \end{code}
+Sets and predicates have the same sort of relationship as between sets and lists (\thmRef{list}), though symmetrically:
+\begin{theorem}[\provedIn{theorem:Pred}]\thmLabel{Pred}
+Given the definitions in \figref{Pred}, |setPred| and |predSet| are semiring homomorphisms (and together form a semiring \emph{isomorphism}).\notefoot{Even a ``\emph{closed} semiring homomorphism''. Probably say so.}
+\end{theorem}
+
+\sectionl{Beyond Booleans}
+
 
 
 % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
@@ -302,6 +293,10 @@ splits (a:as)  = ([],a:as) : [((a:l),r) | (l,r) <- splits as]
 \appendix
 
 \sectionl{Proofs}
+
+\subsection{\thmRef{list}}\proofLabel{theorem:list}
+
+\subsection{\thmRef{Pred}}\proofLabel{theorem:Pred}
 
 \bibliography{bib}
 

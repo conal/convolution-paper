@@ -127,12 +127,12 @@ instance (Eq c, ClosedSemiring s) => HasDecomp (RegExp c s) c s where
   atEps (p :<.> q)  = atEps p <.> atEps q
   atEps (Closure p) = closure (atEps p)
   
-  deriv c (Char c') | c == c'   = one
-                    | otherwise = zero
-  deriv _ (Value _)             = zero
-  deriv c (p :<+> q)            = deriv c p <+> deriv c q
-  deriv c (p :<.> q)            = Value (atEps p) <.> deriv c q <+> deriv c p <.> q
-  deriv c (Closure p)           = deriv c (p <.> Closure p) -- since deriv c one = zero
+  deriv c (Char c')   = boolVal (c == c')
+                        -- if c == c' then one else zero
+  deriv _ (Value _)   = zero
+  deriv c (p :<+> q)  = deriv c p <+> deriv c q
+  deriv c (p :<.> q)  = Value (atEps p) <.> deriv c q <+> deriv c p <.> q
+  deriv c (Closure p) = deriv c (p <.> Closure p) -- since deriv c one = zero
                                   -- deriv c (one <+> p <.> Closure p)
 
 -- | Interpret a regular expression

@@ -529,7 +529,7 @@ instance HasDecomp (Decomp c) c where
 
 Although the |Decomp| representation caches |hasEps|, |deriv c| will be recomputed due to the use of a function in the |Decomp| representation.
 To further improve performance, we can \emph{memoize} these functions, e.g., with a generalized trie \needcite{} or a finite map.
-Given the sparseness of typical languages, the latter choice seems preferable as a naturally sparse representation, since we can interpret missing entries as $\zero$, i.e., the empty language.
+Given the sparseness of typical languages, the latter choice seems preferable as a naturally sparse representation, interpreting missing entries as $\zero$ (the empty language).
 The resulting representation is exactly a trie \needcite{}, and |accept| for |Trie| is the usual membership test for tries.
 Another route to ``derivative''-based language recognition was hiding in the standard notion of tries all along!
 \begin{theorem}[\provedIn{theorem:Trie}]\thmLabel{Trie}
@@ -640,13 +640,11 @@ The other language representations also generalize easily as well.
 infixl 6 :<+>
 infixl 7 :<.>
 
-data RegExp c s =
-    Char c
-  | Value s
-  | RegExp c s  :<+>  RegExp c s
-  | RegExp c s  :<.>  RegExp c s
-  | Closure (RegExp c s)
- deriving (Show,Eq)
+data RegExp c s  =  Char c
+                 |  Value s
+                 |  RegExp c s  :<+>  RegExp c s
+                 |  RegExp c s  :<.>  RegExp c s
+                 |  Closure (RegExp c s)
 
 instance Semiring s => Semiring (RegExp c s) where
   zero  = Value zero
@@ -661,26 +659,25 @@ instance (Functor f, Foldable f, Semiring s) => HasSingle (RegExp c s) (f c) whe
   single w = product (fmap Char w)
 
 instance (Eq c, ClosedSemiring s) => HasDecomp (RegExp c s) c s where
-  atEps (Char _)     = zero
-  atEps (Value s)    = s
-  atEps (p :<+> q)   = atEps p <+> atEps q
-  atEps (p :<.> q)   = atEps p <.> atEps q
-  atEps (Closure p)  = closure (atEps p)
-  
-  deriv c (Char c') | c          == c'   = one
-                    | otherwise  = zero
-  deriv _ (Value _)              = zero
-  deriv c (p :<+> q)             = deriv c p <+> deriv c q
-  deriv c (p :<.> q)             = Value (atEps p) <.> deriv c q <+> deriv c p <.> q
-  deriv c (Closure p)            = deriv c (p <.> Closure p)
+  atEps (Char _)        = zero
+  atEps (Value s)       = s
+  atEps (p  :<+>  q)    = atEps p <+> atEps q
+  atEps (p  :<.>  q)    = atEps p <.> atEps q
+  atEps (Closure p)     = closure (atEps p)
+
+  deriv c (Char c')    = boolVal (c == c')
+  deriv _ (Value _)    = zero
+  deriv c (p :<+> q)   = deriv c p <+> deriv c q
+  deriv c (p :<.> q)   = Value (atEps p) <.> deriv c q <+> deriv c p <.> q
+  deriv c (Closure p)  = deriv c (p <.> Closure p)
 
 -- Interpret a regular expression
 regexp :: (ClosedSemiring s, HasSingle s [c]) => RegExp c s -> s
-regexp (Char c)      = single [c]
-regexp (Value s)     = s
-regexp (u  :<+>  v)  = regexp u  <+>  regexp v
-regexp (u  :<.>  v)  = regexp u  <.>  regexp v
-regexp (Closure u)   = closure (regexp u)
+regexp (Char c)       = single [c]
+regexp (Value s)      = s
+regexp (u  :<+>   v)  = regexp u  <+>  regexp v
+regexp (u  :<.>   v)  = regexp u  <.>  regexp v
+regexp (Closure u)    = closure (regexp u)
 \end{code}
 \vspace{-4ex}
 } generalizes regular expressions from \figref{RegExp}.

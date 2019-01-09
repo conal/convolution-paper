@@ -17,8 +17,8 @@ bool t e b = if b then t else e
 
 -- All ways of splitting a given list (inverting |(<>)|).
 splits :: [a] -> [([a],[a])]
-splits []       = [([],[])]
-splits (a:as')  = ([],a:as') : [((a:l),r) | (l,r) <- splits as']
+splits []     = [([],[])]
+splits (a:as) = ([],a:as) : [((a:l),r) | (l,r) <- splits as]
 
 -- splits as@(a:as') = ([],as) : map (first (a:)) (splits as')
 

@@ -214,23 +214,27 @@ instance Monoid a => Semiring [a] where
 
 instance Monoid a => ClosedSemiring [a] -- default
 
+instance HasSingle [a] a where single a = [a]
+
 instance (Monoid a, Ord a) => Semiring (Set a) where
   zero = empty
   one = singleton mempty
   p  <+>  q = p `union` q
   p  <.>  q = fromList [u <> v | u <- toList p, v <- toList q]
+
+instance HasSingle (Set a) a where single = singleton
 \end{code}
 \vspace{-4ex}
 }.
 \mynote{Briefly explain the operations used from |Data.Set|.}
 
-%format `elem` = "\mathbin{`\Varid{elem}`}"
+%format `listElem` = "\mathbin{`\Varid{elem}`}"
 
 The |Semiring| instance definitions in \figreftwo{set}{list-finite-set} bear a family resemblance to each other, which we can readily make precise.
 First, assume function |listElems| and |finSetElems| that extracts the (abstract) \emph{set} of elements of a list or finite set respectively:
 \begin{code}
 listElems :: [a] -> Pow a
-listElems as = set (a | a `elem` as)
+listElems as = set (a | a `listElem` as)
 
 finSetElems :: Set a -> Pow a
 finSetElems as  = set (a | a `member` as)
@@ -238,6 +242,60 @@ finSetElems as  = set (a | a `member` as)
 \end{code}
 Then the functions |listElems|, |finSetElems|, and |fromList| are all semiring homomorphisms.\footnote{The |toList| function, however, is \emph{not} a semiring homomorphism. Exercise: why not?}
 Further, one can take these homomorphism properties as algebraic \emph{specifications} and \emph{calculate} the |Semiring| instance definitions in \figreftwo{set}{list-finite-set} from the specifications, explaining the resemblances.
+
+\sectionl{Matching}
+
+Now consider how we can computably \emph{match} a string for membership in a language described in the vocabulary given in the previous section.
+The set-based language definition does not lead directly to effective string matching, because the sets may be infinite.
+The list and finite set types do have computable membership testing so we could use them instead.
+Another option is to use membership predicates directly, which are isomorphic to sets:
+\begin{code}
+setPred :: Pow a -> (a -> Bool)
+setPred as = \ a -> a `elem` as
+
+predSet :: (a -> Bool) -> Pow a
+predSet f = set (a | f a)
+\end{code}
+It's easy to show that |setPred . predSet == id| and |predSet . setPred == id|.
+% See 2018-12-10 notes.
+%format exists = "\exists"
+%format DOT = "\!."
+We can require that |predSet| (and thus |setPred|) is semiring homomorphism and solve the required homomorphism equations to yield a |Semiring| instance, as shown in \figrefdef{Pred}{Membership predicate as semiring (language representation)}{
+\begin{code}
+instance (Monoid a, Eq a) => Semiring (a -> Bool) where
+  zero = \ a -> False
+  one = \ a -> a == mempty
+  f  <+>  g  = \ w -> f w || g w
+  f  <.>  g  = \ w -> exists u,v DOT u <> v == w && f u && g v
+
+instance ClosedSemiring (Pred [c])  -- default |closure|
+
+instance Eq s => HasSingle (Pred s) s where
+  single s = Pred (== s)
+\end{code}
+\vspace{-4ex}
+}.
+\nc\bigOrZ[2]{\hspace{-#2ex}\bigvee\limits_{\substack{#1}}\hspace{-#2ex}}
+%format bigOr (lim) = "\bigOrZ{" lim "}{0}"
+%format bigOrQ (lim) = "\bigOrZ{" lim "}{1.5}"
+%format BR = "\\"
+We can also express the product operation as
+\begin{code}
+  f <.> g  = \ w -> bigOrQ (u,v BR u <> v == w) f u && g v
+\end{code}
+%% $$ f * g  = \lambda w \to \bigvee\limits_{u,v \\ u \mappend v = w} (f\,u \land g\,v) $$
+to suggest enumerating over \emph{splittings} of |w|.
+In a more clearly computable form,
+\begin{code}
+  f <.> g  = \ w -> or [ f u && g v | (u,v) <- splits w ]
+\end{code}
+where |splits| inverts list concatenation:
+\begin{code}
+splits :: [a] -> [([a],[a])]
+splits []      = [([],[])]
+splits (a:as)  = ([],a:as) : [((a:l),r) | (l,r) <- splits as]
+\end{code}
+
 
 % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
 

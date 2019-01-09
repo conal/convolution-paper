@@ -153,10 +153,10 @@ class HasSingle a x where
   single :: x -> a
 
 instance Semiring Bool where
-  zero   = False
-  one    = True
-  (<+>)  = (||)
-  (<.>)  = (&&)
+  zero    = False
+  one     = True
+  (<+>)   = (||)
+  (<.>)   = (&&)
 
 instance ClosedSemiring Bool where
   closure _ = one

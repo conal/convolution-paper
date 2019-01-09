@@ -138,8 +138,8 @@ These observations are the defining properties of a \emph{star semiring} (also c
 class Semiring a where
   infixl 7 <.>
   infixl 6 <+>
-  zero   , one    :: a
-  (<+>)  , (<.>)  :: a -> a -> a
+  zero    , one    :: a
+  (<+>)   , (<.>)  :: a -> a -> a
 
 sum, product :: (Foldable f, Semiring a) => f a -> a
 sum      = foldr (<+>)  zero
@@ -153,8 +153,8 @@ class HasSingle a x where
   single :: x -> a
 
 instance Semiring Bool where
-  zero  = False
-  one   = True
+  zero   = False
+  one    = True
   (<+>)  = (||)
   (<.>)  = (&&)
 

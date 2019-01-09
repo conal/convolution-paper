@@ -9,6 +9,8 @@
 
 module Semiring where
 
+import qualified Data.Set as S
+
 class Semiring a where
   infixl 7 <.>
   infixl 6 <+>
@@ -72,6 +74,23 @@ sum' = foldr (<+>) zero
 product' :: (Foldable f, Semiring a) => f a -> a
 product' = foldr (<.>) one
 
+instance Monoid a => Semiring [a] where
+  zero = []
+  one = [mempty]
+  p <+> q = p ++ q
+  p <.> q = [u <> v | u <- p, v <- q]
+
+instance Monoid a => ClosedSemiring [a] -- default
+
+instance (Monoid a, Ord a) => Semiring (S.Set a) where
+  zero = S.empty
+  one = S.singleton mempty
+  p <+> q = p `S.union` q
+  p <.> q = S.fromList
+             [u <> v | u <- S.toList p, v <- S.toList q]
+
+-- instance (Monoid a, Ord a) => ClosedSemiring (S.Set a) -- default
+
 {--------------------------------------------------------------------
     Language operations. Move elsewhere.
 --------------------------------------------------------------------}
@@ -88,3 +107,17 @@ accept :: HasDecomp a c s => a -> [c] -> s
 accept p s = atEps (derivs s p)
 
 type Language a c s = (ClosedSemiring a, HasSingle a [c], HasDecomp a c s)
+
+
+instance HasSingle [a] a where single a = [a]
+
+instance Eq c => HasDecomp [[c]] c Bool where
+  atEps p = [] `elem` p
+  deriv c p = [cs | c' : cs <- p, c' == c]
+
+
+instance HasSingle (S.Set a) a where single = S.singleton
+
+instance Ord c => HasDecomp (S.Set [c]) c Bool where
+  atEps p = [] `S.member` p
+  deriv c p = S.fromList [cs | c' : cs <- S.toList p, c' == c]

@@ -24,16 +24,21 @@ figures: $(figures)
 
 showpdf=skim
 
-see: $(targ).pdf
-	${showpdf} $(targ).pdf
+%.see: %.pdf
+	${showpdf} $<
+
+see: $(targ).see
+
+# see: $(targ).pdf
+# 	${showpdf} $(targ).pdf
 
 SHELL = bash
 
 clean:
-	rm -f $(targ).{tex,dvi,pdf,aux,bbl,blg,out,log,ptb,fdb_latexmk,fls}
+	rm -f {$(targ),was1}.{tex,dvi,pdf,aux,bbl,blg,out,log,ptb,fdb_latexmk,fls}
 
 web: web-token
 
 web-token: $(targ).pdf
-	scp $(targ).pdf conal@conal.net:/home/conal/domains/conal/htdocs/papers/$(targ)
+	scp $< conal@conal.net:/home/conal/domains/conal/htdocs/papers/$(targ)
 	touch web-token

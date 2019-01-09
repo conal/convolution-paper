@@ -31,7 +31,7 @@ instance Semiring (Set a) where
   zero = emptyset
   one = single mempty
   p + q = set (a | a `elem` p || a `elem` q)
-  p <.> q = set (p <> q | u `elem` p && v `elem` q)
+  p <.> q = set (u <> v | u `elem` p && v `elem` q)
 
 instance ClosedSemiring (Set a) where
   closure p = bigunion (n >= 0) (p^n)

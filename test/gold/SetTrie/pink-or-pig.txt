@@ -1,1 +1,1 @@
-False :| fromList [('p',False :| fromList [('i',False :| fromList [('g',True :| fromList []),('n',False :| fromList [('k',True :| fromList [])])])])]
+False :< fromList [('p',False :< fromList [('i',False :< fromList [('g',True :< fromList []),('n',False :< fromList [('k',True :< fromList [])])])])]

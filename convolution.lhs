@@ -274,7 +274,7 @@ Given the definitions in \figref{pred}, |setPred| and |predSet| are homomorphism
 
 \sectionl{Beyond Booleans}
 
-As an example other than numbers and languages, booleans form a closed semiring:
+As an example other than numbers and languages, booleans form a star semiring:
 \begin{code}
 instance Semiring Bool where
   zero  = False
@@ -288,10 +288,11 @@ instance ClosedSemiring Bool where
              = True
 \end{code}
 
-\noindent
-\nc\bigSumZ[2]{\hspace{-#2ex}\sum\limits_{\substack{#1}}\hspace{-#2ex}}
 %format bigSum (lim) = "\bigSumZ{" lim "}{0}"
 %format bigSumQ (lim) = "\bigSumZ{" lim "}{1.5}"
+\nc\bigSumZ[2]{\hspace{-#2ex}\sum\limits_{\substack{#1}}\hspace{-#2ex}}
+
+\noindent
 Re-examining the instances in \figref{pred}, we can see uses of |False|, |(||||)|, and |(&&)|, as well as an equality test (for |single w|), which yields |False| or |True|.
 We can therefore easily generalize the codomain of ``predicates'' from booleans to \emph{any} semiring, as in \figrefdef{function}{Function-to-semiring as generalized language representation}{
 \begin{code}
@@ -313,19 +314,41 @@ boolVal True   = one
 \vspace{-4ex}
 }.
 \begin{theorem}[\provedIn{theorem:function}]\thmLabel{function}
-Given the definitions in \figref{function}, functions from |a| to |b| the laws of closed semirings hold whenever |a| is a monoid and |b| is a semiring.
+Given the instance definitions in \figref{function}, |a -> b| satisfies the laws of the instantiated classes whenever |a| is a monoid and |b| is a semiring.
 \end{theorem}
-\noindent
-When the monoid |a| is a list, we can again express the product operation in a more clearly computable form:
+
+When the monoid |a| is a list, we can again express the product operation from \figref{function} in a more clearly computable form:
 \begin{code}
   f <.> g  = \ w -> sum [ f u <.> g v | (u,v) <- splits w ]
 \end{code}
 
+Another representation of |a -> b| is |Map a b|, where |Map| is an efficient representation of finite maps, i.e., partial functions defined on a finite subset of its domain \needcite{}.
+Although we can think of |Map a b| as denoting partial functions from |a| to |b|, if we further require |b| to be semiring, we can treat missing entries as being implicitly zero, yielding a \emph{total} function:\notefoot{Describe finite maps and |findWithDefault|.}
+\begin{code}
+(!) :: (Ord c, Semiring s) => Map c s -> c -> s
+m ! c = findWithDefault zero c m
+\end{code}
+\begin{theorem}[\provedIn{theorem:Map}]\thmLabel{Map}
+Given the definitions in \figrefdef{Map}{Maps as a language representation}{
+\begin{code}
+instance (Monoid a, Ord a, Semiring b) => Semiring (Map a b) where
+  zero  = empty
+  one   = singleton mempty one
+  p  <+>  q  = unionWith (<+>) p q
+  p  <.>  q  = fromListWith (<+>)
+                 [(u <> v, s <.> t) | (u,s) <- toList p, (v,t) <- toList q]
+
+instance Semiring s => HasSingle (Map a s) a where
+  single a = singleton a one
+\end{code}
+\vspace{-4ex}
+}, |(!)| (as a function of one argument) is a homomorphism with respect to each instantiated class.\notefoot{Describe the |Map| operations used in \figref{Map}.}
+\end{theorem}
+The finiteness of finite maps interferes with giving a useful |ClosedSemiring| instance.
+
 \sectionl{Tries}
 
 %format :< = "\mathrel{\Varid{:\!\!\triangleleft}}"
-%format `mat` = !
-%format mat = (!)
 
 Since a language is a set of strings, we have considered representations of such sets as lists and as predicates.
 Another choice of language representation is the \emph{trie}, as introduced by Thue in 1912, according to Knuth \needcite{}.
@@ -334,15 +357,11 @@ Putting genericity aside\notefoot{Re-raise later?} and restricting our attention
 
 > data Trie c s = s :< Map c (Trie c s)
 
-where |Map| is an efficient representation of finite maps, i.e., partial functions over finite domains \needcite{}.
-Although we can think of |Trie c s| as denoting partial functions from |[c]| to |s|, if we further require |s| to be semiring, we can treat missing entries as being implicitly zero, yielding a \emph{total} function:\notefoot{Describe finite maps and |findWithDefault|.}
+Tries denote functions, as follows:
 \begin{code}
 trieFun :: Ord c => Trie c s -> ([c] -> s)
 trieFun (e  :<  _   ) []      = e
 trieFun (_  :<  ts  ) (c:cs)  = trieFun (ts ! c) cs
-
-(!) :: (Ord c, Semiring s) => Map c s -> c -> s
-m ! c = findWithDefault zero c m
 \end{code}
 We really need that |Trie c s| is a semiring (and hence has |zero|), since the finite map contains tries.
 As we'll see, however, |Trie c s| is a semiring whenever |s| is.
@@ -375,19 +394,8 @@ In other words, the meanings of the sub-tries of a trie |t| are the derivatives 
 
 Our goal is to deduce definitions of the semiring vocabulary for tries such that |trieFun| becomes a semiring homomorphism.
 Understanding how differentiation relates to that vocabulary will move us closer to this goal.
-\begin{theorem}[\provedIn{theorem:deriv}, generalizing a result of \citet{Brzozowski64}, Theorem 3.1]\thmLabel{deriv}
-The |deriv| operation has the following properties:%
-\out{
-\footnote{The fourth property can be written more directly as follows:
-
-> deriv c (p <.> q) = (if mempty `setElem` p then deriv c q else 0) <+> deriv c p <.> q
-
-or even
-
-> deriv c (p <.> q) = if mempty `setElem` p then deriv c q <+> deriv c p <.> q else deriv c p <.> q
-
-}
-}
+\begin{lemma}[\provedIn{lemma:deriv}, generalizing a result of \citet{Brzozowski64}, Lemma 3.1]\lemLabel{deriv}
+Differentiation has the following properties:%
 %format .> = "\cdot"
 \begin{code}
 deriv c zero         = zero
@@ -403,8 +411,33 @@ infixl 7 .>
 s .> f  = \ a -> s * (f a)
         = (s NOP *) . f
 \end{code}
-\end{theorem}
+\end{lemma}
 
+\begin{theorem}[\provedIn{theorem:Trie}]\thmLabel{Trie}
+Given the definitions in \figrefdef{Trie}{Tries as a semiring}{
+\begin{code}
+instance (Ord c, Semiring s) => Semiring (Trie c s) where
+  zero  = zero  :< empty
+  one   = one   :< empty
+  (a :< ps')  <+>  (b :< qs') = (a <+> b) :< unionWith (<+>) ps' qs'
+  (a :< ps')  <.>  (b :< qs') =
+    (a <.> b) :< unionWith (<+>) (fmap (<.> NOP q) ps') (fmap (scaleT a) qs')
+
+-- |(.>)| on tries
+scaleT :: (Ord c, Semiring s) => s -> Trie c s -> Trie c s
+scaleT s (e :< ts) = (s <.> e) :< fmap (scaleT s) ts
+
+instance (Ord c, Semiring s) => ClosedSemiring (Trie c s) where
+  closure (_ :< ds) = q where q = one :< fmap (<.> NOP q) ds
+
+instance (Ord c, Semiring s) => HasSingle (Trie c s) [c] where
+  single w = product (map symbol w)
+   where
+     symbol c = zero :< singleton c one
+\end{code}
+\vspace{-4ex}
+}, |trieFun| is a homomorphism with respect to each instantiated class.
+\end{theorem}
 
 % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
 
@@ -418,7 +451,11 @@ s .> f  = \ a -> s * (f a)
 
 \subsection{\thmRef{function}}\proofLabel{theorem:function}
 
-\subsection{\thmRef{deriv}}\proofLabel{theorem:deriv}
+\subsection{\thmRef{Map}}\proofLabel{theorem:Map}
+
+\subsection{\lemRef{deriv}}\proofLabel{lemma:deriv}
+
+\subsection{\thmRef{Trie}}\proofLabel{theorem:Trie}
 
 \bibliography{bib}
 

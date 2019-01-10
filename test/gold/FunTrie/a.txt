@@ -1,1 +1,1 @@
-False :| fromList [('a',True :| fromList [])]
+False :< fromList [('a',True :< fromList [])]

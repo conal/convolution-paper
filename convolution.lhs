@@ -114,6 +114,7 @@ Conal Elliott
 %format bigunion (lim) (body) = "\bigunion_{" lim "}{" body "}"
 %format pow a (b) = a "^{" b "}"
 %format `union` = "\cup"
+%format closure p = "\closure{"p"}"
 
 \sectionl{Languages}
 
@@ -374,20 +375,37 @@ In other words, the meanings of the sub-tries of a trie |t| are the derivatives 
 
 Our goal is to deduce definitions of the semiring vocabulary for tries such that |trieFun| becomes a semiring homomorphism.
 Understanding how differentiation relates to that vocabulary will move us closer to this goal.
-\begin{theorem}[\provedIn{theorem:deriv}, generalizing \citet{Brzozowski64}, Theorem 3.1]\thmLabel{deriv}
-The |deriv| operation has the following properties:\footnote{The fourth property can be written more directly as follows:
-$$\deriv c (p \conv q) = (\ite{\mempty \in p}{\deriv c q}0) + \deriv c p \conv q $$
+\begin{theorem}[\provedIn{theorem:deriv}, generalizing a result of \citet{Brzozowski64}, Theorem 3.1]\thmLabel{deriv}
+The |deriv| operation has the following properties:%
+\out{
+\footnote{The fourth property can be written more directly as follows:
+
+> deriv c (p <.> q) = (if mempty `setElem` p then deriv c q else 0) <+> deriv c p <.> q
+
 or even
-$$\deriv c (p \conv q) = \iteB{\mempty \in p}{\deriv c q + \deriv c p \conv q}{\deriv c p \conv q}. $$}
-\begin{align*}
-\deriv c \zero        &= \zero \\
-\deriv c \one         &= \zero \\
-\deriv c (p + q)      &= \deriv c p + \deriv c q \\
-\deriv c (p \conv q)  &= \delta\, p \conv \deriv c q + \deriv c p \conv q \\
-\deriv c (\closure p) &= \deriv c (p \conv \closure p) \\
-\end{align*}
-where $\delta\,p$ is the set containing just the empty string $\mempty$ if $\mempty \in p$ and otherwise the empty set itself:\notefoot{Consider eliminating |delta| in favor of just using |hasEps|.}
-$$ \delta\,p = \iteB{\mempty \in p}{\one}{\zero} . $$
+
+> deriv c (p <.> q) = if mempty `setElem` p then deriv c q <+> deriv c p <.> q else deriv c p <.> q
+
+}
+}
+%format *^ = "\cdot"
+\begin{code}
+deriv c zero         = zero
+deriv c one          = zero
+deriv c (p  <+>  q)  = deriv c p <+> deriv c q
+deriv c (p  <.>  q)  = delta p <.> deriv c q <+> deriv c p <.> q
+deriv c (closure p)  = deriv c (p <.> closure p)
+\end{code}
+where |delta p| is an ``impulse function'' that agrees with |p| at |mempty| and is |zero| elsewhere:
+\begin{code}
+delta p  = \ w -> if w == mempty then p w else 0
+         = p mempty *^ one
+\end{code}
+where |(*^)| scales the result of a function:
+\begin{code}
+s *^ f  = \ a -> s * (f a)
+        = (s NOP *) . f
+\end{code}
 \end{theorem}
 
 % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %

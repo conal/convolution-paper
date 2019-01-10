@@ -396,7 +396,7 @@ deriv c (p  <+>  q)  = deriv c p <+> deriv c q
 deriv c (p  <.>  q)  = p mempty .> deriv c q <+> deriv c p <.> q
 deriv c (closure p)  = deriv c (p <.> closure p)
 \end{code}
-where |(.>)| scales the result of a function:
+where |(.>)| scales the result of a function:\footnote{Equivalently, |deriv c (p  <.>  q) = delta p * deriv c q <+> deriv c p <.> q|, where |delta p = p mempty .> one| \citep{Brzozowski64}.}
 \begin{code}
 infixl 7 .>
 (.>) :: Semiring s => s -> (a -> s) -> (a -> s)

@@ -107,6 +107,14 @@ Conal Elliott
 %format `elem` = "\mathbin{`\Varid{elem}`}"
 %format `setElem` = "\in"
 
+%format Pow = "\Pow"
+%format emptyset = "\emptyset"
+%format single (s) = "\single{"s"}"
+%format set (e) = "\set{"e"}"
+%format bigunion (lim) (body) = "\bigunion_{" lim "}{" body "}"
+%format pow a (b) = a "^{" b "}"
+%format `union` = "\cup"
+
 \sectionl{Languages}
 
 \mynote{Summarize/review languages as sets, including singleton, union, concatenation, and star/closure.}
@@ -144,25 +152,12 @@ class Semiring a where
   zero    , one    :: a
   (<+>)   , (<.>)  :: a -> a -> a
 
-sum, product :: (Foldable f, Semiring a) => f a -> a
-sum      = foldr (<+>)  zero
-product  = foldr (<.>)  one
-
 class Semiring a => ClosedSemiring a where
   closure :: a -> a
   closure p = q where q = one <+> p <.> q  -- default
 
 class HasSingle a x where
   single :: x -> a
-
-instance Semiring Bool where
-  zero    = False
-  one     = True
-  (<+>)   = (||)
-  (<.>)   = (&&)
-
-instance ClosedSemiring Bool where
-  closure _ = one
 \end{code}
 \vspace{-4ex}
 } shows Haskell classes for representations of languages (and later generalizations), combining the star semiring vocabulary with an operation for singletons.
@@ -172,15 +167,6 @@ The singleton-forming operation must satisfy the following properties:
 \single {u \mappend v} &= \single u \conv \single v
 \end{align*}
 i.e., |single| is a monoid homomorphism (targeting the product monoid).
-As an example other than numbers and languages, \figref{classes} includes the closed semiring of boolean values.
-
-%format Pow = "\Pow"
-%format emptyset = "\emptyset"
-%format single (s) = "\single{"s"}"
-%format set (e) = "\set{"e"}"
-%format bigunion (lim) (body) = "\bigunion_{" lim "}{" body "}"
-%format pow a (b) = a "^{" b "}"
-%format `union` = "\cup"
 
 The semiring interface has a corresponding notion of structure preservation:
 \begin{definition}
@@ -192,16 +178,18 @@ forall a b NOP . NOP h (a  <+>  b) == h a  <+>  h b
 forall a b NOP . NOP h (a  <.>  b) == h a  <.>  h b
 \end{code}
 \end{definition}
+\mynote{Explain the value of homomorphisms to the methodology of this paper: simple and consistent specification style, non-leaky abstraction, guarantee that the laws hold. Refer to my TCM and AD papers.}
 
 Languages as sets fulfill this combined interface as described above and again in the pseudocode in \figrefdef{set}{Abstract sets as a ``language''}{
 \begin{code}
 instance Monoid s => Semiring (Pow s) where
   zero  = emptyset
   one   = single mempty
-  p  <+>  q  = set (s | s `setElem` p || s `setElem` q) = p `setUnion` q
+  p  <+>  q  = p `union` q
   p  <.>  q  = set (u <> v | u `setElem` p && v `setElem` q)
 
 instance ClosedSemiring (Pow s)  -- default |closure|
+
 instance HasSingle (Pow s) s where single s = set s
 \end{code}
 \vspace{-4ex}
@@ -212,8 +200,8 @@ More concretely, we might instead use a type of (possibly infinite) lists, as in
 instance Monoid a => Semiring [a] where
   zero = []
   one = [mempty]
-  p <+> q = p ++ q
-  p <.> q = [u <> v | u <- p, v <- q]
+  p  <+>  q = p ++ q
+  p  <.>  q = [u <> v | u <- p, v <- q]
 
 instance Monoid a => ClosedSemiring [a] -- default
 
@@ -224,12 +212,11 @@ instance HasSingle [a] a where single a = [a]
 Lists relate to sets as follows:
 \begin{code}
 listElems :: [a] -> Pow a
-listElems []      = set ()
-listElems (a:as)  = set a `union` listElems as
+listElems = foldr insert emptyset where insert a as = single a `union` as
 \end{code}
 The instance definitions in \figreftwo{set}{list} bear a family resemblance to each other, which we can readily make precise:
 \begin{theorem}[\provedIn{theorem:list}]\thmLabel{list}
-Given the definitions in \figref{list}, |listElems| is a semiring (and close semiring) homomorphism.
+Given the definitions in \figref{list}, |listElems| is a homomorphism with respect to each instantiated class.
 \end{theorem}
 %% Further, one can take this homomorphism property as an algebraic \emph{specifications} and \emph{calculate} the instance definitions in \figref{list}, explaining the resemblances.
 
@@ -238,7 +225,7 @@ Given the definitions in \figref{list}, |listElems| is a semiring (and close sem
 Now consider how we can computably \emph{match} a string for membership in a language described in the vocabulary given in the previous section.
 The set-based language definition does not lead directly to effective string matching, because the sets may be infinite.
 The list and finite set types do have computable membership testing so we could use them instead.
-Another option is to use membership predicates directly, which are isomorphic to sets:
+Another option is to use membership predicates \emph{as} language implementation, noting the set/predicate isomorphism:
 \begin{code}
 setPred :: Pow a -> (a -> Bool)
 setPred as = \ a -> a `setElem` as
@@ -254,11 +241,11 @@ It's easy to show that |setPred . predSet == id| and |predSet . setPred == id|.
 %format bigOr (lim) = "\bigOrZ{" lim "}{0}"
 %format bigOrQ (lim) = "\bigOrZ{" lim "}{1.5}"
 %format BR = "\\"
-We can require that |predSet| (and thus |setPred|) is semiring homomorphism and solve the required homomorphism equations to yield a |Semiring| instance, as shown in \figrefdef{Pred}{Membership predicate as semiring (language representation)}{
+We can require that |predSet| (and thus |setPred|) is semiring homomorphism and solve the required homomorphism equations to yield a |Semiring| instance, as shown in \figrefdef{pred}{Membership predicate as semiring (language representation)}{
 \begin{code}
 instance (Monoid a, Eq a) => Semiring (a -> Bool) where
   zero = \ w -> False
-  one = \ w -> w == mempty
+  one = single mempty
   f  <+>  g = \ w -> f w || g w
   f  <.>  g = \ w -> bigOrQ (u,v BR u <> v == w) f u && g v
 
@@ -280,13 +267,128 @@ splits []      = [([],[])]
 splits (a:as)  = ([],a:as) : [((a:l),r) | (l,r) <- splits as]
 \end{code}
 Sets and predicates have the same sort of relationship as between sets and lists (\thmRef{list}), though symmetrically:
-\begin{theorem}[\provedIn{theorem:Pred}]\thmLabel{Pred}
-Given the definitions in \figref{Pred}, |setPred| and |predSet| are semiring homomorphisms (and together form a semiring \emph{isomorphism}).\notefoot{Even a ``\emph{closed} semiring homomorphism''. Probably say so.}
+\begin{theorem}[\provedIn{theorem:pred}]\thmLabel{pred}
+Given the definitions in \figref{pred}, |setPred| and |predSet| are homomorphisms (and together form an isomorphism) with respect to each instantiated class.
 \end{theorem}
 
 \sectionl{Beyond Booleans}
 
+As an example other than numbers and languages, booleans form a closed semiring:
+\begin{code}
+instance Semiring Bool where
+  zero  = False
+  one   = True
+  (<+>) = (||)
+  (<.>) = (&&)
 
+instance ClosedSemiring Bool where
+  closure b  = one <+> b <.> closure b
+             = True || (b && closure b)
+             = True
+\end{code}
+
+\noindent
+\nc\bigSumZ[2]{\hspace{-#2ex}\sum\limits_{\substack{#1}}\hspace{-#2ex}}
+%format bigSum (lim) = "\bigSumZ{" lim "}{0}"
+%format bigSumQ (lim) = "\bigSumZ{" lim "}{1.5}"
+Re-examining the instances in \figref{pred}, we can see uses of |False|, |(||||)|, and |(&&)|, as well as an equality test (for |single w|), which yields |False| or |True|.
+We can therefore easily generalize the codomain of ``predicates'' from booleans to \emph{any} semiring, as in \figrefdef{function}{Function-to-semiring as generalized language representation}{
+\begin{code}
+instance (Monoid a, Eq a, Semiring b) => Semiring (a -> b) where
+  zero = \ w -> zero
+  one = single mempty
+  f  <+>  g = \ w -> f w <+> g w
+  f  <.>  g = \ w -> bigSumQ (u,v BR u <> v == w) f u <.> g v
+
+instance (Monoid a, Eq a) => ClosedSemiring (a -> b)
+
+instance Eq a => HasSingle (a -> b) a where
+  single w = \ w' -> boolVal (w' == w)
+
+boolVal :: Semiring s => Bool -> s
+boolVal False  = zero
+boolVal True   = one
+\end{code}
+\vspace{-4ex}
+}.
+\begin{theorem}[\provedIn{theorem:function}]\thmLabel{function}
+Given the definitions in \figref{function}, functions from |a| to |b| the laws of closed semirings hold whenever |a| is a monoid and |b| is a semiring.
+\end{theorem}
+\noindent
+When the monoid |a| is a list, we can again express the product operation in a more clearly computable form:
+\begin{code}
+  f <.> g  = \ w -> sum [ f u <.> g v | (u,v) <- splits w ]
+\end{code}
+
+\sectionl{Tries}
+
+%format :< = "\mathrel{\Varid{:\!\!\triangleleft}}"
+%format `mat` = !
+%format mat = (!)
+
+Since a language is a set of strings, we have considered representations of such sets as lists and as predicates.
+Another choice of language representation is the \emph{trie}, as introduced by Thue in 1912, according to Knuth \needcite{}.
+As shown by Hinze \needcite{}, tries can be extended to represent not just sets but partial functions, as well as defined generically for partial functions from types other than strings.
+Putting genericity aside\notefoot{Re-raise later?} and restricting our attention to functions of lists (``strings''), we can formulate a simple trie data type as follows:
+
+> data Trie c s = s :< Map c (Trie c s)
+
+where |Map| is an efficient representation of finite maps, i.e., partial functions over finite domains \needcite{}.
+Although we can think of |Trie c s| as denoting partial functions from |[c]| to |s|, if we further require |s| to be semiring, we can treat missing entries as being implicitly zero, yielding a \emph{total} function:\notefoot{Describe finite maps and |findWithDefault|.}
+\begin{code}
+trieFun :: Ord c => Trie c s -> ([c] -> s)
+trieFun (e  :<  _   ) []      = e
+trieFun (_  :<  ts  ) (c:cs)  = trieFun (ts ! c) cs
+
+(!) :: (Ord c, Semiring s) => Map c s -> c -> s
+m ! c = findWithDefault zero c m
+\end{code}
+We really need that |Trie c s| is a semiring (and hence has |zero|), since the finite map contains tries.
+As we'll see, however, |Trie c s| is a semiring whenever |s| is.
+Since |trieFun| interprets a trie as a function (from a monoid to a semiring), let's also require that it be a semiring homomorphism as a specification for the trie semiring.
+
+%format deriv (c) = "\derivOp_{"c"}"
+
+For a trie |t = e :< ts|, how does the meaning (via |trieFun|) of the trie |t| relate to the meanings of the sub-tries in |ts|?
+An answer comes from the notion of \emph{derivatives} of languages as used by \citet{Brzozowski64} for simple and efficient recognition of regular languages.
+The \emph{derivative} |deriv c p| of a language |p| (as a set of strings) with respect to an initial symbol |c| is the set of |c|-suffixes of strings in |p|, i.e.,
+\begin{code}
+deriv :: c -> Pow [c] -> Pow [c]
+deriv c p = set (u | c : u `setElem` p)
+\end{code}
+Recast and generalized to functions of lists,
+\begin{code}
+deriv :: c -> ([c] -> b) -> ([c] -> b)
+deriv c p  = \ u -> p (c : u)
+           = p . (c NOP :)
+\end{code}
+Now suppose that |p| is given by a trie:
+\begin{code}
+    deriv c (trieFun (e :< ts))
+==  trieFun (e :< ts) . (c NOP :)
+==  \ u -> trieFun (e :< ts) (c : u)
+==  \ u -> trieFun (ts ! c) u
+==  trieFun (ts ! c)
+\end{code}
+In other words, the meanings of the sub-tries of a trie |t| are the derivatives of the meaning of |t|.
+
+Our goal is to deduce definitions of the semiring vocabulary for tries such that |trieFun| becomes a semiring homomorphism.
+Understanding how differentiation relates to that vocabulary will move us closer to this goal.
+\begin{theorem}[\provedIn{theorem:deriv}, generalizing \citet{Brzozowski64}, Theorem 3.1]\thmLabel{deriv}
+The |deriv| operation has the following properties:\footnote{The fourth property can be written more directly as follows:
+$$\deriv c (p \conv q) = (\ite{\mempty \in p}{\deriv c q}0) + \deriv c p \conv q $$
+or even
+$$\deriv c (p \conv q) = \iteB{\mempty \in p}{\deriv c q + \deriv c p \conv q}{\deriv c p \conv q}. $$}
+\begin{align*}
+\deriv c \zero        &= \zero \\
+\deriv c \one         &= \zero \\
+\deriv c (p + q)      &= \deriv c p + \deriv c q \\
+\deriv c (p \conv q)  &= \delta\, p \conv \deriv c q + \deriv c p \conv q \\
+\deriv c (\closure p) &= \deriv c (p \conv \closure p) \\
+\end{align*}
+where $\delta\,p$ is the set containing just the empty string $\mempty$ if $\mempty \in p$ and otherwise the empty set itself:\notefoot{Consider eliminating |delta| in favor of just using |hasEps|.}
+$$ \delta\,p = \iteB{\mempty \in p}{\one}{\zero} . $$
+\end{theorem}
 
 % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
 
@@ -296,7 +398,11 @@ Given the definitions in \figref{Pred}, |setPred| and |predSet| are semiring hom
 
 \subsection{\thmRef{list}}\proofLabel{theorem:list}
 
-\subsection{\thmRef{Pred}}\proofLabel{theorem:Pred}
+\subsection{\thmRef{pred}}\proofLabel{theorem:pred}
+
+\subsection{\thmRef{function}}\proofLabel{theorem:function}
+
+\subsection{\thmRef{deriv}}\proofLabel{theorem:deriv}
 
 \bibliography{bib}
 

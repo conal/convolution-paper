@@ -27,10 +27,10 @@ import Set hiding (Trie)
 
 instance HasTrie c => Semiring (LTrie c Bool) where
   zero = pure zero
-  one = True :< pure zero
-  ~(a :< ps') <+> ~(b :< qs') = (a || b) :< liftA2 (<+>) ps' qs'
+  one = True :| pure zero
+  ~(a :| ps') <+> ~(b :| qs') = (a || b) :| liftA2 (<+>) ps' qs'
   -- (<+>) = liftA2 (||) -- liftA2 (<+>)
-  ~(a :< ps') <.> ~q@(b :< qs') = (a && b) :< liftA2 h ps' qs'
+  ~(a :| ps') <.> ~q@(b :| qs') = (a && b) :| liftA2 h ps' qs'
    where
      -- h p' q' = (if a then q' else zero) <+> (p' <.> q)
      -- h p' q' = if a then q' <+> p' <.> q else p' <.> q
@@ -51,13 +51,13 @@ closureLT t = t'
    t' = one <+> t <.> (one <+> t <.> (one <+> t <.> (one <+> t <.> (one <+> t)))) -- converge
 
 instance (HasTrie c, Eq c) => HasSingle (LTrie c Bool) [c] where
-  single = foldr (\ c p -> False :< trie (\ c' -> if c==c' then p else zero)) one
-  -- single [] = one -- True :< pure zero
-  -- single (c:cs) = False :< trie (\ c' -> if c==c' then single cs else zero)
+  single = foldr (\ c p -> False :| trie (\ c' -> if c==c' then p else zero)) one
+  -- single [] = one -- True :| pure zero
+  -- single (c:cs) = False :| trie (\ c' -> if c==c' then single cs else zero)
 
 instance HasTrie c => HasDecomp (LTrie c Bool) c Bool where
-  atEps (a :< _) = a
-  deriv c (_ :< ps') = ps' ! c
+  atEps (a :| _) = a
+  deriv c (_ :| ps') = ps' ! c
 
 {--------------------------------------------------------------------
     Memoization via generalized tries
@@ -191,8 +191,8 @@ HasTrieIsomorph((),Char,Int,fromEnum,toEnum)
     String tries
 --------------------------------------------------------------------}
 
-infix 1 :<
-data LTrie c a = a :< (c :->: LTrie c a)
+infix 1 :|
+data LTrie c a = a :| (c :->: LTrie c a)
 
 -- TODO: Use HasTrieIsomorph for [c]. I'll probably have to add instances of
 -- Semiring etc for generics.
@@ -200,20 +200,20 @@ data LTrie c a = a :< (c :->: LTrie c a)
 deriving instance HasTrie c => Functor (LTrie c)
 
 instance HasTrie c => Applicative (LTrie c) where
-  pure a = t where t = a :< pure t
-  liftA2 h ~(a :< as) ~(b :< bs) = h a b :< (liftA2.liftA2) h as bs
+  pure a = t where t = a :| pure t
+  liftA2 h ~(a :| as) ~(b :| bs) = h a b :| (liftA2.liftA2) h as bs
 
 instance HasTrie c => HasTrie [c] where
   type Trie [c] = LTrie c
-  trie f = f [] :< trie (\ c -> trie (f . (c :)))
-  untrie (e :< ts) = list e (untrie . untrie ts)
+  trie f = f [] :| trie (\ c -> trie (f . (c :)))
+  untrie (e :| ts) = list e (untrie . untrie ts)
 
 -- Equivalently:
 -- 
---   untrie (e :< _ ) [] = e
---   untrie (_ :< ts) (c:cs) = untrie (untrie ts c) cs
+--   untrie (e :| _ ) [] = e
+--   untrie (_ :| ts) (c:cs) = untrie (untrie ts c) cs
 --   
---   untrie (e :< ts) = list e (\ c cs -> untrie (untrie ts c) cs)
+--   untrie (e :| ts) = list e (\ c cs -> untrie (untrie ts c) cs)
 
 -- TODO: rewrite trie @[c] vis unlist.
 

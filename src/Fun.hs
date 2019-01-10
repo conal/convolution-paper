@@ -188,59 +188,62 @@ instance HasDecomp (Decomp c s) c s where
     List trie with finite maps
 --------------------------------------------------------------------}
 
-infix 1 :|
-data Trie c s = s :| Map c (Trie c s) deriving Show
+infix 1 :<
+data Trie c s = s :< Map c (Trie c s) deriving Show
 
 type OD c s = (Ord c, DetectableZero s)
 
 scaleT :: OD c s => s -> Trie c s -> Trie c s
 scaleT s _ | isZero s = zero
-scaleT s (e :| ts) = (s <.> e) :| fmap (scaleT s) ts
+scaleT s (e :< ts) = (s <.> e) :< fmap (scaleT s) ts
 
-inTrie :: OD c s => Trie c s -> [c] -> s
-inTrie (e :| _ ) [] = e
-inTrie (_ :| ds) (c:cs) = inTrie (ds `mat` c) cs
+-- -- Oops. We'd need to enumerate all of c.
+-- funTrie :: ([c] -> s) -> Trie c s
 
-mat :: (Ord c, Semiring a) => Map c a -> c -> a
-m `mat` c = M.findWithDefault zero c m
+trieFun :: OD c s => Trie c s -> ([c] -> s)
+trieFun (e :< _ ) [] = e
+trieFun (_ :< ts) (c:cs) = trieFun (ts ! c) cs
+
+(!) :: (Ord c, Semiring s) => Map c s -> c -> s
+m ! c = M.findWithDefault zero c m
 
 trieFunTo :: OD c s => Trie c s -> FunTo s [c]
-trieFunTo = FunTo . inTrie
+trieFunTo = FunTo . trieFun
 
 instance OD c s => Semiring (Trie c s) where
-  zero = zero :| M.empty
-  one  = one  :| M.empty
-  (a :| ps') <+> (b :| qs') = (a <+> b) :| M.unionWith (<+>) ps' qs'
+  zero = zero :< M.empty
+  one  = one  :< M.empty
+  (a :< ps') <+> (b :< qs') = (a <+> b) :< M.unionWith (<+>) ps' qs'
 #if 0
   -- Wedges for the recursive anbn examples even with the lazy pattern.
-  (a :| ps') <.> ~q@(b :| qs') =
-    (a <.> b) :| M.unionWith (<+>) (fmap (<.> q) ps') (fmap (scaleT a) qs')
+  (a :< ps') <.> ~q@(b :< qs') =
+    (a <.> b) :< M.unionWith (<+>) (fmap (<.> q) ps') (fmap (scaleT a) qs')
 #elif 0
   -- Wedges for recursive anbn examples even with the lazy pattern.
-  (a :| ps') <.> ~q@(b :| qs') = (a <.> b) :| M.unionWith (<+>) us vs
+  (a :< ps') <.> ~q@(b :< qs') = (a <.> b) :< M.unionWith (<+>) us vs
    where
      us = fmap (<.> q) ps'
      vs = fmap (scaleT a) qs'
 #elif 1
   -- Works even for recursive anbn examples.
-  (a :| ps') <.> q = scaleT a q <+> (zero :| fmap (<.> q) ps')
+  (a :< ps') <.> q = scaleT a q <+> (zero :< fmap (<.> q) ps')
 #else
   -- Works even for recursive anbn examples.
-  (a :| ps') <.> ~q@(b :| qs')
-    | isZero a = zero :| fmap (<.> q) ps'
-    | otherwise = a <.> b :| M.unionWith (<+>) (fmap (<.> q) ps') (fmap (scaleT a) qs')
+  (a :< ps') <.> ~q@(b :< qs')
+    | isZero a = zero :< fmap (<.> q) ps'
+    | otherwise = a <.> b :< M.unionWith (<+>) (fmap (<.> q) ps') (fmap (scaleT a) qs')
 #endif
 
 -- TODO: Map as semiring
 
 instance OD c s => ClosedSemiring (Trie c s) where
-  closure (_ :| ds) = q where q = one :| fmap (<.> q) ds
+  closure (_ :< ds) = q where q = one :< fmap (<.> q) ds
 
 instance OD c s => HasSingle (Trie c s) [c] where
   single = product . map symbol
    where
-     symbol c = zero :| M.singleton c one
+     symbol c = zero :< M.singleton c one
 
 instance OD c s => HasDecomp (Trie c s) c s where
-  atEps (a :| _) = a
-  deriv c (_ :| ds) = ds `mat` c
+  atEps (a :< _) = a
+  deriv c (_ :< ds) = ds ! c

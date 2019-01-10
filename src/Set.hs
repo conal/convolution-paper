@@ -13,6 +13,8 @@ import GHC.Types (Constraint)
 import Data.Maybe (maybeToList)
 import Data.Map (Map)
 import qualified Data.Map as M
+-- import Data.Set (Set)
+-- import qualified Data.Set as S
 
 import Misc
 import Semiring
@@ -44,6 +46,15 @@ instance Eq a => HasDecomp (Set a) a Bool where
   deriv c p = set (cs | c : cs `elem` p)
 
 #endif
+
+-- listElems :: Ord a => [a] -> Set a
+
+-- listElems = foldr insert S.empty where insert a as = S.singleton a `S.union` as
+
+-- listElems = foldr S.insert S.empty
+
+-- listElems []      = S.empty
+-- listElems (a:as)  = S.singleton a `S.union` listElems as
 
 {--------------------------------------------------------------------
     Predicates
@@ -321,12 +332,12 @@ instance HasDecomp (Decomp c) c Bool where
     List trie with finite maps as language
 --------------------------------------------------------------------}
 
--- infix 1 :|
-data Trie c = Bool :| Map c (Trie c) deriving Show
+-- infix 1 :<
+data Trie c = Bool :< Map c (Trie c) deriving Show
 
 inTrie :: Ord c => Trie c -> [c] -> Bool
-inTrie (e :| _ ) [] = e
-inTrie (_ :| ds) (c:cs) = inTrie (ds `mat` c) cs
+inTrie (e :< _ ) [] = e
+inTrie (_ :< ds) (c:cs) = inTrie (ds `mat` c) cs
 
 mat :: (Ord c, Semiring a) => Map c a -> c -> a
 m `mat` c = M.findWithDefault zero c m
@@ -335,52 +346,52 @@ triePred :: Ord c => Trie c -> Pred [c]
 triePred = Pred . inTrie
 
 decomp :: Ord c => Trie c -> Decomp c
--- decomp (e :| ds) = e :<: (\ c -> decomp (ds `mat` c))
--- decomp (e :| ds) = e :<: (\ c -> decomp (mat ds c))
-decomp (e :| ds) = e :<: (decomp . (ds `mat`))
+-- decomp (e :< ds) = e :<: (\ c -> decomp (ds `mat` c))
+-- decomp (e :< ds) = e :<: (\ c -> decomp (mat ds c))
+decomp (e :< ds) = e :<: (decomp . (ds `mat`))
 
 -- triePred = decompPred . decomp
 
 -- trimLT :: Ord c => Int -> Trie c -> Trie c
 -- trimLT 0 _ = zero
--- trimLT n (a :| m) = a :| (trimLT (n-1) <$> m)
+-- trimLT n (a :< m) = a :< (trimLT (n-1) <$> m)
 
 instance Ord c => Semiring (Trie c) where
-  zero = False :| M.empty
-  one  = True  :| M.empty
-  (a :| ps') <+> (b :| qs') = (a || b) :| M.unionWith (<+>) ps' qs'
+  zero = False :< M.empty
+  one  = True  :< M.empty
+  (a :< ps') <+> (b :< qs') = (a || b) :< M.unionWith (<+>) ps' qs'
 #if 0
   -- Works, but it leaves many zero entries in the maps (due to (delta p <.>))
   -- and wedges for the recursive anbn examples even with the lazy pattern.
-  p@(a :| ps') <.> ~q@(b :| qs') =
-    (a && b) :| M.unionWith (<+>) (fmap (<.> q) ps') (fmap (delta p <.>) qs')
+  p@(a :< ps') <.> ~q@(b :< qs') =
+    (a && b) :< M.unionWith (<+>) (fmap (<.> q) ps') (fmap (delta p <.>) qs')
 #elif 1
   -- Wedges for recursive anbn examples with the lazy pattern.
-  (a :| ps') <.> ~q@(b :| qs') = (a && b) :| M.unionWith (<+>) us vs
+  (a :< ps') <.> ~q@(b :< qs') = (a && b) :< M.unionWith (<+>) us vs
    where
      us = fmap (<.> q) ps'
      vs = if a then qs' else M.empty
 #elif 0
   -- Works even for recursive anbn examples.
-  (a :| ps') <.> q = (if a then q else zero) <+> (False :| fmap (<.> q) ps')
+  (a :< ps') <.> q = (if a then q else zero) <+> (False :< fmap (<.> q) ps')
 #else
   -- Works even for recursive anbn examples.
-  (False :| ps') <.> q = False :| fmap (<.> q) ps'
-  (True  :| ps') <.> q@(b :| qs') = b :| M.unionWith (<+>) (fmap (<.> q) ps') qs'
+  (False :< ps') <.> q = False :< fmap (<.> q) ps'
+  (True  :< ps') <.> q@(b :< qs') = b :< M.unionWith (<+>) (fmap (<.> q) ps') qs'
 #endif
 
 instance Ord c => ClosedSemiring (Trie c) where
-  closure (_ :| ds) = q where q = True :| fmap (<.> q) ds
+  closure (_ :< ds) = q where q = True :< fmap (<.> q) ds
 
 instance Ord c => HasSingle (Trie c) [c] where
-  -- single = foldr (\ c p -> False :| M.singleton c p) one
+  -- single = foldr (\ c p -> False :< M.singleton c p) one
   -- single [] = one
-  -- single (c:cs) = False :| M.singleton c (single cs)
+  -- single (c:cs) = False :< M.singleton c (single cs)
   single = product . map symbol
    where
-     symbol c = False :| M.singleton c one
+     symbol c = False :< M.singleton c one
 
 instance Ord c => HasDecomp (Trie c) c Bool where
-  atEps (a :| _) = a
-  deriv c (_ :| ds) = ds `mat` c
+  atEps (a :< _) = a
+  deriv c (_ :< ds) = ds `mat` c
 

@@ -388,25 +388,23 @@ or even
 
 }
 }
-%format *^ = "\cdot"
+%format .> = "\cdot"
 \begin{code}
 deriv c zero         = zero
 deriv c one          = zero
 deriv c (p  <+>  q)  = deriv c p <+> deriv c q
-deriv c (p  <.>  q)  = delta p <.> deriv c q <+> deriv c p <.> q
+deriv c (p  <.>  q)  = p mempty .> deriv c q <+> deriv c p <.> q
 deriv c (closure p)  = deriv c (p <.> closure p)
 \end{code}
-where |delta p| is an ``impulse function'' that agrees with |p| at |mempty| and is |zero| elsewhere:
+where |(.>)| scales the result of a function:
 \begin{code}
-delta p  = \ w -> if w == mempty then p w else 0
-         = p mempty *^ one
-\end{code}
-where |(*^)| scales the result of a function:
-\begin{code}
-s *^ f  = \ a -> s * (f a)
+infixl 7 .>
+(.>) :: Semiring s => s -> (a -> s) -> (a -> s)
+s .> f  = \ a -> s * (f a)
         = (s NOP *) . f
 \end{code}
 \end{theorem}
+
 
 % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
 

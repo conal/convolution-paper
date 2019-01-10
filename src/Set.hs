@@ -35,7 +35,7 @@ instance Semiring (Set a) where
   p + q = set (a | a `elem` p || a `elem` q)
   p <.> q = set (u <> v | u `elem` p && v `elem` q)
 
-instance ClosedSemiring (Set a) where
+instance StarSemiring (Set a) where
   closure p = bigunion (n >= 0) (p^n)
 
 instance HasSingle (Set a) a where
@@ -78,7 +78,7 @@ instance Semiring (Pred [c]) where
   Pred f <+> Pred g = Pred (\ x -> f x || g x)
   Pred f <.> Pred g = Pred (\ x -> or [ f u && g v | (u,v) <- splits x ] )
 
-instance ClosedSemiring (Pred [c])
+instance StarSemiring (Pred [c])
 
 instance Eq s => HasSingle (Pred s) s where
   single s = Pred (== s)
@@ -116,7 +116,7 @@ instance Semiring (Resid s) where
 
 #endif
 
-instance ClosedSemiring (Resid s)
+instance StarSemiring (Resid s)
 
 instance Eq s => HasSingle (Resid s) [s] where
   -- single x = Resid (\ s -> case stripPrefix x s of
@@ -178,7 +178,7 @@ instance Eq c => Semiring (RegExp c) where
   a <.> One = a
   a <.> b = a :<.> b
 
-instance Eq c => ClosedSemiring (RegExp c) where
+instance Eq c => StarSemiring (RegExp c) where
   closure Zero = One
   closure e    = Closure e
 
@@ -192,7 +192,7 @@ instance Semiring (RegExp c) where
   (<+>) = (:<+>)
   (<.>) = (:<.>)
 
-instance ClosedSemiring (RegExp c) where
+instance StarSemiring (RegExp c) where
   closure = Closure
 
 #endif
@@ -238,7 +238,7 @@ instance Eq c => HasDecomp (RegExp c) c Bool where
                         -- deriv c (one <+> p <.> Closure p)
 
 -- | Interpret a regular expression
-regexp :: (ClosedSemiring a, HasSingle a [c]) => RegExp c -> a
+regexp :: (StarSemiring a, HasSingle a [c]) => RegExp c -> a
 regexp (Char c)      = single [c]
 regexp Zero          = zero
 regexp One           = one
@@ -314,7 +314,7 @@ instance Semiring (Decomp c) where
 
   -- (<+>) = liftA2 (||)
 
-instance ClosedSemiring (Decomp c)
+instance StarSemiring (Decomp c)
 
 instance Eq c => HasSingle (Decomp c) [c] where
   single = product . map symbol
@@ -380,7 +380,7 @@ instance Ord c => Semiring (Trie c) where
   (True  :< ps') <.> q@(b :< qs') = b :< M.unionWith (<+>) (fmap (<.> q) ps') qs'
 #endif
 
-instance Ord c => ClosedSemiring (Trie c) where
+instance Ord c => StarSemiring (Trie c) where
   closure (_ :< ds) = q where q = True :< fmap (<.> q) ds
 
 instance Ord c => HasSingle (Trie c) [c] where

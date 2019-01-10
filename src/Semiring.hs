@@ -10,6 +10,7 @@
 module Semiring where
 
 import qualified Data.Set as S
+import qualified Data.Map as M
 
 class Semiring a where
   infixl 7 <.>
@@ -17,7 +18,7 @@ class Semiring a where
   zero, one     :: a
   (<+>), (<.>)  :: a -> a -> a
 
-class Semiring a => ClosedSemiring a where
+class Semiring a => StarSemiring a where
   closure :: a -> a
   closure p = q where q = one <+> p <.> q
 
@@ -36,7 +37,7 @@ instance Semiring Bool where
   (<+>) = (||)
   (<.>) = (&&)
 
-instance ClosedSemiring Bool where
+instance StarSemiring Bool where
   closure _ = one
 
 newtype Sum a = Sum { getSum :: a }
@@ -78,7 +79,7 @@ instance Monoid a => Semiring [a] where
   p <+> q = p ++ q
   p <.> q = [u <> v | u <- p, v <- q]
 
-instance Monoid a => ClosedSemiring [a] -- default
+instance Monoid a => StarSemiring [a] -- default
 
 instance (Monoid a, Ord a) => Semiring (S.Set a) where
   zero = S.empty
@@ -87,7 +88,14 @@ instance (Monoid a, Ord a) => Semiring (S.Set a) where
   p <.> q = S.fromList
              [u <> v | u <- S.toList p, v <- S.toList q]
 
--- instance (Monoid a, Ord a) => ClosedSemiring (S.Set a) -- default
+-- instance (Monoid a, Ord a) => StarSemiring (S.Set a) -- default
+
+instance (Monoid a, Ord a, Semiring b) => Semiring (M.Map a b) where
+  zero = M.empty
+  one = M.singleton mempty one
+  p <+> q = M.unionWith (<+>) p q
+  p <.> q = M.fromListWith (<+>)
+              [(u <> v, s <.> t) | (u,s) <- M.toList p, (v,t) <- M.toList q]
 
 {--------------------------------------------------------------------
     Language operations. Move elsewhere.
@@ -104,7 +112,7 @@ derivs s p = foldl (flip deriv) p s
 accept :: HasDecomp a c s => a -> [c] -> s
 accept p s = atEps (derivs s p)
 
-type Language a c s = (ClosedSemiring a, HasSingle a [c], HasDecomp a c s)
+type Language a c s = (StarSemiring a, HasSingle a [c], HasDecomp a c s)
 
 
 instance HasSingle [a] a where single a = [a]
@@ -119,3 +127,11 @@ instance HasSingle (S.Set a) a where single = S.singleton
 instance Ord c => HasDecomp (S.Set [c]) c Bool where
   atEps p = [] `S.member` p
   deriv c p = S.fromList [cs | c' : cs <- S.toList p, c' == c]
+
+instance Semiring s => HasSingle (M.Map a s) a where
+  single a = M.singleton a one
+
+instance (Ord c, Semiring s) => HasDecomp (M.Map [c] s) c s where
+  atEps p = M.findWithDefault zero [] p
+  deriv c p = M.fromList [(cs,s) | (c':cs,s) <- M.toList p, c' == c]
+

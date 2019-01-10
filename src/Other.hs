@@ -40,7 +40,7 @@ instance HasTrie c => Semiring (LTrie c Bool) where
 -- Oops: I think I'll have to wrap LTrie to make it a language instance, because
 -- I'll want a different Applicative. Wait and see.
 
-instance HasTrie c => ClosedSemiring (LTrie c Bool)
+instance HasTrie c => StarSemiring (LTrie c Bool)
 
 closureLT :: HasTrie c => LTrie c Bool -> LTrie c Bool
 closureLT t = t'

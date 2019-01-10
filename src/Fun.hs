@@ -30,7 +30,7 @@ instance Semiring s => Semiring (FunTo s [c]) where
   FunTo f <+> FunTo g = FunTo (\ w -> f w <+> g w)
   FunTo f <.> FunTo g = FunTo (\ w -> sum [ f u <.> g v | (u,v) <- splits w ] )
 
-instance Semiring s => ClosedSemiring (FunTo s [c])
+instance Semiring s => StarSemiring (FunTo s [c])
 
 instance (Semiring s, Eq b) => HasSingle (FunTo s b) b where
   single x = FunTo (boolVal . (== x))
@@ -72,7 +72,7 @@ instance Semiring s => Semiring (Resid c s) where
 
 #if 0
 
-instance ClosedSemiring (Resid s)
+instance StarSemiring (Resid s)
 
 instance Eq s => HasSingle (Resid s) [s] where
   -- single x = Resid (\ s -> case stripPrefix x s of
@@ -114,13 +114,13 @@ instance Semiring s => Semiring (RegExp c s) where
   (<+>) = (:<+>)
   (<.>) = (:<.>)
 
-instance Semiring s => ClosedSemiring (RegExp c s) where
+instance Semiring s => StarSemiring (RegExp c s) where
   closure = Closure
 
 instance (Functor f, Foldable f, Semiring s) => HasSingle (RegExp c s) (f c) where
   single = product . fmap Char
 
-instance (Eq c, ClosedSemiring s) => HasDecomp (RegExp c s) c s where
+instance (Eq c, StarSemiring s) => HasDecomp (RegExp c s) c s where
   atEps (Char _)    = zero
   atEps (Value s)   = s
   atEps (p :<+> q)  = atEps p <+> atEps q
@@ -136,7 +136,7 @@ instance (Eq c, ClosedSemiring s) => HasDecomp (RegExp c s) c s where
                                   -- deriv c (one <+> p <.> Closure p)
 
 -- | Interpret a regular expression
-regexp :: (ClosedSemiring s, HasSingle s [c]) => RegExp c s -> s
+regexp :: (StarSemiring s, HasSingle s [c]) => RegExp c s -> s
 regexp (Char c)      = single [c]
 regexp (Value s)     = s
 regexp (u  :<+>  v)  = regexp u <+> regexp v
@@ -173,7 +173,7 @@ instance DetectableZero s => Semiring (Decomp c s) where
    where
      h p' q' = scaleD a q' <+> p' <.> q
 
-instance DetectableZero s => ClosedSemiring (Decomp c s)
+instance DetectableZero s => StarSemiring (Decomp c s)
 
 instance (DetectableZero s, Eq c) => HasSingle (Decomp c s) [c] where
   single = product . map symbol
@@ -214,6 +214,9 @@ instance OD c s => Semiring (Trie c s) where
   zero = zero :< M.empty
   one  = one  :< M.empty
   (a :< ps') <+> (b :< qs') = (a <+> b) :< M.unionWith (<+>) ps' qs'
+  -- (a :< ps') <+> (b :< qs') = (a <+> b) :< (ps' <+> qs')
+  -- c would have to be a monoid, though we could eliminate by introducing an
+  -- Additive superclass of Semiring.
 #if 0
   -- Wedges for the recursive anbn examples even with the lazy pattern.
   (a :< ps') <.> ~q@(b :< qs') =
@@ -234,9 +237,7 @@ instance OD c s => Semiring (Trie c s) where
     | otherwise = a <.> b :< M.unionWith (<+>) (fmap (<.> q) ps') (fmap (scaleT a) qs')
 #endif
 
--- TODO: Map as semiring
-
-instance OD c s => ClosedSemiring (Trie c s) where
+instance OD c s => StarSemiring (Trie c s) where
   closure (_ :< ds) = q where q = one :< fmap (<.> q) ds
 
 instance OD c s => HasSingle (Trie c s) [c] where

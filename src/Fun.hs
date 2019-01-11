@@ -152,8 +152,8 @@ regexp (Closure u)   = closure (regexp u)
 
 infix 1 <:
 (<:) :: b -> (c -> [c] -> b) -> [c] -> b
-(b <: _) []      = b
-(_ <: h) (c:cs)  = h c cs
+(b <: _) []     = b
+(_ <: h) (c:cs) = h c cs
 
 -- -- Identity:
 -- deFun :: ([c] -> b) -> ([c] -> b)

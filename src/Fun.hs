@@ -150,6 +150,15 @@ regexp (Closure u)   = closure (regexp u)
     Decomposition as language
 --------------------------------------------------------------------}
 
+infix 1 <:
+(<:) :: b -> (c -> [c] -> b) -> [c] -> b
+(b <: h) []      = b
+(b <: h) (c:cs)  = h c cs
+
+-- -- Identity:
+-- deFun :: ([c] -> b) -> ([c] -> b)
+-- deFun f = f [] <: \ c cs -> f (c:cs)
+
 infix 1 :<:
 data Decomp c s = s :<: (c -> Decomp c s)
 
@@ -165,9 +174,9 @@ decompFun :: Decomp c s -> ([c] -> s)
 decompFun (e :<: ds) = list e (decompFun . ds)
 
 -- If I keep, move to Misc
-list :: a -> (c -> [c] -> a) -> [c] -> a
-list a _ [] = a
-list _ f (c:as) = f c as
+list :: b -> (c -> [c] -> b) -> [c] -> b
+list b _ [] = b
+list _ f (c:cs) = f c cs
 
 -- A hopefully temporary hack for testing.
 -- (Some of the tests show the language representation.)

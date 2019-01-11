@@ -63,8 +63,8 @@ Conal Elliott
 \nc\bigunion{\bigcup}
 \nc\has[1]{\mathop{\delta_{#1}}}
 \nc\derivOp{\mathcal{D}}
-\nc\derivsOp{\derivOp^{\ast}}
-\nc\deriv[1]{\mathop{\derivOp_{#1}}}
+%% \nc\derivsOp{\derivOp^{\ast}}
+%% \nc\deriv[1]{\mathop{\derivOp_{#1}}}
 %% \nc\derivs[1]{\mathop{\derivsOp_{#1}}}
 %% \nc\conv{\ast}
 \nc\conv{*}
@@ -105,7 +105,7 @@ Conal Elliott
 %format one = "\one"
 
 %format `elem` = "\mathbin{`\Varid{elem}`}"
-%format `setElem` = "\in"
+%format <# = "\in"
 
 %format Pow = "\Pow"
 %format emptyset = "\emptyset"
@@ -187,7 +187,7 @@ instance Monoid s => Semiring (Pow s) where
   zero  = emptyset
   one   = single mempty
   p  <+>  q  = p `union` q
-  p  <.>  q  = set (u <> v | u `setElem` p && v `setElem` q)
+  p  <.>  q  = set (u <> v | u <# p && v <# q)
 
 instance ClosedSemiring (Pow s)  -- default |closure|
 
@@ -229,7 +229,7 @@ The list and finite set types do have computable membership testing so we could 
 Another option is to use membership predicates \emph{as} language implementation, noting the set/predicate isomorphism:
 \begin{code}
 setPred :: Pow a -> (a -> Bool)
-setPred as = \ a -> a `setElem` as
+setPred as = \ a -> a <# as
 
 predSet :: (a -> Bool) -> Pow a
 predSet f = set (a | f a)
@@ -380,20 +380,36 @@ Consider each case, and appeal to the definition of |(<:)|:
 Thus, for \emph{all} |w :: [c]|, |f w == (f [] <: (\ c cs -> f (c:cs))) w|, from which the lemma follows by extensionality.
 \end{proof}
 
-This decomposition generalizes a pair of notions used by \citet{Brzozowski64} mapping languages to languages (as sets of strings):
-\begin{align*}
-\delta\,p &= \iteB{\mempty \in p}{\set{\mempty}}{\emptyset} \\
-\deriv c p &= \set{v \mid c:v \in p}
-\end{align*}
-%format derivBrz (c) = "\derivOp_{"c"}"
-To see the relationship between Brzozowski's two operations and the decomposition above, first recast the two operations in terms of predicates (functions to booleans):
+%format deriv = "\derivOp"
+This decomposition generalizes a pair of notions used by \citet{Brzozowski64} mapping languages to languages (as sets of strings):\footnote{Brzozowski wrote ``$\derivOp_c\,p$'' instead of ``|deriv p c|'', but the latter will prove more convenient below.}
+\begin{code}
+delta p = if mempty <# p then set mempty else emptyset 
+
+deriv p c = set (cs | c:cs <# p)
+\end{code}
+To see the relationship between Brzozowski's two operations and the decomposition above, recast the two operations in terms of predicates (functions to booleans):
 \begin{code}
 delta p []      = p []
 delta p (c:cs)  = False
 
-derivBrz c p = \ cs -> p (c : cs)
+deriv p = \ c cs -> p (c : cs)
 \end{code}
+Below, |deriv p c| will be referred to below as ``the derivative of |p| with respect to |c|'', following \citet{Brzozowski64}.
+In the spirit of Fréchet differentiation, |deriv p| by itself will be referred below to simply as ``the derivative of |p|'' (combining all ``partial derivatives'').\notefoot{See whether I really do use these terms below.}
 
+\workingHere
+
+\noindent
+\mynote{
+Next:
+\begin{itemize}
+\item A lemma about |f []| where |f| comes from each of the semiring operations, generalizing a result from \citet[Section 3]{Brzozowski64}.
+\item Move \lemRef{deriv} here from below.
+\item Add a lemma for my new reformulation of the product case.
+\item Use these lemmas in a theorem about the semiring operations on functions expressed via |(<:)|.
+      Then the \secref{Tries} below will be much more obvious.
+\end{itemize}
+}
 
 \sectionl{Tries}
 
@@ -416,14 +432,12 @@ We really need that |Trie c s| is a semiring (and hence has |zero|), since the f
 As we'll see, however, |Trie c s| is a semiring whenever |s| is.
 Since |trieFun| interprets a trie as a function (from a monoid to a semiring), let's also require that it be a semiring homomorphism as a specification for the trie semiring.
 
-%format deriv = "\derivOp"
-
 For a trie |t = e :< ts|, how does the meaning (via |trieFun|) of the trie |t| relate to the meanings of the sub-tries in |ts|?
 An answer comes from the notion of \emph{derivatives} of languages as used by \citet{Brzozowski64} for simple and efficient recognition of regular languages.
 The \emph{derivative} |deriv c p| of a language |p| (as a set of strings) with respect to an initial symbol |c| is the set of |c|-suffixes of strings in |p|, i.e.,
 \begin{code}
 deriv :: Pow [c] -> c -> Pow [c]
-deriv p c = set (u | c : u `setElem` p)
+deriv p c = set (u | c : u <# p)
 \end{code}
 Recast and generalized to functions of lists,
 \begin{code}

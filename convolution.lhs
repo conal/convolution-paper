@@ -62,9 +62,9 @@ Conal Elliott
 \nc\union{\cup}
 \nc\bigunion{\bigcup}
 \nc\has[1]{\mathop{\delta_{#1}}}
-%% \nc\derivOp{\mathcal{D}}
-%% \nc\derivsOp{\derivOp^{\ast}}
-%% \nc\deriv[1]{\mathop{\derivOp_{#1}}}
+\nc\derivOp{\mathcal{D}}
+\nc\derivsOp{\derivOp^{\ast}}
+\nc\deriv[1]{\mathop{\derivOp_{#1}}}
 %% \nc\derivs[1]{\mathop{\derivsOp_{#1}}}
 %% \nc\conv{\ast}
 \nc\conv{*}
@@ -346,6 +346,55 @@ instance Semiring s => HasSingle (Map a s) a where
 \end{theorem}
 The finiteness of finite maps interferes with giving a useful |ClosedSemiring| instance.
 
+\sectionl{Decomposing Functions}
+
+The implementations in previous sections work but can be made much more efficient.
+As preparation, let's now explore a decomposition of functions of lists.
+
+%% %format :<: = "\mathrel{\Varid{:\!\blacktriangleleft}}"
+%format <: = "\blacktriangleleft"
+
+Any function on lists can be expressed in terms of how it handles the empty list |[]| and non-empty lists |c:cs|, as made precise by the following definition:
+\begin{code}
+(<:) :: b -> (c -> [c] -> b) -> [c] -> b
+(b <: h) []      = b
+(b <: h) (c:cs)  = h c cs
+\end{code}
+\begin{lemma}
+Any function from lists |f :: [c] -> b| can be decomposed as follows:
+
+> f = f [] <: \ c cs -> f (c:cs)
+
+\end{lemma}
+\begin{proof}
+Any argument to |f| must be either |[]| or |d : ds| for some value |d| and list |ds|.
+Consider each case, and appeal to the definition of |(<:)|:
+\begin{code}
+    (f [] <: \ c cs -> f (c:cs)) []
+==  f []                                 -- by the definition of |(b <: h) []|
+                                                  
+    (f [] <: \ c cs -> f (c:cs)) (d:ds)  NOP
+==  (\ c cs -> f (c:cs))) d ds           -- by the definition of |(b <: h) (d:ds)|
+==  f (d:ds)                             -- by $\beta$-reduction
+\end{code}
+Thus, for \emph{all} |w :: [c]|, |f w == (f [] <: (\ c cs -> f (c:cs))) w|, from which the lemma follows by extensionality.
+\end{proof}
+
+This decomposition generalizes a pair of notions used by \citet{Brzozowski64} mapping languages to languages (as sets of strings):
+\begin{align*}
+\delta\,p &= \iteB{\mempty \in p}{\set{\mempty}}{\emptyset} \\
+\deriv c p &= \set{v \mid c:v \in p}
+\end{align*}
+%format derivBrz (c) = "\derivOp_{"c"}"
+To see the relationship between Brzozowski's two operations and the decomposition above, first recast the two operations in terms of predicates (functions to booleans):
+\begin{code}
+delta p []      = p []
+delta p (c:cs)  = False
+
+derivBrz c p = \ cs -> p (c : cs)
+\end{code}
+
+
 \sectionl{Tries}
 
 %format :< = "\mathrel{\Varid{:\!\!\triangleleft}}"
@@ -367,7 +416,7 @@ We really need that |Trie c s| is a semiring (and hence has |zero|), since the f
 As we'll see, however, |Trie c s| is a semiring whenever |s| is.
 Since |trieFun| interprets a trie as a function (from a monoid to a semiring), let's also require that it be a semiring homomorphism as a specification for the trie semiring.
 
-%format deriv = "\mathcal D"
+%format deriv = "\derivOp"
 
 For a trie |t = e :< ts|, how does the meaning (via |trieFun|) of the trie |t| relate to the meanings of the sub-tries in |ts|?
 An answer comes from the notion of \emph{derivatives} of languages as used by \citet{Brzozowski64} for simple and efficient recognition of regular languages.

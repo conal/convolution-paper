@@ -135,6 +135,9 @@ instance (Eq c, StarSemiring s) => HasDecomp (RegExp c s) c s where
   deriv c (Closure p) = deriv c (p <.> Closure p) -- since deriv c one = zero
                                   -- deriv c (one <+> p <.> Closure p)
 
+-- TODO: fix deriv c (Closure p) to compute deriv c p and deriv c (Closure p)
+-- just once. Do a bit of inlining and simplification.
+
 -- | Interpret a regular expression
 regexp :: (StarSemiring s, HasSingle s [c]) => RegExp c s -> s
 regexp (Char c)      = single [c]
@@ -154,16 +157,24 @@ scaleD :: DetectableZero s => s -> Decomp c s -> Decomp c s
 scaleD s _ | isZero s = zero
 scaleD s (e :<: ts) = (s <.> e) :<: (scaleD s . ts)
 
-inDecomp :: Decomp c s -> ([c] -> s)
-inDecomp (e :<: _ ) [] = e
-inDecomp (_ :<: ds) (c:cs) = inDecomp (ds c) cs
+decompFun :: Decomp c s -> ([c] -> s)
+-- decompFun (e :<: _ ) [] = e
+-- decompFun (_ :<: ds) (c:cs) = decompFun (ds c) cs
+
+-- decompFun (e :<: ds) = list e (\ c cs -> decompFun (ds c) cs)
+decompFun (e :<: ds) = list e (decompFun . ds)
+
+-- If I keep, move to Misc
+list :: a -> (c -> [c] -> a) -> [c] -> a
+list a _ [] = a
+list _ f (c:as) = f c as
 
 -- A hopefully temporary hack for testing.
 -- (Some of the tests show the language representation.)
 instance Show (Decomp c s) where show _ = "<Decomp>"
 
 decompFunTo :: Decomp c s -> FunTo s [c]
-decompFunTo = FunTo . inDecomp
+decompFunTo = FunTo . decompFun
 
 instance DetectableZero s => Semiring (Decomp c s) where
   zero = zero :<: const zero
@@ -192,6 +203,10 @@ infix 1 :<
 data Trie c s = s :< Map c (Trie c s) deriving Show
 
 type OD c s = (Ord c, DetectableZero s)
+
+trimT :: OD c s => Int -> Trie c s -> Trie c s
+trimT 0 _ = zero
+trimT n (c :< ts) = c :< fmap (trimT (n-1)) ts
 
 scaleT :: OD c s => s -> Trie c s -> Trie c s
 scaleT s _ | isZero s = zero
@@ -229,7 +244,7 @@ instance OD c s => Semiring (Trie c s) where
      vs = fmap (scaleT a) qs'
 #elif 1
   -- Works even for recursive anbn examples.
-  (a :< ps') <.> q = scaleT a q <+> (zero :< fmap (<.> q) ps')
+  (a :< ps) <.> q = scaleT a q <+> (zero :< fmap (<.> q) ps)
 #else
   -- Works even for recursive anbn examples.
   (a :< ps') <.> ~q@(b :< qs')

@@ -360,7 +360,7 @@ Any function on lists can be expressed in terms of how it handles the empty list
 (b <: h) []      = b
 (b <: h) (c:cs)  = h c cs
 \end{code}
-\begin{lemma}
+\begin{lemma}\lemLabel{decompose function}
 Any function from lists |f :: [c] -> b| can be decomposed as follows:
 
 > f = f [] <: \ c cs -> f (c:cs)
@@ -394,8 +394,31 @@ delta p (c:cs)  = False
 
 deriv p = \ c cs -> p (c : cs)
 \end{code}
+%format atEps = "\Varid{at}_\epsilon"
+While we could use |delta p| as above, it will be simpler to work with |p []| directly:
+\begin{code}
+atEps :: Monoid w => (w -> b) -> b
+atEps f = f mempty
+\end{code}
 Below, |deriv p c| will be referred to below as ``the derivative of |p| with respect to |c|'', following \citet{Brzozowski64}.
 In the spirit of Fréchet differentiation, |deriv p| by itself will be referred below to simply as ``the derivative of |p|'' (combining all ``partial derivatives'').\notefoot{See whether I really do use these terms below.}
+Rephrased, \lemRef{decompose function} says that any function from lists |f :: [c] -> b| can be decomposed as follows:
+\begin{code}
+f == atEps f <: deriv f
+\end{code}
+
+\begin{lemma}[\provedIn{lemma:atEps}]\lemLabel{atEps}
+The |atEps| function is a star semiring homomorphism, i.e.,
+\begin{code}
+atEps zero         == zero 
+atEps one          == one 
+atEps (p  <+>  q)  == atEps p  <+>  atEps q 
+atEps (p  <.>  q)  == atEps p  <.>  atEps q 
+atEps (closure p)  == closure (atEps p)
+\end{code}
+\end{lemma}
+
+\mynote{Move the definitions of |atEps| and |deriv| into \lemRef{decompose function}.}
 
 \workingHere
 
@@ -408,6 +431,7 @@ Next:
 \item Add a lemma for my new reformulation of the product case.
 \item Use these lemmas in a theorem about the semiring operations on functions expressed via |(<:)|.
       Then the \secref{Tries} below will be much more obvious.
+\item Merge this branch into \emph{master}.
 \end{itemize}
 }
 
@@ -515,6 +539,8 @@ instance (Ord c, Semiring s) => HasSingle (Trie c s) [c] where
 \subsection{\thmRef{function}}\proofLabel{theorem:function}
 
 \subsection{\thmRef{Map}}\proofLabel{theorem:Map}
+
+\subsection{\lemRef{atEps}}\proofLabel{lemma:atEps}
 
 \subsection{\lemRef{deriv}}\proofLabel{lemma:deriv}
 

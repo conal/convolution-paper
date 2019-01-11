@@ -62,10 +62,10 @@ Conal Elliott
 \nc\union{\cup}
 \nc\bigunion{\bigcup}
 \nc\has[1]{\mathop{\delta_{#1}}}
-\nc\derivOp{\mathcal{D}}
-\nc\derivsOp{\derivOp^{\ast}}
-\nc\deriv[1]{\mathop{\derivOp_{#1}}}
-\nc\derivs[1]{\mathop{\derivsOp_{#1}}}
+%% \nc\derivOp{\mathcal{D}}
+%% \nc\derivsOp{\derivOp^{\ast}}
+%% \nc\deriv[1]{\mathop{\derivOp_{#1}}}
+%% \nc\derivs[1]{\mathop{\derivsOp_{#1}}}
 %% \nc\conv{\ast}
 \nc\conv{*}
 \nc\zero{\mathbf{0}}
@@ -367,24 +367,24 @@ We really need that |Trie c s| is a semiring (and hence has |zero|), since the f
 As we'll see, however, |Trie c s| is a semiring whenever |s| is.
 Since |trieFun| interprets a trie as a function (from a monoid to a semiring), let's also require that it be a semiring homomorphism as a specification for the trie semiring.
 
-%format deriv (c) = "\derivOp_{"c"}"
+%format deriv = "\mathcal D"
 
 For a trie |t = e :< ts|, how does the meaning (via |trieFun|) of the trie |t| relate to the meanings of the sub-tries in |ts|?
 An answer comes from the notion of \emph{derivatives} of languages as used by \citet{Brzozowski64} for simple and efficient recognition of regular languages.
 The \emph{derivative} |deriv c p| of a language |p| (as a set of strings) with respect to an initial symbol |c| is the set of |c|-suffixes of strings in |p|, i.e.,
 \begin{code}
-deriv :: c -> Pow [c] -> Pow [c]
-deriv c p = set (u | c : u `setElem` p)
+deriv :: Pow [c] -> c -> Pow [c]
+deriv p c = set (u | c : u `setElem` p)
 \end{code}
 Recast and generalized to functions of lists,
 \begin{code}
-deriv :: c -> ([c] -> b) -> ([c] -> b)
-deriv c p  = \ u -> p (c : u)
+deriv :: ([c] -> b) -> c -> ([c] -> b)
+deriv p c  = \ u -> p (c : u)
            = p . (c NOP :)
 \end{code}
 Now suppose that |p| is given by a trie:
 \begin{code}
-    deriv c (trieFun (e :< ts))
+    deriv (trieFun (e :< ts)) c
 ==  trieFun (e :< ts) . (c NOP :)
 ==  \ u -> trieFun (e :< ts) (c : u)
 ==  \ u -> trieFun (ts ! c) u
@@ -398,13 +398,13 @@ Understanding how differentiation relates to that vocabulary will move us closer
 Differentiation has the following properties:%
 %format .> = "\cdot"
 \begin{code}
-deriv c zero         = zero
-deriv c one          = zero
-deriv c (p  <+>  q)  = deriv c p <+> deriv c q
-deriv c (p  <.>  q)  = p mempty .> deriv c q <+> deriv c p <.> q
-deriv c (closure p)  = deriv c (p <.> closure p)
+deriv zero c         = zero
+deriv one c          = zero
+deriv (p  <+>  q) c  = deriv p c <+> deriv q c
+deriv (p  <.>  q) c  = p mempty .> deriv q c <+> deriv p c <.> q
+deriv (closure p) c  = deriv (p <.> closure p) c
 \end{code}
-where |(.>)| scales the result of a function:\footnote{Equivalently, |deriv c (p  <.>  q) = delta p * deriv c q <+> deriv c p <.> q|, where |delta p = p mempty .> one|, generalizing a notion of \citet[Definition 3.2]{Brzozowski64}.}
+where |(.>)| scales the result of a function:\footnote{Equivalently, |deriv (p  <.>  q) c = delta p * deriv q c <+> deriv p c <.> q|, where |delta p = p mempty .> one|, generalizing a notion of \citet[Definition 3.2]{Brzozowski64}.}
 \begin{code}
 infixl 7 .>
 (.>) :: Semiring s => s -> (a -> s) -> (a -> s)

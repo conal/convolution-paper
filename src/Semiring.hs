@@ -103,14 +103,14 @@ instance (Monoid a, Ord a, Semiring b) => Semiring (M.Map a b) where
 
 class HasDecomp a c s | a -> c s where
   atEps :: a -> s
-  deriv :: c -> a -> a
+  deriv :: a -> c -> a
 
 -- | Derivative of a language w.r.t a string
-derivs :: HasDecomp a c s => [c] -> a -> a
-derivs s p = foldl (flip deriv) p s
+derivs :: HasDecomp a c s => a -> [c] -> a
+derivs = foldl deriv
 
 accept :: HasDecomp a c s => a -> [c] -> s
-accept p s = atEps (derivs s p)
+accept p s = atEps (derivs p s)
 
 type Language a c s = (StarSemiring a, HasSingle a [c], HasDecomp a c s)
 
@@ -119,19 +119,19 @@ instance HasSingle [a] a where single a = [a]
 
 instance Eq c => HasDecomp [[c]] c Bool where
   atEps p = [] `elem` p
-  deriv c p = [cs | c' : cs <- p, c' == c]
+  deriv p c = [cs | c' : cs <- p, c' == c]
 
 
 instance HasSingle (S.Set a) a where single = S.singleton
 
 instance Ord c => HasDecomp (S.Set [c]) c Bool where
   atEps p = [] `S.member` p
-  deriv c p = S.fromList [cs | c' : cs <- S.toList p, c' == c]
+  deriv p c = S.fromList [cs | c' : cs <- S.toList p, c' == c]
 
 instance Semiring s => HasSingle (M.Map a s) a where
   single a = M.singleton a one
 
 instance (Ord c, Semiring s) => HasDecomp (M.Map [c] s) c s where
   atEps p = M.findWithDefault zero [] p
-  deriv c p = M.fromList [(cs,s) | (c':cs,s) <- M.toList p, c' == c]
+  deriv p c = M.fromList [(cs,s) | (c':cs,s) <- M.toList p, c' == c]
 

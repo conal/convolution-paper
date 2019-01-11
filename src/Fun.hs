@@ -37,7 +37,7 @@ instance (Semiring s, Eq b) => HasSingle (FunTo s b) b where
 
 instance HasDecomp (FunTo s [c]) c s where
   atEps (FunTo f) = f []
-  deriv c (FunTo f) = FunTo (f . (c :))
+  deriv (FunTo f) c = FunTo (f . (c :))
 
 {--------------------------------------------------------------------
     Classic list-of-successes
@@ -127,15 +127,15 @@ instance (Eq c, StarSemiring s) => HasDecomp (RegExp c s) c s where
   atEps (p :<.> q)  = atEps p <.> atEps q
   atEps (Closure p) = closure (atEps p)
   
-  deriv c (Char c')   = boolVal (c == c')
+  deriv (Char c') c   = boolVal (c == c')
                         -- if c == c' then one else zero
-  deriv _ (Value _)   = zero
-  deriv c (p :<+> q)  = deriv c p <+> deriv c q
-  deriv c (p :<.> q)  = Value (atEps p) <.> deriv c q <+> deriv c p <.> q
-  deriv c (Closure p) = deriv c (p <.> Closure p) -- since deriv c one = zero
+  deriv (Value _) _   = zero
+  deriv (p :<+> q) c  = deriv p c <+> deriv q c
+  deriv (p :<.> q) c  = Value (atEps p) <.> deriv q c <+> deriv p c <.> q
+  deriv (Closure p) c = deriv (p <.> Closure p) c -- since deriv c one = zero
                                   -- deriv c (one <+> p <.> Closure p)
 
--- TODO: fix deriv c (Closure p) to compute deriv c p and deriv c (Closure p)
+-- TODO: fix deriv c (Closure p) to compute deriv p c and deriv c (Closure p)
 -- just once. Do a bit of inlining and simplification.
 
 -- | Interpret a regular expression
@@ -193,7 +193,7 @@ instance (DetectableZero s, Eq c) => HasSingle (Decomp c s) [c] where
 
 instance HasDecomp (Decomp c s) c s where
   atEps (a :<: _) = a
-  deriv c (_ :<: ds) = ds c
+  deriv (_ :<: ds) c = ds c
 
 {--------------------------------------------------------------------
     List trie with finite maps
@@ -262,4 +262,4 @@ instance OD c s => HasSingle (Trie c s) [c] where
 
 instance OD c s => HasDecomp (Trie c s) c s where
   atEps (a :< _) = a
-  deriv c (_ :< ds) = ds ! c
+  deriv (_ :< ds) c = ds ! c

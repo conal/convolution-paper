@@ -57,7 +57,7 @@ instance (HasTrie c, Eq c) => HasSingle (LTrie c Bool) [c] where
 
 instance HasTrie c => HasDecomp (LTrie c Bool) c Bool where
   atEps (a :| _) = a
-  deriv c (_ :| ps') = ps' ! c
+  deriv (_ :| ps') c = ps' ! c
 
 {--------------------------------------------------------------------
     Memoization via generalized tries

@@ -44,9 +44,9 @@ tests group = testGroup group
   , gold "a"                            $ a
   , gold "pig"                          $ pig
   , gold "pink-or-pig"                  $ pp
-  , gold "derivs-pp-q"                  $ deriv 'q' pp
-  , gold "derivs-pp-pi"                 $ derivs "pi" pp
-  , gold "derivs-pp-pig"                $ derivs "pig" pp
+  , gold "derivs-pp-q"                  $ deriv pp 'q'
+  , gold "derivs-pp-pi"                 $ derivs pp "pi"
+  , gold "derivs-pp-pig"                $ derivs pp "pig"
 
   , gold "accept-pp-pi"                 $ app "pi"
   , gold "accept-pp-pig"                $ app "pig"

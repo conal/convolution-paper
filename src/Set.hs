@@ -43,7 +43,7 @@ instance HasSingle (Set a) a where
 
 instance Eq a => HasDecomp (Set a) a Bool where
   atEps p = [] `elem` p
-  deriv c p = set (cs | c : cs `elem` p)
+  deriv p c = set (cs | c : cs `elem` p)
 
 #endif
 
@@ -85,7 +85,7 @@ instance Eq s => HasSingle (Pred s) s where
 
 instance HasDecomp (Pred [c]) c Bool where
   atEps (Pred f) = f []
-  deriv c (Pred f) = Pred (f . (c :))
+  deriv (Pred f) c = Pred (f . (c :))
 
 {--------------------------------------------------------------------
     Classic list-of-successes
@@ -126,7 +126,7 @@ instance Eq s => HasSingle (Resid s) [s] where
 
 instance HasDecomp (Resid s) s Bool where
   atEps (Resid f) = any null (f [])
-  deriv c (Resid f) = Resid (f . (c :)) -- TODO: check
+  deriv (Resid f) c = Resid (f . (c :)) -- TODO: check
 
 #if 0
             deriv      :: c -> a -> a
@@ -222,19 +222,19 @@ instance Eq c => HasDecomp (RegExp c) c Bool where
   atEps (p :<.> q)  = atEps p <.> atEps q
   atEps (Closure p) = closure (atEps p)
   
-  deriv c (Char c') | c == c'   = one
+  deriv (Char c') c | c == c'   = one
                     | otherwise = zero
-  deriv _ Zero                  = zero
-  deriv _ One                   = zero
-  deriv c (p :<+> q)            = deriv c p <+> deriv c q
+  deriv Zero _                  = zero
+  deriv One _                   = zero
+  deriv (p :<+> q) c            = deriv p c <+> deriv q c
 #if 1
   -- This one definition works fine if we have OptimizeRegexp
-  deriv c (p :<.> q)            = delta p <.> deriv c q <+> deriv c p <.> q
+  deriv (p :<.> q) c            = delta p <.> deriv q c <+> deriv p c <.> q
 #else
-  deriv c (p :<.> q) | atEps p  = deriv c q <+> deriv c p <.> q
-                     | otherwise = deriv c p <.> q
+  deriv (p :<.> q) c | atEps p   = deriv q c <+> deriv p c <.> q
+                     | otherwise = deriv p c <.> q
 #endif
-  deriv c (Closure p)           = deriv c (p <.> Closure p) -- since deriv c one = zero
+  deriv (Closure p) c           = deriv (p <.> Closure p) c -- since deriv c one = zero
                         -- deriv c (one <+> p <.> Closure p)
 
 -- | Interpret a regular expression
@@ -326,7 +326,7 @@ instance Eq c => HasSingle (Decomp c) [c] where
 
 instance HasDecomp (Decomp c) c Bool where
   atEps (a :<: _) = a
-  deriv c (_ :<: ds) = ds c
+  deriv (_ :<: ds) c = ds c
 
 {--------------------------------------------------------------------
     List trie with finite maps as language
@@ -393,5 +393,5 @@ instance Ord c => HasSingle (Trie c) [c] where
 
 instance Ord c => HasDecomp (Trie c) c Bool where
   atEps (a :< _) = a
-  deriv c (_ :< ds) = ds `mat` c
+  deriv (_ :< ds) c = ds `mat` c
 

@@ -7,6 +7,7 @@ module Fun where
 import Prelude hiding (sum,product)
 
 import Control.Applicative (liftA2)
+import Text.Show.Functions ()  -- for Decomp
 import Data.Map (Map)
 import qualified Data.Map as M
 
@@ -160,7 +161,7 @@ infix 1 <:
 -- deFun f = f [] <: \ c cs -> f (c:cs)
 
 infix 1 :<:
-data Decomp c s = s :<: (c -> Decomp c s)
+data Decomp c s = s :<: (c -> Decomp c s) deriving Show
 
 scaleD :: DetectableZero s => s -> Decomp c s -> Decomp c s
 scaleD s _ | isZero s = zero
@@ -178,27 +179,58 @@ list :: b -> (c -> [c] -> b) -> [c] -> b
 list b _ [] = b
 list _ f (c:cs) = f c cs
 
--- A hopefully temporary hack for testing.
--- (Some of the tests show the language representation.)
-instance Show (Decomp c s) where show _ = "<Decomp>"
+-- -- A hopefully temporary hack for testing.
+-- -- (Some of the tests show the language representation.)
+-- instance Show (Decomp c s) where show (e :<: f) = "Decomp " ++ show e ++ " <function>"
 
 decompFunTo :: Decomp c s -> FunTo s [c]
 decompFunTo = FunTo . decompFun
 
 instance DetectableZero s => Semiring (Decomp c s) where
+#if 0
+  -- For the paper
+  zero = zero :<: \ _c -> zero
+  one  = one  :<: \ _c -> zero
+  (a :<: dp) <+> (b :<: dq) = (a <+> b) :<: \ c -> dp c <+> dq c
+  (a :<: dp) <.> ~q@(b :<: dq) = (a <.> b) :<: \ c -> scaleD a (dq c) <+> dp c <.> q
+#else
   zero = zero :<: const zero
   one  = one  :<: const zero
-  (a :<: ps') <+> (b :<: qs') = (a <+> b) :<: liftA2 (<+>) ps' qs'
-  (a :<: ps') <.> ~q@(b :<: qs') = (a <.> b) :<: liftA2 h ps' qs'
+  (a :<: dp) <+> (b :<: dq) = (a <+> b) :<: liftA2 (<+>) dp dq
+#if 1
+  (a :<: ps) <.> q = scaleD a q <+> (zero :<: fmap (<.> q) ps)
+#else
+  (a :<: ps) <.> ~q@(b :<: qs) = (a <.> b) :<: liftA2 h ps qs
    where
-     h p' q' = scaleD a q' <+> p' <.> q
+     h u v = scaleD a v <+> u <.> q
+#endif
 
-instance DetectableZero s => StarSemiring (Decomp c s)
+#endif
+
+instance (StarSemiring s, DetectableZero s) => StarSemiring (Decomp c s) where
+#if 0
+  -- We don't need StarSemiring s for the default
+#elif 0
+  closure (a :<: dp) = q
+    where
+      q = closure a :<: deriv ((a :<: dp) <.> q)
+#else
+  closure (a :<: dp) = b :<: dq
+    where
+      b = closure a
+      dq c = r where r = a `scaleD` r <+> dp c <.> (b :<: dq)
+#endif
+
 
 instance (DetectableZero s, Eq c) => HasSingle (Decomp c s) [c] where
+#if 0
+  single w = product [zero :<: boolVal (c' == c) | c <- w]
+#else
   single = product . map symbol
    where
-     symbol c = zero :<: (\ c' -> if c'==c then one else zero)
+     -- symbol c = zero :<: (\ c' -> boolVal (c' == c))
+     symbol c = zero :<: (boolVal . (== c))
+#endif
 
 instance HasDecomp (Decomp c s) c s where
   atEps (a :<: _) = a

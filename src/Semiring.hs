@@ -135,3 +135,9 @@ instance (Ord c, Semiring s) => HasDecomp (M.Map [c] s) c s where
   atEps p = M.findWithDefault zero [] p
   deriv p c = M.fromList [(cs,s) | (c':cs,s) <- M.toList p, c' == c]
 
+{--------------------------------------------------------------------
+    Misc
+--------------------------------------------------------------------}
+
+(.>) :: Semiring s => s -> (a -> s) -> (a -> s)
+s .> f  = (s <.>) . f

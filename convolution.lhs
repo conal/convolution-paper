@@ -357,6 +357,7 @@ As preparation, let's now explore a decomposition of functions of lists.
 
 Any function on lists can be expressed in terms of how it handles the empty list |[]| and non-empty lists |c:cs|, as made precise by the following definition:
 \begin{code}
+infix 1 <:
 (<:) :: b -> (c -> [c] -> b) -> [c] -> b
 (b <: h) []      = b
 (b <: h) (c:cs)  = h c cs
@@ -454,7 +455,7 @@ Combine \lemRefThree{decompose function}{atEps}{deriv}.
 \begin{lemma}[\provedIn{lemma:derivProduct}]\lemLabel{derivProduct}
 The following alternative characterization of |(<.>)| on functions holds:
 \begin{code}
-(a <: dp) <.> q = a .> q <+> (zero <: ((<.> q) . dp))
+(a <: dp) <.> q = a .> q <+> (zero <: ((<.> NOP q) . dp))
 \end{code}
 \end{lemma}
 

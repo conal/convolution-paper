@@ -198,9 +198,9 @@ instance DetectableZero s => Semiring (Decomp c s) where
   one  = one  :<: const zero
   (a :<: dp) <+> (b :<: dq) = (a <+> b) :<: liftA2 (<+>) dp dq
 #if 1
-  (a :<: ps) <.> q = scaleD a q <+> (zero :<: fmap (<.> q) ps)
+  (a :<: dp) <.> q = scaleD a q <+> (zero :<: (<.> q) . dp)
 #else
-  (a :<: ps) <.> ~q@(b :<: qs) = (a <.> b) :<: liftA2 h ps qs
+  (a :<: dp) <.> ~q@(b :<: dq) = (a <.> b) :<: liftA2 h dp dq
    where
      h u v = scaleD a v <+> u <.> q
 #endif

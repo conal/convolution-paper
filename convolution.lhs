@@ -440,8 +440,8 @@ The following properties hold:
 \begin{code}
 zero  = zero  <: \ c -> zero
 one   = one   <: \ c -> zero
-(a  <:  dp)  <+>  (b <: dq) = (a  <+>  b) <: \ c -> dp c <+> dq c
-(a  <:  dp)  <.>  (b <: dq) = (a  <.>  b) <: \ c -> a .> dq c <+> dp c <.> (b <: dq)
+(a  <:  dp)  <+>  (b <: dq) = (a  <+>  b) <: (\ c -> dp c <+> dq c)
+(a  <:  dp)  <.>  (b <: dq) = (a  <.>  b) <: (\ c -> a .> dq c <+> dp c <.> (b <: dq))
 
 closure (a <: dp) = b <: dq
   where  b = closure a
@@ -453,14 +453,17 @@ Combine \lemRefThree{decompose function}{atEps}{deriv}.
 \end{proof}
 
 \begin{lemma}[\provedIn{lemma:derivProduct}]\lemLabel{derivProduct}
-The following alternative characterization of |(<.>)| on functions holds:
+The following alternative characterizations of products and closure on functions hold:\notefoot{Since I moved the |one| addend to after |a .> q|, I think we're going to look for long matches before short ones, possibly with harmful results. Test thoroughly, and describe results later in the paper.}
 \begin{code}
-(a <: dp) <.> q = a .> q <+> (zero <: ((<.> NOP q) . dp))
+(a <: dp) <.> q = a .> q <+> (zero <: (<.> NOP q) . dp)
+
+closure (a <: dp) = q where q = a .> q <+> (one <: (<.> NOP q) . dp)
 \end{code}
 \end{lemma}
 
-%if False
-%% Is there anything to say here?
+%if True
+\mynote{Is there anything to say about singleton languages??}
+%else
 Finally, singleton languages:
 \begin{lemma}
 For functions,
@@ -470,19 +473,12 @@ single w = product [zero <: boolVal (c' == c) | c <- w]
 \end{lemma}
 %endif
 
-\workingHere
-
 \noindent
 \mynote{
 Next:
 \begin{itemize}
-\item A lemma about |f []| where |f| comes from each of the semiring operations, generalizing a result from \citet[Section 3]{Brzozowski64}.
-\item Move \lemRef{deriv} here from below.
-\item Add a lemma for my new reformulation of the product case.
-\item Use these lemmas in a theorem about the semiring operations on functions expressed via |(<:)|.
-      Then the \secref{Tries} below will be much more obvious.
-\item Merge this branch into \emph{master}.
-\item |single w|
+\item |single w|?
+\item Rewrite \secref{Tries}.
 \end{itemize}
 }
 

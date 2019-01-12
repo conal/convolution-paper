@@ -1,1 +1,1 @@
-<Decomp>
+True :<: <function>

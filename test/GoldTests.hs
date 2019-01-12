@@ -48,6 +48,7 @@ tests group = testGroup group
   , gold "derivs-pp-pi"                 $ derivs pp "pi"
   , gold "derivs-pp-pig"                $ derivs pp "pig"
 
+  , gold "accept-as-a"                  $ accept as "a"
   , gold "accept-pp-pi"                 $ app "pi"
   , gold "accept-pp-pig"                $ app "pig"
   , gold "accept-pp-pig"                $ app "pig"
@@ -75,6 +76,7 @@ tests group = testGroup group
    sing = single @z
    a = sing "a"
    b = sing "b"
+   as = closure a
    pink = sing "pink"
    pig = sing "pig"
    pp = pink <+> pig

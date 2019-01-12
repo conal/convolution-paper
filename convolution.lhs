@@ -334,9 +334,9 @@ Given the definitions in \figrefdef{Map}{Maps as a language representation}{
 instance (Monoid a, Ord a, Semiring b) => Semiring (Map a b) where
   zero  = empty
   one   = singleton mempty one
-  p  <+>  q  = unionWith (<+>) p q
-  p  <.>  q  = fromListWith (<+>)
-                 [(u <> v, s <.> t) | (u,s) <- toList p, (v,t) <- toList q]
+  p  <+>  q  =  unionWith (<+>) p q
+  p  <.>  q  =  fromListWith (<+>)
+                  [(u <> v, s <.> t) | (u,s) <- toList p, (v,t) <- toList q]
 
 instance Semiring s => HasSingle (Map a s) a where
   single a = singleton a one
@@ -348,11 +348,12 @@ The finiteness of finite maps interferes with giving a useful |ClosedSemiring| i
 
 \sectionl{Decomposing Functions}
 
+%format <: = "\blacktriangleleft"
+%format atEps = "\Varid{at}_\epsilon"
+%format deriv = "\derivOp"
+
 The implementations in previous sections work but can be made much more efficient.
 As preparation, let's now explore a decomposition of functions of lists.
-
-%% %format :<: = "\mathrel{\Varid{:\!\blacktriangleleft}}"
-%format <: = "\blacktriangleleft"
 
 Any function on lists can be expressed in terms of how it handles the empty list |[]| and non-empty lists |c:cs|, as made precise by the following definition:
 \begin{code}
@@ -362,25 +363,33 @@ Any function on lists can be expressed in terms of how it handles the empty list
 \end{code}
 \begin{lemma}\lemLabel{decompose function}
 Any function from lists |f :: [c] -> b| can be decomposed as follows:
+\begin{code}
+f == atEps f <: deriv f
+\end{code}
+where
+\begin{code}
+atEps :: Monoid w => (w -> b) -> b
+atEps f = f mempty
 
-> f = f [] <: \ c cs -> f (c:cs)
-
+deriv :: ([c] -> b) -> c -> ([c] -> b)
+deriv p = \ c cs -> p (c : cs)
+\end{code}
 \end{lemma}
 \begin{proof}
-Any argument to |f| must be either |[]| or |d : ds| for some value |d| and list |ds|.
+Any argument to |f| must be either |[]| or |c : cs| for some value |c| anc list |cs|.
 Consider each case, and appeal to the definition of |(<:)|:
 \begin{code}
-    (f [] <: \ c cs -> f (c:cs)) []
-==  f []                                 -- by the definition of |(b <: h) []|
-                                                  
-    (f [] <: \ c cs -> f (c:cs)) (d:ds)  NOP
-==  (\ c cs -> f (c:cs))) d ds           -- by the definition of |(b <: h) (d:ds)|
-==  f (d:ds)                             -- by $\beta$-reduction
+    (atEps f <: deriv f) []
+==  atEps f []                   -- definition of |b <: h|
+==  f []                         -- definition of |atEps|
+                                           
+    (atEps f <: deriv f) (c:cs)  NOP
+==  deriv f (c:cs)               -- definition of |b <: h|
+==  f (c:cs)                     -- definition of |deriv|
 \end{code}
-Thus, for \emph{all} |w :: [c]|, |f w == (f [] <: (\ c cs -> f (c:cs))) w|, from which the lemma follows by extensionality.
+Thus, for \emph{all} |w :: [c]|, |f w == (atEps f <: deriv f) w|, from which the lemma follows by extensionality.
 \end{proof}
 
-%format deriv = "\derivOp"
 This decomposition generalizes a pair of notions used by \citet{Brzozowski64} mapping languages to languages (as sets of strings):\footnote{Brzozowski wrote ``$\derivOp_c\,p$'' instead of ``|deriv p c|'', but the latter will prove more convenient below.}
 \begin{code}
 delta p = if mempty <# p then set mempty else emptyset 
@@ -394,19 +403,9 @@ delta p (c:cs)  = False
 
 deriv p = \ c cs -> p (c : cs)
 \end{code}
-%format atEps = "\Varid{at}_\epsilon"
-While we could use |delta p| as above, it will be simpler to work with |p []| directly:
-\begin{code}
-atEps :: Monoid w => (w -> b) -> b
-atEps f = f mempty
-\end{code}
-Below, |deriv p c| will be referred to below as ``the derivative of |p| with respect to |c|'', following \citet{Brzozowski64}.
-In the spirit of Fréchet differentiation, |deriv p| by itself will be referred below to simply as ``the derivative of |p|'' (combining all ``partial derivatives'').\notefoot{See whether I really do use these terms below.}
-Rephrased, \lemRef{decompose function} says that any function from lists |f :: [c] -> b| can be decomposed as follows:
-\begin{code}
-f == atEps f <: deriv f
-\end{code}
 
+\noindent
+Understanding how |atEps| and |deriv| relate to the semiring vocabulary will help us develop an efficient implementation in \secref{Tries} below.
 \begin{lemma}[\provedIn{lemma:atEps}]\lemLabel{atEps}
 The |atEps| function is a star semiring homomorphism, i.e.,
 \begin{code}
@@ -417,8 +416,58 @@ atEps (p  <.>  q)  == atEps p  <.>  atEps q
 atEps (closure p)  == closure (atEps p)
 \end{code}
 \end{lemma}
+\begin{lemma}[\provedIn{lemma:deriv}, generalizing a result of \citet{Brzozowski64}, Lemma 3.1]\lemLabel{deriv}
+Differentiation has the following properties:%
+%format .> = "\cdot"
+\begin{code}
+deriv zero         == \c -> zero
+deriv one          == \c -> zero
+deriv (p  <+>  q)  == \c -> deriv p c <+> deriv q c
+deriv (p  <.>  q)  == \c -> p mempty .> deriv q c <+> deriv p c <.> q
+deriv (closure p)  == deriv (p <.> closure p)
+\end{code}
+where |(.>)| scales the result of a function:\footnote{Equivalently, |deriv (p  <.>  q) c = delta p * deriv q c <+> deriv p c <.> q|, where |delta p = p mempty .> one|, generalizing a notion of \citet[Definition 3.2]{Brzozowski64}.}
+\begin{code}
+infixl 7 .>
+(.>) :: Semiring s => s -> (a -> s) -> (a -> s)
+s .> f  = \ a -> s * (f a)
+        = (s NOP *) . f
+\end{code}
+\end{lemma}
+\begin{corollary}
+The following properties hold:
+\begin{code}
+zero  = zero  <: \ c -> zero
+one   = one   <: \ c -> zero
+(a  <:  dp)  <+>  (b <: dq) = (a  <+>  b) <: \ c -> dp c <+> dq c
+(a  <:  dp)  <.>  (b <: dq) = (a  <.>  b) <: \ c -> a .> dq c <+> dp c <.> (b <: dq)
 
-\mynote{Move the definitions of |atEps| and |deriv| into \lemRef{decompose function}.}
+closure (a <: dp) = b <: dq
+  where  b = closure a
+         dq c = a .> dq c <+> dp c <.> (b <: dq)
+\end{code}
+\end{corollary}
+\begin{proof}
+Combine \lemRefThree{decompose function}{atEps}{deriv}.
+\end{proof}
+
+\begin{lemma}[\provedIn{lemma:derivProduct}]\lemLabel{derivProduct}
+The following alternative characterization of |(<.>)| on functions holds:
+\begin{code}
+(a <: dp) <.> q = a .> q <+> (zero <: ((<.> q) . dp))
+\end{code}
+\end{lemma}
+
+%if False
+%% Is there anything to say here?
+Finally, singleton languages:
+\begin{lemma}
+For functions,
+\begin{code}
+single w = product [zero <: boolVal (c' == c) | c <- w]
+\end{code}
+\end{lemma}
+%endif
 
 \workingHere
 
@@ -432,6 +481,7 @@ Next:
 \item Use these lemmas in a theorem about the semiring operations on functions expressed via |(<:)|.
       Then the \secref{Tries} below will be much more obvious.
 \item Merge this branch into \emph{master}.
+\item |single w|
 \end{itemize}
 }
 
@@ -481,24 +531,6 @@ In other words, the meanings of the sub-tries of a trie |t| are the derivatives 
 
 Our goal is to deduce definitions of the semiring vocabulary for tries such that |trieFun| becomes a semiring homomorphism.
 Understanding how differentiation relates to that vocabulary will move us closer to this goal.
-\begin{lemma}[\provedIn{lemma:deriv}, generalizing a result of \citet{Brzozowski64}, Lemma 3.1]\lemLabel{deriv}
-Differentiation has the following properties:%
-%format .> = "\cdot"
-\begin{code}
-deriv zero c         = zero
-deriv one c          = zero
-deriv (p  <+>  q) c  = deriv p c <+> deriv q c
-deriv (p  <.>  q) c  = p mempty .> deriv q c <+> deriv p c <.> q
-deriv (closure p) c  = deriv (p <.> closure p) c
-\end{code}
-where |(.>)| scales the result of a function:\footnote{Equivalently, |deriv (p  <.>  q) c = delta p * deriv q c <+> deriv p c <.> q|, where |delta p = p mempty .> one|, generalizing a notion of \citet[Definition 3.2]{Brzozowski64}.}
-\begin{code}
-infixl 7 .>
-(.>) :: Semiring s => s -> (a -> s) -> (a -> s)
-s .> f  = \ a -> s * (f a)
-        = (s NOP *) . f
-\end{code}
-\end{lemma}
 
 \begin{theorem}[\provedIn{theorem:Trie}]\thmLabel{Trie}
 Given the definitions in \figrefdef{Trie}{Tries as a semiring}{
@@ -543,6 +575,10 @@ instance (Ord c, Semiring s) => HasSingle (Trie c s) [c] where
 \subsection{\lemRef{atEps}}\proofLabel{lemma:atEps}
 
 \subsection{\lemRef{deriv}}\proofLabel{lemma:deriv}
+
+\subsection{\lemRef{derivProduct}}\proofLabel{lemma:derivProduct}
+
+\mynote{See 2019-01-10 journal.}
 
 \subsection{\thmRef{Trie}}\proofLabel{theorem:Trie}
 

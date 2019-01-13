@@ -349,6 +349,7 @@ The finiteness of finite maps interferes with giving a useful |ClosedSemiring| i
 \sectionl{Decomposing Functions}
 
 %format <: = "\blacktriangleleft"
+%format <: = "\triangleleft"
 %format atEps = "\Varid{at}_\epsilon"
 %format deriv = "\derivOp"
 
@@ -493,67 +494,35 @@ Putting genericity aside\notefoot{Re-raise later?} and restricting our attention
 
 > data Trie c s = s :< Map c (Trie c s)
 
-Tries denote functions, as follows:
+The similarity between the |Trie| type and the function decomposition from \secref{Decomposing Functions} (motivating the constructor's name) makes the denotation of tries quite simple to express:\footnote{Equivalently, |trieFun (e :< d) = e <: \ c cs -> trieFun (d ! c) cs|.}
 \begin{code}
 trieFun :: Ord c => Trie c s -> ([c] -> s)
-trieFun (e  :<  _   ) []      = e
-trieFun (_  :<  ts  ) (c:cs)  = trieFun (ts ! c) cs
+trieFun (e :< d) = e <: trieFun . (d NOP !)
 \end{code}
-We really need that |Trie c s| is a semiring (and hence has |zero|), since the finite map contains tries.
-As we'll see, however, |Trie c s| is a semiring whenever |s| is.
-Since |trieFun| interprets a trie as a function (from a monoid to a semiring), let's also require that it be a semiring homomorphism as a specification for the trie semiring.
-
-For a trie |t = e :< ts|, how does the meaning (via |trieFun|) of the trie |t| relate to the meanings of the sub-tries in |ts|?
-An answer comes from the notion of \emph{derivatives} of languages as used by \citet{Brzozowski64} for simple and efficient recognition of regular languages.
-The \emph{derivative} |deriv c p| of a language |p| (as a set of strings) with respect to an initial symbol |c| is the set of |c|-suffixes of strings in |p|, i.e.,
-\begin{code}
-deriv :: Pow [c] -> c -> Pow [c]
-deriv p c = set (u | c : u <# p)
-\end{code}
-Recast and generalized to functions of lists,
-\begin{code}
-deriv :: ([c] -> b) -> c -> ([c] -> b)
-deriv p c  = \ u -> p (c : u)
-           = p . (c NOP :)
-\end{code}
-Now suppose that |p| is given by a trie:
-\begin{code}
-    deriv (trieFun (e :< ts)) c
-==  trieFun (e :< ts) . (c NOP :)
-==  \ u -> trieFun (e :< ts) (c : u)
-==  \ u -> trieFun (ts ! c) u
-==  trieFun (ts ! c)
-\end{code}
-In other words, the meanings of the sub-tries of a trie |t| are the derivatives of the meaning of |t|.
-
-Our goal is to deduce definitions of the semiring vocabulary for tries such that |trieFun| becomes a semiring homomorphism.
-Understanding how differentiation relates to that vocabulary will move us closer to this goal.
-
+Likewise, the properties from section \secref{Decomposing Functions} make it fairly easy to calculate instances for |Trie|.
 \begin{theorem}[\provedIn{theorem:Trie}]\thmLabel{Trie}
-Given the definitions in \figrefdef{Trie}{Tries as a semiring}{
+Given the definitions in \figrefdef{Trie}{Tries as a language representation}{
+%format OD c s = Ord c
+%format `scaleT` = .>
 \begin{code}
-instance (Ord c, Semiring s) => Semiring (Trie c s) where
-  zero  = zero  :< empty
-  one   = one   :< empty
-  (a :< ps')  <+>  (b :< qs') = (a <+> b) :< unionWith (<+>) ps' qs'
-  (a :< ps')  <.>  (b :< qs') =
-    (a <.> b) :< unionWith (<+>) (fmap (<.> NOP q) ps') (fmap (scaleT a) qs')
+instance OD c s => Semiring (Trie c s) where
+  zero = zero :< M.empty
+  one  = one  :< M.empty
+  (a :< ps') <+> (b :< qs') = (a <+> b) :< M.unionWith (<+>) ps' qs'
+  (a :< ps) <.> q = a `scaleT` q <+> (zero :< fmap (<.> q) ps)
+#endif
 
--- |(.>)| on tries
-scaleT :: (Ord c, Semiring s) => s -> Trie c s -> Trie c s
-scaleT s (e :< ts) = (s <.> e) :< fmap (scaleT s) ts
+instance OD c s => StarSemiring (Trie c s) where
+  closure (_ :< ds) = q where q = one :< fmap (<.> q) ds
 
-instance (Ord c, Semiring s) => ClosedSemiring (Trie c s) where
-  closure (_ :< ds) = q where q = one :< fmap (<.> NOP q) ds
-
-instance (Ord c, Semiring s) => HasSingle (Trie c s) [c] where
-  single w = product (map symbol w)
-   where
-     symbol c = zero :< singleton c one
+instance OD c s => HasSingle (Trie c s) [c] where
+  single w = product [zero :< M.singleton c one | c <- w]
 \end{code}
 \vspace{-4ex}
 }, |trieFun| is a homomorphism with respect to each instantiated class.
 \end{theorem}
+
+
 
 % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
 

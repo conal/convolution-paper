@@ -127,9 +127,16 @@ instance (Eq c, StarSemiring s) => HasDecomp (RegExp c s) c s where
                         -- if c == c' then one else zero
   deriv (Value _) _   = zero
   deriv (p :<+> q) c  = deriv p c <+> deriv q c
-  deriv (p :<.> q) c  = Value (atEps p) <.> deriv q c <+> deriv p c <.> q
-  deriv (Closure p) c = deriv (p <.> Closure p) c -- since deriv c one = zero
-                                  -- deriv c (one <+> p <.> Closure p)
+  deriv (p :<.> q) c  = -- deriv p c <.> q <+> Value (atEps p) <.> deriv q c
+                        Value (atEps p) <.> deriv q c <+> deriv p c <.> q
+  deriv (Closure p) c = -- The following version works even if the atEps term
+                        -- comes first in deriv (p :<.> q) c
+                        Value (closure (atEps p)) <.> deriv p c <.> closure p
+                        -- See 2018-01-13 journal.
+                        -- The following version converges if the atEps term
+                        -- comes second in deriv (p :<.> q) c
+                        -- deriv (p <.> Closure p) c -- since deriv c one = zero
+                        -- deriv c (one <+> p <.> Closure p)
 
 -- TODO: fix deriv c (Closure p) to compute deriv p c and deriv c (Closure p)
 -- just once. Do a bit of inlining and simplification.
@@ -217,23 +224,12 @@ instance DetectableZero s => Semiring (Decomp c s) where
 #endif
 
 instance (StarSemiring s, DetectableZero s) => StarSemiring (Decomp c s) where
-#if 0
-  -- We don't need StarSemiring s for the default
-#elif 0
+  -- See 2019-01-13 joural
   closure (a :<: dp) = q
     where
-      q = closure a :<: deriv ((a :<: dp) <.> q)
-#elif 0
-  closure (a :<: dp) = b :<: dq
-    where
-      b = closure a
-      dq c = r where r = a `scaleD` r <+> dp c <.> (b :<: dq)
-#else
-  closure (a :<: dp) = q
-    where
-      q = a `scaleD` q <+> (one :<: ((<.> q) . dp))
-#endif
-
+      q = as :<: fmap h dp
+      as = closure a
+      h d = as `scaleD` d <.> q
 
 instance (DetectableZero s, Eq c) => HasSingle (Decomp c s) [c] where
 #if 0
@@ -322,37 +318,14 @@ instance OD c s => Semiring (Trie c s) where
 --   closure (_ :< ds) = q where q = one :< fmap (<.> q) ds
 
 instance (Ord c, StarSemiring s, DetectableZero s) => StarSemiring (Trie c s) where
-#if 0
-  -- We don't need StarSemiring s for the default
-#elif 0
-  -- doesn't even type-check
-  closure (a :<: dp) = q
-    where
-      q = closure a :< deriv ((a :< dp) <.> q)
-#elif 0
-  -- wedges on accept-ass-a
-  closure ~(a :< dp) = b :< dq
-    where
-      b = closure a
-      dq = fmap der dp
-      der dpc = r where r = a `scaleT` r <+> dpc <.> (b :< dq)
-#elif 0
-  closure (a :< dp) = q
-    where
-      q = a `scaleT` q <+> (one :< fmap (<.> q) dp)
-#elif 0
-  closure ~(a :< dp) = one <+> a `scaleT` closure (a :< dp) <+> (zero :< fmap (<.> closure (a :< dp)) dp)
-#elif 0
-  closure ~(a :< dp) = q
-    where q = one <+> a `scaleT` q -- <+> (zero :< fmap (<.> q) dp)
-#else
-  -- $$ D_c\, \closure p = \closure{(p\,\mempty)} \cdot D_c\, p * \closure p$$
+  -- See 2019-01-13 joural
   closure (a :< dp) = q
     where
       q = as :< fmap h dp
       as = closure a
       h d = as `scaleT` d <.> q
-#endif
+
+-- TODO: Fix so that scaleT checks isZero as only once.
 
 instance OD c s => HasSingle (Trie c s) [c] where
   single w = product [zero :< M.singleton c one | c <- w]

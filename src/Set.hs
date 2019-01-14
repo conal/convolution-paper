@@ -231,11 +231,14 @@ instance Eq c => HasDecomp (RegExp c) c Bool where
   -- This one definition works fine if we have OptimizeRegexp
   deriv (p :<.> q) c            = delta p <.> deriv q c <+> deriv p c <.> q
 #else
-  deriv (p :<.> q) c | atEps p   = deriv q c <+> deriv p c <.> q
+  -- Fix to check atEps p just once, not once per c
+  deriv (p :<.> q) c | atEps p   = deriv p c <.> q <+> deriv q c
+                                   -- deriv q c <+> deriv p c <.> q
                      | otherwise = deriv p c <.> q
 #endif
-  deriv (Closure p) c           = deriv (p <.> Closure p) c -- since deriv c one = zero
-                        -- deriv c (one <+> p <.> Closure p)
+  deriv (Closure p) c   = deriv p c <.> closure p
+                        -- = deriv (p <.> Closure p) c -- since deriv c one = zero
+                        -- = deriv c (one <+> p <.> Closure p)
 
 -- | Interpret a regular expression
 regexp :: (StarSemiring a, HasSingle a [c]) => RegExp c -> a
@@ -260,6 +263,10 @@ inDecomp (_ :<: ds) (c:cs) = inDecomp (ds c) cs
 -- inDecomp = list' . second (inDecomp .) . undecomp
 
 -- decompPred' (e :<: f) = list e (\ c cs -> decompPred' (f c) cs)
+
+scaleD :: Bool -> Decomp c -> Decomp c
+scaleD False _ = zero
+scaleD s (e :<: ts) = (s <.> e) :<: (scaleD s . ts)
 
 -- A hopefully temporary hack for testing.
 -- (Some of the tests show the language representation.)
@@ -314,7 +321,13 @@ instance Semiring (Decomp c) where
 
   -- (<+>) = liftA2 (||)
 
-instance StarSemiring (Decomp c)
+instance StarSemiring (Decomp c) where
+  -- See 2019-01-13 joural
+  closure (a :<: dp) = q
+    where
+      q = as :<: fmap h dp
+      as = closure a
+      h d = as `scaleD` d <.> q
 
 instance Eq c => HasSingle (Decomp c) [c] where
   single = product . map symbol
@@ -381,7 +394,16 @@ instance Ord c => Semiring (Trie c) where
 #endif
 
 instance Ord c => StarSemiring (Trie c) where
+
+  -- Correct? Look for counterexamples.
   closure (_ :< ds) = q where q = True :< fmap (<.> q) ds
+
+  -- -- See 2019-01-13 joural
+  -- closure (a :< dp) = q
+  --   where
+  --     q = as :< fmap h dp
+  --     as = closure a
+  --     h d = as `scaleT` d <.> q
 
 instance Ord c => HasSingle (Trie c) [c] where
   -- single = foldr (\ c p -> False :< M.singleton c p) one

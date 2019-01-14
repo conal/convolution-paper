@@ -18,11 +18,6 @@ import Semiring
     Generalized predicates
 --------------------------------------------------------------------}
 
--- The unique 'Semiring' homomorphism from 'Bool'.
-boolVal :: Semiring s => Bool -> s
-boolVal False = zero
-boolVal True  = one
-
 newtype FunTo s a = FunTo (a -> s)
 
 instance Semiring s => Semiring (FunTo s [c]) where
@@ -156,6 +151,8 @@ infix 1 <:
 (b <: _) []     = b
 (_ <: h) (c:cs) = h c cs
 
+-- der :: ([c] -> b) -> c -> ([c] -> b)
+
 -- -- Identity:
 -- deFun :: ([c] -> b) -> ([c] -> b)
 -- deFun f = f [] <: \ c cs -> f (c:cs)
@@ -168,16 +165,28 @@ scaleD s _ | isZero s = zero
 scaleD s (e :<: ts) = (s <.> e) :<: (scaleD s . ts)
 
 decompFun :: Decomp c s -> ([c] -> s)
+decompFun (e :<: ds) = e <: decompFun . ds
+
+funDecomp :: ([c] -> s) -> Decomp c s
+funDecomp f = atEps f :<: funDecomp . deriv f
+
+-- funDecomp f = f [] :<: funDecomp . \ c -> f . (c :)
+-- funDecomp f = f [] :<: \ c -> funDecomp (f . (c :))
+
+-- f :: [c] -> s
+-- f . (c :) :: [c] -> s
+-- funDecomp (f . (c :)) :: Decomp c s
+
 -- decompFun (e :<: _ ) [] = e
 -- decompFun (_ :<: ds) (c:cs) = decompFun (ds c) cs
 
 -- decompFun (e :<: ds) = list e (\ c cs -> decompFun (ds c) cs)
-decompFun (e :<: ds) = list e (decompFun . ds)
+-- decompFun (e :<: ds) = list e (decompFun . ds)
 
--- If I keep, move to Misc
-list :: b -> (c -> [c] -> b) -> [c] -> b
-list b _ [] = b
-list _ f (c:cs) = f c cs
+-- -- If I keep, move to Misc
+-- list :: b -> (c -> [c] -> b) -> [c] -> b
+-- list b _ [] = b
+-- list _ f (c:cs) = f c cs
 
 -- -- A hopefully temporary hack for testing.
 -- -- (Some of the tests show the language representation.)
@@ -214,11 +223,15 @@ instance (StarSemiring s, DetectableZero s) => StarSemiring (Decomp c s) where
   closure (a :<: dp) = q
     where
       q = closure a :<: deriv ((a :<: dp) <.> q)
-#else
+#elif 0
   closure (a :<: dp) = b :<: dq
     where
       b = closure a
       dq c = r where r = a `scaleD` r <+> dp c <.> (b :<: dq)
+#else
+  closure (a :<: dp) = q
+    where
+      q = a `scaleD` q <+> (one :<: ((<.> q) . dp))
 #endif
 
 
@@ -250,15 +263,26 @@ trimT 0 _ = zero
 trimT n (c :< ts) = c :< fmap (trimT (n-1)) ts
 
 scaleT :: OD c s => s -> Trie c s -> Trie c s
-scaleT s _ | isZero s = zero
-scaleT s (e :< ts) = (s <.> e) :< fmap (scaleT s) ts
+scaleT s | isZero s  = const zero
+         | otherwise = go
+ where
+   go ~(e :< ts) = (s <.> e) :< fmap go ts
+
+-- TODO: generalize scaleT to tmap, and then let scaleT s = tmap (s <.>).
 
 -- -- Oops. We'd need to enumerate all of c.
 -- funTrie :: ([c] -> s) -> Trie c s
 
+-- funTrie :: ([c] -> s) -> Trie c s
+-- funTrie f = 
+
 trieFun :: OD c s => Trie c s -> ([c] -> s)
-trieFun (e :< _ ) [] = e
-trieFun (_ :< ts) (c:cs) = trieFun (ts ! c) cs
+trieFun (e :< d) = e <: trieFun . (d !)
+
+-- trieFun (e :< d) = e <: \ c cs -> trieFun (d ! c) cs
+
+-- trieFun (e :< _ ) [] = e
+-- trieFun (_ :< ts) (c:cs) = trieFun (ts ! c) cs
 
 (!) :: (Ord c, Semiring s) => Map c s -> c -> s
 m ! c = M.findWithDefault zero c m
@@ -269,7 +293,7 @@ trieFunTo = FunTo . trieFun
 instance OD c s => Semiring (Trie c s) where
   zero = zero :< M.empty
   one  = one  :< M.empty
-  (a :< ps') <+> (b :< qs') = (a <+> b) :< M.unionWith (<+>) ps' qs'
+  ~(a :< ps') <+> ~(b :< qs') = (a <+> b) :< M.unionWith (<+>) ps' qs'
   -- (a :< ps') <+> (b :< qs') = (a <+> b) :< (ps' <+> qs')
   -- c would have to be a monoid, though we could eliminate by introducing an
   -- Additive superclass of Semiring.
@@ -285,7 +309,7 @@ instance OD c s => Semiring (Trie c s) where
      vs = fmap (scaleT a) qs'
 #elif 1
   -- Works even for recursive anbn examples.
-  (a :< ps) <.> q = scaleT a q <+> (zero :< fmap (<.> q) ps)
+  ~(a :< ps) <.> q = a `scaleT` q <+> (zero :< fmap (<.> q) ps)
 #else
   -- Works even for recursive anbn examples.
   (a :< ps') <.> ~q@(b :< qs')
@@ -293,14 +317,57 @@ instance OD c s => Semiring (Trie c s) where
     | otherwise = a <.> b :< M.unionWith (<+>) (fmap (<.> q) ps') (fmap (scaleT a) qs')
 #endif
 
-instance OD c s => StarSemiring (Trie c s) where
-  closure (_ :< ds) = q where q = one :< fmap (<.> q) ds
+-- instance OD c s => StarSemiring (Trie c s) where
+--   -- Wrong
+--   closure (_ :< ds) = q where q = one :< fmap (<.> q) ds
+
+instance (Ord c, StarSemiring s, DetectableZero s) => StarSemiring (Trie c s) where
+#if 0
+  -- We don't need StarSemiring s for the default
+#elif 0
+  -- doesn't even type-check
+  closure (a :<: dp) = q
+    where
+      q = closure a :< deriv ((a :< dp) <.> q)
+#elif 0
+  -- wedges on accept-ass-a
+  closure ~(a :< dp) = b :< dq
+    where
+      b = closure a
+      dq = fmap der dp
+      der dpc = r where r = a `scaleT` r <+> dpc <.> (b :< dq)
+#elif 0
+  closure (a :< dp) = q
+    where
+      q = a `scaleT` q <+> (one :< fmap (<.> q) dp)
+#elif 0
+  closure ~(a :< dp) = one <+> a `scaleT` closure (a :< dp) <+> (zero :< fmap (<.> closure (a :< dp)) dp)
+#elif 0
+  closure ~(a :< dp) = q
+    where q = one <+> a `scaleT` q -- <+> (zero :< fmap (<.> q) dp)
+#else
+  -- $$ D_c\, \closure p = \closure{(p\,\mempty)} \cdot D_c\, p * \closure p$$
+  closure (a :< dp) = q
+    where
+      q = as :< fmap h dp
+      as = closure a
+      h d = as `scaleT` d <.> q
+#endif
 
 instance OD c s => HasSingle (Trie c s) [c] where
-  single = product . map symbol
-   where
-     symbol c = zero :< M.singleton c one
+  single w = product [zero :< M.singleton c one | c <- w]
+  -- single = product . map symbol
+  --  where
+  --    symbol c = zero :< M.singleton c one
+
 
 instance OD c s => HasDecomp (Trie c s) c s where
   atEps (a :< _) = a
   deriv (_ :< ds) c = ds ! c
+
+{--------------------------------------------------------------------
+    Temporary for testing
+--------------------------------------------------------------------}
+
+
+type T = Trie Char Bool

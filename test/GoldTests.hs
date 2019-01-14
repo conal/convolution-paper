@@ -27,11 +27,13 @@ main = do
 basicTests :: TestTree
 basicTests = testGroup "Various representations"
   [ testGroup "" []
+  -- TODO: lists!
+
   , tests @(S.RegExp  Char) "SetRegExp"
-  , tests @(S.Decomp  Char) "SetDecomp"
-  , tests @(S.Trie    Char) "SetTrie"
   , tests @(F.RegExp  Char Bool) "FunRegExp"
+  , tests @(S.Decomp  Char) "SetDecomp"
   , tests @(F.Decomp  Char Bool) "FunDecomp"
+  , tests @(S.Trie    Char) "SetTrie"
   , tests @(F.Trie    Char Bool) "FunTrie"
   ]
 
@@ -48,7 +50,11 @@ tests group = testGroup group
   , gold "derivs-pp-pi"                 $ derivs pp "pi"
   , gold "derivs-pp-pig"                $ derivs pp "pig"
 
+  , gold "accept-as-eps"                $ accept as ""
   , gold "accept-as-a"                  $ accept as "a"
+  , gold "accept-ass-eps"               $ accept ass ""
+  , gold "accept-ass-a"                 $ accept ass "a"
+
   , gold "accept-pp-pi"                 $ app "pi"
   , gold "accept-pp-pig"                $ app "pig"
   , gold "accept-pp-pig"                $ app "pig"
@@ -77,6 +83,7 @@ tests group = testGroup group
    a = sing "a"
    b = sing "b"
    as = closure a
+   ass = closure as
    pink = sing "pink"
    pig = sing "pig"
    pp = pink <+> pig
@@ -87,6 +94,6 @@ tests group = testGroup group
    ranbn = accept anbn
    gold :: Show a => String -> a -> TestTree
    gold nm = -- TODO: make directory if missing 
-             goldenVsString "basic"
+             goldenVsString nm
                 ("test/gold/" <> group <> "/" <> nm <> ".txt")
              . pure . pack . show

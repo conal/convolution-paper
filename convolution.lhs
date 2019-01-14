@@ -407,6 +407,7 @@ deriv p = \ c cs -> p (c : cs)
 \end{code}
 
 \noindent
+%format `scaleT` = .>
 Understanding how |atEps| and |deriv| relate to the semiring vocabulary will help us develop an efficient implementation in \secref{Tries} below.
 \begin{lemma}[\provedIn{lemma:atEps}]\lemLabel{atEps}
 The |atEps| function is a star semiring homomorphism, i.e.,
@@ -422,11 +423,12 @@ atEps (closure p)  == closure (atEps p)
 Differentiation has the following properties:%
 %format .> = "\cdot"
 \begin{code}
-deriv zero         == \c -> zero
-deriv one          == \c -> zero
-deriv (p  <+>  q)  == \c -> deriv p c <+> deriv q c
-deriv (p  <.>  q)  == \c -> p mempty .> deriv q c <+> deriv p c <.> q
-deriv (closure p)  == deriv (p <.> closure p)
+deriv zero         == \ c -> zero
+deriv one          == \ c -> zero
+deriv (p  <+>  q)  == \ c -> deriv p c <+> deriv q c
+deriv (p  <.>  q)  == \ c -> p mempty .> deriv q c <+> deriv p c <.> q
+
+deriv (closure p)  == \ c -> closure (p mempty) .> deriv p c * closure p
 \end{code}
 where |(.>)| scales the result of a function:\footnote{Equivalently, |deriv (p  <.>  q) c = delta p * deriv q c <+> deriv p c <.> q|, where |delta p = p mempty .> one|, generalizing a notion of \citet[Definition 3.2]{Brzozowski64}.}
 \begin{code}
@@ -444,9 +446,11 @@ one   = one   <: \ c -> zero
 (a  <:  dp)  <+>  (b <: dq) = (a  <+>  b) <: (\ c -> dp c <+> dq c)
 (a  <:  dp)  <.>  (b <: dq) = (a  <.>  b) <: (\ c -> a .> dq c <+> dp c <.> (b <: dq))
 
-closure (a <: dp) = b <: dq
-  where  b = closure a
-         dq c = a .> dq c <+> dp c <.> (b <: dq)
+closure (a <: dp) = q
+  where
+     q = as <: (h . dp)
+     as = closure a
+     h d = as .> d <.> q
 \end{code}
 \end{corollary}
 \begin{proof}
@@ -503,7 +507,6 @@ Likewise, the properties from section \secref{Decomposing Functions} make it fai
 \begin{theorem}[\provedIn{theorem:Trie}]\thmLabel{Trie}
 Given the definitions in \figrefdef{Trie}{Tries as a language representation}{
 %format OD c s = Ord c
-%format `scaleT` = .>
 \begin{code}
 instance OD c s => Semiring (Trie c s) where
   zero = zero :< M.empty
@@ -550,6 +553,8 @@ instance OD c s => HasSingle (Trie c s) [c] where
 \subsection{\lemRef{atEps}}\proofLabel{lemma:atEps}
 
 \subsection{\lemRef{deriv}}\proofLabel{lemma:deriv}
+
+For |deriv (closure p)|, see 2019-01-13 notes.
 
 \subsection{\lemRef{derivProduct}}\proofLabel{lemma:derivProduct}
 

@@ -523,6 +523,15 @@ instance OD c s => HasSingle (Trie c s) [c] where
 \end{theorem}
 
 
+\sectionl{Related Work}
+\begin{itemize}
+\item \emph{Fun with semirings}
+\item \emph{Polynomial Functors Constrained by Regular Expressions}
+\item \href{https://doisinkidney.com/}{Donnacha Oisín Kidney's blog}
+\item Dan Piponi's blog
+\end{itemize}
+
+
 
 % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
 

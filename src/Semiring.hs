@@ -101,6 +101,11 @@ instance (Monoid a, Ord a, Semiring b) => Semiring (M.Map a b) where
     Language operations. Move elsewhere.
 --------------------------------------------------------------------}
 
+-- The unique 'Semiring' homomorphism from 'Bool'.
+boolVal :: Semiring s => Bool -> s
+boolVal False = zero
+boolVal True  = one
+
 class HasDecomp a c s | a -> c s where
   atEps :: a -> s
   deriv :: a -> c -> a
@@ -114,6 +119,14 @@ accept p s = atEps (derivs p s)
 
 type Language a c s = (StarSemiring a, HasSingle a [c], HasDecomp a c s)
 
+
+instance HasDecomp ([c] -> b) c b where
+  atEps f = f []
+  deriv f c = f . (c :)
+
+instance (Eq a, Semiring b) => HasSingle (a -> b) a where
+  single a = boolVal . (== a)
+  -- single a a' = boolVal (a' == a)
 
 instance HasSingle [a] a where single a = [a]
 

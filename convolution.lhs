@@ -109,7 +109,7 @@ Conal Elliott
 
 %format Pow = "\Pow"
 %format emptyset = "\emptyset"
-%format single (s) = "\single{"s"}"
+%format (single (s)) = "\single{"s"}"
 %format set (e) = "\set{"e"}"
 %format bigunion (lim) (body) = "\bigunion_{" lim "}{" body "}"
 %format pow a (b) = a "^{" b "}"
@@ -117,8 +117,6 @@ Conal Elliott
 %format closure p = "\closure{"p"}"
 
 \sectionl{Languages}
-
-\mynote{Summarize/review languages as sets, including singleton, union, concatenation, and star/closure.}
 
 A \emph{language} is a set of strings, where a string is a sequence of values of some given type (``symbols'' from an ``alphabet'').
 Languages are commonly built up via a few simple operations:\notefoot{I may want to parametrize by a monoid instead of an alphabet.}
@@ -225,7 +223,7 @@ Given the definitions in \figref{list}, |listElems| is a homomorphism with respe
 
 Now consider how we can computably \emph{match} a string for membership in a language described in the vocabulary given in the previous section.
 The set-based language definition does not lead directly to effective string matching, because the sets may be infinite.
-The list and finite set types do have computable membership testing so we could use them instead.
+The list and finite set types do have computable membership testing so we could use them instead.\notefoot{Finite sets \needcite{} don't support closure.}
 Another option is to use membership predicates \emph{as} language implementation, noting the set/predicate isomorphism:
 \begin{code}
 setPred :: Pow a -> (a -> Bool)
@@ -378,8 +376,8 @@ deriv p = \ c cs -> p (c : cs)
 \end{code}
 \end{lemma}
 \begin{proof}
-Any argument to |f| must be either |[]| or |c : cs| for some value |c| anc list |cs|.
-Consider each case, and appeal to the definition of |(<:)|:
+Any argument to |f| must be either |[]| or |c : cs| for some value |c| and list |cs|.
+Consider each case:
 \begin{code}
     (atEps f <: deriv f) []
 ==  atEps f []                   -- definition of |b <: h|
@@ -392,13 +390,13 @@ Consider each case, and appeal to the definition of |(<:)|:
 Thus, for \emph{all} |w :: [c]|, |f w == (atEps f <: deriv f) w|, from which the lemma follows by extensionality.
 \end{proof}
 
-This decomposition generalizes a pair of notions used by \citet{Brzozowski64} mapping languages to languages (as sets of strings):\footnote{Brzozowski wrote ``$\derivOp_c\,p$'' instead of ``|deriv p c|'', but the latter will prove more convenient below.}
+This decomposition generalizes a pair of operations used by \citet{Brzozowski64} mapping languages to languages (as sets of strings):\footnote{Brzozowski wrote ``$\derivOp_c\,p$'' instead of ``|deriv p c|'', but the latter will prove more convenient below.}
 \begin{code}
 delta p = if mempty <# p then set mempty else emptyset 
 
 deriv p c = set (cs | c:cs <# p)
 \end{code}
-To see the relationship between Brzozowski's two operations and the decomposition above, recast the two operations in terms of predicates (functions to booleans):
+To see the relationship between Brzozowski's two operations and the decomposition above, recast |delta| and |deriv| in terms of predicates (functions to booleans):
 \begin{code}
 delta p []      = p []
 delta p (c:cs)  = False
@@ -408,6 +406,7 @@ deriv p = \ c cs -> p (c : cs)
 
 \noindent
 %format `scaleT` = .>
+%format scaleT = (.>)
 Understanding how |atEps| and |deriv| relate to the semiring vocabulary will help us develop an efficient implementation in \secref{Tries} below.
 \begin{lemma}[\provedIn{lemma:atEps}]\lemLabel{atEps}
 The |atEps| function is a star semiring homomorphism, i.e.,
@@ -416,19 +415,24 @@ atEps zero         == zero
 atEps one          == one 
 atEps (p  <+>  q)  == atEps p  <+>  atEps q 
 atEps (p  <.>  q)  == atEps p  <.>  atEps q 
+
 atEps (closure p)  == closure (atEps p)
 \end{code}
+Moreover, |atEps (single [d]) == zero|.
+
 \end{lemma}
-\begin{lemma}[\provedIn{lemma:deriv}, generalizing a result of \citet{Brzozowski64}, Lemma 3.1]\lemLabel{deriv}
+\begin{lemma}[\provedIn{lemma:deriv}, generalizing Lemma 3.1 of \citet{Brzozowski64}]\lemLabel{deriv}
 Differentiation has the following properties:%
 %format .> = "\cdot"
 \begin{code}
-deriv zero         == \ c -> zero
-deriv one          == \ c -> zero
-deriv (p  <+>  q)  == \ c -> deriv p c <+> deriv q c
-deriv (p  <.>  q)  == \ c -> p mempty .> deriv q c <+> deriv p c <.> q
+deriv zero  c == zero
+deriv one   c == zero
+deriv (p  <+>  q) c == deriv p c <+> deriv q c
+deriv (p  <.>  q) c == p mempty .> deriv q c <+> deriv p c <.> q
 
-deriv (closure p)  == \ c -> closure (p mempty) .> deriv p c * closure p
+deriv (closure p) c == closure (p mempty) .> deriv p c * closure p
+
+deriv (single [d]) c == boolVal (d == c)
 \end{code}
 where |(.>)| scales the result of a function:\footnote{Equivalently, |deriv (p  <.>  q) c = delta p * deriv q c <+> deriv p c <.> q|, where |delta p = p mempty .> one|, generalizing a notion of \citet[Definition 3.2]{Brzozowski64}.}
 \begin{code}
@@ -451,41 +455,30 @@ closure (a <: dp) = q
      q = as <: (h . dp)
      as = closure a
      h d = as .> d <.> q
+
+single w = product (map symbol w)
+  where
+     symbol d = zero <: (\ c -> boolVal (c == d))
 \end{code}
 \end{corollary}
 \begin{proof}
 Combine \lemRefThree{decompose function}{atEps}{deriv}.
 \end{proof}
 
+%let derivProduct = True
+
+%if derivProduct
 \begin{lemma}[\provedIn{lemma:derivProduct}]\lemLabel{derivProduct}
-The following alternative characterizations of products and closure on functions hold:\notefoot{Since I moved the |one| addend to after |a .> q|, I think we're going to look for long matches before short ones, possibly with harmful results. Test thoroughly, and describe results later in the paper.}
+The following alternative characterizations of products and closure on functions hold:%
+\notefoot{Since I moved the |one| addend to after |a .> q|, I think we're going to look for long matches before short ones, possibly with harmful results. Test thoroughly, and describe results later in the paper.}%
+\notefoot{Check on convergence. If I can't get it, then drop this lemma, and change \figref{Trie}.}
 \begin{code}
 (a <: dp) <.> q = a .> q <+> (zero <: (<.> NOP q) . dp)
 
-closure (a <: dp) = q where q = a .> q <+> (one <: (<.> NOP q) . dp)
-\end{code}
-\end{lemma}
-
-%if True
-\mynote{Is there anything to say about singleton languages??}
-%else
-Finally, singleton languages:
-\begin{lemma}
-For functions,
-\begin{code}
-single w = product [zero <: boolVal (c' == c) | c <- w]
+closure (a <: dp) = q where q = closure a .> (one <: (<.> NOP q) .  dp)
 \end{code}
 \end{lemma}
 %endif
-
-\noindent
-\mynote{
-Next:
-\begin{itemize}
-\item |single w|?
-\item Rewrite \secref{Tries}.
-\end{itemize}
-}
 
 \sectionl{Tries}
 
@@ -508,23 +501,53 @@ Likewise, the properties from section \secref{Decomposing Functions} make it fai
 Given the definitions in \figrefdef{Trie}{Tries as a language representation}{
 %format OD c s = Ord c
 \begin{code}
-instance OD c s => Semiring (Trie c s) where
-  zero = zero :< M.empty
-  one  = one  :< M.empty
-  (a :< ps') <+> (b :< qs') = (a <+> b) :< M.unionWith (<+>) ps' qs'
-  (a :< ps) <.> q = a `scaleT` q <+> (zero :< fmap (<.> q) ps)
-#endif
+data Trie c s = s :< Map c (Trie c s)
 
-instance OD c s => StarSemiring (Trie c s) where
-  closure (_ :< ds) = q where q = one :< fmap (<.> q) ds
+scaleT :: (Ord c, Semiring s) => s -> Trie c s -> Trie c s
+s `scaleT` (e :< ts) = (s <.> e) :< fmap (s NOP `scaleT`) ts
 
-instance OD c s => HasSingle (Trie c s) [c] where
-  single w = product [zero :< M.singleton c one | c <- w]
+instance Ord c => Semiring (Trie c s) where
+  zero = zero :< empty
+  one  = one  :< empty
+  (a :< dp) <+> (b :< dq) = (a <+> b) :< unionWith (<+>) dp dq
+  (a :< ps) <.> q = a `scaleT` q <+> (zero :< fmap (<.> NOP q) ps)
+
+instance Ord c => StarSemiring (Trie c s) where
+  closure (_ :< ds) = q where q = one :< fmap (<.> NOP q) ds
+
+instance Ord c => HasSingle (Trie c s) [c] where
+  single w = product [zero :< singleton c one | c <- w]
 \end{code}
 \vspace{-4ex}
 }, |trieFun| is a homomorphism with respect to each instantiated class.
 \end{theorem}
 
+\workingHere
+
+\sectionl{Regular Expressions}
+
+\sectionl{Convolution}
+
+\mynote{Show that |(*)| corresponds to generalized convolution.}
+
+\sectionl{Beyond Convolution}
+
+\mynote{The free semimodule monad.}
+
+\sectionl{More Variations}
+
+\mynote{Variations: counting, probability distributions, temporal/spatial convolution.}
+
+\sectionl{What else?}
+
+\begin{itemize}
+\item Other applications:
+\begin{itemize}
+  \item Univariate and multivariate polynomials.
+  \item Convolution: discrete and continuous, one- and multi-dimensional, dense and sparse.
+  \item 2D parsing?
+\end{itemize}
+\end{itemize}
 
 \sectionl{Related Work}
 \begin{itemize}
@@ -556,9 +579,11 @@ instance OD c s => HasSingle (Trie c s) [c] where
 
 For |deriv (closure p)|, see 2019-01-13 notes.
 
+%if derivProduct
 \subsection{\lemRef{derivProduct}}\proofLabel{lemma:derivProduct}
 
 \mynote{See 2019-01-10 journal.}
+%endif
 
 \subsection{\thmRef{Trie}}\proofLabel{theorem:Trie}
 

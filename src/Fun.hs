@@ -264,6 +264,8 @@ scaleT s | isZero s  = const zero
  where
    go ~(e :< ts) = (s <.> e) :< fmap go ts
 
+-- scaleT s (e :< ts) = (s <.> e) :< fmap (scaleT s) ts
+
 -- TODO: generalize scaleT to tmap, and then let scaleT s = tmap (s <.>).
 
 -- -- Oops. We'd need to enumerate all of c.
@@ -289,28 +291,31 @@ trieFunTo = FunTo . trieFun
 instance OD c s => Semiring (Trie c s) where
   zero = zero :< M.empty
   one  = one  :< M.empty
-  ~(a :< ps') <+> ~(b :< qs') = (a <+> b) :< M.unionWith (<+>) ps' qs'
-  -- (a :< ps') <+> (b :< qs') = (a <+> b) :< (ps' <+> qs')
+  ~(a :< dp) <+> ~(b :< dq) = (a <+> b) :< M.unionWith (<+>) dp dq
+  -- (a :< dp) <+> (b :< dq) = (a <+> b) :< (dp <+> dq)
   -- c would have to be a monoid, though we could eliminate by introducing an
   -- Additive superclass of Semiring.
 #if 0
   -- Wedges for the recursive anbn examples even with the lazy pattern.
-  (a :< ps') <.> ~q@(b :< qs') =
-    (a <.> b) :< M.unionWith (<+>) (fmap (<.> q) ps') (fmap (scaleT a) qs')
+  (a :< dp) <.> ~q@(b :< dq) =
+    (a <.> b) :< M.unionWith (<+>) (fmap (<.> q) dp) (fmap (scaleT a) dq)
 #elif 0
   -- Wedges for recursive anbn examples even with the lazy pattern.
-  (a :< ps') <.> ~q@(b :< qs') = (a <.> b) :< M.unionWith (<+>) us vs
+  (a :< dp) <.> ~q@(b :< dq) = (a <.> b) :< M.unionWith (<+>) us vs
    where
-     us = fmap (<.> q) ps'
-     vs = fmap (scaleT a) qs'
+     us = fmap (<.> q) dp
+     vs = fmap (scaleT a) dq
+#elif 1
+  -- Works even for recursive anbn examples.
+  (a :< dp) <.> q = a `scaleT` q <+> (zero :< fmap (<.> q) dp)
 #elif 1
   -- Works even for recursive anbn examples.
   ~(a :< ps) <.> q = a `scaleT` q <+> (zero :< fmap (<.> q) ps)
 #else
   -- Works even for recursive anbn examples.
-  (a :< ps') <.> ~q@(b :< qs')
-    | isZero a = zero :< fmap (<.> q) ps'
-    | otherwise = a <.> b :< M.unionWith (<+>) (fmap (<.> q) ps') (fmap (scaleT a) qs')
+  (a :< dp) <.> ~q@(b :< dq)
+    | isZero a = zero :< fmap (<.> q) dp
+    | otherwise = a <.> b :< M.unionWith (<+>) (fmap (<.> q) dp) (fmap (scaleT a) dq)
 #endif
 
 -- instance OD c s => StarSemiring (Trie c s) where
@@ -318,12 +323,18 @@ instance OD c s => Semiring (Trie c s) where
 --   closure (_ :< ds) = q where q = one :< fmap (<.> q) ds
 
 instance (Ord c, StarSemiring s, DetectableZero s) => StarSemiring (Trie c s) where
+#if 1
+  -- Works
+  closure (a :< dp) = q where q = closure a `scaleT` (one :< fmap (<.> q) dp)
+#else
+  -- Works
   -- See 2019-01-13 joural
   closure (a :< dp) = q
     where
       q = as :< fmap h dp
       as = closure a
       h d = as `scaleT` d <.> q
+#endif
 
 -- TODO: Fix so that scaleT checks isZero as only once.
 

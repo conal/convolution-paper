@@ -6,5 +6,6 @@
 *   Probability distribution semiring:
     *   Uses?
     *   Closure
+*   Understand and apply [this MathOverflow answer](https://math.stackexchange.com/a/1651127) on convolution and Day convolution.
 
 

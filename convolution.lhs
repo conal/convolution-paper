@@ -562,22 +562,46 @@ Thus,
 \end{code}
 \end{spacing}
 \noindent
-which is exactly the standard definition of discrete convolution \needcite{}.
+which is exactly the standard definition of discrete convolution \needcite{}\footnote{Note that this reasoning applies to \emph{any} group (monoid with inverses)}.
 Therefore, just as \eqnref{convolution} generalizes language concatenation, it also generalizes the usual notion of discrete convolution.
 Moreover, if the domain is a continuous type such as |R| or |C|, we can reinterpret summation as integration, resulting in \emph{continuous} convolution \needcite{}.
-Additionally, for multi-dimensional (discrete or continuous) convolution, we can simply use tuples of scalar indices for |w| and |u|, and define subtraction on tuples to be component-wise.
+Additionally, for multi-dimensional (discrete or continuous) convolution, we can simply use tuples of scalar indices for |w| and |u|, and define subtraction on tuples to be component-wise.\notefoot{More generally, cartesian products of monoids are also monoids.
+Consider multi-dimensional convolution in which different dimensions have different types, even mixing discrete and continuous, and maybe even sequences and numbers.
+At the least, it's useful to combine finite dimensions of different sizes.}
 
-\workingHere
+\mynote{Maybe give some convolution examples.}
 
-\mynote{Where next?
-\begin{itemize}
-\item Convolution examples.
-\item Probability distributions?
-\item Finite domains. Note awkwardness of mismatching sizes.
-\end{itemize}
-}
+%format ... = "\ldots"
+%format Fin (m) = Fin "_{" m "}"
+
+Some uses of convolution involve functions having finite support, i.e., non-zero on only a finite subset of their domains.
+More specifically, these domain subsets may be defined by finite \emph{intervals}.
+For instance, such a 2D operation would be given by intervals in each dimension, together specifying lower left and upper right corners of 2D interval (rectangle), as convolutional neural networks (CNNs) \needcite{}.
+The two input intervals needn't have the same size, and the result occupies a larger interval than both inputs, with sizes equaling the sum of the sizes in each dimension (minus one for the discrete case).
+\mynote{Show an example as a picture.}
+Since the result's size is entirely predictable and based only on the arguments' sizes, it is appealing to track sizes statically via types.
+For instance, a 1D convolution might have the following type:
+\begin{code}
+(*) :: Semiring s => Array (m+1) s -> Array (n+1) s -> Array (m+n+1) s
+\end{code}
+Unfortunately, this type is incompatible with the general type of |(*)|, in which arguments and result all have the same type.
+
+From the perspective of functions, an array of size |n| is a memoized function from |Fin n|, which represents the finite set |0, ..., n-1|.
+Although we can still define a convolution-like operation in terms of index addition, indices no longer form a monoid, simply due to the non-uniformity of types.
+The inability to handle such situations is a shame, since convolution still makes sense:
+\begin{code}
+(f <.> g) w  = bigSumQ (u,v BR u + v == w) f u <.> g v
+\end{code}
+where now
+\begin{code}
+(+) :: Fin (m+1) -> Fin (n+1) -> Fin (m+n+1)
+\end{code}
 
 \sectionl{Beyond Convolution}
+
+The problem with convolution (semiring multiplication on functions and their various isomorphic, memoized forms) and statically sized arrays came from the expectation that index/argument combination is via a monoid.
+Fortunately, this expectation can be transcended by generalizing from |(<>)| (monoidal combination) to an \emph{arbitrary} binary operation |h :: a -> b -> c|.
+Let's call this more general operation ``|liftA2 h|''.
 
 \mynote{The free semimodule monad.}
 
@@ -592,6 +616,7 @@ Additionally, for multi-dimensional (discrete or continuous) convolution, we can
 \begin{itemize}
   \item Univariate and multivariate polynomials.
   \item Convolution: discrete and continuous, one- and multi-dimensional, dense and sparse.
+  \item Probability distributions.
   \item 2D parsing?
 \end{itemize}
 \end{itemize}

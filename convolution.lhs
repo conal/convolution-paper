@@ -658,15 +658,16 @@ There are, however, two problems with this story:
 \item Even if such |Functor| and |Applicative| instances were accepted, they would conflict with existing instances, which are defined pointwise: |fmap h f = \ x -> h (f x)|, |pure b = \ x -> b|, and |liftA2 h f g = \ x -> h (f x) (g x)|.
 \end{itemize}
 There is an easy solution to both of these problems: define a new type constructor of functions but with the domain and codomain type arguments swapped:
+%format <-- = "\leftarrow"
 \begin{code}
-newtype Fun b a = Fun (a -> b)
+newtype b <-- a = F (a -> b)
 
-instance Semiring s => Functor (Fun s) where
-  fmap h (Fun f) = Fun (\ w -> bigSumQ (u BR h u == w) f u)
+instance Semiring s => Functor ((<--) s) where
+  fmap h (F f) = F (\ w -> bigSumQ (u BR h u == w) f u)
 
-instance Semiring s => Applicative (Fun s) where
-  pure b = Fun (\ w -> boolVal (w == b))
-  liftA2 h (Fun f) (Fun g) = Fun (\ w -> bigSumQ (u,v BR h u v == w) f u <.> g v)
+instance Semiring s => Applicative ((<--) s) where
+  pure b = F (\ w -> boolVal (w == b))
+  liftA2 h (F f) (F g) = F (\ w -> bigSumQ (u,v BR h u v == w) f u <.> g v)
 \end{code}
 Just as with our semiring instances for functions in \figref{function}, these definitions are not really executable code, since they involve summations are over potentially infinite ranges.
 

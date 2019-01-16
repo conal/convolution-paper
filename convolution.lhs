@@ -4,6 +4,8 @@
 \documentclass[twoside]{article}  % fleqn, 
 \usepackage[margin=0.12in]{geometry}  % 0.12in, 0.9in, 1in
 
+\usepackage{setspace}
+
 %% \documentclass{article}
 %% \usepackage{fullpage}
 
@@ -531,26 +533,49 @@ instance Ord c => HasSingle (Trie c s) [c] where
 \sectionl{Convolution}
 
 Consider again the definition of semiring ``multiplication'' on functions from \figref{function}:
-\begin{equation}
+\begin{equation}\eqnlabel{convolution}
 (f * g)\,w = \bigSumZ{u,v \\ u \mappend v = w}1 f\,u * g\,v
 \end{equation}
+If we specialize the functions' codomains to |Bool|, we get the definition in \figref{pred}:
 
->  (f <.> g) w = bigSumQ (u,v BR u <> v == w) f u <.> g v
+>   (f  <.>  g) w = bigOrQ (u,v BR u <> v == w) f u && g v
 
-This definition resembles discrete convolution \needcite:
+Equivalently, using the set/predicate isomorphism from \secref{Matching}, we can translate this definition from predicates to sets, as in \figref{set}:
 
->  (f <.> g) w = bigSum u f u <.> g (w - u)
+>   p  <.>  q  = set (u <> v | u <# p && v <# q)
+
+which is the definition of the concatenation of two languages from \secref{Languages}.
+
+By specializing the \emph{domain} of the functions to sequences (from general monoids), we can get efficient matching of semiring-generalized ``languages'', as in \secreftwo{Decomposing Functions}{Tries}, which translates to regular expressions (\secref{Regular Expressions}), generalizing work of \citet{Brzozowski64}\mynote{, while apparently improving performance.\notefoot{Measure and compare in \secref{Regular Expressions}.}}
 
 %format R = "\mathbb R"
 %format C = "\mathbb C"
-For multi-dimensional convolution, use tuples of scalar indices for |w| and |u|, and define subtraction on tuples to be component-wise.
-For continuous convolution, use indices from from a continuous type such as |R| or |C|, and reinterpret summation as integration.
 
-The resemblance between function semiring multiplication and convolution is more than superficial.
-Just as the former generalizes language concatenation, it also generalizes convolution in the usual sense.
-Consider that numbers form a monoid with |u <> v = u + v|, and that |u + v == w <=> v = w - u|.
+Now let's consider specializing the functions' domains to \emph{integers} instead of sequences, recalling that integers (and numeric types in general) form a monoid under addition.
+Thus,
+\begin{spacing}{1.5}
+\begin{code}
+(f <.> g) w  = bigSumQ (u,v BR u <> v == w) f u <.> g v
+             = bigSumQ (u,v BR u + v == w) f u <.> g v
+             = bigSumQ (u,v BR v = w - u) f u <.> g v
+             = bigSum u f u <.> g (w - u)
+\end{code}
+\end{spacing}
+\noindent
+which is exactly the standard definition of discrete convolution \needcite{}.
+Therefore, just as \eqnref{convolution} generalizes language concatenation, it also generalizes the usual notion of discrete convolution.
+Moreover, if the domain is a continuous type such as |R| or |C|, we can reinterpret summation as integration, resulting in \emph{continuous} convolution \needcite{}.
+Additionally, for multi-dimensional (discrete or continuous) convolution, we can simply use tuples of scalar indices for |w| and |u|, and define subtraction on tuples to be component-wise.
 
-\mynote{Show that |(*)| corresponds to generalized convolution.}
+\workingHere
+
+\mynote{Where next?
+\begin{itemize}
+\item Convolution examples.
+\item Probability distributions?
+\item Finite domains. Note awkwardness of mismatching sizes.
+\end{itemize}
+}
 
 \sectionl{Beyond Convolution}
 

@@ -225,7 +225,7 @@ Given the definitions in \figref{list}, |listElems| is a homomorphism with respe
 
 Now consider how we can computably \emph{match} a string for membership in a language described in the vocabulary given in the previous section.
 The set-based language definition does not lead directly to effective string matching, because the sets may be infinite.
-The list and finite set types do have computable membership testing so we could use them instead.\notefoot{Finite sets \needcite{} don't support closure.}
+The list and finite set types do have computable membership testing so we could use them instead.\notefoot{Finite sets \needcite{} would not support closure, due to finiteness.}
 Another option is to use membership predicates \emph{as} language implementation, noting the set/predicate isomorphism:
 \begin{code}
 setPred :: Pow a -> (a -> Bool)
@@ -654,7 +654,7 @@ Higher-arity liftings can be defined via these three.
 For the convolution-style liftings (|lift2|, |lift1|, and |lift0|) defined above, |f t = t -> s| (for a semiring |s|).
 There are, however, two problems with this story:
 \begin{itemize}
-\item Although Haskell supports higher-kinded types \needcite{}, Haskell compilers perform type inference via first-order unification and so will not infer the needed type function |f = Lambda t DOT t -> s| (where ``|Lambda|'' is a hypothetical type-level lambda, as in the second-order $\lambda$-calculus \mynote{\needcite --- check}).
+\item Although Haskell supports higher-kinded types \needcite{}, Haskell compilers perform type inference via first-order unification and so will not infer the needed type function |f = Lambda t DOT t -> s| (where ``|Lambda|'' is a hypothetical type-level lambda).
 \item Even if such |Functor| and |Applicative| instances were accepted, they would conflict with existing instances, which are defined pointwise: |fmap h f = \ x -> h (f x)|, |pure b = \ x -> b|, and |liftA2 h f g = \ x -> h (f x) (g x)|.
 \end{itemize}
 There is an easy solution to both of these problems: define a new type constructor of functions but with the domain and codomain type arguments swapped:

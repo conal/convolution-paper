@@ -403,7 +403,7 @@ atEps :: Monoid w => (w -> b) -> b
 atEps f = f mempty
 
 deriv :: ([c] -> b) -> c -> ([c] -> b)
-deriv p = \ c cs -> p (c : cs)
+deriv f = \ c cs -> f (c : cs)
 \end{code}
 \end{lemma}
 \begin{proof}
@@ -439,6 +439,16 @@ deriv p = \ c cs -> p (c : cs)
 %format `scaleT` = .>
 %format scaleT = (.>)
 Understanding how |atEps| and |deriv| relate to the semiring vocabulary will help us develop an efficient implementation in \secref{Tries} below.
+First, however, we'll need to generalize to representations other |a -> b|:
+\begin{code}
+class HasDecomp a c s | a -> c s where
+  infix 1 <:
+  (<:)  :: s -> (c -> a) -> a
+  atEps :: a -> s
+  deriv :: a -> c -> a
+\end{code}
+Now adapt the |[c] -> b| instance to |b <-- [c]|:
+
 \begin{lemma}[\provedIn{lemma:atEps}]\lemLabel{atEps}
 The |atEps| function is a star semiring homomorphism, i.e.,
 \begin{code}

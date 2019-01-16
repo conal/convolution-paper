@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
 
 -- | Languages as functions to semirings
@@ -15,10 +16,10 @@ import Misc
 import Semiring
 
 {--------------------------------------------------------------------
-    Generalized predicates
+    Functions / generalized predicates
 --------------------------------------------------------------------}
 
-newtype s <-- a = F (a -> s)
+newtype b <-- a = F { unF :: a -> b }
 
 instance Semiring s => Semiring (s <-- [c]) where
   zero = F (const zero)
@@ -32,8 +33,10 @@ instance (Semiring s, Eq b) => HasSingle (s <-- b) b where
   single x = F (boolVal . (== x))
 
 instance HasDecomp (s <-- [c]) c s where
-  atEps (F f) = f []
-  deriv (F f) c = F (f . (c :))
+  b <: h = F (\ case []   -> b
+                     c:cs -> unF (h c) cs)
+  atEps (F f) = f mempty
+  deriv (F f) = \ c -> F (\ cs -> f (c:cs))
 
 {--------------------------------------------------------------------
     Classic list-of-successes
@@ -152,13 +155,6 @@ regexp (Closure u)   = closure (regexp u)
 {--------------------------------------------------------------------
     Decomposition as language
 --------------------------------------------------------------------}
-
-infix 1 <:
-(<:) :: b -> (c -> [c] -> b) -> [c] -> b
-(b <: _) []     = b
-(_ <: h) (c:cs) = h c cs
-
--- der :: ([c] -> b) -> c -> ([c] -> b)
 
 -- -- Identity:
 -- deFun :: ([c] -> b) -> ([c] -> b)

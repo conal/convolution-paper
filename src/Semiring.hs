@@ -22,8 +22,24 @@ class Semiring a => StarSemiring a where
   closure :: a -> a
   closure p = q where q = one <+> p <.> q
 
-class HasSingle a s where
-  single :: s -> a
+class HasSingle a w where
+  single :: w -> a
+
+{--------------------------------------------------------------------
+    Instances
+--------------------------------------------------------------------}
+
+instance Semiring b => Semiring (a -> b) where
+  zero = const zero
+  one  = const one
+  f <+> g = \ a -> f a <+> g a
+  f <.> g = \ a -> f a <.> g a
+
+instance StarSemiring b => StarSemiring (a -> b) where
+  closure f = \ a -> closure (f a)
+
+instance HasSingle b w => HasSingle (a -> b) w where
+  single w = const (single w)
 
 instance Semiring Integer where
   zero = 0
@@ -62,16 +78,16 @@ instance Semiring a => Monoid (Product a) where
 product :: (Foldable f, Semiring a) => f a -> a
 product = getProduct . foldMap Product
 
-class Semiring a => DetectableZero a  where
-  isZero :: a -> Bool
-
-instance DetectableZero Bool where isZero = not
-
 -- Variants
 
 sum', product' :: (Foldable f, Semiring a) => f a -> a
 sum' = foldr (<+>) zero
 product' = foldr (<.>) one
+
+class Semiring a => DetectableZero a  where
+  isZero :: a -> Bool
+
+instance DetectableZero Bool where isZero = not
 
 instance Monoid a => Semiring [a] where
   zero = []
@@ -107,6 +123,8 @@ boolVal False = zero
 boolVal True  = one
 
 class HasDecomp a c s | a -> c s where
+  infix 1 <:
+  (<:)  :: s -> (c -> a) -> a
   atEps :: a -> s
   deriv :: a -> c -> a
 
@@ -119,10 +137,12 @@ accept p s = atEps (derivs p s)
 
 type Language a c s = (StarSemiring a, HasSingle a [c], HasDecomp a c s)
 
-
 instance HasDecomp ([c] -> b) c b where
+  (b <: _) []     = b
+  (_ <: h) (c:cs) = h c cs
   atEps f = f []
-  deriv f c = f . (c :)
+  -- deriv f c = f . (c :)
+  deriv f = \ c cs -> f (c : cs)
 
 instance (Eq a, Semiring b) => HasSingle (a -> b) a where
   single a = boolVal . (== a)

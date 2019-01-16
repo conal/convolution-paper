@@ -42,6 +42,7 @@ instance HasSingle (Set a) a where
   single a = set a
 
 instance Eq a => HasDecomp (Set a) a Bool where
+  e <: h = (if e then set mempty else emptyset) `union` bigunion c h c
   atEps p = [] `elem` p
   deriv p c = set (cs | c : cs `elem` p)
 
@@ -60,7 +61,7 @@ instance Eq a => HasDecomp (Set a) a Bool where
     Predicates
 --------------------------------------------------------------------}
 
-newtype Pred s = Pred (s -> Bool)
+newtype Pred s = Pred { unPred :: s -> Bool }
 
 #if 0
 
@@ -72,11 +73,14 @@ predSet (Pred f) = set (a | f a)
 
 #endif
 
+allVals :: [c]
+allVals = error "allVals not defined"
+
 instance Semiring (Pred [c]) where
   zero = Pred (const False)
   one = Pred null
-  Pred f <+> Pred g = Pred (\ x -> f x || g x)
-  Pred f <.> Pred g = Pred (\ x -> or [ f u && g v | (u,v) <- splits x ] )
+  Pred f <+> Pred g = Pred (\ w -> f w || g w)
+  Pred f <.> Pred g = Pred (\ w -> or [ f u && g v | (u,v) <- splits w ] )
 
 instance StarSemiring (Pred [c])
 
@@ -84,8 +88,10 @@ instance Eq s => HasSingle (Pred s) s where
   single s = Pred (== s)
 
 instance HasDecomp (Pred [c]) c Bool where
+  e <: h = boolVal e <+> Pred (\ w -> or [ unPred (h c) w | c <- allVals ])
   atEps (Pred f) = f []
-  deriv (Pred f) c = Pred (f . (c :))
+  -- deriv (Pred f) c = Pred (f . (c :))
+  deriv (Pred f) c = Pred (\ cs -> f (c : cs))
 
 {--------------------------------------------------------------------
     Classic list-of-successes
@@ -125,6 +131,7 @@ instance Eq s => HasSingle (Resid s) [s] where
   single x = Resid (maybeToList . stripPrefix x)
 
 instance HasDecomp (Resid s) s Bool where
+  (<:) = error "(<:) not yet defined on Resid"
   atEps (Resid f) = any null (f [])
   deriv (Resid f) c = Resid (f . (c :)) -- TODO: check
 
@@ -215,6 +222,7 @@ instance (Functor f, Foldable f, OkSym c) => HasSingle (RegExp c) (f c) where
 #endif
 
 instance Eq c => HasDecomp (RegExp c) c Bool where
+  (<:) = error "(<:) not yet defined on RegExp"
   atEps (Char _)    = zero
   atEps Zero        = zero
   atEps One         = one
@@ -338,6 +346,7 @@ instance Eq c => HasSingle (Decomp c) [c] where
   -- single (c:cs) = False :<: (\ c' -> if c==c' then single cs else zero)
 
 instance HasDecomp (Decomp c) c Bool where
+  (<:) = (:<:)
   atEps (a :<: _) = a
   deriv (_ :<: ds) c = ds c
 
@@ -413,7 +422,11 @@ instance Ord c => HasSingle (Trie c) [c] where
    where
      symbol c = False :< M.singleton c one
 
+instance Ord c => DetectableZero (Trie c) where
+  isZero (b :< m) = isZero b && M.null m
+
 instance Ord c => HasDecomp (Trie c) c Bool where
-  atEps (a :< _) = a
+  b <: h = b :< M.fromList [ (c,t) | c <- allVals, let t = h c, not (isZero t) ]
+  atEps (b :< _) = b
   deriv (_ :< ds) c = ds `mat` c
 

@@ -572,9 +572,10 @@ At the least, it's useful to combine finite dimensions of different sizes.}
 \mynote{Maybe give some convolution examples.}
 
 %format ... = "\ldots"
+%format cdots = "\cdots"
 %format Fin (m) = Fin "_{" m "}"
 
-Some uses of convolution involve functions having finite support, i.e., non-zero on only a finite subset of their domains.
+Some uses of convolution involve functions having finite support, i.e., non-zero on only a finite subset of their domains.\notefoot{First suggest finite maps, using instances from \figref{Map}. Then intervals/arrays.}
 More specifically, these domain subsets may be defined by finite \emph{intervals}.
 For instance, such a 2D operation would be given by intervals in each dimension, together specifying lower left and upper right corners of 2D interval (rectangle), as convolutional neural networks (CNNs) \needcite{}.
 The two input intervals needn't have the same size, and the result occupies a larger interval than both inputs, with sizes equaling the sum of the sizes in each dimension (minus one for the discrete case).
@@ -588,7 +589,16 @@ Unfortunately, this type is incompatible with the general type of |(*)|, in whic
 
 From the perspective of functions, an array of size |n| is a memoized function from |Fin n|, which represents the finite set |0, ..., n-1|.
 Although we can still define a convolution-like operation in terms of index addition, indices no longer form a monoid, simply due to the non-uniformity of types.
-The inability to handle such situations is a shame, since convolution still makes sense:
+
+\sectionl{Beyond Convolution}
+
+%format lift0
+%format lift1
+%format lift2
+%format liftn = lift "_n"
+
+The inability to support convolution on statically sized arrays (or other memoized forms of functions over finite domains) as semiring multiplication came from the expectation that index/argument combination is via a monoid.
+This limitation is a shame, since convolution still makes sense:
 \begin{code}
 (f <.> g) w  = bigSumQ (u,v BR u + v == w) f u <.> g v
 \end{code}
@@ -596,12 +606,73 @@ where now
 \begin{code}
 (+) :: Fin (m+1) -> Fin (n+1) -> Fin (m+n+1)
 \end{code}
+Fortunately, this monoid expectation can be transcended by generalizing from monoidal combination to an \emph{arbitrary} binary operation |h :: a -> b -> c|.
+Let's call this more general operation ``|lift2 h|''.
+Operating on functions,
+\begin{code}
+lift2 :: Semiring s => (a -> b -> c) -> (a -> s) -> (b -> s) -> (c -> s)
+lift2 h f g = \ w -> bigSumQ (u,v BR h u v == w) f u <.> g v
+\end{code}
+We can similarly lift functions of \emph{any} arity:
+%format a1
+%format an = a "_n"
+%format f1
+%format fn = f "_n"
+%format u1
+%format un = u "_n"
+%format bigSumZ (lim) = "\bigSumZ{" lim "}{3}"
+\begin{code}
+liftn :: Semiring s => (a1 -> ... -> an -> b) -> (a1 -> s) -> ... -> (an -> s) -> (b -> s)
+liftn h f1 ... fn = \ w -> bigSumZ (u1, ..., un BR h u1 cdots un == w) f1 u1 <.> cdots <.> fn un
+\end{code}
+Consider two specific cases:
+\begin{code}
+lift1 :: Semiring s => (a -> b) -> (a -> s) -> (b -> s)
+lift1 h f = \ w -> bigSumQ (u BR h u == w) f u
 
-\sectionl{Beyond Convolution}
+lift0 :: Semiring s => b -> (b -> s)
+lift0 b  = \ w -> bigSum (b == w) 1
+         = \ w -> if b == w then one else zero
+         = \ w -> boolVal (w == b)
+\end{code}
 
-The problem with convolution (semiring multiplication on functions and their various isomorphic, memoized forms) and statically sized arrays came from the expectation that index/argument combination is via a monoid.
-Fortunately, this expectation can be transcended by generalizing from |(<>)| (monoidal combination) to an \emph{arbitrary} binary operation |h :: a -> b -> c|.
-Let's call this more general operation ``|liftA2 h|''.
+\noindent
+The signatures of |lift2|, |lift1|, and |lift0| resemble those of |liftA2|, |fmap|, and |pure| from the |Functor| and |Applicative| classes\needcite:\notefoot{Originally, |Applicative| had a |(<*>)| method from which one can easily define |liftA2|. Since the base library version 4.10 \needcite, |liftA2| was added as a method to allow for more efficient implementation. \mynote{Cite \href{https://ghc.haskell.org/trac/ghc/ticket/13191}{GHC ticket 13191} if I can't find a better reference. To do: fix the spelling of my last name on that ticket page.}}
+\begin{code}
+class Functor f where
+  fmap :: (a -> b) -> f a -> f b
+
+class Applicative f where
+  pure :: b -> f b
+  liftA2 :: (a -> b -> c) -> f a -> f b -> f c
+\end{code}
+Higher-arity liftings can be defined via these three.
+(Exercise.)
+
+For the convolution-style liftings (|lift2|, |lift1|, and |lift0|) defined above, |f t = t -> s| (for a semiring |s|).
+There are, however, two problems with this story:
+\begin{itemize}
+\item Although Haskell supports higher-kinded types \needcite{}, Haskell compilers perform type inference via first-order unification and so will not infer the needed type function |f = Lambda t DOT t -> s| (where ``|Lambda|'' is a hypothetical type-level lambda, as in the second-order $\lambda$-calculus \mynote{\needcite --- check}).
+\item Even if such |Functor| and |Applicative| instances were accepted, they would conflict with existing instances, which are defined pointwise: |fmap h f = \ x -> h (f x)|, |pure b = \ x -> b|, and |liftA2 h f g = \ x -> h (f x) (g x)|.
+\end{itemize}
+There is an easy solution to both of these problems: define a new type constructor of functions but with the domain and codomain type arguments swapped:
+\begin{code}
+newtype Fun b a = Fun (a -> b)
+
+instance Semiring s => Functor (Fun s) where
+  fmap h f = \ w -> bigSumQ (u BR h u == w) f u
+
+instance Semiring s => Applicative (Fun s) where
+  pure b = \ w -> boolVal (w == b)
+  liftA2 h f g = \ w -> bigSumQ (u,v BR h u v == w) f u <.> g v
+\end{code}
+Just as with our semiring instances for functions in 
+
+Of course, these definitions are not really executable code, since they summations are over potentially infinite ranges.
+
+\mynote{I should really fix the |Semiring| instances as well, since there's another |Semiring| instance that corresponds to the usual |Functor| and |Applicative| instances for functions, with |(*) = liftA2 (*)|. Delightfully, the Fourier transform is then a semiring homomorphism!}
+
+\workingHere
 
 \mynote{The free semimodule monad.}
 

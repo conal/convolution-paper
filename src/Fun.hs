@@ -350,6 +350,19 @@ instance OD c s => HasDecomp (Trie c s) c s where
   deriv (_ :< ds) c = ds ! c
 
 {--------------------------------------------------------------------
+    Functor and Applicative
+--------------------------------------------------------------------}
+
+newtype Fun b a = Fun (a -> b)
+
+#if 0
+
+instance Semiring s -> Functor (Fun s) where
+
+
+#endif
+
+{--------------------------------------------------------------------
     Temporary for testing
 --------------------------------------------------------------------}
 

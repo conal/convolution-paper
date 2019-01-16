@@ -19,7 +19,7 @@ import qualified Data.Map as M
 import Misc
 import Semiring
 
-delta :: (Semiring a, HasDecomp a c Bool) => a -> a
+delta :: (Semiring a, Decomposable a c Bool) => a -> a
 delta a | atEps a   = one
         | otherwise = zero
 
@@ -41,7 +41,7 @@ instance StarSemiring (Set a) where
 instance HasSingle (Set a) a where
   single a = set a
 
-instance Eq a => HasDecomp (Set a) a Bool where
+instance Eq a => Decomposable (Set a) a Bool where
   e <: h = (if e then set mempty else emptyset) `union` bigunion c h c
   atEps p = [] `elem` p
   deriv p c = set (cs | c : cs `elem` p)
@@ -87,7 +87,7 @@ instance StarSemiring (Pred [c])
 instance Eq s => HasSingle (Pred s) s where
   single s = Pred (== s)
 
-instance HasDecomp (Pred [c]) ((->) c) Bool where
+instance Decomposable (Pred [c]) ((->) c) Bool where
   e <: h = boolVal e <+> Pred (\ w -> or [ unPred (h c) w | c <- allVals ])
   atEps (Pred f) = f []
   -- deriv (Pred f) c = Pred (f . (c :))
@@ -130,7 +130,7 @@ instance Eq s => HasSingle (Resid s) [s] where
   --                            Nothing -> [])
   single x = Resid (maybeToList . stripPrefix x)
 
--- instance HasDecomp (Resid s) s Bool where
+-- instance Decomposable (Resid s) s Bool where
 --   (<:) = error "(<:) not yet defined on Resid"
 --   atEps (Resid f) = any null (f [])
 --   deriv (Resid f) c = Resid (f . (c :)) -- TODO: check
@@ -221,7 +221,7 @@ instance (Functor f, Foldable f, OkSym c) => HasSingle (RegExp c) (f c) where
 
 #endif
 
-instance Eq c => HasDecomp (RegExp c) ((->) c) Bool where
+instance Eq c => Decomposable (RegExp c) ((->) c) Bool where
   (<:) = error "(<:) not yet defined on RegExp"
   atEps (Char _)    = zero
   atEps Zero        = zero
@@ -345,7 +345,7 @@ instance Eq c => HasSingle (Decomp c) [c] where
   -- single [] = one
   -- single (c:cs) = False :<: (\ c' -> if c==c' then single cs else zero)
 
-instance HasDecomp (Decomp c) ((->) c) Bool where
+instance Decomposable (Decomp c) ((->) c) Bool where
   (<:) = (:<:)
   atEps (a :<: _) = a
   deriv (_ :<: ds) c = ds c
@@ -425,7 +425,7 @@ instance Ord c => HasSingle (Trie c) [c] where
 instance Ord c => DetectableZero (Trie c) where
   isZero (b :< m) = isZero b && M.null m
 
-instance Ord c => HasDecomp (Trie c) (Map c) Bool where
+instance Ord c => Decomposable (Trie c) (Map c) Bool where
   (<:) = (:<)
   atEps (b :< _) = b
   deriv (_ :< d) = d

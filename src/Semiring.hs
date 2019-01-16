@@ -127,15 +127,20 @@ boolVal :: Semiring s => Bool -> s
 boolVal False = zero
 boolVal True  = one
 
-class HasLookup f k | f -> k where
+class Indexable f k | f -> k where
   (!) :: Semiring s => f s -> k -> s
 
-instance HasLookup ((->) k) k where (!) = id
+instance Indexable ((->) k) k where
+  -- (!) = id
+  f ! k = f k
 
-instance Ord k => HasLookup (M.Map k) k where
+instance Ord k => Indexable (M.Map k) k where
   m ! c = M.findWithDefault zero c m
 
-class Semiring a => HasDecomp a h s | a -> h s where
+type SR a = Semiring a
+-- type SR a = (() ~ ())
+
+class SR a => Decomposable a h s | a -> h s where
   infix 1 <:
   (<:)  :: s -> h a -> a
   atEps :: a -> s
@@ -144,43 +149,43 @@ class Semiring a => HasDecomp a h s | a -> h s where
 -- TODO: Do I really want h to depend on a? Could we have more than one h per a?
 
 -- | Derivative of a language w.r.t a string
-derivs :: (HasDecomp a h s, HasLookup h c) => a -> [c] -> a
+derivs :: (Decomposable a h s, Indexable h c) => a -> [c] -> a
 derivs = foldl ((!) . deriv)
 
-accept :: (HasDecomp a h s, HasLookup h c) => a -> [c] -> s
+accept :: (Decomposable a h s, Indexable h c) => a -> [c] -> s
 accept p s = atEps (derivs p s)
 
--- type Language a c s = (StarSemiring a, HasSingle a [c], HasDecomp a c s)
+-- type Language a c s = (StarSemiring a, HasSingle a [c], Decomposable a c s)
 
-instance Semiring b => HasDecomp ([c] -> b) ((->) c) b where
+instance SR b => Decomposable ([c] -> b) ((->) c) b where
   (b <: _) []     = b
   (_ <: h) (c:cs) = h c cs
   atEps f = f []
   -- deriv f c = f . (c :)
   deriv f = \ c cs -> f (c : cs)
 
-instance (Eq a, Semiring b) => HasSingle (a -> b) a where
+instance (Eq a, SR b) => HasSingle (a -> b) a where
   single a = boolVal . (== a)
   -- single a a' = boolVal (a' == a)
 
 instance HasSingle [a] a where single a = [a]
 
--- instance Eq c => HasDecomp [[c]] ((->) c) Bool where
+-- instance Eq c => Decomposable [[c]] ((->) c) Bool where
 --   atEps p = [] `elem` p
 --   deriv p c = [cs | c' : cs <- p, c' == c]
 
 
 instance HasSingle (S.Set a) a where single = S.singleton
 
-instance Ord c => HasDecomp (S.Set [c]) (M.Map c) Bool where
+instance Ord c => Decomposable (S.Set [c]) (M.Map c) Bool where
   e <: d = boolVal e <+> S.unions [ S.map (c:) css | (c,css) <- M.toList d ]
   atEps p = [] `S.member` p
   deriv p = M.fromListWith (<+>) [(c, S.singleton cs) | c:cs <- S.toList p]
 
-instance Semiring s => HasSingle (M.Map a s) a where
+instance SR s => HasSingle (M.Map a s) a where
   single a = M.singleton a one
 
-instance (Ord c, Semiring s) => HasDecomp (M.Map [c] s) (M.Map c) s where
+instance (Ord c, SR s) => Decomposable (M.Map [c] s) (M.Map c) s where
   b <: d = M.insert [] b (M.unionsWith (<+>)
                            [ M.mapKeys (c:) css | (c,css) <- M.toList d ])
   atEps p = M.findWithDefault zero [] p

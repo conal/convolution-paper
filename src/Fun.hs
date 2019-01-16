@@ -32,11 +32,14 @@ instance Semiring s => StarSemiring (s <-- [c])
 instance (Semiring s, Eq b) => HasSingle (s <-- b) b where
   single x = F (boolVal . (== x))
 
-instance Semiring s => HasDecomp (s <-- [c]) ((->) c) s where
+instance Semiring s => Decomposable (s <-- [c]) ((->) c) s where
   b <: h = F (\ case []   -> b
                      c:cs -> unF (h c) cs)
   atEps (F f) = f mempty
   deriv (F f) = \ c -> F (\ cs -> f (c:cs))
+
+instance Indexable (b <-- a) a b where
+  F f ! a = f a
 
 {--------------------------------------------------------------------
     Classic list-of-successes
@@ -79,7 +82,7 @@ instance Eq s => HasSingle (Resid s) [s] where
   --                            Nothing -> [])
   single x = Resid (maybeToList . stripPrefix x)
 
-instance HasDecomp (Resid s) s Bool where
+instance Decomposable (Resid s) s Bool where
   atEps (Resid f) = any null (f [])
   deriv c (Resid f) = Resid (f . (c :)) -- TODO: check
 
@@ -119,8 +122,8 @@ instance Semiring s => StarSemiring (RegExp c s) where
 instance (Functor f, Foldable f, Semiring s) => HasSingle (RegExp c s) (f c) where
   single = product . fmap Char
 
-instance (Eq c, StarSemiring s) => HasDecomp (RegExp c s) ((->) c) s where
-  
+instance (Eq c, StarSemiring s) => Decomposable (RegExp c s) ((->) c) s where
+  -- (<:) ...
   atEps (Char _)    = zero
   atEps (Value s)   = s
   atEps (p :<+> q)  = atEps p <+> atEps q
@@ -238,7 +241,7 @@ instance (DetectableZero s, Eq c) => HasSingle (Decomp c s) [c] where
      symbol c = zero :<: (boolVal . (== c))
 #endif
 
-instance DetectableZero s => HasDecomp (Decomp c s) ((->) c) s where
+instance DetectableZero s => Decomposable (Decomp c s) ((->) c) s where
   (<:) = (:<:)
   atEps (a :<: _) = a
   deriv (_ :<: ds) c = ds c
@@ -342,8 +345,7 @@ instance OD c s => HasSingle (Trie c s) [c] where
   --  where
   --    symbol c = zero :< M.singleton c one
 
-
-instance OD c s => HasDecomp (Trie c s) (M.Map c) s where
+instance OD c s => Decomposable (Trie c s) (M.Map c) s where
   (<:) = (:<)
   atEps (a :< _) = a
   deriv (_ :< d) = d

@@ -1,5 +1,6 @@
 ## To-do items for the paper and code
 
+*   Remove a bunch of unused code, first moving to `Other`.
 *   Use semiring-num
 *   Tropical semirings?
 *   Counting and closure and infinity.

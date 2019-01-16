@@ -441,19 +441,32 @@ deriv p = \ c cs -> p (c : cs)
 Understanding how |atEps| and |deriv| relate to the semiring vocabulary will help us develop an efficient implementation in \secref{Tries} below.
 First, however, we'll need to generalize to representations other |a -> b|:
 \begin{code}
-class Semiring a => HasDecomp a h s | a -> h s where
+class Semiring a => Decomposable a h s | a -> h s where
   infix 1 <:
   (<:)  :: s -> h a -> a
   atEps :: a -> s
   deriv :: a -> h a
 
-instance Semiring b => HasDecomp ([c] -> b) ((->) c) b where
+instance Semiring b => Decomposable ([c] -> b) ((->) c) b where
   (b <: _) []     = b
   (_ <: h) (c:cs) = h c cs
   atEps f  = f []
   deriv f  = \ c cs -> f (c : cs)
 \end{code}
-Now adapt the |[c] -> b| instance to |b <-- [c]|:
+We'll need a way to ``index'' in |h|:
+\begin{code}
+class Indexable f k | f -> k where
+  (!) :: Semiring s => f s -> k -> s
+
+instance Indexable ((->) k) k where
+  f ! k = f k
+
+instance Ord k => Indexable (M.Map k) k where
+  m ! c = M.findWithDefault zero c m
+\end{code}
+
+\noindent
+Now adapt the |[c] -> b| instances of |Indexable| and |Decomposable| to |b <-- [c]|:
 
 \begin{lemma}[\provedIn{lemma:atEps}]\lemLabel{atEps}
 The |atEps| function is a star semiring homomorphism, i.e.,

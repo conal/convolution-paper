@@ -39,14 +39,16 @@ basicTests = testGroup "Various representations"
 
 -- TODO: some tests with s other than Bool.
 
-tests :: forall z s. (Language z Char s, Show z, Show s) => String -> TestTree
+tests :: forall z h s. ( StarSemiring z, HasSingle z String, Decomposable z h s
+                       , Indexable h Char, Show z, Show s )
+  => String -> TestTree
 tests group = testGroup group
   [ testGroup "" []
 
   , gold "a"                            $ a
   , gold "pig"                          $ pig
   , gold "pink-or-pig"                  $ pp
-  , gold "derivs-pp-q"                  $ deriv pp 'q'
+  , gold "derivs-pp-q"                  $ derivs pp "q"
   , gold "derivs-pp-pi"                 $ derivs pp "pi"
   , gold "derivs-pp-pig"                $ derivs pp "pig"
 

@@ -540,7 +540,7 @@ If we specialize the functions' codomains to |Bool|, we get the definition in \f
 
 >   (f  <.>  g) w = bigOrQ (u,v BR u <> v == w) f u && g v
 
-Equivalently, using the set/predicate isomorphism from \secref{Matching}, we can translate this definition from predicates to sets, as in \figref{set}:
+Using the set/predicate isomorphism from \secref{Matching}, we can translate this definition from predicates to sets, as in \figref{set}:
 
 >   p  <.>  q  = set (u <> v | u <# p && v <# q)
 
@@ -551,7 +551,7 @@ By specializing the \emph{domain} of the functions to sequences (from general mo
 %format R = "\mathbb R"
 %format C = "\mathbb C"
 
-Now let's consider specializing the functions' domains to \emph{integers} instead of sequences, recalling that integers (and numeric types in general) form a monoid under addition.
+Let's now consider specializing the functions' domains to \emph{integers} instead of sequences, recalling that integers (and numeric types in general) form a monoid under addition.
 Thus,
 \begin{spacing}{1.5}
 \begin{code}
@@ -562,7 +562,7 @@ Thus,
 \end{code}
 \end{spacing}
 \noindent
-which is exactly the standard definition of discrete convolution \needcite{}\footnote{Note that this reasoning applies to \emph{any} group (monoid with inverses)}.
+which is exactly the standard definition of discrete \emph{convolution} \needcite{}\footnote{Note that this reasoning applies to \emph{any} group (monoid with inverses)}.
 Therefore, just as \eqnref{convolution} generalizes language concatenation, it also generalizes the usual notion of discrete convolution.
 Moreover, if the domain is a continuous type such as |R| or |C|, we can reinterpret summation as integration, resulting in \emph{continuous} convolution \needcite{}.
 Additionally, for multi-dimensional (discrete or continuous) convolution, we can simply use tuples of scalar indices for |w| and |u|, and define subtraction on tuples to be component-wise.\notefoot{More generally, cartesian products of monoids are also monoids.
@@ -574,12 +574,13 @@ At the least, it's useful to combine finite dimensions of different sizes.}
 %format ... = "\ldots"
 %format cdots = "\cdots"
 %format Fin (m) = Fin "_{" m "}"
+%format Array (m) = Array "_{" m "}"
 
 Some uses of convolution involve functions having finite support, i.e., non-zero on only a finite subset of their domains.\notefoot{First suggest finite maps, using instances from \figref{Map}. Then intervals/arrays.}
 More specifically, these domain subsets may be defined by finite \emph{intervals}.
-For instance, such a 2D operation would be given by intervals in each dimension, together specifying lower left and upper right corners of 2D interval (rectangle), as convolutional neural networks (CNNs) \needcite{}.
+For instance, such a 2D operation would be given by intervals in each dimension, together specifying lower left and upper right corners of 2D interval (rectangle), e.g., as with convolutional neural networks (CNNs) \needcite{}.
 The two input intervals needn't have the same size, and the result occupies a larger interval than both inputs, with sizes equaling the sum of the sizes in each dimension (minus one for the discrete case).
-\mynote{Show an example as a picture.}
+\notefoot{Show an example as a picture.}
 Since the result's size is entirely predictable and based only on the arguments' sizes, it is appealing to track sizes statically via types.
 For instance, a 1D convolution might have the following type:
 \begin{code}
@@ -607,7 +608,7 @@ where now
 (+) :: Fin (m+1) -> Fin (n+1) -> Fin (m+n+1)
 \end{code}
 Fortunately, this monoid expectation can be transcended by generalizing from monoidal combination to an \emph{arbitrary} binary operation |h :: a -> b -> c|.
-Let's call this more general operation ``|lift2 h|''.
+For now, let's call this more general operation ``|lift2 h|''.
 Operating on functions,
 \begin{code}
 lift2 :: Semiring s => (a -> b -> c) -> (a -> s) -> (b -> s) -> (c -> s)
@@ -625,7 +626,8 @@ We can similarly lift functions of \emph{any} arity:
 liftn :: Semiring s => (a1 -> ... -> an -> b) -> (a1 -> s) -> ... -> (an -> s) -> (b -> s)
 liftn h f1 ... fn = \ w -> bigSumZ (u1, ..., un BR h u1 cdots un == w) f1 u1 <.> cdots <.> fn un
 \end{code}
-Consider two specific cases:
+Here we are summing over the set-valued \emph{preimage} of |w| under |h|.
+Now consider two specific cases of |liftn|:
 \begin{code}
 lift1 :: Semiring s => (a -> b) -> (a -> s) -> (b -> s)
 lift1 h f = \ w -> bigSumQ (u BR h u == w) f u
@@ -637,7 +639,7 @@ lift0 b  = \ w -> bigSum (b == w) 1
 \end{code}
 
 \noindent
-The signatures of |lift2|, |lift1|, and |lift0| resemble those of |liftA2|, |fmap|, and |pure| from the |Functor| and |Applicative| classes\needcite:\notefoot{Originally, |Applicative| had a |(<*>)| method from which one can easily define |liftA2|. Since the base library version 4.10 \needcite, |liftA2| was added as a method to allow for more efficient implementation. \mynote{Cite \href{https://ghc.haskell.org/trac/ghc/ticket/13191}{GHC ticket 13191} if I can't find a better reference. To do: fix the spelling of my last name on that ticket page.}}
+The signatures of |lift2|, |lift1|, and |lift0| resemble those of |liftA2|, |fmap|, and |pure| from the |Functor| and |Applicative| type classes \needcite:\footnote{Originally, |Applicative| had a |(<*>)| method from which one can easily define |liftA2|. Since the base library version 4.10 \needcite, |liftA2| was added as a method to allow for more efficient implementation. \mynote{Cite \href{https://ghc.haskell.org/trac/ghc/ticket/13191}{GHC ticket 13191} if I can't find a better reference.}}
 \begin{code}
 class Functor f where
   fmap :: (a -> b) -> f a -> f b
@@ -660,17 +662,16 @@ There is an easy solution to both of these problems: define a new type construct
 newtype Fun b a = Fun (a -> b)
 
 instance Semiring s => Functor (Fun s) where
-  fmap h f = \ w -> bigSumQ (u BR h u == w) f u
+  fmap h (Fun f) = Fun (\ w -> bigSumQ (u BR h u == w) f u)
 
 instance Semiring s => Applicative (Fun s) where
-  pure b = \ w -> boolVal (w == b)
-  liftA2 h f g = \ w -> bigSumQ (u,v BR h u v == w) f u <.> g v
+  pure b = Fun (\ w -> boolVal (w == b))
+  liftA2 h (Fun f) (Fun g) = Fun (\ w -> bigSumQ (u,v BR h u v == w) f u <.> g v)
 \end{code}
-Just as with our semiring instances for functions in 
+Just as with our semiring instances for functions in \figref{function}, these definitions are not really executable code, since they involve summations are over potentially infinite ranges.
 
-Of course, these definitions are not really executable code, since they summations are over potentially infinite ranges.
-
-\mynote{I should really fix the |Semiring| instances as well, since there's another |Semiring| instance that corresponds to the usual |Functor| and |Applicative| instances for functions, with |(*) = liftA2 (*)|. Delightfully, the Fourier transform is then a semiring homomorphism!}
+%format :<- = "\leftarrow"
+\mynote{I should really fix the |Semiring| instances as well, since there's another |Semiring| instance that corresponds to the usual |Functor| and |Applicative| instances for functions, with |(*) = liftA2 (*)|. Delightfully, the Fourier transform is then a semiring homomorphism! Idea: rename |Fun b a| to ``|b :<- a|''.}
 
 \workingHere
 

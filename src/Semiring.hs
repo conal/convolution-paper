@@ -189,6 +189,7 @@ instance SR s => HasSingle (Map a s) a where
 instance (Ord c, SR s) => Decomposable (Map [c] s) (Map c) s where
   b <: d = M.insert [] b (M.unionsWith (<+>)
                            [ M.mapKeys (c:) css | (c,css) <- M.toList d ])
-  atEps p = M.findWithDefault zero [] p
+  atEps p = p ! []
+            -- M.findWithDefault zero [] p
   deriv p = M.fromListWith (<+>)
               [(c, M.singleton cs s) | (c:cs,s) <- M.toList p]

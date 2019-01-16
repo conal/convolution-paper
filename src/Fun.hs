@@ -18,22 +18,22 @@ import Semiring
     Generalized predicates
 --------------------------------------------------------------------}
 
-newtype FunTo s a = FunTo (a -> s)
+newtype s <-- a = F (a -> s)
 
-instance Semiring s => Semiring (FunTo s [c]) where
-  zero = FunTo (const zero)
-  one = FunTo (boolVal . null)
-  FunTo f <+> FunTo g = FunTo (\ w -> f w <+> g w)
-  FunTo f <.> FunTo g = FunTo (\ w -> sum [ f u <.> g v | (u,v) <- splits w ] )
+instance Semiring s => Semiring (s <-- [c]) where
+  zero = F (const zero)
+  one = F (boolVal . null)
+  F f <+> F g = F (\ w -> f w <+> g w)
+  F f <.> F g = F (\ w -> sum [ f u <.> g v | (u,v) <- splits w ] )
 
-instance Semiring s => StarSemiring (FunTo s [c])
+instance Semiring s => StarSemiring (s <-- [c])
 
-instance (Semiring s, Eq b) => HasSingle (FunTo s b) b where
-  single x = FunTo (boolVal . (== x))
+instance (Semiring s, Eq b) => HasSingle (s <-- b) b where
+  single x = F (boolVal . (== x))
 
-instance HasDecomp (FunTo s [c]) c s where
-  atEps (FunTo f) = f []
-  deriv (FunTo f) c = FunTo (f . (c :))
+instance HasDecomp (s <-- [c]) c s where
+  atEps (F f) = f []
+  deriv (F f) c = F (f . (c :))
 
 {--------------------------------------------------------------------
     Classic list-of-successes
@@ -43,8 +43,8 @@ instance HasDecomp (FunTo s [c]) c s where
 -- successful matches.
 newtype Resid c s = Resid ([c] -> [([c], s)])
 
-residFunTo :: Semiring s => Resid c s -> FunTo s [c]
-residFunTo (Resid f) = FunTo (\ w -> sum [ s | (w',s) <- f w, null w' ])
+residF :: Semiring s => Resid c s -> (s <-- [c])
+residF (Resid f) = F (\ w -> sum [ s | (w',s) <- f w, null w' ])
 
 #if 0
 
@@ -199,8 +199,8 @@ funDecomp f = atEps f :<: funDecomp . deriv f
 -- -- (Some of the tests show the language representation.)
 -- instance Show (Decomp c s) where show (e :<: f) = "Decomp " ++ show e ++ " <function>"
 
-decompFunTo :: Decomp c s -> FunTo s [c]
-decompFunTo = FunTo . decompFun
+decompF :: Decomp c s -> (s <-- [c])
+decompF = F . decompFun
 
 instance DetectableZero s => Semiring (Decomp c s) where
 #if 0
@@ -285,8 +285,8 @@ trieFun (e :< d) = e <: trieFun . (d !)
 (!) :: (Ord c, Semiring s) => Map c s -> c -> s
 m ! c = M.findWithDefault zero c m
 
-trieFunTo :: OD c s => Trie c s -> FunTo s [c]
-trieFunTo = FunTo . trieFun
+trieF :: OD c s => Trie c s -> (s <-- [c])
+trieF = F . trieFun
 
 instance OD c s => Semiring (Trie c s) where
   zero = zero :< M.empty
@@ -348,19 +348,6 @@ instance OD c s => HasSingle (Trie c s) [c] where
 instance OD c s => HasDecomp (Trie c s) c s where
   atEps (a :< _) = a
   deriv (_ :< ds) c = ds ! c
-
-{--------------------------------------------------------------------
-    Functor and Applicative
---------------------------------------------------------------------}
-
-newtype Fun b a = Fun (a -> b)
-
-#if 0
-
-instance Semiring s -> Functor (Fun s) where
-
-
-#endif
 
 {--------------------------------------------------------------------
     Temporary for testing

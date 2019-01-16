@@ -32,7 +32,7 @@ instance Semiring s => StarSemiring (s <-- [c])
 instance (Semiring s, Eq b) => HasSingle (s <-- b) b where
   single x = F (boolVal . (== x))
 
-instance HasDecomp (s <-- [c]) c s where
+instance Semiring s => HasDecomp (s <-- [c]) ((->) c) s where
   b <: h = F (\ case []   -> b
                      c:cs -> unF (h c) cs)
   atEps (F f) = f mempty
@@ -119,7 +119,8 @@ instance Semiring s => StarSemiring (RegExp c s) where
 instance (Functor f, Foldable f, Semiring s) => HasSingle (RegExp c s) (f c) where
   single = product . fmap Char
 
-instance (Eq c, StarSemiring s) => HasDecomp (RegExp c s) c s where
+instance (Eq c, StarSemiring s) => HasDecomp (RegExp c s) ((->) c) s where
+  
   atEps (Char _)    = zero
   atEps (Value s)   = s
   atEps (p :<+> q)  = atEps p <+> atEps q
@@ -167,10 +168,10 @@ scaleD :: DetectableZero s => s -> Decomp c s -> Decomp c s
 scaleD s _ | isZero s = zero
 scaleD s (e :<: ts) = (s <.> e) :<: (scaleD s . ts)
 
-decompFun :: Decomp c s -> ([c] -> s)
+decompFun :: Semiring s => Decomp c s -> ([c] -> s)
 decompFun (e :<: ds) = e <: decompFun . ds
 
-funDecomp :: ([c] -> s) -> Decomp c s
+funDecomp :: Semiring s => ([c] -> s) -> Decomp c s
 funDecomp f = atEps f :<: funDecomp . deriv f
 
 -- funDecomp f = f [] :<: funDecomp . \ c -> f . (c :)
@@ -195,7 +196,7 @@ funDecomp f = atEps f :<: funDecomp . deriv f
 -- -- (Some of the tests show the language representation.)
 -- instance Show (Decomp c s) where show (e :<: f) = "Decomp " ++ show e ++ " <function>"
 
-decompF :: Decomp c s -> (s <-- [c])
+decompF :: Semiring s => Decomp c s -> (s <-- [c])
 decompF = F . decompFun
 
 instance DetectableZero s => Semiring (Decomp c s) where
@@ -237,7 +238,8 @@ instance (DetectableZero s, Eq c) => HasSingle (Decomp c s) [c] where
      symbol c = zero :<: (boolVal . (== c))
 #endif
 
-instance HasDecomp (Decomp c s) c s where
+instance DetectableZero s => HasDecomp (Decomp c s) ((->) c) s where
+  (<:) = (:<:)
   atEps (a :<: _) = a
   deriv (_ :<: ds) c = ds c
 
@@ -278,8 +280,8 @@ trieFun (e :< d) = e <: trieFun . (d !)
 -- trieFun (e :< _ ) [] = e
 -- trieFun (_ :< ts) (c:cs) = trieFun (ts ! c) cs
 
-(!) :: (Ord c, Semiring s) => Map c s -> c -> s
-m ! c = M.findWithDefault zero c m
+-- (!) :: (Ord c, Semiring s) => Map c s -> c -> s
+-- m ! c = M.findWithDefault zero c m
 
 trieF :: OD c s => Trie c s -> (s <-- [c])
 trieF = F . trieFun
@@ -341,9 +343,10 @@ instance OD c s => HasSingle (Trie c s) [c] where
   --    symbol c = zero :< M.singleton c one
 
 
-instance OD c s => HasDecomp (Trie c s) c s where
+instance OD c s => HasDecomp (Trie c s) (M.Map c) s where
+  (<:) = (:<)
   atEps (a :< _) = a
-  deriv (_ :< ds) c = ds ! c
+  deriv (_ :< d) = d
 
 {--------------------------------------------------------------------
     Temporary for testing

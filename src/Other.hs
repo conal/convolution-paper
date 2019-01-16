@@ -55,9 +55,12 @@ instance (HasTrie c, Eq c) => HasSingle (LTrie c Bool) [c] where
   -- single [] = one -- True :| pure zero
   -- single (c:cs) = False :| trie (\ c' -> if c==c' then single cs else zero)
 
-instance HasTrie c => HasDecomp (LTrie c Bool) c Bool where
-  atEps (a :| _) = a
-  deriv (_ :| ps') c = ps' ! c
+-- instance HasTrie c => HasDecomp (LTrie c Bool) (Trie c) Bool where
+--   (<:) = (:|)
+--   atEps (a :| _) = a
+--   deriv (_ :| d) = d
+
+-- Illegal type synonym family application in instance: Trie c
 
 {--------------------------------------------------------------------
     Memoization via generalized tries
@@ -74,9 +77,9 @@ class Applicative (Trie k) => HasTrie k where
     trie   :: (k  ->  v) -> (k :->: v)
     untrie :: (k :->: v) -> (k  ->  v)
 
--- | Indexing. Synonym for 'untrie'.
-(!) :: HasTrie k => (k :->: v) -> k  ->  v
-(!) = untrie
+-- -- | Indexing. Synonym for 'untrie'.
+-- (!) :: HasTrie k => (k :->: v) -> k  ->  v
+-- (!) = untrie
 
 -- Identity trie. To do: make idTrie the method, and define trie via idTrie.
 idTrie :: HasTrie k => k :->: k

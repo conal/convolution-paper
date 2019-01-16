@@ -87,7 +87,7 @@ instance StarSemiring (Pred [c])
 instance Eq s => HasSingle (Pred s) s where
   single s = Pred (== s)
 
-instance HasDecomp (Pred [c]) c Bool where
+instance HasDecomp (Pred [c]) ((->) c) Bool where
   e <: h = boolVal e <+> Pred (\ w -> or [ unPred (h c) w | c <- allVals ])
   atEps (Pred f) = f []
   -- deriv (Pred f) c = Pred (f . (c :))
@@ -130,10 +130,10 @@ instance Eq s => HasSingle (Resid s) [s] where
   --                            Nothing -> [])
   single x = Resid (maybeToList . stripPrefix x)
 
-instance HasDecomp (Resid s) s Bool where
-  (<:) = error "(<:) not yet defined on Resid"
-  atEps (Resid f) = any null (f [])
-  deriv (Resid f) c = Resid (f . (c :)) -- TODO: check
+-- instance HasDecomp (Resid s) s Bool where
+--   (<:) = error "(<:) not yet defined on Resid"
+--   atEps (Resid f) = any null (f [])
+--   deriv (Resid f) c = Resid (f . (c :)) -- TODO: check
 
 #if 0
             deriv      :: c -> a -> a
@@ -221,7 +221,7 @@ instance (Functor f, Foldable f, OkSym c) => HasSingle (RegExp c) (f c) where
 
 #endif
 
-instance Eq c => HasDecomp (RegExp c) c Bool where
+instance Eq c => HasDecomp (RegExp c) ((->) c) Bool where
   (<:) = error "(<:) not yet defined on RegExp"
   atEps (Char _)    = zero
   atEps Zero        = zero
@@ -345,7 +345,7 @@ instance Eq c => HasSingle (Decomp c) [c] where
   -- single [] = one
   -- single (c:cs) = False :<: (\ c' -> if c==c' then single cs else zero)
 
-instance HasDecomp (Decomp c) c Bool where
+instance HasDecomp (Decomp c) ((->) c) Bool where
   (<:) = (:<:)
   atEps (a :<: _) = a
   deriv (_ :<: ds) c = ds c
@@ -425,8 +425,8 @@ instance Ord c => HasSingle (Trie c) [c] where
 instance Ord c => DetectableZero (Trie c) where
   isZero (b :< m) = isZero b && M.null m
 
-instance Ord c => HasDecomp (Trie c) c Bool where
-  b <: h = b :< M.fromList [ (c,t) | c <- allVals, let t = h c, not (isZero t) ]
+instance Ord c => HasDecomp (Trie c) (Map c) Bool where
+  (<:) = (:<)
   atEps (b :< _) = b
-  deriv (_ :< ds) c = ds `mat` c
+  deriv (_ :< d) = d
 

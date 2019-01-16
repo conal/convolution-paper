@@ -441,11 +441,17 @@ deriv p = \ c cs -> p (c : cs)
 Understanding how |atEps| and |deriv| relate to the semiring vocabulary will help us develop an efficient implementation in \secref{Tries} below.
 First, however, we'll need to generalize to representations other |a -> b|:
 \begin{code}
-class HasDecomp a c s | a -> c s where
+class Semiring a => HasDecomp a h s | a -> h s where
   infix 1 <:
-  (<:)  :: s -> (c -> a) -> a
+  (<:)  :: s -> h a -> a
   atEps :: a -> s
-  deriv :: a -> c -> a
+  deriv :: a -> h a
+
+instance Semiring b => HasDecomp ([c] -> b) ((->) c) b where
+  (b <: _) []     = b
+  (_ <: h) (c:cs) = h c cs
+  atEps f  = f []
+  deriv f  = \ c cs -> f (c : cs)
 \end{code}
 Now adapt the |[c] -> b| instance to |b <-- [c]|:
 

@@ -9,6 +9,8 @@
 
 module Semiring where
 
+import Data.Set (Set)
+import Data.Map (Map)
 import qualified Data.Set as S
 import qualified Data.Map as M
 
@@ -40,6 +42,9 @@ instance StarSemiring b => StarSemiring (a -> b) where
 
 instance HasSingle b w => HasSingle (a -> b) w where
   single w = const (single w)
+
+(.>) :: Semiring s => s -> (a -> s) -> (a -> s)
+s .> f  = (s <.>) . f
 
 instance Semiring Integer where
   zero = 0
@@ -122,22 +127,32 @@ boolVal :: Semiring s => Bool -> s
 boolVal False = zero
 boolVal True  = one
 
-class HasDecomp a c s | a -> c s where
+class HasLookup f k | f -> k where
+  (!) :: Semiring s => f s -> k -> s
+
+instance HasLookup ((->) k) k where (!) = id
+
+instance Ord k => HasLookup (M.Map k) k where
+  m ! c = M.findWithDefault zero c m
+
+class Semiring a => HasDecomp a h s | a -> h s where
   infix 1 <:
-  (<:)  :: s -> (c -> a) -> a
+  (<:)  :: s -> h a -> a
   atEps :: a -> s
-  deriv :: a -> c -> a
+  deriv :: a -> h a
+
+-- TODO: Do I really want h to depend on a? Could we have more than one h per a?
 
 -- | Derivative of a language w.r.t a string
-derivs :: HasDecomp a c s => a -> [c] -> a
-derivs = foldl deriv
+derivs :: (HasDecomp a h s, HasLookup h c) => a -> [c] -> a
+derivs = foldl ((!) . deriv)
 
-accept :: HasDecomp a c s => a -> [c] -> s
+accept :: (HasDecomp a h s, HasLookup h c) => a -> [c] -> s
 accept p s = atEps (derivs p s)
 
-type Language a c s = (StarSemiring a, HasSingle a [c], HasDecomp a c s)
+-- type Language a c s = (StarSemiring a, HasSingle a [c], HasDecomp a c s)
 
-instance HasDecomp ([c] -> b) c b where
+instance Semiring b => HasDecomp ([c] -> b) ((->) c) b where
   (b <: _) []     = b
   (_ <: h) (c:cs) = h c cs
   atEps f = f []
@@ -150,27 +165,24 @@ instance (Eq a, Semiring b) => HasSingle (a -> b) a where
 
 instance HasSingle [a] a where single a = [a]
 
-instance Eq c => HasDecomp [[c]] c Bool where
-  atEps p = [] `elem` p
-  deriv p c = [cs | c' : cs <- p, c' == c]
+-- instance Eq c => HasDecomp [[c]] ((->) c) Bool where
+--   atEps p = [] `elem` p
+--   deriv p c = [cs | c' : cs <- p, c' == c]
 
 
 instance HasSingle (S.Set a) a where single = S.singleton
 
-instance Ord c => HasDecomp (S.Set [c]) c Bool where
+instance Ord c => HasDecomp (S.Set [c]) (M.Map c) Bool where
+  e <: d = boolVal e <+> S.unions [ S.map (c:) css | (c,css) <- M.toList d ]
   atEps p = [] `S.member` p
-  deriv p c = S.fromList [cs | c' : cs <- S.toList p, c' == c]
+  deriv p = M.fromListWith (<+>) [(c, S.singleton cs) | c:cs <- S.toList p]
 
 instance Semiring s => HasSingle (M.Map a s) a where
   single a = M.singleton a one
 
-instance (Ord c, Semiring s) => HasDecomp (M.Map [c] s) c s where
+instance (Ord c, Semiring s) => HasDecomp (M.Map [c] s) (M.Map c) s where
+  b <: d = M.insert [] b (M.unionsWith (<+>)
+                           [ M.mapKeys (c:) css | (c,css) <- M.toList d ])
   atEps p = M.findWithDefault zero [] p
-  deriv p c = M.fromList [(cs,s) | (c':cs,s) <- M.toList p, c' == c]
-
-{--------------------------------------------------------------------
-    Misc
---------------------------------------------------------------------}
-
-(.>) :: Semiring s => s -> (a -> s) -> (a -> s)
-s .> f  = (s <.>) . f
+  deriv p = M.fromListWith (<+>)
+              [(c, M.singleton cs s) | (c:cs,s) <- M.toList p]

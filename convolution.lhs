@@ -228,11 +228,13 @@ The set-based language definition does not lead directly to effective string mat
 The list and finite set types do have computable membership testing so we could use them instead.\notefoot{Finite sets \needcite{} would not support closure, due to finiteness.}
 Another option is to use membership predicates \emph{as} language implementation, noting the set/predicate isomorphism:
 \begin{code}
-setPred :: Pow a -> (a -> Bool)
-setPred as = \ a -> a <# as
+newtype Pred a = Pred (a -> Bool)
 
-predSet :: (a -> Bool) -> Pow a
-predSet f = set (a | f a)
+setPred :: Pow a -> Pred a
+setPred as = Pred (\ a -> a <# as)
+
+predSet :: Pred a -> Pow a
+predSet (Pred f) = set (a | f a)
 \end{code}
 It's easy to show that |setPred . predSet == id| and |predSet . setPred == id|.
 % See 2018-12-10 notes.
@@ -244,22 +246,24 @@ It's easy to show that |setPred . predSet == id| and |predSet . setPred == id|.
 %format BR = "\\"
 We can require that |predSet| (and thus |setPred|) is semiring homomorphism and solve the required homomorphism equations to yield a |Semiring| instance, as shown in \figrefdef{pred}{Membership predicate as semiring (language representation)}{
 \begin{code}
-instance (Monoid a, Eq a) => Semiring (a -> Bool) where
-  zero = \ w -> False
+newtype Pred a = Pred (a -> Bool)
+
+instance (Monoid a, Eq a) => Semiring (Pred a) where
+  zero = Pred (\ w -> False)
   one = single mempty
-  (f  <+>  g) w = f w || g w
-  (f  <.>  g) w = bigOrQ (u,v BR u <> v == w) f u && g v
+  Pred f  <+>  Pred g = Pred (\ w -> f w || g w)
+  Pred f  <.>  Pred g = Pred (\ w -> bigOrQ (u,v BR u <> v == w) f u && g v)
 
-instance (Monoid a, Eq a) => ClosedSemiring (a -> Bool)  -- default |closure|
+instance (Monoid a, Eq a) => ClosedSemiring (Pred a)  -- default |closure|
 
-instance Eq a => HasSingle (a -> Bool) a where
-  single w = \ w' -> w' == w
+instance Eq a => HasSingle (Pred a) a where
+  single w = Pred (\ w' -> w' == w)
 \end{code}
 \vspace{-4ex}
 }.
 When the monoid |a| is a list, we can also express the product operation in a more clearly computable form via list \emph{splittings}:
 \begin{code}
-  f <.> g  = \ w -> or [ f u && g v | (u,v) <- splits w ]
+  Pred f <.> Pred g  = Pred (\ w -> or [ f u && g v | (u,v) <- splits w ])
 \end{code}
 where |splits| inverts list concatenation:
 \begin{code}
@@ -291,21 +295,24 @@ instance ClosedSemiring Bool where
 %format bigSum (lim) = "\bigSumZ{" lim "}{0}"
 %format bigSumQ (lim) = "\bigSumZ{" lim "}{1.5}"
 \nc\bigSumZ[2]{\displaystyle\hspace{-#2ex}\sum_{\substack{#1}}\hspace{-#2ex}}
+%format <-- = "\leftarrow"
 
 \noindent
 Re-examining the instances in \figref{pred}, we can see uses of |False|, |(||||)|, and |(&&)|, as well as an equality test (for |single w|), which yields |False| or |True|.
-We can therefore easily generalize the codomain of ``predicates'' from booleans to \emph{any} semiring, as in \figrefdef{function}{Function-to-semiring as generalized language representation}{
+We can therefore easily generalize the codomain of ``predicates'' from booleans to \emph{any} semiring, as in \figrefdef{FunTo}{|b <-- a| as generalized language representation}{
 \begin{code}
-instance (Monoid a, Eq a, Semiring b) => Semiring (a -> b) where
-  zero = \ w -> zero
+newtype b <-- a = F (a -> b)
+
+instance (Semiring b, Monoid a, Eq a) => Semiring (b <-- a) where
+  zero = F (\ w -> zero)
   one = single mempty
-  (f  <+>  g) w = f w <+> g w
-  (f  <.>  g) w = bigSumQ (u,v BR u <> v == w) f u <.> g v
+  F f  <+>  F g = F (\ w -> f w <+> g w)
+  F f  <.>  F g = F (\ w -> bigSumQ (u,v BR u <> v == w) f u <.> g v)
 
-instance (Monoid a, Eq a) => ClosedSemiring (a -> b)
+instance (Monoid a, Eq a) => ClosedSemiring (b <-- a)
 
-instance Eq a => HasSingle (a -> b) a where
-  single w = \ w' -> boolVal (w' == w)
+instance Eq a => HasSingle (b <-- a) a where
+  single w = F (\ w' -> boolVal (w' == w))
 
 boolVal :: Semiring s => Bool -> s
 boolVal False  = zero
@@ -313,16 +320,37 @@ boolVal True   = one
 \end{code}
 \vspace{-4ex}
 }.
-\begin{theorem}[\provedIn{theorem:function}]\thmLabel{function}
-Given the instance definitions in \figref{function}, |a -> b| satisfies the laws of the instantiated classes whenever |a| is a monoid and |b| is a semiring.
+It will be useful to reverse the usual notation from ``|a -> b|'' to ``|b <-- a|''.
+\begin{theorem}[\provedIn{theorem:FunTo}]\thmLabel{FunTo}
+Given the instance definitions in \figref{FunTo}, |b <-- a| satisfies the laws of the instantiated classes whenever |a| is a monoid and |b| is a semiring.
 \end{theorem}
 
-When the monoid |a| is a list, we can again express the product operation from \figref{function} in a more clearly computable form:
+When the monoid |a| is a list, we can again express the product operation from \figref{FunTo} in a more clearly computable form:
 \begin{code}
-  f <.> g  = \ w -> sum [ f u <.> g v | (u,v) <- splits w ]
+  F f <.> F g  = F (\ w -> sum [ f u <.> g v | (u,v) <- splits w ])
 \end{code}
 
-Another representation of |a -> b| is |Map a b|, where |Map| is an efficient representation of finite maps, i.e., partial functions defined on a finite subset of its domain \needcite{}.
+One reason to introduce the new data type |b <-- a| is to allow us to define a simpler instance for functions in which operations are defined pointwise, as in \figrefdef{function}{|a -> b| as generalized language representation}{
+\begin{code}
+instance Semiring b => Semiring (a -> b) where
+  zero  = \ a -> zero
+  one   = \ a -> one
+  f  <+>  g  = \ a -> f a <+> g a
+  f  <.>  g  = \ a -> f a <.> g a
+
+instance StarSemiring b => StarSemiring (a -> b) where
+  closure f = \ a -> closure (f a)
+
+instance HasSingle b w => HasSingle (a -> b) w where
+  single w = \ a -> single w
+\end{code}
+\vspace{-4ex}
+}.
+\notefoot{Maybe a theorem here saying that these instances satisfy the necessary laws. Otherwise suggest that the reader verify. I'm unsure how to prove the closure property. Perhaps coinduction. See journal notes for 2019-01-16.}
+We will use the |a -> b| semiring in \secref{Convolution}.
+
+Another representation of functions from |a| to |b| is |Map a b|, where |Map| is an efficient representation of finite maps, i.e., partial functions defined on a finite subset of its domain \needcite{}.
+\notefoot{Probably swap |Map| arguments for the required |Functor| and |Applicative| instances.}
 Although we can think of |Map a b| as denoting partial functions from |a| to |b|, if we further require |b| to be semiring, we can treat missing entries as being implicitly zero, yielding a \emph{total} function:\notefoot{Describe finite maps and |findWithDefault|.}
 \begin{code}
 (!) :: (Ord c, Semiring s) => Map c s -> c -> s
@@ -342,7 +370,8 @@ instance Semiring s => HasSingle (Map a s) a where
   single a = singleton a one
 \end{code}
 \vspace{-4ex}
-}, |(!)| (as a function of one argument) is a homomorphism with respect to each instantiated class.\notefoot{Describe the |Map| operations used in \figref{Map}.}
+}, |(!)| (as a function of one argument) is a homomorphism with respect to each instantiated class.
+\notefoot{Describe the |Map| operations used in \figref{Map}.}
 \end{theorem}
 The finiteness of finite maps interferes with giving a useful |ClosedSemiring| instance.
 
@@ -532,7 +561,7 @@ instance Ord c => HasSingle (Trie c s) [c] where
 
 \sectionl{Convolution}
 
-Consider again the definition of semiring ``multiplication'' on functions from \figref{function}:
+Consider again the definition of semiring ``multiplication'' on functions from \figref{FunTo}:
 \begin{equation}\eqnlabel{convolution}
 (f * g)\,w = \bigSumZ{u,v \\ u \mappend v = w}1 f\,u * g\,v
 \end{equation}
@@ -658,7 +687,6 @@ There are, however, two problems with this story:
 \item Even if such |Functor| and |Applicative| instances were accepted, they would conflict with existing instances, which are defined pointwise: |fmap h f = \ x -> h (f x)|, |pure b = \ x -> b|, and |liftA2 h f g = \ x -> h (f x) (g x)|.
 \end{itemize}
 There is an easy solution to both of these problems: define a new type constructor of functions but with the domain and codomain type arguments swapped:
-%format <-- = "\leftarrow"
 \begin{code}
 newtype b <-- a = F (a -> b)
 
@@ -669,7 +697,7 @@ instance Semiring s => Applicative ((<--) s) where
   pure b = F (\ w -> boolVal (w == b))
   liftA2 h (F f) (F g) = F (\ w -> bigSumQ (u,v BR h u v == w) f u <.> g v)
 \end{code}
-Just as with our semiring instances for functions in \figref{function}, these definitions are not really executable code, since they involve summations are over potentially infinite ranges.
+Just as with our semiring instances for functions in \figref{FunTo}, these definitions are not really executable code, since they involve summations are over potentially infinite ranges.
 
 %format <-- = "\leftarrow"
 \mynote{I should really fix the |Semiring| instances as well, since there's another |Semiring| instance that corresponds to the usual |Functor| and |Applicative| instances for functions, with |(*) = liftA2 (*)|. Delightfully, the Fourier transform is then a semiring homomorphism! Idea: rename |Fun b a| to ``|b <-- a|''.}
@@ -714,7 +742,7 @@ Just as with our semiring instances for functions in \figref{function}, these de
 
 \subsection{\thmRef{pred}}\proofLabel{theorem:pred}
 
-\subsection{\thmRef{function}}\proofLabel{theorem:function}
+\subsection{\thmRef{FunTo}}\proofLabel{theorem:FunTo}
 
 \subsection{\thmRef{Map}}\proofLabel{theorem:Map}
 

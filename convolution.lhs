@@ -245,8 +245,8 @@ We can require that |predSet| (and thus |setPred|) is semiring homomorphism and 
 instance (Monoid a, Eq a) => Semiring (a -> Bool) where
   zero = \ w -> False
   one = single mempty
-  f  <+>  g = \ w -> f w || g w
-  f  <.>  g = \ w -> bigOrQ (u,v BR u <> v == w) f u && g v
+  (f  <+>  g) w = f w || g w
+  (f  <.>  g) w = bigOrQ (u,v BR u <> v == w) f u && g v
 
 instance (Monoid a, Eq a) => ClosedSemiring (a -> Bool)  -- default |closure|
 
@@ -288,7 +288,7 @@ instance ClosedSemiring Bool where
 
 %format bigSum (lim) = "\bigSumZ{" lim "}{0}"
 %format bigSumQ (lim) = "\bigSumZ{" lim "}{1.5}"
-\nc\bigSumZ[2]{\hspace{-#2ex}\sum\limits_{\substack{#1}}\hspace{-#2ex}}
+\nc\bigSumZ[2]{\displaystyle\hspace{-#2ex}\sum_{\substack{#1}}\hspace{-#2ex}}
 
 \noindent
 Re-examining the instances in \figref{pred}, we can see uses of |False|, |(||||)|, and |(&&)|, as well as an equality test (for |single w|), which yields |False| or |True|.
@@ -297,8 +297,8 @@ We can therefore easily generalize the codomain of ``predicates'' from booleans 
 instance (Monoid a, Eq a, Semiring b) => Semiring (a -> b) where
   zero = \ w -> zero
   one = single mempty
-  f  <+>  g = \ w -> f w <+> g w
-  f  <.>  g = \ w -> bigSumQ (u,v BR u <> v == w) f u <.> g v
+  (f  <+>  g) w = f w <+> g w
+  (f  <.>  g) w = bigSumQ (u,v BR u <> v == w) f u <.> g v
 
 instance (Monoid a, Eq a) => ClosedSemiring (a -> b)
 
@@ -513,20 +513,42 @@ instance Ord c => Semiring (Trie c s) where
   (a :< ps) <.> q = a `scaleT` q <+> (zero :< fmap (<.> NOP q) ps)
 
 instance Ord c => StarSemiring (Trie c s) where
-  closure (_ :< ds) = q where q = one :< fmap (<.> NOP q) ds
+  closure (a :< dp) = q where q = closure a .> (one <: (<.> NOP q) .  dp)
 
 instance Ord c => HasSingle (Trie c s) [c] where
   single w = product [zero :< singleton c one | c <- w]
 \end{code}
 \vspace{-4ex}
-}, |trieFun| is a homomorphism with respect to each instantiated class.
+}, |trieFun| is a homomorphism with respect to each instantiated class.\notefoot{Consider making |scaleT| be a method of a new class. Derive instances homomorphically. Maybe a semimodule will be additive plus scalable.}
 \end{theorem}
 
 \workingHere
 
 \sectionl{Regular Expressions}
 
+\mynote{A sort of ``free'' variant of functions. Easy to derive homomorphically.}
+
 \sectionl{Convolution}
+
+Consider again the definition of semiring ``multiplication'' on functions from \figref{function}:
+\begin{equation}
+(f * g)\,w = \bigSumZ{u,v \\ u \mappend v = w}1 f\,u * g\,v
+\end{equation}
+
+>  (f <.> g) w = bigSumQ (u,v BR u <> v == w) f u <.> g v
+
+This definition resembles discrete convolution \needcite:
+
+>  (f <.> g) w = bigSum u f u <.> g (w - u)
+
+%format R = "\mathbb R"
+%format C = "\mathbb C"
+For multi-dimensional convolution, use tuples of scalar indices for |w| and |u|, and define subtraction on tuples to be component-wise.
+For continuous convolution, use indices from from a continuous type such as |R| or |C|, and reinterpret summation as integration.
+
+The resemblance between function semiring multiplication and convolution is more than superficial.
+Just as the former generalizes language concatenation, it also generalizes convolution in the usual sense.
+Consider that numbers form a monoid with |u <> v = u + v|, and that |u + v == w <=> v = w - u|.
 
 \mynote{Show that |(*)| corresponds to generalized convolution.}
 

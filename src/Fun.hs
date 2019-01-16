@@ -33,13 +33,21 @@ instance (Semiring s, Eq b) => HasSingle (s <-- b) b where
   single x = F (boolVal . (== x))
 
 instance Semiring s => Decomposable (s <-- [c]) ((->) c) s where
-  b <: h = F (\ case []   -> b
-                     c:cs -> unF (h c) cs)
+  b <: h = F (b <: unF . h)
+
+  -- b <: h = F f where  f []      = b
+  --                     f (c:cs)  = unF (h c) cs
+
+  -- b <: h = F f
+  --   where
+  --     f []   = b
+  --     f (c:cs) = unF (h c) cs
+
+  -- b <: h = F (\ case []   -> b
+  --                    c:cs -> unF (h c) cs)
+
   atEps (F f) = f mempty
   deriv (F f) = \ c -> F (\ cs -> f (c:cs))
-
-instance Indexable (b <-- a) a b where
-  F f ! a = f a
 
 {--------------------------------------------------------------------
     Classic list-of-successes
@@ -83,6 +91,7 @@ instance Eq s => HasSingle (Resid s) [s] where
   single x = Resid (maybeToList . stripPrefix x)
 
 instance Decomposable (Resid s) s Bool where
+  (<:) = ??
   atEps (Resid f) = any null (f [])
   deriv c (Resid f) = Resid (f . (c :)) -- TODO: check
 
@@ -119,8 +128,11 @@ instance Semiring s => Semiring (RegExp c s) where
 instance Semiring s => StarSemiring (RegExp c s) where
   closure = Closure
 
-instance (Functor f, Foldable f, Semiring s) => HasSingle (RegExp c s) (f c) where
-  single = product . fmap Char
+-- instance (Functor f, Foldable f, Semiring s) => HasSingle (RegExp c s) (f c) where
+--   single = product . fmap Char
+
+instance Semiring s => HasSingle (RegExp c s) [c] where
+  single = product . map Char
 
 instance (Eq c, StarSemiring s) => Decomposable (RegExp c s) ((->) c) s where
   -- (<:) ...
@@ -244,7 +256,7 @@ instance (DetectableZero s, Eq c) => HasSingle (Decomp c s) [c] where
 instance DetectableZero s => Decomposable (Decomp c s) ((->) c) s where
   (<:) = (:<:)
   atEps (a :<: _) = a
-  deriv (_ :<: ds) c = ds c
+  deriv (_ :<: d) = d
 
 {--------------------------------------------------------------------
     List trie with finite maps
@@ -345,7 +357,7 @@ instance OD c s => HasSingle (Trie c s) [c] where
   --  where
   --    symbol c = zero :< M.singleton c one
 
-instance OD c s => Decomposable (Trie c s) (M.Map c) s where
+instance OD c s => Decomposable (Trie c s) (Map c) s where
   (<:) = (:<)
   atEps (a :< _) = a
   deriv (_ :< d) = d

@@ -204,11 +204,11 @@ instance StarSemiring (RegExp c) where
 
 #endif
 
-#if 0
+#if 1
 
 instance OkSym c => HasSingle (RegExp c) [c] where
   -- single = foldr (\ c e -> Char c <.> e) One
-  single = product . fmap Char
+  single = product . map Char
 
 #else
 -- Or from an arbitrary foldable

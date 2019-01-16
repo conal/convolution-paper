@@ -24,7 +24,7 @@ class Semiring a => StarSemiring a where
   closure :: a -> a
   closure p = q where q = one <+> p <.> q
 
-class HasSingle a w where
+class HasSingle a w | a -> w where
   single :: w -> a
 
 {--------------------------------------------------------------------
@@ -102,18 +102,19 @@ instance Monoid a => Semiring [a] where
 
 instance Monoid a => StarSemiring [a] -- default
 
-instance (Monoid a, Ord a) => Semiring (S.Set a) where
+instance (Monoid a, Ord a) => Semiring (Set a) where
   zero = S.empty
   one = S.singleton mempty
   p <+> q = p `S.union` q
   p <.> q = S.fromList
              [u <> v | u <- S.toList p, v <- S.toList q]
 
--- instance (Monoid a, Ord a) => StarSemiring (S.Set a) -- default
+-- instance (Monoid a, Ord a) => StarSemiring (Set a) -- default
 
-instance (Monoid a, Ord a, Semiring b) => Semiring (M.Map a b) where
+instance (Monoid a, Ord a, Semiring b) => Semiring (Map a b) where
   zero = M.empty
-  one = M.singleton mempty one
+  one = single mempty
+  -- one = M.singleton mempty one
   p <+> q = M.unionWith (<+>) p q
   p <.> q = M.fromListWith (<+>)
               [(u <> v, s <.> t) | (u,s) <- M.toList p, (v,t) <- M.toList q]
@@ -134,7 +135,7 @@ instance Indexable ((->) k) k where
   -- (!) = id
   f ! k = f k
 
-instance Ord k => Indexable (M.Map k) k where
+instance Ord k => Indexable (Map k) k where
   m ! c = M.findWithDefault zero c m
 
 type SR a = Semiring a
@@ -175,17 +176,17 @@ instance HasSingle [a] a where single a = [a]
 --   deriv p c = [cs | c' : cs <- p, c' == c]
 
 
-instance HasSingle (S.Set a) a where single = S.singleton
+instance HasSingle (Set a) a where single = S.singleton
 
-instance Ord c => Decomposable (S.Set [c]) (M.Map c) Bool where
+instance Ord c => Decomposable (Set [c]) (Map c) Bool where
   e <: d = boolVal e <+> S.unions [ S.map (c:) css | (c,css) <- M.toList d ]
   atEps p = [] `S.member` p
   deriv p = M.fromListWith (<+>) [(c, S.singleton cs) | c:cs <- S.toList p]
 
-instance SR s => HasSingle (M.Map a s) a where
+instance SR s => HasSingle (Map a s) a where
   single a = M.singleton a one
 
-instance (Ord c, SR s) => Decomposable (M.Map [c] s) (M.Map c) s where
+instance (Ord c, SR s) => Decomposable (Map [c] s) (Map c) s where
   b <: d = M.insert [] b (M.unionsWith (<+>)
                            [ M.mapKeys (c:) css | (c,css) <- M.toList d ])
   atEps p = M.findWithDefault zero [] p

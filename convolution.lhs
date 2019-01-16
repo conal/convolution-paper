@@ -157,8 +157,8 @@ class Semiring a => ClosedSemiring a where
   closure :: a -> a
   closure p = q where q = one <+> p <.> q  -- default
 
-class HasSingle a x where
-  single :: x -> a
+class HasSingle a w | a -> w where
+  single :: w -> a
 \end{code}
 \vspace{-4ex}
 } shows Haskell classes for representations of languages (and later generalizations), combining the star semiring vocabulary with an operation for singletons.
@@ -361,7 +361,7 @@ Given the definitions in \figrefdef{Map}{Maps as a language representation}{
 \begin{code}
 instance (Monoid a, Ord a, Semiring b) => Semiring (Map a b) where
   zero  = empty
-  one   = singleton mempty one
+  one   = single one
   p  <+>  q  =  unionWith (<+>) p q
   p  <.>  q  =  fromListWith (<+>)
                   [(u <> v, s <.> t) | (u,s) <- toList p, (v,t) <- toList q]
@@ -461,18 +461,29 @@ class Indexable f k | f -> k where
 instance Indexable ((->) k) k where
   f ! k = f k
 
-instance Ord k => Indexable (M.Map k) k where
-  m ! c = M.findWithDefault zero c m
+instance Ord k => Indexable (Map k) k where
+  m ! c = findWithDefault zero c m
 \end{code}
 
 \noindent
-Now adapt the |[c] -> b| instances of |Indexable| and |Decomposable| to |b <-- [c]|:
+Now adapt the |[c] -> b| instance of |Decomposable| to |b <-- [c]|:
+\begin{code}
+instance Semiring s => Decomposable (s <-- [c]) ((->) c) s where
+  b <: h = F (b <: unF . h)
+  atEps  (F f) = f mempty
+  deriv  (F f) = \ c -> F (\ cs -> f (c:cs))
+\end{code}
+
+%% \begin{code}
+%%   b <: h = F (\ NOP case  []    -> b
+%%                           c:cs  -> unF (h c) cs)
+%% \end{code}
 
 \begin{lemma}[\provedIn{lemma:atEps}]\lemLabel{atEps}
-The |atEps| function is a star semiring homomorphism, i.e.,
+On |b <-- a|, the |atEps| function is a star semiring homomorphism, i.e.,
 \begin{code}
-atEps zero         == zero 
-atEps one          == one 
+atEps zero         == zero
+atEps one          == one
 atEps (p  <+>  q)  == atEps p  <+>  atEps q 
 atEps (p  <.>  q)  == atEps p  <.>  atEps q 
 
@@ -482,7 +493,8 @@ Moreover, |atEps (single [d]) == zero|.
 
 \end{lemma}
 \begin{lemma}[\provedIn{lemma:deriv}, generalizing Lemma 3.1 of \citet{Brzozowski64}]\lemLabel{deriv}
-Differentiation has the following properties:%
+Differentiation on |b <-- a|, has the following properties:
+\notefoot{If I replace application to |c| by indexing by |c| (i.e., |(! NOP c)|), will this lemma hold for all of the representations? I suspect so. Idea: Define $\derivOp_c\,p = \derivOp\,p\:!\:c$.}
 %format .> = "\cdot"
 \begin{code}
 deriv zero  c == zero
@@ -563,6 +575,11 @@ Given the definitions in \figrefdef{Trie}{Tries as a language representation}{
 \begin{code}
 data Trie c s = s :< Map c (Trie c s)
 
+instance OD c s => Decomposable (Trie c s) (Map c) s where
+  a <: d = a :< d
+  atEps  (a  :<  d) = a
+  deriv  (a  :<  d) = d
+
 scaleT :: (Ord c, Semiring s) => s -> Trie c s -> Trie c s
 s `scaleT` (e :< ts) = (s <.> e) :< fmap (s NOP `scaleT`) ts
 
@@ -579,7 +596,10 @@ instance Ord c => HasSingle (Trie c s) [c] where
   single w = product [zero :< singleton c one | c <- w]
 \end{code}
 \vspace{-4ex}
-}, |trieFun| is a homomorphism with respect to each instantiated class.\notefoot{Consider making |scaleT| be a method of a new class. Derive instances homomorphically. Maybe a semimodule will be additive plus scalable.}
+}, |trieFun| is a homomorphism with respect to each instantiated class.
+\notefoot{Consider making |scaleT| be a method of a new class. Derive instances homomorphically. Maybe a semimodule will be additive plus scalable.}
+\notefoot{I think we could exploit a |Semiring b => Semiring (Map c b)| instance and so replace |unionWith (<+>)| by |(<+>)| here. Maybe also something for |single w|.}
+
 \end{theorem}
 
 \workingHere

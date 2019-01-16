@@ -671,8 +671,8 @@ instance Semiring s => Applicative ((<--) s) where
 \end{code}
 Just as with our semiring instances for functions in \figref{function}, these definitions are not really executable code, since they involve summations are over potentially infinite ranges.
 
-%format :<- = "\leftarrow"
-\mynote{I should really fix the |Semiring| instances as well, since there's another |Semiring| instance that corresponds to the usual |Functor| and |Applicative| instances for functions, with |(*) = liftA2 (*)|. Delightfully, the Fourier transform is then a semiring homomorphism! Idea: rename |Fun b a| to ``|b :<- a|''.}
+%format <-- = "\leftarrow"
+\mynote{I should really fix the |Semiring| instances as well, since there's another |Semiring| instance that corresponds to the usual |Functor| and |Applicative| instances for functions, with |(*) = liftA2 (*)|. Delightfully, the Fourier transform is then a semiring homomorphism! Idea: rename |Fun b a| to ``|b <-- a|''.}
 
 \workingHere
 

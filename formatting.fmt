@@ -37,7 +37,7 @@
 %% %format @ = "{\ @}"
 %% %format @@ = "@"
 
-%format <=> = "\Leftrightarrow"
+%format <=> = "\Longleftrightarrow"
 
 %format ldq = "\dq\!\!"
 %format rdq = "\!\!\dq"

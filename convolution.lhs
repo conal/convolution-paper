@@ -448,12 +448,12 @@ class Semiring a => Decomposable a h s | a -> h s where
   deriv :: a -> h a
 
 instance Semiring b => Decomposable ([c] -> b) ((->) c) b where
-  (b <: _) []     = b
-  (_ <: h) (c:cs) = h c cs
-  atEps f  = f []
-  deriv f  = \ c cs -> f (c : cs)
+  (b <: _) []      = b
+  (_ <: h) (c:cs)  = h c cs
+  atEps  f = f []
+  deriv  f = \ c cs -> f (c : cs)
 \end{code}
-We'll need a way to ``index'' in |h|:
+We'll need a way to index into |h|:
 \begin{code}
 class Indexable f k | f -> k where
   (!) :: Semiring s => f s -> k -> s

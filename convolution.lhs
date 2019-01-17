@@ -455,14 +455,14 @@ instance Semiring b => Decomposable ([c] -> b) ((->) c) b where
 \end{code}
 We'll need a way to index into |h|:
 \begin{code}
-class Indexable f k | f -> k where
-  (!) :: Semiring s => f s -> k -> s
+class Indexable p k v | p -> k v where
+  (!) :: p -> k -> v
 
-instance Indexable ((->) k) k where
+instance Indexable (k -> v) k v where
   f ! k = f k
 
-instance Ord k => Indexable (Map k) k where
-  m ! c = findWithDefault zero c m
+instance (Ord k, Semiring v) => Indexable (Map k v) k v where
+  m ! c = M.findWithDefault zero c m
 \end{code}
 
 \noindent

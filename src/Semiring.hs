@@ -128,14 +128,13 @@ boolVal :: Semiring s => Bool -> s
 boolVal False = zero
 boolVal True  = one
 
-class Indexable f k | f -> k where
-  (!) :: Semiring s => f s -> k -> s
+class Indexable p k v | p -> k v where
+  (!) :: p -> k -> v
 
-instance Indexable ((->) k) k where
-  -- (!) = id
+instance Indexable (k -> v) k v where
   f ! k = f k
 
-instance Ord k => Indexable (Map k) k where
+instance (Ord k, Semiring v) => Indexable (Map k v) k v where
   m ! c = M.findWithDefault zero c m
 
 type SR a = Semiring a
@@ -150,10 +149,10 @@ class SR a => Decomposable a h s | a -> h s where
 -- TODO: Do I really want h to depend on a? Could we have more than one h per a?
 
 -- | Derivative of a language w.r.t a string
-derivs :: (Decomposable a h s, Indexable h c) => a -> [c] -> a
+derivs :: (Decomposable a h s, Indexable (h a) c a) => a -> [c] -> a
 derivs = foldl ((!) . deriv)
 
-accept :: (Decomposable a h s, Indexable h c) => a -> [c] -> s
+accept :: (Decomposable a h s, Indexable (h a) c a) => a -> [c] -> s
 accept p s = atEps (derivs p s)
 
 -- type Language a c s = (StarSemiring a, HasSingle a [c], Decomposable a c s)

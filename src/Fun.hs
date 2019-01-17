@@ -134,8 +134,47 @@ instance Semiring s => StarSemiring (RegExp c s) where
 instance Semiring s => HasSingle (RegExp c s) [c] where
   single = product . map Char
 
+scaleRE :: DetectableZero s => s -> RegExp c s -> RegExp c s
+scaleRE s e | isZero s  = zero
+            | otherwise = Value s <.> e
+
+#if 0
+
+instance (Ord c, StarSemiring s, DetectableZero s) => Decomposable (RegExp c s) (Map c) s where
+  e <: d = Value e <+> sum [ single [c] <.> dc | (c,dc) <- M.toList d ]
+  atEps (Char _)    = zero
+  atEps (Value s)   = s
+  atEps (p :<+> q)  = atEps p <+> atEps q
+  atEps (p :<.> q)  = atEps p <.> atEps q
+  atEps (Closure p) = closure (atEps p)
+  
+  deriv (Char c')  = single c'
+  deriv (Value _)  = M.empty
+  deriv (p :<+> q) = M.unionWith (<+>) (deriv p) (deriv q)
+
+  deriv (p :<.> q) =
+    M.unionWith (<+>) (fmap (<.> q) (deriv p)) (fmap (scaleRE (atEps p)) (deriv q))
+
+  -- deriv (p :<.> q) c  = -- deriv p c <.> q <+> Value (atEps p) <.> deriv q c
+  --                       atEps p `scaleRE` deriv q c <+> deriv p c <.> q
+
+  -- deriv (p :<.> q) c  = -- deriv p c <.> q <+> Value (atEps p) <.> deriv q c
+  --                       Value (atEps p) <.> deriv q c <+> deriv p c <.> q
+
+  -- deriv (Closure p) =
+  --   fmap (\ d -> Value (closure (atEps p)) <.> d <.> Closure p) (deriv p)
+
+  -- Testing hangs on a^nb^n.
+
+  deriv (Closure p) = fmap (\ d -> pc <.> d <.> Closure p) (deriv p)
+   where
+     pc = Value (closure (atEps p))
+
+#else
+
 instance (Eq c, StarSemiring s) => Decomposable (RegExp c s) ((->) c) s where
-  -- (<:) ...
+  e <: d = Value e <+> sum [ single [c] <.> d c | c <- allVals ]
+
   atEps (Char _)    = zero
   atEps (Value s)   = s
   atEps (p :<+> q)  = atEps p <+> atEps q
@@ -156,6 +195,8 @@ instance (Eq c, StarSemiring s) => Decomposable (RegExp c s) ((->) c) s where
                         -- comes second in deriv (p :<.> q) c
                         -- deriv (p <.> Closure p) c -- since deriv c one = zero
                         -- deriv c (one <+> p <.> Closure p)
+
+#endif
 
 -- TODO: fix deriv c (Closure p) to compute deriv p c and deriv c (Closure p)
 -- just once. Do a bit of inlining and simplification.
@@ -320,14 +361,11 @@ instance OD c s => Semiring (Trie c s) where
      vs = fmap (scaleT a) dq
 #elif 1
   -- Works even for recursive anbn examples.
-  (a :< dp) <.> q = a `scaleT` q <+> (zero :< fmap (<.> q) dp)
-#elif 1
-  -- Works even for recursive anbn examples.
   ~(a :< ps) <.> q = a `scaleT` q <+> (zero :< fmap (<.> q) ps)
 #else
   -- Works even for recursive anbn examples.
   (a :< dp) <.> ~q@(b :< dq)
-    | isZero a = zero :< fmap (<.> q) dp
+    | isZero a  = zero :< fmap (<.> q) dp
     | otherwise = a <.> b :< M.unionWith (<+>) (fmap (<.> q) dp) (fmap (scaleT a) dq)
 #endif
 

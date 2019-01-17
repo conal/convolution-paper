@@ -193,3 +193,10 @@ instance (Ord c, SR s) => Decomposable (Map [c] s) (Map c) s where
             -- M.findWithDefault zero [] p
   deriv p = M.fromListWith (<+>)
               [(c, M.singleton cs s) | (c:cs,s) <- M.toList p]
+
+{--------------------------------------------------------------------
+    Temporary hack
+--------------------------------------------------------------------}
+
+allVals :: [c]
+allVals = error "allVals not defined"

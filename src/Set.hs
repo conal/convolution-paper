@@ -73,9 +73,6 @@ predSet (Pred f) = set (a | f a)
 
 #endif
 
-allVals :: [c]
-allVals = error "allVals not defined"
-
 instance Semiring (Pred [c]) where
   zero = Pred (const False)
   one = Pred null

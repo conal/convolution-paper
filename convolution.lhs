@@ -610,7 +610,10 @@ instance Ord c => HasSingle (Trie c s) [c] where
 
 \sectionl{Convolution}
 
-Consider again the definition of semiring ``multiplication'' on functions from \figref{FunTo}:
+%format bar (x) = "\bar{"x"}"
+%format blam = "\bar{\lambda}"
+
+Consider again the definition of semiring ``multiplication'' on functions |f,g :: b <-- a| from \figref{FunTo}, for now eliding the |F| constructors:\notefoot{To do: try \emph{with} all of the required |F| constructors. Try also with lighter-weight notation for |F|. For instance, replace ``|F f|'' by ``|bar f|'' and ``|\ w -> cdots|'' by ``|blam w -> cdots|''.}
 \begin{equation}\eqnlabel{convolution}
 (f * g)\,w = \bigSumZ{u,v \\ u \mappend v = w}1 f\,u * g\,v
 \end{equation}
@@ -631,7 +634,8 @@ By specializing the \emph{domain} of the functions to sequences (from general mo
 
 Let's now consider specializing the functions' domains to \emph{integers} instead of sequences, recalling that integers (and numeric types in general) form a monoid under addition.
 Thus,
-\begin{spacing}{1.5}
+\vspace{-2ex}
+\begin{spacing}{2}
 \begin{code}
 (f <.> g) w  = bigSumQ (u,v BR u <> v == w) f u <.> g v
              = bigSumQ (u,v BR u + v == w) f u <.> g v
@@ -639,9 +643,10 @@ Thus,
              = bigSum u f u <.> g (w - u)
 \end{code}
 \end{spacing}
+\vspace{-3ex}
 \noindent
 which is exactly the standard definition of discrete \emph{convolution} \needcite{}\footnote{Note that this reasoning applies to \emph{any} group (monoid with inverses)}.
-Therefore, just as \eqnref{convolution} generalizes language concatenation, it also generalizes the usual notion of discrete convolution.
+Therefore, just as \eqnref{convolution} generalizes language concatenation (via the predicate/set isomorphism), it also generalizes the usual notion of discrete convolution.
 Moreover, if the domain is a continuous type such as |R| or |C|, we can reinterpret summation as integration, resulting in \emph{continuous} convolution \needcite{}.
 Additionally, for multi-dimensional (discrete or continuous) convolution, we can simply use tuples of scalar indices for |w| and |u|, and define subtraction on tuples to be component-wise.\notefoot{More generally, cartesian products of monoids are also monoids.
 Consider multi-dimensional convolution in which different dimensions have different types, even mixing discrete and continuous, and maybe even sequences and numbers.
@@ -649,18 +654,17 @@ At the least, it's useful to combine finite dimensions of different sizes.}
 
 \mynote{Maybe give some convolution examples.}
 
-%format ... = "\ldots"
-%format cdots = "\cdots"
 %format Fin (m) = Fin "_{" m "}"
 %format Array (m) = Array "_{" m "}"
 
-Some uses of convolution involve functions having finite support, i.e., non-zero on only a finite subset of their domains.\notefoot{First suggest finite maps, using instances from \figref{Map}. Then intervals/arrays.}
+Some uses of convolution (including convolutional neural networks \needcite{}) involve functions having finite support, i.e., non-zero on only a finite subset of their domains.\notefoot{First suggest finite maps, using instances from \figref{Map}. Then intervals/arrays.}
 More specifically, these domain subsets may be defined by finite \emph{intervals}.
-For instance, such a 2D operation would be given by intervals in each dimension, together specifying lower left and upper right corners of 2D interval (rectangle), e.g., as with convolutional neural networks (CNNs) \needcite{}.
-The two input intervals needn't have the same size, and the result occupies a larger interval than both inputs, with sizes equaling the sum of the sizes in each dimension (minus one for the discrete case).
+For instance, such a 2D operation would be given by intervals in each dimension, together specifying lower left and upper right corners of a 2D interval (rectangle) out of which the functions are guaranteed to be zero.
+The two input intervals needn't have the same size, and the result occupies (is supported by) a larger interval than both inputs, with sizes equaling the sum of the sizes in each dimension (minus one for the discrete case).
 \notefoot{Show an example as a picture.}
 Since the result's size is entirely predictable and based only on the arguments' sizes, it is appealing to track sizes statically via types.
 For instance, a 1D convolution might have the following type:
+\notefoot{To do: More clearly distinguish between functions with finite support vs functions with finite domains. I think I started this paragraph with the former mindset but switched to the latter.}
 \begin{code}
 (*) :: Semiring s => Array (m+1) s -> Array (n+1) s -> Array (m+n+1) s
 \end{code}
@@ -685,11 +689,12 @@ where now
 \begin{code}
 (+) :: Fin (m+1) -> Fin (n+1) -> Fin (m+n+1)
 \end{code}
+(As in \secref{Convolution}, we're continuing to elide the |F| constructors for |b <-- a| of \figref{FunTo}.)
 Fortunately, this monoid expectation can be transcended by generalizing from monoidal combination to an \emph{arbitrary} binary operation |h :: a -> b -> c|.
 For now, let's call this more general operation ``|lift2 h|''.
-Operating on functions,
+\notefoot{Say something about the mixture of ``|->|'' and ``|<--|''.}
 \begin{code}
-lift2 :: Semiring s => (a -> b -> c) -> (a -> s) -> (b -> s) -> (c -> s)
+lift2 :: Semiring s => (a -> b -> c) -> (s <-- a) -> (s <-- b) -> (s <-- c)
 lift2 h f g = \ w -> bigSumQ (u,v BR h u v == w) f u <.> g v
 \end{code}
 We can similarly lift functions of \emph{any} arity:
@@ -701,16 +706,16 @@ We can similarly lift functions of \emph{any} arity:
 %format un = u "_n"
 %format bigSumZ (lim) = "\bigSumZ{" lim "}{3}"
 \begin{code}
-liftn :: Semiring s => (a1 -> ... -> an -> b) -> (a1 -> s) -> ... -> (an -> s) -> (b -> s)
+liftn :: Semiring s => (a1 -> ... -> an -> b) -> (s <-- a1) -> ... -> (s <-- an) -> (s <-- b)
 liftn h f1 ... fn = \ w -> bigSumZ (u1, ..., un BR h u1 cdots un == w) f1 u1 <.> cdots <.> fn un
 \end{code}
 Here we are summing over the set-valued \emph{preimage} of |w| under |h|.
 Now consider two specific cases of |liftn|:
 \begin{code}
-lift1 :: Semiring s => (a -> b) -> (a -> s) -> (b -> s)
+lift1 :: Semiring s => (a -> b) -> (s <-- a) -> (s <-- b)
 lift1 h f = \ w -> bigSumQ (u BR h u == w) f u
 
-lift0 :: Semiring s => b -> (b -> s)
+lift0 :: Semiring s => b -> (s <-- b)
 lift0 b  = \ w -> bigSum (b == w) 1
          = \ w -> if b == w then one else zero
          = \ w -> boolVal (w == b)
@@ -729,7 +734,13 @@ class Applicative f where
 Higher-arity liftings can be defined via these three.
 (Exercise.)
 
-For the convolution-style liftings (|lift2|, |lift1|, and |lift0|) defined above, |f t = t -> s| (for a semiring |s|).
+For the convolution-style liftings (|lift2|, |lift1|, and |lift0|) defined above, |f t = s <-- t| (for a semiring |s|), i.e., |f = (<--) s|.
+The use of |s <-- t| rather than |t -> s| is what allows us to give these instances within's Haskell's type system (and ability to infer types via first-order unification).
+
+
+\workingHere
+
+
 There are, however, two problems with this story:
 \begin{itemize}
 \item Although Haskell supports higher-kinded types \needcite{}, Haskell compilers perform type inference via first-order unification and so will not infer the needed type function |f = Lambda t DOT t -> s| (where ``|Lambda|'' is a hypothetical type-level lambda).

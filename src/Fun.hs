@@ -11,8 +11,9 @@ import Control.Applicative (liftA2)
 import Text.Show.Functions ()  -- for Decomp
 import Data.Map
   ( Map,toList,fromListWith,empty,singleton,insert,unionWith
-  , unionsWith,mapKeys,findWithDefault )
+  , unionsWith,mapKeys,findWithDefault,keysSet )
 -- import qualified Data.Map as M
+import qualified Data.Set as S
 
 import Misc
 import Semiring
@@ -351,7 +352,32 @@ instance DetectableZero s => Decomposable (Decomp c s) ((->) c) s where
 --------------------------------------------------------------------}
 
 infix 1 :<
-data Trie c s = s :< Map c (Trie c s) deriving Show
+data Trie c b = b :< Map c (Trie c b) deriving Show
+
+#if 0
+
+instance FunctorC (Trie c) where
+  fmapC h (s :< ts) = h s :< (fmapC.fmapC) h ts
+
+instance ApplicativeC (Trie c) where
+  pureC a = a :< empty
+  liftA2C h (a :< us) (b :< vs) = h a b :< (liftA2C.liftA2C) h us vs
+
+-- Hm. I need Applicative (Map c). Define in Semiring.
+
+-- Maybe we don't want these instances. Return to this question.
+
+instance FunctorC (Map k)
+
+instance ApplicativeC (Map k) where
+  pureC v = singleton one v  -- ??
+  liftA2C h u v =
+    fromListWith (<+>)
+      [h (u!k) (v!k) | k <- S.toList (keysSet u `S.union` keysSet v)]
+
+-- TODO: use these instances!
+
+#endif
 
 type OD c s = (Ord c, DetectableZero s)
 

@@ -67,11 +67,9 @@ instance Semiring b => ApplicativeC ((<--) b) where
 
 -- TODO: Infix notation for Map'
 
-newtype Map' b a = M (Map a b)
+newtype b :<-- a = M (Map a b)
 
--- newtype Map' b a = M { unM :: Map a b }
-
-instance (Monoid a, Ord a, Semiring b) => Semiring (Map' b a) where
+instance (Monoid a, Ord a, Semiring b) => Semiring (b :<-- a) where
   zero = M empty
   one = single mempty
   -- one = M (singleton mempty one)
@@ -79,21 +77,21 @@ instance (Monoid a, Ord a, Semiring b) => Semiring (Map' b a) where
   M p <.> M q = M (fromListWith (<+>)
                      [(u <> v, s <.> t) | (u,s) <- toList p, (v,t) <- toList q])
 
-instance Semiring b => HasSingle (Map' b a) a where
+instance Semiring b => HasSingle (b :<-- a) a where
   single a = M (singleton a one)
 
-instance (Ord c, Semiring s) => Decomposable (Map' s [c]) (Map c) s where
+instance (Ord c, Semiring s) => Decomposable (s :<-- [c]) (Map c) s where
   b <: d = M (insert [] b (unionsWith (<+>)
                             [ mapKeys (c:) css | (c,M css) <- toList d ]))
   atEps (M p) = p ! []
               -- findWithDefault zero [] p
   deriv (M p) = fromListWith (<+>) [(c, M (singleton cs s)) | (c:cs,s) <- toList p]
 
-instance Semiring b => FunctorC (Map' b) where
-  type Ok (Map' b) a = Ord a
+instance Semiring b => FunctorC ((:<--) b) where
+  type Ok ((:<--) b) a = Ord a
   fmapC h (M p) = M (fromListWith (<+>) [(h a, b) | (a,b) <- toList p])
 
-instance Semiring b => ApplicativeC (Map' b) where
+instance Semiring b => ApplicativeC ((:<--) b) where
   pureC b = M (singleton b one)
   liftA2C h (M p) (M q) =
     M (fromListWith (<+>) [(h a b, s <.> t) | (a,s) <- toList p, (b,t) <- toList q])

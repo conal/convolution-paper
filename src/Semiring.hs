@@ -10,8 +10,9 @@
 module Semiring where
 
 import Data.Set (Set)
-import Data.Map (Map)
 import qualified Data.Set as S
+
+import Data.Map (Map)
 import qualified Data.Map as M
 
 class Semiring a where
@@ -111,14 +112,6 @@ instance (Monoid a, Ord a) => Semiring (Set a) where
 
 -- instance (Monoid a, Ord a) => StarSemiring (Set a) -- default
 
-instance (Monoid a, Ord a, Semiring b) => Semiring (Map a b) where
-  zero = M.empty
-  one = single mempty
-  -- one = M.singleton mempty one
-  p <+> q = M.unionWith (<+>) p q
-  p <.> q = M.fromListWith (<+>)
-              [(u <> v, s <.> t) | (u,s) <- M.toList p, (v,t) <- M.toList q]
-
 {--------------------------------------------------------------------
     Language operations. Move elsewhere.
 --------------------------------------------------------------------}
@@ -181,17 +174,6 @@ instance Ord c => Decomposable (Set [c]) (Map c) Bool where
   e <: d = boolVal e <+> S.unions [ S.map (c:) css | (c,css) <- M.toList d ]
   atEps p = [] `S.member` p
   deriv p = M.fromListWith (<+>) [(c, S.singleton cs) | c:cs <- S.toList p]
-
-instance SR s => HasSingle (Map a s) a where
-  single a = M.singleton a one
-
-instance (Ord c, SR s) => Decomposable (Map [c] s) (Map c) s where
-  b <: d = M.insert [] b (M.unionsWith (<+>)
-                           [ M.mapKeys (c:) css | (c,css) <- M.toList d ])
-  atEps p = p ! []
-            -- M.findWithDefault zero [] p
-  deriv p = M.fromListWith (<+>)
-              [(c, M.singleton cs s) | (c:cs,s) <- M.toList p]
 
 {--------------------------------------------------------------------
     Temporary hack

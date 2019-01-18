@@ -45,6 +45,7 @@ library:
   source-dirs: src
   exposed-modules:
     - Misc
+    - Constrained
     - Semiring
     - Set
     - Fun

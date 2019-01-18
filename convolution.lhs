@@ -375,6 +375,12 @@ instance Semiring s => HasSingle (Map a s) a where
 \end{theorem}
 The finiteness of finite maps interferes with giving a useful |ClosedSemiring| instance.
 
+\workingHere
+
+\mynote{Switch from |Map a b| to |b :<-- a| as in source}
+
+\mynote{I think this |(!)| is made obsolete by |Indexable| below.}
+
 \sectionl{Decomposing Functions}
 
 %format <: = "\blacktriangleleft"

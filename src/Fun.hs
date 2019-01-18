@@ -9,11 +9,14 @@ import Prelude hiding (sum,product)
 
 import Control.Applicative (liftA2)
 import Text.Show.Functions ()  -- for Decomp
-import Data.Map (Map)
-import qualified Data.Map as M
+import Data.Map
+  ( Map,toList,fromListWith,empty,singleton,insert,unionWith
+  , unionsWith,mapKeys,findWithDefault )
+-- import qualified Data.Map as M
 
 import Misc
 import Semiring
+import Constrained
 
 {--------------------------------------------------------------------
     Functions / generalized predicates
@@ -48,6 +51,52 @@ instance Semiring s => Decomposable (s <-- [c]) ((->) c) s where
 
   atEps (F f) = f mempty
   deriv (F f) = \ c -> F (\ cs -> f (c:cs))
+
+-- The Functor and Applicative instances exist but are not computable.
+
+instance Semiring b => FunctorC ((<--) b) where
+  fmapC h (F f) = F (\ w -> undefined h f w)
+
+instance Semiring b => ApplicativeC ((<--) b) where
+  pureC a = F (\ w -> undefined a w)
+  liftA2C h (F f) (F g) = F (\w -> undefined h f g w)
+
+{--------------------------------------------------------------------
+    Flipped finite maps
+--------------------------------------------------------------------}
+
+-- TODO: Infix notation for Map'
+
+newtype Map' b a = M (Map a b)
+
+-- newtype Map' b a = M { unM :: Map a b }
+
+instance (Monoid a, Ord a, Semiring b) => Semiring (Map' b a) where
+  zero = M empty
+  one = single mempty
+  -- one = M (singleton mempty one)
+  M p <+> M q = M (unionWith (<+>) p q)
+  M p <.> M q = M (fromListWith (<+>)
+                     [(u <> v, s <.> t) | (u,s) <- toList p, (v,t) <- toList q])
+
+instance Semiring b => HasSingle (Map' b a) a where
+  single a = M (singleton a one)
+
+instance (Ord c, Semiring s) => Decomposable (Map' s [c]) (Map c) s where
+  b <: d = M (insert [] b (unionsWith (<+>)
+                            [ mapKeys (c:) css | (c,M css) <- toList d ]))
+  atEps (M p) = p ! []
+              -- findWithDefault zero [] p
+  deriv (M p) = fromListWith (<+>) [(c, M (singleton cs s)) | (c:cs,s) <- toList p]
+
+instance Semiring b => FunctorC (Map' b) where
+  type Ok (Map' b) a = Ord a
+  fmapC h (M p) = M (fromListWith (<+>) [(h a, b) | (a,b) <- toList p])
+
+instance Semiring b => ApplicativeC (Map' b) where
+  pureC b = M (singleton b one)
+  liftA2C h (M p) (M q) =
+    M (fromListWith (<+>) [(h a b, s <.> t) | (a,s) <- toList p, (b,t) <- toList q])
 
 {--------------------------------------------------------------------
     Classic list-of-successes
@@ -141,7 +190,7 @@ scaleRE s e | isZero s  = zero
 #if 0
 
 instance (Ord c, StarSemiring s, DetectableZero s) => Decomposable (RegExp c s) (Map c) s where
-  e <: d = Value e <+> sum [ single [c] <.> dc | (c,dc) <- M.toList d ]
+  e <: d = Value e <+> sum [ single [c] <.> dc | (c,dc) <- toList d ]
   atEps (Char _)    = zero
   atEps (Value s)   = s
   atEps (p :<+> q)  = atEps p <+> atEps q
@@ -149,11 +198,11 @@ instance (Ord c, StarSemiring s, DetectableZero s) => Decomposable (RegExp c s) 
   atEps (Closure p) = closure (atEps p)
   
   deriv (Char c')  = single c'
-  deriv (Value _)  = M.empty
-  deriv (p :<+> q) = M.unionWith (<+>) (deriv p) (deriv q)
+  deriv (Value _)  = empty
+  deriv (p :<+> q) = unionWith (<+>) (deriv p) (deriv q)
 
   deriv (p :<.> q) =
-    M.unionWith (<+>) (fmap (<.> q) (deriv p)) (fmap (scaleRE (atEps p)) (deriv q))
+    unionWith (<+>) (fmap (<.> q) (deriv p)) (fmap (scaleRE (atEps p)) (deriv q))
 
   -- deriv (p :<.> q) c  = -- deriv p c <.> q <+> Value (atEps p) <.> deriv q c
   --                       atEps p `scaleRE` deriv q c <+> deriv p c <.> q
@@ -337,25 +386,25 @@ trieFun (e :< d) = e <: trieFun . (d !)
 -- trieFun (_ :< ts) (c:cs) = trieFun (ts ! c) cs
 
 -- (!) :: (Ord c, Semiring s) => Map c s -> c -> s
--- m ! c = M.findWithDefault zero c m
+-- m ! c = findWithDefault zero c m
 
 trieF :: OD c s => Trie c s -> (s <-- [c])
 trieF = F . trieFun
 
 instance OD c s => Semiring (Trie c s) where
-  zero = zero :< M.empty
-  one  = one  :< M.empty
-  ~(a :< dp) <+> ~(b :< dq) = (a <+> b) :< M.unionWith (<+>) dp dq
+  zero = zero :< empty
+  one  = one  :< empty
+  ~(a :< dp) <+> ~(b :< dq) = (a <+> b) :< unionWith (<+>) dp dq
   -- (a :< dp) <+> (b :< dq) = (a <+> b) :< (dp <+> dq)
   -- c would have to be a monoid, though we could eliminate by introducing an
   -- Additive superclass of Semiring.
 #if 0
   -- Wedges for the recursive anbn examples even with the lazy pattern.
   (a :< dp) <.> ~q@(b :< dq) =
-    (a <.> b) :< M.unionWith (<+>) (fmap (<.> q) dp) (fmap (scaleT a) dq)
+    (a <.> b) :< unionWith (<+>) (fmap (<.> q) dp) (fmap (scaleT a) dq)
 #elif 0
   -- Wedges for recursive anbn examples even with the lazy pattern.
-  (a :< dp) <.> ~q@(b :< dq) = (a <.> b) :< M.unionWith (<+>) us vs
+  (a :< dp) <.> ~q@(b :< dq) = (a <.> b) :< unionWith (<+>) us vs
    where
      us = fmap (<.> q) dp
      vs = fmap (scaleT a) dq
@@ -366,7 +415,7 @@ instance OD c s => Semiring (Trie c s) where
   -- Works even for recursive anbn examples.
   (a :< dp) <.> ~q@(b :< dq)
     | isZero a  = zero :< fmap (<.> q) dp
-    | otherwise = a <.> b :< M.unionWith (<+>) (fmap (<.> q) dp) (fmap (scaleT a) dq)
+    | otherwise = a <.> b :< unionWith (<+>) (fmap (<.> q) dp) (fmap (scaleT a) dq)
 #endif
 
 -- instance OD c s => StarSemiring (Trie c s) where
@@ -390,10 +439,10 @@ instance (Ord c, StarSemiring s, DetectableZero s) => StarSemiring (Trie c s) wh
 -- TODO: Fix so that scaleT checks isZero as only once.
 
 instance OD c s => HasSingle (Trie c s) [c] where
-  single w = product [zero :< M.singleton c one | c <- w]
+  single w = product [zero :< singleton c one | c <- w]
   -- single = product . map symbol
   --  where
-  --    symbol c = zero :< M.singleton c one
+  --    symbol c = zero :< singleton c one
 
 instance OD c s => Decomposable (Trie c s) (Map c) s where
   (<:) = (:<)

@@ -652,6 +652,8 @@ Additionally, for multi-dimensional (discrete or continuous) convolution, we can
 Consider multi-dimensional convolution in which different dimensions have different types, even mixing discrete and continuous, and maybe even sequences and numbers.
 At the least, it's useful to combine finite dimensions of different sizes.}
 
+\mynote{Delightfully, the Fourier transform is a semiring homomorphism from |a -> b| to |b <- a|.}
+
 \mynote{Maybe give some convolution examples.}
 
 %format Fin (m) = Fin "_{" m "}"
@@ -716,53 +718,87 @@ lift1 :: Semiring s => (a -> b) -> (s <-- a) -> (s <-- b)
 lift1 h f = \ w -> bigSumQ (u BR h u == w) f u
 
 lift0 :: Semiring s => b -> (s <-- b)
-lift0 b  = \ w -> bigSum (b == w) 1
+lift0 b  = \ w -> bigSum (b == w) one
          = \ w -> if b == w then one else zero
          = \ w -> boolVal (w == b)
 \end{code}
 
+%format FunctorC = Functor
+%format ApplicativeC = Applicative
+%format fmapC = fmap
+%format pureC = pure
+%format liftA2C = liftA2
 \noindent
-The signatures of |lift2|, |lift1|, and |lift0| resemble those of |liftA2|, |fmap|, and |pure| from the |Functor| and |Applicative| type classes \needcite:\footnote{Originally, |Applicative| had a |(<*>)| method from which one can easily define |liftA2|. Since the base library version 4.10 \needcite, |liftA2| was added as a method to allow for more efficient implementation. \mynote{Cite \href{https://ghc.haskell.org/trac/ghc/ticket/13191}{GHC ticket 13191} if I can't find a better reference.}}
+The signatures of |lift2|, |lift1|, and |lift0| generalize to those of |liftA2|, |fmap|, and |pure| from the |Functor| and |Applicative| type classes \needcite, so let's replace the specialized operations with standard ones.
+These classes appear in \figrefdef{FunApp}{|Functor| and |Applicative| classes and some instances}{
 \begin{code}
-class Functor f where
-  fmap :: (a -> b) -> f a -> f b
+class FunctorC f where
+  type Ok f a :: Constraint
+  type Ok f a = ()
+  fmapC :: (Ok f a, Ok f b) => (a -> b) -> f a -> f b
 
-class Applicative f where
-  pure :: b -> f b
-  liftA2 :: (a -> b -> c) -> f a -> f b -> f c
-\end{code}
-Higher-arity liftings can be defined via these three.
-(Exercise.)
+class FunctorC f => ApplicativeC f where
+  pureC :: Ok f a => a -> f a
+  liftA2C :: (Ok f a, Ok f b, Ok f c) => (a -> b -> c) -> f a -> f b -> f c
 
-For the convolution-style liftings (|lift2|, |lift1|, and |lift0|) defined above, |f t = s <-- t| (for a semiring |s|), i.e., |f = (<--) s|.
-The use of |s <-- t| rather than |t -> s| is what allows us to give these instances within's Haskell's type system (and ability to infer types via first-order unification).
+instance Functor Pow where
+  fmap h p = set (h a | a <# p)
 
+instance Applicative Pow where
+  pure b = set b
+  liftA2 h p q = set (h a b | a <# p && b <# q)
 
-\workingHere
+instance Functor [] where
+  fmap h as = [h a | a <- as]
 
+instance Applicative [] where
+  pure b = [b]
+  liftA2 h as bs = [h a b | a <- as, b <- bs]
 
-There are, however, two problems with this story:
-\begin{itemize}
-\item Although Haskell supports higher-kinded types \needcite{}, Haskell compilers perform type inference via first-order unification and so will not infer the needed type function |f = Lambda t DOT t -> s| (where ``|Lambda|'' is a hypothetical type-level lambda).
-\item Even if such |Functor| and |Applicative| instances were accepted, they would conflict with existing instances, which are defined pointwise: |fmap h f = \ x -> h (f x)|, |pure b = \ x -> b|, and |liftA2 h f g = \ x -> h (f x) (g x)|.
-\end{itemize}
-There is an easy solution to both of these problems: define a new type constructor of functions but with the domain and codomain type arguments swapped:
-\begin{code}
-newtype b <-- a = F (a -> b)
+newtype Map' b a = M (Map a b)
 
-instance Semiring s => Functor ((<--) s) where
+instance Semiring b => FunctorC (Map' b) where
+  type Ok (Map' b) a = Ord a
+  fmapC h (M p) = M (fromListWith (<+>) [(h a, b) | (a,b) <- toList p])
+
+instance Semiring b => ApplicativeC (Map' b) where
+  pureC b = M (singleton b one)
+  liftA2C h (M p) (M q) =
+    M (fromListWith (<+>) [(h a b, s <.> t) | (a,s) <- toList p, (b,t) <- toList q])
+
+instance Functor ((->) a) where
+  fmap h f = f . h
+
+instance Applicative ((->) a) where
+  pure b = \ a -> b
+  liftA2 h f g = \ a -> h (f a) (g a)
+
+instance Semiring b => Functor ((<--) b) where
+  type Ok ((<--) b) = Eq b
   fmap h (F f) = F (\ w -> bigSumQ (u BR h u == w) f u)
 
-instance Semiring s => Applicative ((<--) s) where
+instance Semiring b => Applicative ((<--) b) where
   pure b = F (\ w -> boolVal (w == b))
   liftA2 h (F f) (F g) = F (\ w -> bigSumQ (u,v BR h u v == w) f u <.> g v)
 \end{code}
-Just as with our semiring instances for functions in \figref{FunTo}, these definitions are not really executable code, since they involve summations are over potentially infinite ranges.
+}, along with instances for some of the language representations we've considered so far.%
+\footnote{Originally, |Applicative| had a |(<*>)| method from which one can easily define |liftA2|. Since the base library version 4.10 \needcite, |liftA2| was added as a method (along with a default definition of |(<*>)|) to allow for more efficient implementation. \mynote{Cite \href{https://ghc.haskell.org/trac/ghc/ticket/13191}{GHC ticket 13191} if I can't find a better reference.}}
+Higher-arity liftings can be defined via these three.
+(Exercise.)
+The use of |s <-- t| in addition to |t -> s| allows us to give both of these instances and stay within Haskell's type system (and ability to infer types via first-order unification).
+For |b <-- a|, these definitions are not really executable code (just as with our semiring instances for  in \figref{FunTo}), since they involve summations are over potentially infinite ranges.
 
-%format <-- = "\leftarrow"
-\mynote{I should really fix the |Semiring| instances as well, since there's another |Semiring| instance that corresponds to the usual |Functor| and |Applicative| instances for functions, with |(*) = liftA2 (*)|. Delightfully, the Fourier transform is then a semiring homomorphism! Idea: rename |Fun b a| to ``|b <-- a|''.}
+\notefoot{The ((<--) b) and |Map' b| instances rely on a non-standard but useful extension to the |Functor| and |Applicative| classes to }
 
-\workingHere
+\begin{theorem}
+For each instance defined in \figref{FunApp}, the following equalities hold:
+\begin{code}
+one = pure mempty
+(*) = liftA2 (<>)
+
+single = pure
+\end{code}
+\end{theorem}
 
 \mynote{The free semimodule monad.}
 

@@ -64,3 +64,6 @@
 %% %format * = "\times"
 
 %format >=> = "\mathbin{>\!\!=\!\!\!>}"
+
+%format ... = "\ldots"
+%format cdots = "\cdots"

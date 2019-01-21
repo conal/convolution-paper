@@ -62,7 +62,7 @@ Conal Elliott
 \nc\cat{\mathop{}}
 \nc\single\overline
 \nc\union{\cup}
-\nc\bigunion{\bigcup}
+\nc\bigunion{\bigcup\limits}
 \nc\has[1]{\mathop{\delta_{#1}}}
 \nc\derivOp{\mathcal{D}}
 %% \nc\derivsOp{\derivOp^{\ast}}
@@ -171,7 +171,7 @@ i.e., |single| is a monoid homomorphism (targeting the product monoid).
 
 The semiring interface has a corresponding notion of structure preservation:
 \begin{definition}
-A function |h| from one semiring to another is called \emph{semiring homomorphism} exactly when the following conditions hold:
+A function |h| from one semiring to another is called \emph{semiring homomorphism} when the following conditions hold:
 \begin{code}
 h zero == zero
 h one == one
@@ -181,26 +181,26 @@ forall a b NOP . NOP h (a  <.>  b) == h a  <.>  h b
 \end{definition}
 \mynote{Explain the value of homomorphisms to the methodology of this paper: simple and consistent specification style, non-leaky abstraction, guarantee that the laws hold. Refer to my TCM and AD papers.}
 
-Languages as sets fulfill this combined interface as described above and again in the pseudocode in \figrefdef{set}{Abstract sets as a ``language''}{
+Languages as sets fulfill this combined interface as described above and again in the pseudocode in \figrefdef{set}{Mathematical sets as a ``language'' (pseudocode)}{
 \begin{code}
 instance Monoid s => Semiring (Pow s) where
   zero  = emptyset
   one   = single mempty
   p  <+>  q  = p `union` q
+             = set (u | u <# p || u <# q)
   p  <.>  q  = set (u <> v | u <# p && v <# q)
 
-instance ClosedSemiring (Pow s)  -- default |closure|
+instance ClosedSemiring (Pow s) where closure p = bigunion (n >= 0) (pow p n)
 
 instance HasSingle (Pow s) s where single s = set s
 \end{code}
 \vspace{-4ex}
-%%  closure p = bigunion (n >= 0) (pow p n)
-}, which generalizes from strings to any monoid.\footnote{The |Monoid| class defines |mempty| and |mappend|.}\notefoot{On second thought, postpone generalization from lists to monoids later.}\notefoot{Move the |sum| and |product| definitions to their first use.}
+}, which generalizes from strings to any monoid.\footnote{The |Monoid| class defines |mempty| and |mappend|.}\notefoot{Perhaps postpone generalization from lists to monoids later.}\notefoot{Move the |sum| and |product| definitions to their first use.}
 More concretely, we might instead use a type of (possibly infinite) lists, as in \figrefdef{list}{Lists as a language representation}{
 \begin{code}
 instance Monoid a => Semiring [a] where
   zero = []
-  one = [mempty]
+  one = single mempty
   p  <+>  q = p ++ q
   p  <.>  q = [u <> v | u <- p, v <- q]
 
@@ -213,7 +213,7 @@ instance HasSingle [a] a where single a = [a]
 Lists relate to sets as follows:
 \begin{code}
 listElems :: [a] -> Pow a
-listElems = foldr insert emptyset where insert a as = single a `union` as
+listElems = foldr insert emptyset where insert a as = single a <+> as
 \end{code}
 The instance definitions in \figreftwo{set}{list} bear a family resemblance to each other, which we can readily make precise:
 \begin{theorem}[\provedIn{theorem:list}]\thmLabel{list}
@@ -224,8 +224,11 @@ Given the definitions in \figref{list}, |listElems| is a homomorphism with respe
 \sectionl{Matching}
 
 Now consider how we can computably \emph{match} a string for membership in a language described in the vocabulary given in the previous section.
+Aside from closure, which introduces infinite languages, we could test membership in sets or lists.
+\out{
 The set-based language definition does not lead directly to effective string matching, because the sets may be infinite.
 The list and finite set types do have computable membership testing so we could use them instead.\notefoot{Finite sets \needcite{} would not support closure, due to finiteness.}
+}%
 Another option is to use membership predicates \emph{as} language implementation, noting the set/predicate isomorphism:
 \begin{code}
 newtype Pred a = Pred (a -> Bool)
@@ -276,7 +279,7 @@ Sets and predicates have the same sort of relationship as between sets and lists
 Given the definitions in \figref{pred}, |setPred| and |predSet| are homomorphisms (and together form an isomorphism) with respect to each instantiated class.
 \end{theorem}
 
-\sectionl{Beyond Booleans}
+\sectionl{Booleans and Beyond}
 
 As an example other than numbers and languages, booleans form a star semiring:
 \begin{code}
@@ -299,9 +302,9 @@ instance ClosedSemiring Bool where
 
 \noindent
 Re-examining the instances in \figref{pred}, we can see uses of |False|, |(||||)|, and |(&&)|, as well as an equality test (for |single w|), which yields |False| or |True|.
-We can therefore easily generalize the codomain of ``predicates'' from booleans to \emph{any} semiring, as in \figrefdef{FunTo}{|b <-- a| as generalized language representation}{
+We can therefore easily generalize the codomain of ``predicates'' from booleans to \emph{any} semiring, as in \figrefdef{<--}{|b <-- a| as generalized language representation}{
 \begin{code}
-newtype b <-- a = F (a -> b)
+newtype b <-- a = F { unF :: a -> b }
 
 instance (Semiring b, Monoid a, Eq a) => Semiring (b <-- a) where
   zero = F (\ w -> zero)
@@ -321,11 +324,11 @@ boolVal True   = one
 \vspace{-4ex}
 }.
 It will be useful to reverse the usual notation from ``|a -> b|'' to ``|b <-- a|''.
-\begin{theorem}[\provedIn{theorem:FunTo}]\thmLabel{FunTo}
-Given the instance definitions in \figref{FunTo}, |b <-- a| satisfies the laws of the instantiated classes whenever |a| is a monoid and |b| is a semiring.
+\begin{theorem}[\provedIn{theorem:<--}]\thmLabel{<--}
+Given the instance definitions in \figref{<--}, |b <-- a| satisfies the laws of the instantiated classes whenever |a| is a monoid and |b| is a semiring.
 \end{theorem}
 
-When the monoid |a| is a list, we can again express the product operation from \figref{FunTo} in a more clearly computable form:
+When the monoid |a| is a list, we can again express the product operation from \figref{<--} in a more clearly computable form:
 \begin{code}
   F f <.> F g  = F (\ w -> sum [ f u <.> g v | (u,v) <- splits w ])
 \end{code}
@@ -347,14 +350,14 @@ instance HasSingle b w => HasSingle (a -> b) w where
 \vspace{-4ex}
 }.
 \notefoot{Maybe a theorem here saying that these instances satisfy the necessary laws. Otherwise suggest that the reader verify. I'm unsure how to prove the closure property. Perhaps coinduction. See journal notes for 2019-01-16.}
-We will use the |a -> b| semiring in \secref{Convolution}.
+We will use the |a -> b| semiring in \secref{Convolution}.\notefoot{Check that we did.}
 
-Another representation of functions from |a| to |b| is |Map a b|, where |Map| is an efficient representation of finite maps, i.e., partial functions defined on a finite subset of its domain \needcite{}.
+Another representation of functions from |a| to |b| is |Map a b|, where |Map| is an efficient representation of finite maps, i.e., partial functions defined on finite subsets of their domains \needcite{}.
 \notefoot{Probably swap |Map| arguments for the required |Functor| and |Applicative| instances.}
 Although we can think of |Map a b| as denoting partial functions from |a| to |b|, if we further require |b| to be semiring, we can treat missing entries as being implicitly zero, yielding a \emph{total} function:\notefoot{Describe finite maps and |findWithDefault|.}
 \begin{code}
-(!) :: (Ord c, Semiring s) => Map c s -> c -> s
-m ! c = findWithDefault zero c m
+mat :: (Ord c, Semiring s) => Map c s -> c -> s
+m `mat` c = findWithDefault zero c m
 \end{code}
 \begin{theorem}[\provedIn{theorem:Map}]\thmLabel{Map}
 Given the definitions in \figrefdef{Map}{Maps as a language representation}{
@@ -363,21 +366,22 @@ instance (Monoid a, Ord a, Semiring b) => Semiring (Map a b) where
   zero  = empty
   one   = single one
   p  <+>  q  =  unionWith (<+>) p q
-  p  <.>  q  =  fromListWith (<+>)
-                  [(u <> v, s <.> t) | (u,s) <- toList p, (v,t) <- toList q]
+  p  <.>  q  =  fromListWith (<+>) [(u <> v, s <.> t) | (u,s) <- toList p, (v,t) <- toList q]
 
 instance Semiring s => HasSingle (Map a s) a where
   single a = singleton a one
 \end{code}
 \vspace{-4ex}
-}, |(!)| (as a function of one argument) is a homomorphism with respect to each instantiated class.
+}, |mat| (as a function of one argument) is a homomorphism with respect to each instantiated class.
 \notefoot{Describe the |Map| operations used in \figref{Map}.}
 \end{theorem}
 The finiteness of finite maps interferes with giving a useful |ClosedSemiring| instance.
 
 \workingHere
 
-\mynote{Switch from |Map a b| to |b :<-- a| as in source}
+%format :<-- = "\leftarrowtriangle"
+
+\mynote{Switch from |Map a b| to |b :<-- a| as in source.}
 
 \mynote{I think this |(!)| is made obsolete by |Indexable| below.}
 
@@ -405,8 +409,8 @@ f == atEps f <: deriv f
 \end{code}
 where
 \begin{code}
-atEps :: Monoid w => (w -> b) -> b
-atEps f = f mempty
+atEps :: ([c] -> b) -> b
+atEps f = f []
 
 deriv :: ([c] -> b) -> c -> ([c] -> b)
 deriv f = \ c cs -> f (c : cs)
@@ -445,13 +449,13 @@ deriv p = \ c cs -> p (c : cs)
 %format `scaleT` = .>
 %format scaleT = (.>)
 Understanding how |atEps| and |deriv| relate to the semiring vocabulary will help us develop an efficient implementation in \secref{Tries} below.
-First, however, we'll need to generalize to representations other |a -> b|:
+First, however, we'll need to generalize to representations other than |b <-- a|:
 \begin{code}
 class Semiring a => Decomposable a h s | a -> h s where
   infix 1 <:
-  (<:)  :: s -> h a -> a
-  atEps :: a -> s
-  deriv :: a -> h a
+  (<:)   :: s -> h a -> a
+  atEps  :: a -> s
+  deriv  :: a -> h a
 
 instance Semiring b => Decomposable ([c] -> b) ((->) c) b where
   (b <: _) []      = b
@@ -461,14 +465,11 @@ instance Semiring b => Decomposable ([c] -> b) ((->) c) b where
 \end{code}
 We'll need a way to index into |h|:
 \begin{code}
-class Indexable p k v | p -> k v where
-  (!) :: p -> k -> v
+class Indexable p k v | p -> k v  where (!) :: p -> k -> v
 
-instance Indexable (k -> v) k v where
-  f ! k = f k
+instance Indexable (k -> v) k v   where f ! k = f k
 
-instance (Ord k, Semiring v) => Indexable (Map k v) k v where
-  m ! c = M.findWithDefault zero c m
+instance (Ord k, Semiring v) => Indexable (Map k v) k v where (!) = mat
 \end{code}
 
 \noindent
@@ -604,7 +605,7 @@ instance Ord c => HasSingle (Trie c s) [c] where
 \vspace{-4ex}
 }, |trieFun| is a homomorphism with respect to each instantiated class.
 \notefoot{Consider making |scaleT| be a method of a new class. Derive instances homomorphically. Maybe a semimodule will be additive plus scalable.}
-\notefoot{I think we could exploit a |Semiring b => Semiring (Map c b)| instance and so replace |unionWith (<+>)| by |(<+>)| here. Maybe also something for |single w|.}
+\notefoot{I think we could exploit a |Semiring b => Semiring (Map c b)| instance and so replace |unionWith (<+>)| by |(<+>)| here. Maybe also something for |single w|. I might want to use \emph{total maps} \citep{Elliott-2009-tcm}, especially in \secref{Beyond Convolution}.}
 
 \end{theorem}
 
@@ -619,7 +620,7 @@ instance Ord c => HasSingle (Trie c s) [c] where
 %format bar (x) = "\bar{"x"}"
 %format blam = "\bar{\lambda}"
 
-Consider again the definition of semiring ``multiplication'' on functions |f,g :: b <-- a| from \figref{FunTo}, for now eliding the |F| constructors:\notefoot{To do: try \emph{with} all of the required |F| constructors. Try also with lighter-weight notation for |F|. For instance, replace ``|F f|'' by ``|bar f|'' and ``|\ w -> cdots|'' by ``|blam w -> cdots|''.}
+Consider again the definition of semiring ``multiplication'' on functions |f,g :: b <-- a| from \figref{<--}, temporarily eliding the |F| constructors:\notefoot{To do: try \emph{with} all of the required |F| constructors. Try also with lighter-weight notation for |F|. For instance, replace ``|F f|'' by ``|bar f|'' and ``|\ w -> cdots|'' by ``|blam w -> cdots|''.}
 \begin{equation}\eqnlabel{convolution}
 (f * g)\,w = \bigSumZ{u,v \\ u \mappend v = w}1 f\,u * g\,v
 \end{equation}
@@ -639,7 +640,6 @@ By specializing the \emph{domain} of the functions to sequences (from general mo
 %format C = "\mathbb C"
 
 Let's now consider specializing the functions' domains to \emph{integers} instead of sequences, recalling that integers (and numeric types in general) form a monoid under addition.
-Thus,
 \vspace{-2ex}
 \begin{spacing}{2}
 \begin{code}
@@ -654,11 +654,12 @@ Thus,
 which is exactly the standard definition of discrete \emph{convolution} \needcite{}\footnote{Note that this reasoning applies to \emph{any} group (monoid with inverses)}.
 Therefore, just as \eqnref{convolution} generalizes language concatenation (via the predicate/set isomorphism), it also generalizes the usual notion of discrete convolution.
 Moreover, if the domain is a continuous type such as |R| or |C|, we can reinterpret summation as integration, resulting in \emph{continuous} convolution \needcite{}.
-Additionally, for multi-dimensional (discrete or continuous) convolution, we can simply use tuples of scalar indices for |w| and |u|, and define subtraction on tuples to be component-wise.\notefoot{More generally, cartesian products of monoids are also monoids.
+Additionally, for multi-dimensional (discrete or continuous) convolution, we can simply use tuples of scalar indices for |w| and |u|, and define tuple subtraction component-wise.\notefoot{More generally, cartesian products of monoids are also monoids.
 Consider multi-dimensional convolution in which different dimensions have different types, even mixing discrete and continuous, and maybe even sequences and numbers.
 At the least, it's useful to combine finite dimensions of different sizes.}
-
-\mynote{Delightfully, the Fourier transform is a semiring homomorphism from |a -> b| to |b <- a|.}
+\begin{theorem}[\provedIn{theorem:Fourier}]\thmLabel{Fourier}
+The Fourier transform is a semiring homomorphism from |a -> b| to |b <- a|.
+\end{theorem}
 
 \mynote{Maybe give some convolution examples.}
 
@@ -666,7 +667,7 @@ At the least, it's useful to combine finite dimensions of different sizes.}
 %format Array (m) = Array "_{" m "}"
 
 Some uses of convolution (including convolutional neural networks \needcite{}) involve functions having finite support, i.e., non-zero on only a finite subset of their domains.\notefoot{First suggest finite maps, using instances from \figref{Map}. Then intervals/arrays.}
-More specifically, these domain subsets may be defined by finite \emph{intervals}.
+In many cases, these domain subsets may be defined by finite \emph{intervals}.
 For instance, such a 2D operation would be given by intervals in each dimension, together specifying lower left and upper right corners of a 2D interval (rectangle) out of which the functions are guaranteed to be zero.
 The two input intervals needn't have the same size, and the result occupies (is supported by) a larger interval than both inputs, with sizes equaling the sum of the sizes in each dimension (minus one for the discrete case).
 \notefoot{Show an example as a picture.}
@@ -676,9 +677,9 @@ For instance, a 1D convolution might have the following type:
 \begin{code}
 (*) :: Semiring s => Array (m+1) s -> Array (n+1) s -> Array (m+n+1) s
 \end{code}
-Unfortunately, this type is incompatible with the general type of |(*)|, in which arguments and result all have the same type.
+Unfortunately, this signature is incompatible with the general type of |(*)|, in which arguments and result all have the same type.
 
-From the perspective of functions, an array of size |n| is a memoized function from |Fin n|, which represents the finite set |0, ..., n-1|.
+From the perspective of functions, an array of size |n| is a memoized function from |Fin n|, which represents the finite set |set (0, ..., n-1)|.
 Although we can still define a convolution-like operation in terms of index addition, indices no longer form a monoid, simply due to the non-uniformity of types.
 
 \sectionl{Beyond Convolution}
@@ -697,10 +698,10 @@ where now
 \begin{code}
 (+) :: Fin (m+1) -> Fin (n+1) -> Fin (m+n+1)
 \end{code}
-(As in \secref{Convolution}, we're continuing to elide the |F| constructors for |b <-- a| of \figref{FunTo}.)
-Fortunately, this monoid expectation can be transcended by generalizing from monoidal combination to an \emph{arbitrary} binary operation |h :: a -> b -> c|.
+(As in \secref{Convolution}, we're continuing to elide the |F| constructors for |b <-- a| of \figref{<--}.)
+Fortunately, this monoid expectation can be dropped by generalizing from monoidal combination to an \emph{arbitrary} binary operation |h :: a -> b -> c|.
 For now, let's call this more general operation ``|lift2 h|''.
-\notefoot{Say something about the mixture of ``|->|'' and ``|<--|''.}
+\notefoot{Maybe remark on the mixture of ``|->|'' and ``|<--|''.}
 \begin{code}
 lift2 :: Semiring s => (a -> b -> c) -> (s <-- a) -> (s <-- b) -> (s <-- c)
 lift2 h f g = \ w -> bigSumQ (u,v BR h u v == w) f u <.> g v
@@ -736,7 +737,7 @@ lift0 b  = \ w -> bigSum (b == w) one
 %format liftA2C = liftA2
 \noindent
 The signatures of |lift2|, |lift1|, and |lift0| generalize to those of |liftA2|, |fmap|, and |pure| from the |Functor| and |Applicative| type classes \needcite, so let's replace the specialized operations with standard ones.
-These classes appear in \figrefdef{FunApp}{|Functor| and |Applicative| classes and some instances}{
+An enhanced version of these classes appear in \figrefdef{FunApp}{|Functor| and |Applicative| classes and some instances}{
 \begin{code}
 class FunctorC f where
   type Ok f a :: Constraint
@@ -761,13 +762,13 @@ instance Applicative [] where
   pure b = [b]
   liftA2 h as bs = [h a b | a <- as, b <- bs]
 
-newtype Map' b a = M (Map a b)
+newtype b :<-- a = M (Map a b)
 
-instance Semiring b => FunctorC (Map' b) where
-  type Ok (Map' b) a = Ord a
+instance Semiring b => FunctorC ((:<--) b) where
+  type Ok ((:<--) b) a = Ord a
   fmapC h (M p) = M (fromListWith (<+>) [(h a, b) | (a,b) <- toList p])
 
-instance Semiring b => ApplicativeC (Map' b) where
+instance Semiring b => ApplicativeC ((:<--) b) where
   pureC b = M (singleton b one)
   liftA2C h (M p) (M q) =
     M (fromListWith (<+>) [(h a b, s <.> t) | (a,s) <- toList p, (b,t) <- toList q])
@@ -788,23 +789,34 @@ instance Semiring b => Applicative ((<--) b) where
   liftA2 h (F f) (F g) = F (\ w -> bigSumQ (u,v BR h u v == w) f u <.> g v)
 \end{code}
 }, along with instances for some of the language representations we've considered so far.%
+\footnote{The enhancement is the associated constraint \citep{Bolingbroke2011CK} |Ok|, limiting the types that the class methods must support. The line ``|type Ok f a = ()|'' means that the constraint on |a| defaults to |()|, which holds for all |a|.}%
 \footnote{Originally, |Applicative| had a |(<*>)| method from which one can easily define |liftA2|. Since the base library version 4.10 \needcite, |liftA2| was added as a method (along with a default definition of |(<*>)|) to allow for more efficient implementation. \mynote{Cite \href{https://ghc.haskell.org/trac/ghc/ticket/13191}{GHC ticket 13191} if I can't find a better reference.}}
 Higher-arity liftings can be defined via these three.
 (Exercise.)
-The use of |s <-- t| in addition to |t -> s| allows us to give both of these instances and stay within Haskell's type system (and ability to infer types via first-order unification).
-For |b <-- a|, these definitions are not really executable code (just as with our semiring instances for  in \figref{FunTo}), since they involve summations are over potentially infinite ranges.
+The use of |s <-- t| as an alternative to |t -> s| allows us to give instances for both and to stay within Haskell's type system (and ability to infer types via first-order unification).
+For |b <-- a|, these definitions are not really executable code, since they involve summations are over potentially infinite ranges (as with our semiring instances for |b <-- a| in \figref{<--}).
 
-\notefoot{The ((<--) b) and |Map' b| instances rely on a non-standard but useful extension to the |Functor| and |Applicative| classes to }
+\mynote{
+\begin{itemize}
+\item Describe the constraint-tweaked |Functor| and |Applicative| classes.
+\item Replace finite maps by ``total (finite) maps'', which have an explicit default. Probably introduce these maps much earlier in the paper.
+\item Then flip those maps to match |(<--)|. Name the type with another reverse arrow.
+\item Probe more into the pattern of |single = pure|, |one = single mempty| and |(*) = liftA2 (<>)|.
+      Also the relationship between forward and reverse functions and maps.
+\end{itemize}
+}
 
 \begin{theorem}
 For each instance defined in \figref{FunApp}, the following equalities hold:
 \begin{code}
-one = pure mempty
-(*) = liftA2 (<>)
-
 single = pure
+one = single mempty
+(*) = liftA2 (<>)
 \end{code}
 \end{theorem}
+\begin{proof}
+Immediate from the instance definitions.
+\end{proof}
 
 \mynote{The free semimodule monad.}
 
@@ -815,6 +827,8 @@ single = pure
 \sectionl{What else?}
 
 \begin{itemize}
+\item Optimizing away scaling by |zero| via |DetectableZero|.
+\item Context-free languages (recursion).
 \item Other applications:
 \begin{itemize}
   \item Univariate and multivariate polynomials.
@@ -830,8 +844,8 @@ single = pure
 \item \emph{Polynomial Functors Constrained by Regular Expressions}
 \item \href{https://doisinkidney.com/}{Donnacha Oisín Kidney's blog}
 \item Dan Piponi's blog
+\item Many more references in \verb|todo.md|.
 \end{itemize}
-
 
 
 % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
@@ -844,7 +858,7 @@ single = pure
 
 \subsection{\thmRef{pred}}\proofLabel{theorem:pred}
 
-\subsection{\thmRef{FunTo}}\proofLabel{theorem:FunTo}
+\subsection{\thmRef{<--}}\proofLabel{theorem:<--}
 
 \subsection{\thmRef{Map}}\proofLabel{theorem:Map}
 
@@ -861,6 +875,11 @@ For |deriv (closure p)|, see 2019-01-13 notes.
 %endif
 
 \subsection{\thmRef{Trie}}\proofLabel{theorem:Trie}
+
+\subsection{\thmRef{Fourier}}\proofLabel{theorem:Fourier}
+
+%format F = "\mathcal F"
+\mynote{Additivity of |F|, and the convolution theorem. What about |closure p| and $single w$?}
 
 \bibliography{bib}
 

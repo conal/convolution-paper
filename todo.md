@@ -1,6 +1,5 @@
 ## To-do items for the paper and code
 
-*   Remove a bunch of unused code, first moving to `Other`.
 *   Use semiring-num
 *   Tropical semirings?
 *   Counting and closure and infinity.
@@ -35,6 +34,11 @@
     *   [*Should I use a Monad or a Comonad?*]
 *   Super-memoization.
     See notes from 2018-12-02 and 2018-12-05
+
+## Did
+
+*   Remove a bunch of unused code, first moving to `Other`.
+
 
 [*Differentiation of higher-order types*]: http://conal.net/blog/posts/differentiation-of-higher-order-types/ "blog post"
 

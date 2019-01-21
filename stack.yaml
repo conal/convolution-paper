@@ -1,19 +1,20 @@
 packages:
 - .
-# - # Until semiring-num-1.6.0.2 is released to Hackage.
-#   # See https://github.com/oisdk/semiring-num/pull/2
-#   location:
-#     git: https://github.com/oisdk/semiring-num
-#     commit: 83791610eb313cdf7e567ee7140d439a111c8028
-#   extra-dep: true
+- # Until semiring-num-1.6.0.2 is released to Hackage.
+  # See https://github.com/oisdk/semiring-num/pull/2
+  location:
+    git: https://github.com/oisdk/semiring-num
+    commit: 83791610eb313cdf7e567ee7140d439a111c8028
+  extra-dep: true
 
 # resolver: lts-9.20  # ghc-8.0.2
 # resolver: lts-11.12 # ghc-8.2.2
 # resolver: lts-12.4  # ghc-8.4.3
 # resolver: lts-12.19 # ghc-8.4.4
+resolver: lts-13.4 # ghc-8.6.3
 
-resolver: nightly-2018-11-23 # ghc-8.6.2
+# resolver: nightly-2018-11-23 # ghc-8.6.2
 
-# extra-deps:
-# - semiring-num-1.6.0.1
+extra-deps:
+- total-map-0.1.0
 

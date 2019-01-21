@@ -72,8 +72,6 @@ Conal Elliott
 \nc\conv{*}
 \nc\zero{\mathbf{0}}
 \nc\one{\mathbf{1}}
-%% \nc\zero{0}
-%% \nc\one{1}
 \nc\hasEps{\mathop{\Varid{has}_{\mempty}}}
 \nc\id{\mathop{\Varid{id}}}
 \nc\ite[3]{\text{if}\ #1\ \text{then}\ #2\ \text{else}\ #3}
@@ -86,8 +84,10 @@ Conal Elliott
 \nc\liftA{\mathop{\Varid{liftA}}}
 \nc\cons{\mathit{:}}
 
-\DeclareMathOperator{\true}{true}
-\DeclareMathOperator{\false}{false}
+%% \DeclareMathOperator{\true}{true}
+%% \DeclareMathOperator{\false}{false}
+
+%% TODO: eliminate most of these latex macros, in favor of lhs2tex rendering.
 
 \begin{document}
 
@@ -99,15 +99,16 @@ Conal Elliott
 
 \sectionl{Introduction}
 
-%format <+> = "+"
-%format <.> = "\conv"
+%format <+> = +
+%format <.> = *
 %% %format zero = 0
 %% %format one = 1
-%format zero = "\zero"
-%format one = "\one"
+%format zero = "\mathbf{0}"
+%format one = "\mathbf{1}"
 
 %format `elem` = "\mathbin{`\Varid{elem}`}"
 %format <# = "\in"
+%format # = "\mid"
 
 %format Pow = "\Pow"
 %format emptyset = "\emptyset"
@@ -121,28 +122,26 @@ Conal Elliott
 \sectionl{Languages}
 
 A \emph{language} is a set of strings, where a string is a sequence of values of some given type (``symbols'' from an ``alphabet'').
-Languages are commonly built up via a few simple operations:\notefoot{I may want to parametrize by a monoid instead of an alphabet.}
+Languages are commonly built up via a few simple operations:
+\notefoot{Maybe use the standard terminology |zero|, |(<+>)|, |(<.>)|, and |closure| here.}
 \begin{itemize}
-\item The \emph{empty} language $\emptyset = \set{}$.
-\item For a string $s$, the \emph{singleton} language $\single s = \set{s}$.
-\item For two languages $P$ and $Q$, the \emph{union} $P \union Q = \set{s \mid s \in P \lor s \in Q}$.
-\item For two languages $P$ and $Q$, the element-wise \emph{concatenation} $P \cat Q = \set{p \mappend q \mid p \in P \land q \in Q}$, where ``$\mappend$'' denotes string concatenation.
-\item For a language $P$, the \emph{closure} $\closure P = \bigunion_{n \ge 0} P^n $, where $P^n$ is $P$ concatenated with itself $n$ times\out{ (and $P^0 = \single{\mempty}$)}.
+\item The \emph{empty} language |zero = set ()|.
+\item For a string |s|, the \emph{singleton} language |single s = set s|.
+\item For two languages |p| and |q|, the \emph{union} |p <+> q = set (u # u <# p || u <# q)|.
+\item For two languages |p| and |q|, the element-wise \emph{concatenation} |p <.> q = set (u <> v # u <# p && v <# q)|, where ``|<>|'' denotes string concatenation.
+\item For a language |p|, the \emph{closure} |closure p = bigunion (n > 0) (pow p n)|, where |pow p n| is |p| concatenated with itself |n| times.
 \end{itemize}
-%if False
-\out{Note that $\closure P$ can also be given a recursive specification: $\closure P = \mempty \union P \cat \closure P$.{Syntactically, we'll take concatenation (``$\cat$'') to bind more tightly than union (``$\union$''), so the RHS of this definition is equivalent to $\mempty \union (P \cat \closure P)$}
-%endif
 These operations suffice to describe all \emph{regular} languages.
 The language specifications (language-denoting \emph{expressions} rather than languages themselves) finitely constructed from these operations are called \emph{regular expressions}.
 %(If we allow \emph{recursive} definitions, we get \emph{context-free} languages.)
 
 Some observations:
 \begin{itemize}
-\item Union is associative, with $\emptyset$ as its identity.\notefoot{Maybe state equations for this observations and the next two.}
-\item Element-Wise concatenation is associative and commutative, with $\single \mempty$ as its identity, where $\mempty$ is the empty string.
+\item Union is associative, with |zero| as its identity.\notefoot{Maybe state equations for this observations and the next two.}
+\item Element-Wise concatenation is associative and commutative, with |single mempty| as its identity, where |mempty| is the empty string.
 \item Left- and right-concatenation distribute over union.
-\item The empty language annihilates under concatenation, i.e., $P \cat \emptyset = \emptyset \cat Q = \emptyset$.
-\item The $\closure P$ operation satisfies the equation $\closure P = \mempty \union (P \cat \closure P)$.
+\item The empty language annihilates under concatenation, i.e., |p <.> zero = zero <.> q = zero|.
+\item The closure operation satisfies the equation |closure p = mempty <+> p <.> closure p|.\footnote{Syntactically, we'll take concatenation (``|<.>|'') to bind more tightly than union (``|<+>|''), so the RHS of this definition is equivalent to |mempty <+> (p <.> closure p)|}
 \end{itemize}
 These observations are the defining properties of a \emph{star semiring} (also called a \emph{closed semiring}) \needcite{}.
 \figrefdef{classes}{Abstract interface for languages (and later generalizations)}{
@@ -153,7 +152,7 @@ class Semiring a where
   zero    , one    :: a
   (<+>)   , (<.>)  :: a -> a -> a
 
-class Semiring a => ClosedSemiring a where
+class Semiring a => StarSemiring a where
   closure :: a -> a
   closure p = q where q = one <+> p <.> q  -- default
 
@@ -190,12 +189,13 @@ instance Monoid s => Semiring (Pow s) where
              = set (u | u <# p || u <# q)
   p  <.>  q  = set (u <> v | u <# p && v <# q)
 
-instance ClosedSemiring (Pow s) where closure p = bigunion (n >= 0) (pow p n)
+instance StarSemiring (Pow s) where closure p = bigunion (n >= 0) (pow p n)
 
 instance HasSingle (Pow s) s where single s = set s
 \end{code}
 \vspace{-4ex}
-}, which generalizes from strings to any monoid.\footnote{The |Monoid| class defines |mempty| and |mappend|.}\notefoot{Perhaps postpone generalization from lists to monoids later.}\notefoot{Move the |sum| and |product| definitions to their first use.}
+}, which generalizes from strings to any monoid.\footnote{The |Monoid| class defines |mempty| and |mappend|.}
+\notefoot{Perhaps postpone generalization from lists to monoids later.}
 More concretely, we might instead use a type of (possibly infinite) lists, as in \figrefdef{list}{Lists as a language representation}{
 \begin{code}
 instance Monoid a => Semiring [a] where
@@ -204,7 +204,7 @@ instance Monoid a => Semiring [a] where
   p  <+>  q = p ++ q
   p  <.>  q = [u <> v | u <- p, v <- q]
 
-instance Monoid a => ClosedSemiring [a] -- default
+instance Monoid a => StarSemiring [a] -- default
 
 instance HasSingle [a] a where single a = [a]
 \end{code}
@@ -257,7 +257,7 @@ instance (Monoid a, Eq a) => Semiring (Pred a) where
   Pred f  <+>  Pred g = Pred (\ w -> f w || g w)
   Pred f  <.>  Pred g = Pred (\ w -> bigOrQ (u,v BR u <> v == w) f u && g v)
 
-instance (Monoid a, Eq a) => ClosedSemiring (Pred a)  -- default |closure|
+instance (Monoid a, Eq a) => StarSemiring (Pred a)  -- default |closure|
 
 instance Eq a => HasSingle (Pred a) a where
   single w = Pred (\ w' -> w' == w)
@@ -289,7 +289,7 @@ instance Semiring Bool where
   (<+>) = (||)
   (<.>) = (&&)
 
-instance ClosedSemiring Bool where
+instance StarSemiring Bool where
   closure b  = one <+> b <.> closure b
              = True || (b && closure b)
              = True
@@ -312,7 +312,7 @@ instance (Semiring b, Monoid a, Eq a) => Semiring (b <-- a) where
   F f  <+>  F g = F (\ w -> f w <+> g w)
   F f  <.>  F g = F (\ w -> bigSumQ (u,v BR u <> v == w) f u <.> g v)
 
-instance (Monoid a, Eq a) => ClosedSemiring (b <-- a)
+instance (Monoid a, Eq a) => StarSemiring (b <-- a)
 
 instance Eq a => HasSingle (b <-- a) a where
   single w = F (\ w' -> boolVal (w' == w))
@@ -375,7 +375,7 @@ instance Semiring s => HasSingle (Map a s) a where
 }, |mat| (as a function of one argument) is a homomorphism with respect to each instantiated class.
 \notefoot{Describe the |Map| operations used in \figref{Map}.}
 \end{theorem}
-The finiteness of finite maps interferes with giving a useful |ClosedSemiring| instance.
+The finiteness of finite maps interferes with giving a useful |StarSemiring| instance.
 
 \workingHere
 
@@ -774,18 +774,18 @@ instance Semiring b => ApplicativeC ((:<--) b) where
     M (fromListWith (<+>) [(h a b, s <.> t) | (a,s) <- toList p, (b,t) <- toList q])
 
 instance Functor ((->) a) where
-  fmap h f = f . h
+  fmap h f = \ a -> f (h a)
 
 instance Applicative ((->) a) where
   pure b = \ a -> b
   liftA2 h f g = \ a -> h (f a) (g a)
 
 instance Semiring b => Functor ((<--) b) where
-  type Ok ((<--) b) = Eq b
+  type Ok ((<--) b) a = Eq a
   fmap h (F f) = F (\ w -> bigSumQ (u BR h u == w) f u)
 
 instance Semiring b => Applicative ((<--) b) where
-  pure b = F (\ w -> boolVal (w == b))
+  pure a = F (\ w -> boolVal (w == a))
   liftA2 h (F f) (F g) = F (\ w -> bigSumQ (u,v BR h u v == w) f u <.> g v)
 \end{code}
 }, along with instances for some of the language representations we've considered so far.%

@@ -1,6 +1,11 @@
 ## To-do items for the paper and code
 
-*   Use semiring-num
+*   Try using `TMap` from [total-map](https://github.com/conal/total-map) in place of `Map` from containers, including the `Applicative` and `Monad` instances.
+    I may have to add some operations.
+*   Use semiring-num instead of my own classes for `Semiring`, `ClosedSemiring`, and `DetectableZero`.
+    Consider uses for the other instances defined there.
+*   Define `sum` and `product` at their first use.
+    Consider renaming as in semiring-num.
 *   Tropical semirings?
 *   Counting and closure and infinity.
 *   Probability distribution semiring:

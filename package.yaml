@@ -36,10 +36,11 @@ library:
     - data-inttrie
     - containers
     - multiset
+    - total-map
     # - distributive
     # - adjunctions
     # - comonad
-    # - semiring-num
+    - semiring-num
     # - newtype-generics
   other-modules: []
   source-dirs: src
@@ -47,6 +48,7 @@ library:
     - Misc
     - Constrained
     - Semiring
+    - Language
     - Set
     - Fun
     - Other

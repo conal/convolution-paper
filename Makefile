@@ -1,30 +1,37 @@
+
+outdir=out
+
 targ = convolution
+
+otarg = $(outdir)/$(targ)
 
 .PRECIOUS: %.tex
 
-default: $(targ).pdf
+default: $(otarg).pdf
 
 # dots = $(wildcard figures/*.dot)
 # figures = $(addsuffix .pdf, $(basename $(dots)))
 
 #latex=pdflatex
-latex=latexmk -pdf -halt-on-error
+latex=latexmk -pdf
+latex+= -outdir=${outdir} -outdir=${outdir}
+# latex+= -halt-on-error
 
 %.pdf: %.tex bib.bib $(figures) Makefile
 	$(latex) $*.tex
 
 figures: $(figures)
 
-%.tex: %.lhs macros.tex formatting.fmt Makefile
-	lhs2TeX -o $*.tex $*.lhs
+$(outdir)/%.tex: %.lhs macros.tex formatting.fmt Makefile
+	lhs2TeX -o $@ $*.lhs
 
-# Cap the size so that LaTeX doesn't choke.
-%.pdf: %.dot # Makefile
-	dot -Tpdf -Gmargin=0 -Gsize=10,10 $< -o $@
+# # Figure generation. Cap the size so that LaTeX doesn't choke.
+# %.pdf: %.dot # Makefile
+# 	dot -Tpdf -Gmargin=0 -Gsize=10,10 $< -o $@
 
 showpdf=skim
 
-%.see: %.pdf
+%.see: $(outdir)/%.pdf
 	${showpdf} $<
 
 see: $(targ).see
@@ -34,11 +41,14 @@ see: $(targ).see
 
 SHELL = bash
 
+# clean:
+# 	rm -f {$(targ),was1}.{tex,dvi,pdf,aux,bbl,blg,out,log,ptb,fdb_latexmk,fls}
+
 clean:
-	rm -f {$(targ),was1}.{tex,dvi,pdf,aux,bbl,blg,out,log,ptb,fdb_latexmk,fls}
+	rm -f ${outdir}/*
 
 web: web-token
 
-web-token: $(targ).pdf
+web-token: $(otarg).pdf
 	scp $< conal@conal.net:/home/conal/domains/conal/htdocs/papers/$(targ)
 	touch web-token

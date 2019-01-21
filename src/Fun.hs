@@ -14,6 +14,7 @@ import Data.Map
   , unionsWith,mapKeys,findWithDefault,keysSet )
 -- import qualified Data.Map as M
 import qualified Data.Set as S
+-- import qualified Data.TotalMap as T
 
 import Misc
 import Semiring
@@ -56,6 +57,7 @@ instance Semiring s => Decomposable (s <-- [c]) ((->) c) s where
 -- The Functor and Applicative instances exist but are not computable.
 
 instance Semiring b => FunctorC ((<--) b) where
+  type Ok ((<--) b) a = Eq a
   fmapC h (F f) = F (\ w -> undefined h f w)
 
 instance Semiring b => ApplicativeC ((<--) b) where

@@ -20,7 +20,7 @@ import Semiring
 import Constrained
 
 {--------------------------------------------------------------------
-    Functions / generalized predicates
+    Flipped functions / generalized predicates
 --------------------------------------------------------------------}
 
 newtype b <-- a = F { unF :: a -> b }
@@ -68,7 +68,7 @@ instance Semiring b => ApplicativeC ((<--) b) where
 
 -- TODO: Infix notation for Map'
 
-newtype b :<-- a = M (Map a b)
+newtype b :<-- a = M (Map a b) deriving Show
 
 instance (Monoid a, Ord a, Semiring b) => Semiring (b :<-- a) where
   zero = M empty
@@ -96,6 +96,23 @@ instance Semiring b => ApplicativeC ((:<--) b) where
   pureC b = M (singleton b one)
   liftA2C h (M p) (M q) =
     M (fromListWith (<+>) [(h a b, s <.> t) | (a,s) <- toList p, (b,t) <- toList q])
+
+-- >>> zero :: Bool :<-- String
+-- M (fromList [])
+-- >>> one :: Bool :<-- String
+-- M (fromList [("",True)])
+-- >>> single "cat" :: Bool :<-- String
+-- M (fromList [("cat",True)])
+
+-- >>> cat = single "cat" :: Bool :<-- String
+
+-- >>> zero <+> single "cat" :: Bool :<-- String
+-- M (fromList [("cat",True)])
+-- >>> one <+> single "cat" :: Bool :<-- String
+-- M (fromList [("",True),("cat",True)])
+
+-- >>> (one <+> cat) <.> cat
+-- M (fromList [("cat",True),("catcat",True)])
 
 {--------------------------------------------------------------------
     Classic list-of-successes
@@ -356,7 +373,7 @@ data Trie c b = b :< Map c (Trie c b) deriving Show
 
 #if 0
 
-instance FunctorC (Trie c) where
+instance FunctorC ((Trie c)) where
   fmapC h (s :< ts) = h s :< (fmapC.fmapC) h ts
 
 instance ApplicativeC (Trie c) where
@@ -476,6 +493,5 @@ instance OD c s => Decomposable (Trie c s) (Map c) s where
 {--------------------------------------------------------------------
     Temporary for testing
 --------------------------------------------------------------------}
-
 
 type T = Trie Char Bool

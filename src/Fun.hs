@@ -76,6 +76,9 @@ instance Semiring b => ApplicativeC ((<--) b) where
 
 newtype b :<-- a = M (Map a b) deriving Show
 
+mapTo :: (Ord a, Semiring b) => (b :<-- a) -> (b <-- a)
+mapTo (M m) = F (\ a -> M.findWithDefault zero a m)
+
 instance (Monoid a, Ord a, Semiring b) => Semiring (b :<-- a) where
   zero = M empty
   one = single mempty

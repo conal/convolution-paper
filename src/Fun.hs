@@ -12,12 +12,16 @@ import Text.Show.Functions ()  -- for Decomp
 import Data.Map
   ( Map,toList,fromListWith,empty,singleton,insert,unionWith
   , unionsWith,mapKeys,findWithDefault,keysSet )
--- import qualified Data.Map as M
+import qualified Data.Map as M
 import qualified Data.Set as S
+
+-- import Data.TotalMap hiding ((!))
 -- import qualified Data.TotalMap as T
 
+import Data.Semiring
+
 import Misc
-import Semiring
+import Language
 import Constrained
 
 {--------------------------------------------------------------------
@@ -183,7 +187,7 @@ data RegExp c s =
   | Value s
   | RegExp c s :<+> RegExp c s
   | RegExp c s :<.> RegExp c s
-  | Closure (RegExp c s)
+  | Star (RegExp c s)
  deriving (Show,Eq)
 
 instance Semiring s => Semiring (RegExp c s) where
@@ -193,7 +197,7 @@ instance Semiring s => Semiring (RegExp c s) where
   (<.>) = (:<.>)
 
 instance Semiring s => StarSemiring (RegExp c s) where
-  closure = Closure
+  star = Star
 
 -- instance (Functor f, Foldable f, Semiring s) => HasSingle (RegExp c s) (f c) where
 --   single = product . fmap Char
@@ -213,7 +217,7 @@ instance (Ord c, StarSemiring s, DetectableZero s) => Decomposable (RegExp c s) 
   atEps (Value s)   = s
   atEps (p :<+> q)  = atEps p <+> atEps q
   atEps (p :<.> q)  = atEps p <.> atEps q
-  atEps (Closure p) = closure (atEps p)
+  atEps (Star p) = star (atEps p)
   
   deriv (Char c')  = single c'
   deriv (Value _)  = empty
@@ -228,14 +232,14 @@ instance (Ord c, StarSemiring s, DetectableZero s) => Decomposable (RegExp c s) 
   -- deriv (p :<.> q) c  = -- deriv p c <.> q <+> Value (atEps p) <.> deriv q c
   --                       Value (atEps p) <.> deriv q c <+> deriv p c <.> q
 
-  -- deriv (Closure p) =
-  --   fmap (\ d -> Value (closure (atEps p)) <.> d <.> Closure p) (deriv p)
+  -- deriv (Star p) =
+  --   fmap (\ d -> Value (star (atEps p)) <.> d <.> Star p) (deriv p)
 
   -- Testing hangs on a^nb^n.
 
-  deriv (Closure p) = fmap (\ d -> pc <.> d <.> Closure p) (deriv p)
+  deriv (Star p) = fmap (\ d -> pc <.> d <.> Star p) (deriv p)
    where
-     pc = Value (closure (atEps p))
+     pc = Value (star (atEps p))
 
 #else
 
@@ -246,7 +250,7 @@ instance (Eq c, StarSemiring s) => Decomposable (RegExp c s) ((->) c) s where
   atEps (Value s)   = s
   atEps (p :<+> q)  = atEps p <+> atEps q
   atEps (p :<.> q)  = atEps p <.> atEps q
-  atEps (Closure p) = closure (atEps p)
+  atEps (Star p) = star (atEps p)
   
   deriv (Char c') c   = boolVal (c == c')
                         -- if c == c' then one else zero
@@ -254,18 +258,18 @@ instance (Eq c, StarSemiring s) => Decomposable (RegExp c s) ((->) c) s where
   deriv (p :<+> q) c  = deriv p c <+> deriv q c
   deriv (p :<.> q) c  = -- deriv p c <.> q <+> Value (atEps p) <.> deriv q c
                         Value (atEps p) <.> deriv q c <+> deriv p c <.> q
-  deriv (Closure p) c = -- The following version works even if the atEps term
+  deriv (Star p) c = -- The following version works even if the atEps term
                         -- comes first in deriv (p :<.> q) c
-                        Value (closure (atEps p)) <.> deriv p c <.> closure p
+                        Value (star (atEps p)) <.> deriv p c <.> star p
                         -- See 2018-01-13 journal.
                         -- The following version converges if the atEps term
                         -- comes second in deriv (p :<.> q) c
-                        -- deriv (p <.> Closure p) c -- since deriv c one = zero
-                        -- deriv c (one <+> p <.> Closure p)
+                        -- deriv (p <.> Star p) c -- since deriv c one = zero
+                        -- deriv c (one <+> p <.> Star p)
 
 #endif
 
--- TODO: fix deriv c (Closure p) to compute deriv p c and deriv c (Closure p)
+-- TODO: fix deriv c (Star p) to compute deriv p c and deriv c (Star p)
 -- just once. Do a bit of inlining and simplification.
 
 -- | Interpret a regular expression
@@ -274,7 +278,7 @@ regexp (Char c)      = single [c]
 regexp (Value s)     = s
 regexp (u  :<+>  v)  = regexp u <+> regexp v
 regexp (u  :<.>  v)  = regexp u <.> regexp v
-regexp (Closure u)   = closure (regexp u)
+regexp (Star u)   = star (regexp u)
 
 {--------------------------------------------------------------------
     Decomposition as language
@@ -345,10 +349,10 @@ instance DetectableZero s => Semiring (Decomp c s) where
 
 instance (StarSemiring s, DetectableZero s) => StarSemiring (Decomp c s) where
   -- See 2019-01-13 joural
-  closure (a :<: dp) = q
+  star (a :<: dp) = q
     where
       q = as :<: fmap h dp
-      as = closure a
+      as = star a
       h d = as `scaleD` d <.> q
 
 instance (DetectableZero s, Eq c) => HasSingle (Decomp c s) [c] where
@@ -463,19 +467,19 @@ instance OD c s => Semiring (Trie c s) where
 
 -- instance OD c s => StarSemiring (Trie c s) where
 --   -- Wrong
---   closure (_ :< ds) = q where q = one :< fmap (<.> q) ds
+--   star (_ :< ds) = q where q = one :< fmap (<.> q) ds
 
 instance (Ord c, StarSemiring s, DetectableZero s) => StarSemiring (Trie c s) where
 #if 1
   -- Works
-  closure (a :< dp) = q where q = closure a `scaleT` (one :< fmap (<.> q) dp)
+  star (a :< dp) = q where q = star a `scaleT` (one :< fmap (<.> q) dp)
 #else
   -- Works
   -- See 2019-01-13 joural
-  closure (a :< dp) = q
+  star (a :< dp) = q
     where
       q = as :< fmap h dp
-      as = closure a
+      as = star a
       h d = as `scaleT` d <.> q
 #endif
 

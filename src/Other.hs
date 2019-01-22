@@ -7,13 +7,12 @@ import Prelude hiding (sum,product)
 -- import Data.Monoid (Monoid(..))
 
 import Control.Applicative (liftA2)
-
 import GHC.Generics
-
 import qualified Data.IntTrie as IT  -- data-inttrie
+import Data.Semiring
 
 import Misc
-import Semiring
+import Language
 import Set hiding (Trie)
 
 {--------------------------------------------------------------------

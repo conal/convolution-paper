@@ -15,10 +15,12 @@ import Data.ByteString.Lazy.Char8 (pack)
 import Data.Semigroup ((<>))
 import Test.Tasty (defaultMain, TestTree, testGroup)
 import Test.Tasty.Golden
+import Data.Semiring
 
-import Semiring
 import qualified Set as S
 import qualified Fun as F
+
+import Language
 
 main :: IO ()
 main = do
@@ -84,12 +86,12 @@ tests group = testGroup group
    sing = single @z
    a = sing "a"
    b = sing "b"
-   as = closure a
-   ass = closure as
+   as = star a
+   ass = star as
    pink = sing "pink"
    pig = sing "pig"
    pp = pink <+> pig
-   pps   = closure pp
+   pps   = star pp
    app   = accept pp
    apps  = accept pps
    anbn  = one <+> (a <.> anbn <.> b)

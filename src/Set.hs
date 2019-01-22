@@ -15,9 +15,10 @@ import Data.Map (Map)
 import qualified Data.Map as M
 -- import Data.Set (Set)
 -- import qualified Data.Set as S
+import Data.Semiring
 
 import Misc
-import Semiring
+import Language
 
 delta :: (Semiring a, Decomposable a c Bool) => a -> a
 delta a | atEps a   = one
@@ -36,7 +37,7 @@ instance Semiring (Set a) where
   p <.> q = set (u <> v | u `elem` p && v `elem` q)
 
 instance StarSemiring (Set a) where
-  closure p = bigunion (n >= 0) (p^n)
+  star p = bigunion (n >= 0) (p^n)
 
 instance HasSingle (Set a) a where
   single a = set a
@@ -152,7 +153,7 @@ data RegExp c =
   | One
   | RegExp c :<+> RegExp c
   | RegExp c :<.> RegExp c
-  | Closure (RegExp c)
+  | Star (RegExp c)
  deriving (Show,Eq)
 
 -- TODO: instantiate Show manually, using the method names instead of constructors.
@@ -183,8 +184,8 @@ instance Eq c => Semiring (RegExp c) where
   a <.> b = a :<.> b
 
 instance Eq c => StarSemiring (RegExp c) where
-  closure Zero = One
-  closure e    = Closure e
+  star Zero = One
+  star e    = Star e
 
 #else
 
@@ -197,7 +198,7 @@ instance Semiring (RegExp c) where
   (<.>) = (:<.>)
 
 instance StarSemiring (RegExp c) where
-  closure = Closure
+  star = Star
 
 #endif
 
@@ -225,7 +226,7 @@ instance Eq c => Decomposable (RegExp c) ((->) c) Bool where
   atEps One         = one
   atEps (p :<+> q)  = atEps p <+> atEps q
   atEps (p :<.> q)  = atEps p <.> atEps q
-  atEps (Closure p) = closure (atEps p)
+  atEps (Star p) = star (atEps p)
   
   deriv (Char c') c | c == c'   = one
                     | otherwise = zero
@@ -241,9 +242,9 @@ instance Eq c => Decomposable (RegExp c) ((->) c) Bool where
                                    -- deriv q c <+> deriv p c <.> q
                      | otherwise = deriv p c <.> q
 #endif
-  deriv (Closure p) c   = deriv p c <.> closure p
-                        -- = deriv (p <.> Closure p) c -- since deriv c one = zero
-                        -- = deriv c (one <+> p <.> Closure p)
+  deriv (Star p) c   = deriv p c <.> star p
+                        -- = deriv (p <.> Star p) c -- since deriv c one = zero
+                        -- = deriv c (one <+> p <.> Star p)
 
 -- | Interpret a regular expression
 regexp :: (StarSemiring a, HasSingle a [c]) => RegExp c -> a
@@ -252,7 +253,7 @@ regexp Zero          = zero
 regexp One           = one
 regexp (u  :<+>  v)  = regexp u <+> regexp v
 regexp (u  :<.>  v)  = regexp u <.> regexp v
-regexp (Closure u)   = closure (regexp u)
+regexp (Star u)   = star (regexp u)
 
 {--------------------------------------------------------------------
     Decomposition as language
@@ -328,10 +329,10 @@ instance Semiring (Decomp c) where
 
 instance StarSemiring (Decomp c) where
   -- See 2019-01-13 joural
-  closure (a :<: dp) = q
+  star (a :<: dp) = q
     where
       q = as :<: fmap h dp
-      as = closure a
+      as = star a
       h d = as `scaleD` d <.> q
 
 instance Eq c => HasSingle (Decomp c) [c] where
@@ -402,13 +403,13 @@ instance Ord c => Semiring (Trie c) where
 instance Ord c => StarSemiring (Trie c) where
 
   -- Correct? Look for counterexamples.
-  closure (_ :< ds) = q where q = True :< fmap (<.> q) ds
+  star (_ :< ds) = q where q = True :< fmap (<.> q) ds
 
   -- -- See 2019-01-13 joural
-  -- closure (a :< dp) = q
+  -- star (a :< dp) = q
   --   where
   --     q = as :< fmap h dp
-  --     as = closure a
+  --     as = star a
   --     h d = as `scaleT` d <.> q
 
 instance Ord c => HasSingle (Trie c) [c] where

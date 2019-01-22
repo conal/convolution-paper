@@ -3,7 +3,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 
 {-# OPTIONS_GHC -Wall #-}
--- {-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
+{-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
 
 -- | Generalized "languages", which is mostly Semiring & friends
 

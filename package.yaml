@@ -47,7 +47,6 @@ library:
   exposed-modules:
     - Misc
     - Constrained
-    - Semiring
     - Language
     - Set
     - Fun
@@ -64,4 +63,5 @@ tests:
     - bytestring
     - tasty
     - tasty-golden
+    - semiring-num
     - paper

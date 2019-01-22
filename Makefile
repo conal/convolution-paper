@@ -14,8 +14,10 @@ default: $(otarg).pdf
 
 #latex=pdflatex
 latex=latexmk -pdf
-latex+= -outdir=${outdir} -outdir=${outdir}
+# latex+= -outdir=${outdir} -outdir=${outdir}
 # latex+= -halt-on-error
+# # Preview continuously
+# latex+= -pvc
 
 %.pdf: %.tex bib.bib $(figures) Makefile
 	$(latex) $*.tex

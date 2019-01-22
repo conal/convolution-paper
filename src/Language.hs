@@ -14,8 +14,8 @@ import qualified Data.Set as S
 import Data.Map (Map)
 import qualified Data.Map as M
 
-import Data.TotalMap (TMap)
-import qualified Data.TotalMap as T
+-- import Data.TotalMap (TMap)
+-- import qualified Data.TotalMap as T
 
 import Data.Semiring
 

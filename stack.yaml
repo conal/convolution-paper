@@ -1,8 +1,8 @@
 packages:
 - .
-- # While in flux
-  location: /Users/conal/Haskell/total-map
-  extra-dep: true
+# - # While in flux
+#   location: /Users/conal/Haskell/total-map
+#   extra-dep: true
 - # Until semiring-num-1.6.0.2 is released to Hackage.
   # See https://github.com/oisdk/semiring-num/pull/2
   location:
@@ -18,6 +18,6 @@ resolver: lts-13.4 # ghc-8.6.3
 
 # resolver: nightly-2018-11-23 # ghc-8.6.2
 
-extra-deps:
-# - total-map-0.1.0
+# extra-deps:
+# # - total-map-0.1.0
 

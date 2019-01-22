@@ -352,38 +352,36 @@ instance HasSingle b w => HasSingle (a -> b) w where
 \notefoot{Maybe a theorem here saying that these instances satisfy the necessary laws. Otherwise suggest that the reader verify. I'm unsure how to prove the closure property. Perhaps coinduction. See journal notes for 2019-01-16.}
 We will use the |a -> b| semiring in \secref{Convolution}.\notefoot{Check that we did.}
 
-Another representation of functions from |a| to |b| is |Map a b|, where |Map| is an efficient representation of finite maps, i.e., partial functions defined on finite subsets of their domains \needcite{}.
-\notefoot{Probably swap |Map| arguments for the required |Functor| and |Applicative| instances.}
-Although we can think of |Map a b| as denoting partial functions from |a| to |b|, if we further require |b| to be semiring, we can treat missing entries as being implicitly zero, yielding a \emph{total} function:\notefoot{Describe finite maps and |findWithDefault|.}
-\begin{code}
-mat :: (Ord c, Semiring s) => Map c s -> c -> s
-m `mat` c = findWithDefault zero c m
-\end{code}
-\begin{theorem}[\provedIn{theorem:Map}]\thmLabel{Map}
-Given the definitions in \figrefdef{Map}{Maps as a language representation}{
-\begin{code}
-instance (Monoid a, Ord a, Semiring b) => Semiring (Map a b) where
-  zero  = empty
-  one   = single one
-  p  <+>  q  =  unionWith (<+>) p q
-  p  <.>  q  =  fromListWith (<+>) [(u <> v, s <.> t) | (u,s) <- toList p, (v,t) <- toList q]
-
-instance Semiring s => HasSingle (Map a s) a where
-  single a = singleton a one
-\end{code}
-\vspace{-4ex}
-}, |mat| (as a function of one argument) is a homomorphism with respect to each instantiated class.
-\notefoot{Describe the |Map| operations used in \figref{Map}.}
-\end{theorem}
-The finiteness of finite maps interferes with giving a useful |StarSemiring| instance.
-
-\workingHere
-
 %format :<-- = "\leftarrowtriangle"
 
-\mynote{Switch from |Map a b| to |b :<-- a| as in source.}
+Another representation of functions from |a| to |b| is |Map a b|, where |Map| is an efficient representation of finite maps, i.e., partial functions defined on finite subsets of their domains \needcite{}.
+Although we can think of |Map a b| as denoting partial functions from |a| to |b|, if we further require |b| to be semiring, we can treat missing entries as being implicitly zero, yielding a \emph{total} function.
+\notefoot{Describe finite maps and |findWithDefault|.}
+As with functions, it will be helpful later to flip the order of type parameters to |Map|.
+\begin{theorem}[\provedIn{theorem:Map}]\thmLabel{Map}
+Given the definitions in \figrefdef{Map}{Finite maps as a language representation}{
+\begin{code}
+newtype b :<-- a = M (Map a b) deriving Show
 
-\mynote{I think this |(!)| is made obsolete by |Indexable| below.}
+mapTo :: (Ord a, Semiring b) => (b :<-- a) -> (b <-- a)
+mapTo (M m) = F (\ a -> findWithDefault zero a m)
+
+instance (Monoid a, Ord a, Semiring b) => Semiring (b :<-- a) where
+  zero = M empty
+  one = single mempty
+  M p  <+>  M q = M (unionWith (<+>) p q)
+  M p  <.>  M q = M  (fromListWith (<+>)
+                       [(u <> v, s <.> t) | (u,s) <- toList p, (v,t) <- toList q])
+
+instance Semiring b => HasSingle (b :<-- a) a where
+  single a = M (singleton a one)
+\end{code}
+\vspace{-4ex}
+}, |mapTo| is a homomorphism with respect to each instantiated class.
+\notefoot{Describe the |Map| operations used in \figref{Map}.}
+\notefoot{Look for a better name than ``|mapTo|''.}
+\end{theorem}
+The finiteness of finite maps interferes with giving a useful |StarSemiring| instance.
 
 \sectionl{Decomposing Functions}
 
@@ -789,34 +787,26 @@ instance Semiring b => Applicative ((<--) b) where
   liftA2 h (F f) (F g) = F (\ w -> bigSumQ (u,v BR h u v == w) f u <.> g v)
 \end{code}
 }, along with instances for some of the language representations we've considered so far.%
-\footnote{The enhancement is the associated constraint \citep{Bolingbroke2011CK} |Ok|, limiting the types that the class methods must support. The line ``|type Ok f a = ()|'' means that the constraint on |a| defaults to |()|, which holds for all |a|.}%
+\footnote{The enhancement is the associated constraint \citep{Bolingbroke2011CK} |Ok|, limiting the types that the class methods must support. The line ``|type Ok f a = ()|'' means that the constraint on |a| defaults to |()|, which holds vacuously for all |a|.}%
 \footnote{Originally, |Applicative| had a |(<*>)| method from which one can easily define |liftA2|. Since the base library version 4.10 \needcite, |liftA2| was added as a method (along with a default definition of |(<*>)|) to allow for more efficient implementation. \mynote{Cite \href{https://ghc.haskell.org/trac/ghc/ticket/13191}{GHC ticket 13191} if I can't find a better reference.}}
 Higher-arity liftings can be defined via these three.
 (Exercise.)
 The use of |s <-- t| as an alternative to |t -> s| allows us to give instances for both and to stay within Haskell's type system (and ability to infer types via first-order unification).
 For |b <-- a|, these definitions are not really executable code, since they involve summations are over potentially infinite ranges (as with our semiring instances for |b <-- a| in \figref{<--}).
-
-\mynote{
-\begin{itemize}
-\item Describe the constraint-tweaked |Functor| and |Applicative| classes.
-\item Replace finite maps by ``total (finite) maps'', which have an explicit default. Probably introduce these maps much earlier in the paper.
-\item Then flip those maps to match |(<--)|. Name the type with another reverse arrow.
-\item Probe more into the pattern of |single = pure|, |one = single mempty| and |(*) = liftA2 (<>)|.
-      Also the relationship between forward and reverse functions and maps.
-\end{itemize}
-}
-
 \begin{theorem}
 For each instance defined in \figref{FunApp}, the following equalities hold:
+\notefoot{Probe more into the pattern of |single = pure|, |one = single mempty| and |(*) = liftA2 (<>)|.
+Also the relationship between forward and reverse functions and maps.}
 \begin{code}
-single = pure
-one = single mempty
-(*) = liftA2 (<>)
+single  = pure
+one     = single mempty
+(*)     = liftA2 (<>)
 \end{code}
 \end{theorem}
 \begin{proof}
 Immediate from the instance definitions.
 \end{proof}
+
 
 \mynote{The free semimodule monad.}
 

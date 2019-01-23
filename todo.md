@@ -1,7 +1,42 @@
 ## To-do items for the paper and code
 
+
+*   Summation (etc) notation style:
+    *   Consider moving the condition to the body where it becomes multiplication:
+
+        ``` haskell
+          liftA2 h (Pred f) (Pred g) = Pred (\ w -> or (u,v) (f u && g v && h u v == w))
+        ``` 
+
+        Note that `w` appears only in the third conjunct.
+    *   Generalizing from predicates to flipped functions, 
+
+        ``` haskell
+          liftA2 h (F f) (F g) = F (\ w -> sum (u,v) (f u * g v * single (h u v) w))
+        ```
+
+    *   Simplify further
+
+        ``` haskell
+          liftA2 h (F f) (F g)
+        = F (\ w -> sum (u,v) (f u * g v * single (h u v) w))
+        = sum (u,v) (\ w -> f u * g v * single (h u v) w)
+        = sum (u,v) ((f u * g v) .> (\ w -> single (h u v) w))
+        = sum (u,v) ((f u * g v) .> single (h u v))
+        ```
+
+    *   Then simplify the "standard FunApp" proof.
+    *   Introduce notation "`a |-> b = b .> single a`".
+        Then `liftA2 h (F f) (F g) = sum (u,v) (f u * g v |-> h u v)`.
+
+
 *   Try using `TMap` from [total-map](https://github.com/conal/total-map) in place of `Map` from containers, including the `Applicative` and `Monad` instances.
     I may have to add some operations.
+*   Consider the following intuition.
+    The result of `fmap h (F f)` is moving all of the values in `f` to new locations according to `h`, summing all values that get moved to the same place.
+    Similarly for `liftA2`.
+    Graphics has a similar issue!
+    Spatial transformations may be one-to-many, especially if non-projective.
 *   Use semiring-num instead of my own classes for `Semiring`, `ClosedSemiring`, and `DetectableZero`.
     Consider uses for the other instances defined there.
 *   Define `sum` and `product` at their first use.

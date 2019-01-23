@@ -79,10 +79,22 @@ s .> f | isZero s  = zero
 #endif
 
 {--------------------------------------------------------------------
-    Flipped finite maps
+    Finite maps
 --------------------------------------------------------------------}
 
--- TODO: Infix notation for Map'
+-- semiring-num gives a Semiring instance for Map that corresponds to (<--)
+-- rather than to (->). Wrap here for the '(->)'-like version
+
+newtype Map' a b = M' (Map a b) deriving Show
+
+mapFun :: (Ord a, Semiring b) => Map' a b -> (a -> b)
+mapFun (M' m) = \ a -> M.findWithDefault zero a m
+
+-- See also total-map
+
+{--------------------------------------------------------------------
+    Flipped finite maps
+--------------------------------------------------------------------}
 
 newtype b :<-- a = M (Map a b) deriving Show
 

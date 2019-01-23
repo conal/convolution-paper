@@ -29,7 +29,7 @@
     *   Introduce notation "`a |-> b = b .> single a`".
         Then `liftA2 h (F f) (F g) = sum (u,v) (f u * g v |-> h u v)`.
 
-
+*   Maybe drop `HasSingle` and define `single` via `fmap` and `one`.
 *   Try using `TMap` from [total-map](https://github.com/conal/total-map) in place of `Map` from containers, including the `Applicative` and `Monad` instances.
     I may have to add some operations.
 *   Consider the following intuition.
@@ -42,6 +42,7 @@
 *   Define `sum` and `product` at their first use.
     Consider renaming as in semiring-num.
 *   Tropical semirings?
+*   Generalize to other tries.
 *   Counting and closure and infinity.
 *   Probability distribution semiring:
     *   Uses?

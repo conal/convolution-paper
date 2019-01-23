@@ -110,6 +110,8 @@ Conal Elliott
 %format <# = "\in"
 %format # = "\mid"
 
+%format paren (e) = "\left(" e "\right)"
+
 %format Pow = "\Pow"
 %format emptyset = "\emptyset"
 %format (single (s)) = "\single{"s"}"
@@ -137,7 +139,8 @@ The language specifications (language-denoting \emph{expressions} rather than la
 
 Some observations:
 \begin{itemize}
-\item Union is associative, with |zero| as its identity.\notefoot{Maybe state equations for this observations and the next two.}
+\item Union is associative, with |zero| as its identity.
+      \notefoot{Maybe state equations for this observations and the next two.}
 \item Element-Wise concatenation is associative and commutative, with |single mempty| as its identity, where |mempty| is the empty string.
 \item Left- and right-concatenation distribute over union.
 \item The empty language annihilates under concatenation, i.e., |p <.> zero = zero <.> q = zero|.
@@ -160,7 +163,7 @@ class HasSingle a w | a -> w where
   single :: w -> a
 \end{code}
 \vspace{-4ex}
-} shows Haskell classes for representations of languages (and later generalizations), combining the star semiring vocabulary with an operation for singletons.
+} shows Haskell classes for representations of languages (and later generalizations), combining the star semiring vocabulary (from the semiring-num library \citep{semiring-num}) with an operation for singletons.
 The singleton-forming operation must satisfy the following properties:
 \begin{align*}
 \single \mempty &= \one \\
@@ -227,7 +230,8 @@ Now consider how we can computably \emph{match} a string for membership in a lan
 Aside from closure, which introduces infinite languages, we could test membership in sets or lists.
 \out{
 The set-based language definition does not lead directly to effective string matching, because the sets may be infinite.
-The list and finite set types do have computable membership testing so we could use them instead.\notefoot{Finite sets \needcite{} would not support closure, due to finiteness.}
+The list and finite set types do have computable membership testing so we could use them instead.
+\notefoot{Finite sets \needcite{} would not support closure, due to finiteness.}
 }%
 Another option is to use membership predicates \emph{as} language implementation, noting the set/predicate isomorphism:
 \begin{code}
@@ -295,9 +299,9 @@ instance StarSemiring Bool where
              = True
 \end{code}
 
-%format bigSum (lim) = "\bigSumZ{" lim "}{0}"
-%format bigSumQ (lim) = "\bigSumZ{" lim "}{1.5}"
-\nc\bigSumZ[2]{\displaystyle\hspace{-#2ex}\sum_{\substack{#1}}\hspace{-#2ex}}
+%format bigSum (lim) (body) = "\bigSumZ{" lim "}{0}" body
+%format bigSumQ (lim) (body) = "\bigSumZ{" lim "}{1.5}" body
+\nc\bigSumZ[2]{\displaystyle\hspace{-#2ex}\sum_{\substack{#1}}\,\hspace{-#2ex}}
 %format <-- = "\leftarrow"
 
 \noindent
@@ -310,7 +314,7 @@ instance (Semiring b, Monoid a, Eq a) => Semiring (b <-- a) where
   zero = F (\ w -> zero)
   one = single mempty
   F f  <+>  F g = F (\ w -> f w <+> g w)
-  F f  <.>  F g = F (\ w -> bigSumQ (u,v BR u <> v == w) f u <.> g v)
+  F f  <.>  F g = F (\ w -> bigSumQ (u,v BR u <> v == w) (f u <.> g v))
 
 instance (Monoid a, Eq a) => StarSemiring (b <-- a)
 
@@ -515,8 +519,8 @@ where |(.>)| scales the result of a function:\footnote{Equivalently, |deriv (p  
 \begin{code}
 infixl 7 .>
 (.>) :: Semiring s => s -> (a -> s) -> (a -> s)
-s .> f  = \ a -> s * (f a)
-        = (s NOP *) . f
+s .> f  = \ a -> s <.> (f a)
+        = (s NOP <.>) . f
 \end{code}
 \end{lemma}
 \begin{corollary}
@@ -557,6 +561,18 @@ closure (a <: dp) = q where q = closure a .> (one <: (<.> NOP q) .  dp)
 \end{lemma}
 %endif
 
+Returning to the definition of |s .> f| above, there's a very important optimization to be made.
+When |s == zero|, |s .> f == zero| (exercise), so we can discard |f| entirely:
+\begin{code}
+(.>) :: DetectableZero s => s -> (a -> s) -> (a -> s)
+s .> f  | isZero s   = zero
+        | otherwise  = (s NOP <.>) . f
+\end{code}
+The |DetectableZero| class \citep{semiring-num}:
+\begin{code}
+class Semiring a => DetectableZero a where isZero :: a -> Bool
+\end{code}
+
 \sectionl{Tries}
 
 %format :< = "\mathrel{\Varid{:\!\!\triangleleft}}"
@@ -569,14 +585,15 @@ Putting genericity aside\notefoot{Re-raise later?} and restricting our attention
 > data Trie c s = s :< Map c (Trie c s)
 
 The similarity between the |Trie| type and the function decomposition from \secref{Decomposing Functions} (motivating the constructor's name) makes the denotation of tries quite simple to express:\footnote{Equivalently, |trieFun (e :< d) = e <: \ c cs -> trieFun (d ! c) cs|.}
+%format OD c s = Ord SPC c
+%format OD c s = (Ord SPC c, DetectableZero SPC s)
 \begin{code}
-trieFun :: Ord c => Trie c s -> ([c] -> s)
+trieFun :: OD c => Trie c s -> ([c] -> s)
 trieFun (e :< d) = e <: trieFun . (d NOP !)
 \end{code}
 Likewise, the properties from section \secref{Decomposing Functions} make it fairly easy to calculate instances for |Trie|.
 \begin{theorem}[\provedIn{theorem:Trie}]\thmLabel{Trie}
 Given the definitions in \figrefdef{Trie}{Tries as a language representation}{
-%format OD c s = Ord c
 \begin{code}
 data Trie c s = s :< Map c (Trie c s)
 
@@ -585,29 +602,31 @@ instance OD c s => Decomposable (Trie c s) (Map c) s where
   atEps  (a  :<  d) = a
   deriv  (a  :<  d) = d
 
-scaleT :: (Ord c, Semiring s) => s -> Trie c s -> Trie c s
-s `scaleT` (e :< ts) = (s <.> e) :< fmap (s NOP `scaleT`) ts
+scaleT :: OD c s => s -> Trie c s -> Trie c s
+s `scaleT` t   | isZero s   = zero
+               | otherwise  = go t
+ where
+   go (e :< ts) = (s <.> e) :< fmap go ts
 
-instance Ord c => Semiring (Trie c s) where
+instance OD c s => Semiring (Trie c s) where
   zero = zero :< empty
   one  = one  :< empty
   (a :< dp) <+> (b :< dq) = (a <+> b) :< unionWith (<+>) dp dq
   (a :< ps) <.> q = a `scaleT` q <+> (zero :< fmap (<.> NOP q) ps)
 
-instance Ord c => StarSemiring (Trie c s) where
+instance OD c s => StarSemiring (Trie c s) where
   closure (a :< dp) = q where q = closure a .> (one <: (<.> NOP q) .  dp)
 
-instance Ord c => HasSingle (Trie c s) [c] where
+instance OD c s => HasSingle (Trie c s) [c] where
   single w = product [zero :< singleton c one | c <- w]
 \end{code}
 \vspace{-4ex}
 }, |trieFun| is a homomorphism with respect to each instantiated class.
 \notefoot{Consider making |scaleT| be a method of a new class. Derive instances homomorphically. Maybe a semimodule will be additive plus scalable.}
 \notefoot{I think we could exploit a |Semiring b => Semiring (Map c b)| instance and so replace |unionWith (<+>)| by |(<+>)| here. Maybe also something for |single w|. I might want to use \emph{total maps} \citep{Elliott-2009-tcm}, especially in \secref{Beyond Convolution}.}
-
 \end{theorem}
-
-\workingHere
+Note again the important optimization for |zero `scaleT` t = zero|, eliminating the entire, possibly infinite trie |t|.
+This optimization applies quite often in practice, since languages tend to be sparse.
 
 \sectionl{Regular Expressions}
 
@@ -618,7 +637,8 @@ instance Ord c => HasSingle (Trie c s) [c] where
 %format bar (x) = "\bar{"x"}"
 %format blam = "\bar{\lambda}"
 
-Consider again the definition of semiring ``multiplication'' on functions |f,g :: b <-- a| from \figref{<--}, temporarily eliding the |F| constructors:\notefoot{To do: try \emph{with} all of the required |F| constructors. Try also with lighter-weight notation for |F|. For instance, replace ``|F f|'' by ``|bar f|'' and ``|\ w -> cdots|'' by ``|blam w -> cdots|''.}
+Consider again the definition of semiring ``multiplication'' on functions |f,g :: b <-- a| from \figref{<--}, temporarily eliding the |F| constructors:
+\notefoot{To do: try \emph{with} all of the required |F| constructors. Try also with lighter-weight notation for |F|. For instance, replace ``|F f|'' by ``|bar f|'' and ``|\ w -> cdots|'' by ``|blam w -> cdots|''.}
 \begin{equation}\eqnlabel{convolution}
 (f * g)\,w = \bigSumZ{u,v \\ u \mappend v = w}1 f\,u * g\,v
 \end{equation}
@@ -632,7 +652,8 @@ Using the set/predicate isomorphism from \secref{Matching}, we can translate thi
 
 which is the definition of the concatenation of two languages from \secref{Languages}.
 
-By specializing the \emph{domain} of the functions to sequences (from general monoids), we can get efficient matching of semiring-generalized ``languages'', as in \secreftwo{Decomposing Functions}{Tries}, which translates to regular expressions (\secref{Regular Expressions}), generalizing work of \citet{Brzozowski64}\mynote{, while apparently improving performance.\notefoot{Measure and compare in \secref{Regular Expressions}.}}
+By specializing the \emph{domain} of the functions to sequences (from general monoids), we can get efficient matching of semiring-generalized ``languages'', as in \secreftwo{Decomposing Functions}{Tries}, which translates to regular expressions (\secref{Regular Expressions}), generalizing work of \citet{Brzozowski64}\mynote{, while apparently improving performance.
+\notefoot{Measure and compare in \secref{Regular Expressions}.}}
 
 %format R = "\mathbb R"
 %format C = "\mathbb C"
@@ -641,18 +662,19 @@ Let's now consider specializing the functions' domains to \emph{integers} instea
 \vspace{-2ex}
 \begin{spacing}{2}
 \begin{code}
-(f <.> g) w  = bigSumQ (u,v BR u <> v == w) f u <.> g v
-             = bigSumQ (u,v BR u + v == w) f u <.> g v
-             = bigSumQ (u,v BR v = w - u) f u <.> g v
-             = bigSum u f u <.> g (w - u)
+(f <.> g) w  = bigSumQ (u,v BR u <> v == w) (f u <.> g v)
+             = bigSumQ (u,v BR u + v == w) (f u <.> g v)
+             = bigSumQ (u,v BR v = w - u) (f u <.> g v)
+             = bigSum u (f u <.> g (w - u))
 \end{code}
 \end{spacing}
 \vspace{-3ex}
 \noindent
-which is exactly the standard definition of discrete \emph{convolution} \needcite{}\footnote{Note that this reasoning applies to \emph{any} group (monoid with inverses)}.
+which is the standard definition of discrete \emph{convolution} \needcite{}\footnote{Note that this reasoning applies to \emph{any} group (monoid with inverses)}.
 Therefore, just as \eqnref{convolution} generalizes language concatenation (via the predicate/set isomorphism), it also generalizes the usual notion of discrete convolution.
 Moreover, if the domain is a continuous type such as |R| or |C|, we can reinterpret summation as integration, resulting in \emph{continuous} convolution \needcite{}.
-Additionally, for multi-dimensional (discrete or continuous) convolution, we can simply use tuples of scalar indices for |w| and |u|, and define tuple subtraction component-wise.\notefoot{More generally, cartesian products of monoids are also monoids.
+Additionally, for multi-dimensional (discrete or continuous) convolution, we can simply use tuples of scalar indices for |w| and |u|, and define tuple subtraction componentwise.
+\notefoot{More generally, cartesian products of monoids are also monoids.
 Consider multi-dimensional convolution in which different dimensions have different types, even mixing discrete and continuous, and maybe even sequences and numbers.
 At the least, it's useful to combine finite dimensions of different sizes.}
 \begin{theorem}[\provedIn{theorem:Fourier}]\thmLabel{Fourier}
@@ -664,7 +686,8 @@ The Fourier transform is a semiring homomorphism from |a -> b| to |b <- a|.
 %format Fin (m) = Fin "_{" m "}"
 %format Array (m) = Array "_{" m "}"
 
-Some uses of convolution (including convolutional neural networks \needcite{}) involve functions having finite support, i.e., non-zero on only a finite subset of their domains.\notefoot{First suggest finite maps, using instances from \figref{Map}. Then intervals/arrays.}
+Some uses of convolution (including convolutional neural networks \needcite{}) involve functions having finite support, i.e., non-zero on only a finite subset of their domains.
+\notefoot{First suggest finite maps, using instances from \figref{Map}. Then intervals/arrays.}
 In many cases, these domain subsets may be defined by finite \emph{intervals}.
 For instance, such a 2D operation would be given by intervals in each dimension, together specifying lower left and upper right corners of a 2D interval (rectangle) out of which the functions are guaranteed to be zero.
 The two input intervals needn't have the same size, and the result occupies (is supported by) a larger interval than both inputs, with sizes equaling the sum of the sizes in each dimension (minus one for the discrete case).
@@ -690,7 +713,7 @@ Although we can still define a convolution-like operation in terms of index addi
 The inability to support convolution on statically sized arrays (or other memoized forms of functions over finite domains) as semiring multiplication came from the expectation that index/argument combination is via a monoid.
 This limitation is a shame, since convolution still makes sense:
 \begin{code}
-(f <.> g) w  = bigSumQ (u,v BR u + v == w) f u <.> g v
+(f <.> g) w  = bigSumQ (u,v BR u + v == w) (f u <.> g v)
 \end{code}
 where now
 \begin{code}
@@ -702,7 +725,7 @@ For now, let's call this more general operation ``|lift2 h|''.
 \notefoot{Maybe remark on the mixture of ``|->|'' and ``|<--|''.}
 \begin{code}
 lift2 :: Semiring s => (a -> b -> c) -> (s <-- a) -> (s <-- b) -> (s <-- c)
-lift2 h f g = \ w -> bigSumQ (u,v BR h u v == w) f u <.> g v
+lift2 h f g = \ w -> bigSumQ (u,v BR h u v == w) (f u <.> g v)
 \end{code}
 We can similarly lift functions of \emph{any} arity:
 %format a1
@@ -711,16 +734,16 @@ We can similarly lift functions of \emph{any} arity:
 %format fn = f "_n"
 %format u1
 %format un = u "_n"
-%format bigSumZ (lim) = "\bigSumZ{" lim "}{3}"
+%format bigSumZ (lim) (body) = "\bigSumZ{" lim "}{3}" body
 \begin{code}
 liftn :: Semiring s => (a1 -> ... -> an -> b) -> (s <-- a1) -> ... -> (s <-- an) -> (s <-- b)
-liftn h f1 ... fn = \ w -> bigSumZ (u1, ..., un BR h u1 cdots un == w) f1 u1 <.> cdots <.> fn un
+liftn h f1 ... fn = \ w -> bigSumZ (u1, ..., un BR h u1 cdots un == w) (f1 u1 <.> cdots <.> fn un)
 \end{code}
 Here we are summing over the set-valued \emph{preimage} of |w| under |h|.
 Now consider two specific cases of |liftn|:
 \begin{code}
 lift1 :: Semiring s => (a -> b) -> (s <-- a) -> (s <-- b)
-lift1 h f = \ w -> bigSumQ (u BR h u == w) f u
+lift1 h f = \ w -> bigSumQ (u BR h u == w) (f u)
 
 lift0 :: Semiring s => b -> (s <-- b)
 lift0 b  = \ w -> bigSum (b == w) one
@@ -750,14 +773,16 @@ instance Functor Pow where
   fmap h p = set (h a | a <# p)
 
 instance Applicative Pow where
-  pure b = set b
+  pure b  = set b
+          = pure b
   liftA2 h p q = set (h a b | a <# p && b <# q)
 
 instance Functor [] where
   fmap h as = [h a | a <- as]
 
 instance Applicative [] where
-  pure b = [b]
+  pure b  = [b]
+          = single b
   liftA2 h as bs = [h a b | a <- as, b <- bs]
 
 newtype b :<-- a = M (Map a b)
@@ -767,7 +792,8 @@ instance Semiring b => FunctorC ((:<--) b) where
   fmapC h (M p) = M (fromListWith (<+>) [(h a, b) | (a,b) <- toList p])
 
 instance Semiring b => ApplicativeC ((:<--) b) where
-  pureC b = M (singleton b one)
+  pureC a  = M (singleton a one)
+           = single a
   liftA2C h (M p) (M q) =
     M (fromListWith (<+>) [(h a b, s <.> t) | (a,s) <- toList p, (b,t) <- toList q])
 
@@ -775,16 +801,18 @@ instance Functor ((->) a) where
   fmap h f = \ a -> f (h a)
 
 instance Applicative ((->) a) where
-  pure b = \ a -> b
+  pure b  = \ a -> b
+          = single b
   liftA2 h f g = \ a -> h (f a) (g a)
 
 instance Semiring b => Functor ((<--) b) where
   type Ok ((<--) b) a = Eq a
-  fmap h (F f) = F (\ w -> bigSumQ (u BR h u == w) f u)
+  fmap h (F f) = F (\ w -> bigSumQ (u BR h u == w) (f u))
 
 instance Semiring b => Applicative ((<--) b) where
-  pure a = F (\ w -> boolVal (w == a))
-  liftA2 h (F f) (F g) = F (\ w -> bigSumQ (u,v BR h u v == w) f u <.> g v)
+  pure a  = F (\ w -> boolVal (w == a))
+          = single a
+  liftA2 h (F f) (F g) = F (\ w -> bigSumQ (u,v BR h u v == w) (f u <.> g v))
 \end{code}
 }, along with instances for some of the language representations we've considered so far.%
 \footnote{The enhancement is the associated constraint \citep{Bolingbroke2011CK} |Ok|, limiting the types that the class methods must support. The line ``|type Ok f a = ()|'' means that the constraint on |a| defaults to |()|, which holds vacuously for all |a|.}%
@@ -807,8 +835,34 @@ one     = single mempty
 Immediate from the instance definitions.
 \end{proof}
 
+\sectionl{The free semimodule monad}
 
-\mynote{The free semimodule monad.}
+Where there's an applicative, there's often a compatible monad.
+For |b <-- a|, the monad is known as the ``free semimodule monad'' (or sometimes the ``free \emph{vector space} monad'') \needcite{}.
+(A semimodule is like a vector space but relaxes the requirement of a \emph{field} of scalars to a semiring.)
+One can think of a free semimodule over a semiring |b| as |b <-- a| for some set |a| of ``indices'' and semiring |b| of ``scalars''.
+The dimension of the semimodule is the cardinality of |a|.
+Basis vectors have the form |single u| for some |u :: a|, mapping |u| to |one| and everything else to |zero| as in \figref{<--}.
+Every function |f :: b <-- a| can be decomposed into this basis as follows:
+\notefoot{I'm not assuming finite support, which is part of the usual definition but problematic for the applications in this paper. Is there a problem with dropping finite support and finiteness of linear combinations?}
+\begin{code}
+F f = bigSum u (f u .> single u)
+\end{code}
+The monad instance is defined as follows:\footnote{The |return| method does not appear here, since it is equivalent to |pure| from Applicative.}
+\begin{code}
+instance Semiring s => Monad ((<--) s) where
+  (>>=) :: (s <-- a) -> (a -> (s <-- b))) -> (s <-- b)
+  F f >>= h = bigSum a (f a) .> unF (h a)
+\end{code}
+\vspace{-4ex}
+\begin{theorem}[\provedIn{theorem:standard FunApp}]\thmLabel{standard FunApp}
+The definitions of |fmap| and |liftA2| on |((<--) b)| in \figref{FunApp} satisfy the following standard equations for monads:
+\begin{code}
+fmap f p = p >>= \ a -> pure (f a)
+
+liftA2 h p q = p >>= \ u -> q >>= \ v -> pure (h u v)
+\end{code}
+\end{theorem}
 
 \sectionl{More Variations}
 
@@ -870,6 +924,36 @@ For |deriv (closure p)|, see 2019-01-13 notes.
 
 %format F = "\mathcal F"
 \mynote{Additivity of |F|, and the convolution theorem. What about |closure p| and $single w$?}
+
+\subsection{\thmRef{standard FunApp}}\proofLabel{theorem:standard FunApp}
+
+First consider |fmap|, as defined in \figref{FunApp}.
+Eliding the |F| constructors,
+\begin{spacing}{1.5}
+\begin{code}
+    fmap h f
+==  \ w -> bigSumQ (u BR h u == w) (f u)                              -- definition of |fmap| on |(<--) b|
+==  \ w -> bigSum u (if h u == w then f u else zero)                  -- |zero| as additive identity
+==  \ w -> bigSum u (if h u == w then f u <.> one else f u <.> zero)  -- semiring laws
+==  \ w -> bigSum u (f u <.> (if h u == w then one else zero))        -- refactor |if|
+==  bigSum u (\ w -> f u <.> (if h u == w then one else zero))        -- addition of functions
+==  bigSum u (f u .> (\ w -> if h u == w then one else zero))         -- definition of |(.>)|
+==  bigSum u (f u .> pure (h u))                                      -- definition of |pure|
+==  f >>= \ u -> pure (h u)                                           -- definition of |(>>=)|
+\end{code}
+\end{spacing}
+\noindent
+Similarly for |liftA2|:
+\begin{spacing}{1.5}
+\begin{code}
+    liftA2 h f g
+==  \ w -> bigSumQ (u,v BR h u v == w) (f u <.> g v)
+==  bigSum (u,v) ((f u <.> g v) .> pure (h u v))
+==  bigSum (u,v) (f u .> (g v .> pure (h u v)))
+==  bigSum u (f u .> paren (bigSum v (g v .> pure (h u v))))
+== f >>= \ u -> g >>= \ v -> pure (h u v)
+\end{code}
+\end{spacing}
 
 \bibliography{bib}
 

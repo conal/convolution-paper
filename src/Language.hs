@@ -20,13 +20,13 @@ import qualified Data.Map as M
 import Data.Semiring
 
 class HasSingle a w | a -> w where
-  single :: w           -> a
+  single :: w -> a
 
 instance HasSingle b w => HasSingle (a -> b) w where
   single w = const (single w)
 
-(.>) :: Semiring s => s -> (a -> s) -> (a -> s)
-s .> f = (s <.>) . f
+-- (.>) :: Semiring s => s -> (a -> s) -> (a -> s)
+-- s .> f = (s <.>) . f
 
 -- The unique 'Semiring' homomorphism from 'Bool'.
 boolVal :: Semiring s => Bool -> s
@@ -34,7 +34,7 @@ boolVal False = zero
 boolVal True  = one
 
 class Indexable p k v | p -> k v where
-  (!) :: p                -> k -> v
+  (!) :: p -> k -> v
 
 instance Indexable (k -> v) k v where
   f ! k = f k
@@ -44,9 +44,9 @@ instance (Ord k, Semiring v) => Indexable (Map k v) k v where
 
 class Semiring a => Decomposable a h s | a -> h s where
   infix 1 <:
-  (<:)  :: s                               -> h a -> a
-  atEps :: a                               -> s
-  deriv :: a                               -> h a
+  (<:)  :: s -> h a -> a
+  atEps :: a -> s
+  deriv :: a -> h a
 
 -- TODO: Do I really want h to depend on a? Could we have more than one h per a?
 
@@ -60,14 +60,14 @@ accept p s = atEps (derivs p s)
 -- type Language a c s = (StarSemiring a, HasSingle a [c], Decomposable a c s)
 
 instance Semiring b => Decomposable ([c] -> b) ((->) c) b where
-  (b <: _) []     = b
+  (b <: _) [] = b
   (_ <: h) (c:cs) = h c cs
-  atEps f         = f []
-  -- deriv f c    = f . (c :)
-  deriv f         = \ c cs                       -> f (c : cs)
+  atEps f = f []
+  -- deriv f c = f . (c :)
+  deriv f = \ c cs -> f (c : cs)
 
 instance (Eq a, Semiring b) => HasSingle (a -> b) a where
-  single a       = boolVal . (== a)
+  single a = boolVal . (== a)
   -- single a a' = boolVal (a' == a)
 
 instance HasSingle [a] a where single a = [a]

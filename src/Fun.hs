@@ -68,6 +68,16 @@ instance Semiring b => ApplicativeC ((<--) b) where
   pureC a = F (\ w -> undefined a w)
   liftA2C h (F f) (F g) = F (\w -> undefined h f g w)
 
+infixl 7 .>
+#if 1
+(.>) :: Semiring s => s -> (a -> s) -> (a -> s)
+s .> f = (s <.>) . f
+#else
+(.>) :: DetectableZero s => s -> (a -> s) -> (a -> s)
+s .> f | isZero s  = zero
+       | otherwise = (s <.>) . f
+#endif
+
 {--------------------------------------------------------------------
     Flipped finite maps
 --------------------------------------------------------------------}
@@ -412,10 +422,16 @@ trimT 0 _ = zero
 trimT n (c :< ts) = c :< fmap (trimT (n-1)) ts
 
 scaleT :: OD c s => s -> Trie c s -> Trie c s
-scaleT s | isZero s  = const zero
-         | otherwise = go
+
+s `scaleT` t | isZero s  = zero
+             | otherwise = go t
  where
    go ~(e :< ts) = (s <.> e) :< fmap go ts
+
+-- scaleT s | isZero s  = const zero
+--          | otherwise = go
+--  where
+--    go ~(e :< ts) = (s <.> e) :< fmap go ts
 
 -- scaleT s (e :< ts) = (s <.> e) :< fmap (scaleT s) ts
 

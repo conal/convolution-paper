@@ -40,7 +40,7 @@ instance Indexable (k -> v) k v where
   f ! k = f k
 
 instance (Ord k, Semiring v) => Indexable (Map k v) k v where
-  m ! c = M.findWithDefault zero c m
+  m ! k = M.findWithDefault zero k m
 
 class Semiring a => Decomposable a h s | a -> h s where
   infix 1 <:

@@ -15,9 +15,6 @@ import Data.Map
 import qualified Data.Map as M
 import qualified Data.Set as S
 
--- import Data.TotalMap hiding ((!))
--- import qualified Data.TotalMap as T
-
 import Data.Semiring
 
 import Misc
@@ -77,20 +74,6 @@ s .> f = (s <.>) . f
 s .> f | isZero s  = zero
        | otherwise = (s <.>) . f
 #endif
-
-{--------------------------------------------------------------------
-    Finite maps
---------------------------------------------------------------------}
-
--- semiring-num gives a Semiring instance for Map that corresponds to (<--)
--- rather than to (->). Wrap here for the '(->)'-like version
-
-newtype Map' a b = M' (Map a b) deriving Show
-
-mapFun :: (Ord a, Semiring b) => Map' a b -> (a -> b)
-mapFun (M' m) = \ a -> M.findWithDefault zero a m
-
--- See also total-map
 
 {--------------------------------------------------------------------
     Flipped finite maps
@@ -531,4 +514,4 @@ instance OD c s => Decomposable (Trie c s) (Map c) s where
     Temporary for testing
 --------------------------------------------------------------------}
 
-type T = Trie Char Bool
+-- type T = Trie Char Bool

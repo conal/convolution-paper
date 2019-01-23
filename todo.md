@@ -14,29 +14,33 @@
 *   Understand and apply [this MathOverflow answer](https://math.stackexchange.com/a/1651127) on convolution and Day convolution.
 *   Track down references for convolution over functions with arbitrary *monoidal* domains.
     Also "convolutional algebras".
-    See, e.g., "[group algebra](https://www.encyclopediaofmath.org/index.php/Group_algebra)".
-
-*   Some references on Brzozowski derivatives:
-    *   [Wikipedia page on the *Brzozowski derivative*](https://en.wikipedia.org/wiki/Brzozowski_derivative)
-    *   [*Derivatives of Regular Expressions*]
-    *   [*Rewriting Extended Regular Expressions*]
-    *   [*Some Properties of Brzozowski Derivatives of Regular Expressions*]
-    *   [*Derivatives of Regular Expressions and an Application*]
-    *   [*Regular-expression derivatives reexamined*]
-    *   [*Derivatives for Enhanced Regular Expressions*]
-    *   [*Regular expression sub-matching using partial derivatives*]
-    *   [*Testing Extended Regular Language Membership Incrementally by Rewriting*]
-    *   [*Yacc is dead*]
-    *   [*Yacc is dead: An update*]
-*   On semirings and parsing:
-    *   [*Parsing Inside-Out*]
-    *   [*Semiring Parsing*]
-    *   [*Algebraic Foundation of Statistical Parsing: Semiring Parsing*]
-    *   [*Goodman: Semiring Parsing*]
-*   Comonad references:
-    *   [Monads from Comonads](http://comonad.com/reader/2011/monads-from-comonads/) (blog post by Ed Kmett, 2011)
-    *   [*Monads from Comonads, Comonads from Monads*]
-    *   [*Should I use a Monad or a Comonad?*]
+    See, e.g., "[group algebra](https://www.encyclopediaofmath.org/index.php/Group_algebra)" and "[convolution algebra](https://ncatlab.org/nlab/show/convolution+algebra)".
+*   Some references:
+    *   Brzozowski derivatives:
+        *   [Wikipedia page on the *Brzozowski derivative*](https://en.wikipedia.org/wiki/Brzozowski_derivative)
+        *   [*Derivatives of Regular Expressions*]
+        *   [*Rewriting Extended Regular Expressions*]
+        *   [*Some Properties of Brzozowski Derivatives of Regular Expressions*]
+        *   [*Derivatives of Regular Expressions and an Application*]
+        *   [*Regular-expression derivatives reexamined*]
+        *   [*Derivatives for Enhanced Regular Expressions*]
+        *   [*Regular expression sub-matching using partial derivatives*]
+        *   [*Testing Extended Regular Language Membership Incrementally by Rewriting*]
+        *   [*Yacc is dead*]
+        *   [*Yacc is dead: An update*]
+    *   On semirings and parsing:
+        *   [*Parsing Inside-Out*]
+        *   [*Semiring Parsing*]
+        *   [*Algebraic Foundation of Statistical Parsing: Semiring Parsing*]
+        *   [*Goodman: Semiring Parsing*]
+    *   Comonad references:
+        *   [Monads from Comonads](http://comonad.com/reader/2011/monads-from-comonads/) (blog post by Ed Kmett, 2011)
+        *   [*Monads from Comonads, Comonads from Monads*]
+        *   [*Should I use a Monad or a Comonad?*]
+    *   Other:
+        *   [*Quantifiers on languages and codensity monads*]
+        *   [What is a coalgebra intuitively?](https://mathoverflow.net/questions/76509/what-is-a-coalgebra-intuitively)
+        *   [*Bases as coalgebras*](https://arxiv.org/pdf/1309.0844.pdf)
 *   Super-memoization.
     See notes from 2018-12-02 and 2018-12-05
 
@@ -92,3 +96,10 @@
 [`Data.Functor.Day`]: https://hackage.haskell.org/package/kan-extensions/docs/Data-Functor-Day.html "Haskell source module by Edward Kmett (2014--2016)"
 
 [*Comonads and Day Convolution*]: https://blog.functorial.com/posts/2016-08-08-Comonad-And-Day-Convolution.html "blog post by Phil Freeman (2016)"
+
+[*Quantifiers on languages and codensity monads*]: https://arxiv.org/abs/1702.08841 "paper by Mai Gehrke, Daniela Petrisan, and Luca Reggio
+(2018)"
+
+[*Towards a Coalgebraic Chomsky Hierarchy*]: https://arxiv.org/abs/1401.5277v3 "paper by Sergey Goncharov, Stefan Milius, Alexandra Silva (2014)"
+
+[*The monads of classical algebra are seldom weakly cartesian*]: https://link.springer.com/article/10.1007/s40062-013-0063-2 "paper by Maria Manuel Clementino, Dirk Hofmann, and George Janelidze (2013)"

@@ -843,11 +843,15 @@ For |b <-- a|, the monad is known as the ``free semimodule monad'' (or sometimes
 One can think of a free semimodule over a semiring |b| as |b <-- a| for some set |a| of ``indices'' and semiring |b| of ``scalars''.
 The dimension of the semimodule is the cardinality of |a|.
 Basis vectors have the form |single u| for some |u :: a|, mapping |u| to |one| and everything else to |zero| as in \figref{<--}.
+\begin{theorem}[\provedIn{theorem:decompose liftA2}]\thmLabel{decompose liftA2}
 Every function |f :: b <-- a| can be decomposed into this basis as follows:
 \notefoot{I'm not assuming finite support, which is part of the usual definition but problematic for the applications in this paper. Is there a problem with dropping finite support and finiteness of linear combinations?}
 \begin{code}
 F f = bigSum u (f u .> single u)
 \end{code}
+\vspace{-4ex}
+\end{theorem}
+
 The monad instance is defined as follows:\footnote{The |return| method does not appear here, since it is equivalent to |pure| from Applicative.}
 \begin{code}
 instance Semiring s => Monad ((<--) s) where
@@ -860,9 +864,33 @@ The definitions of |fmap| and |liftA2| on |((<--) b)| in \figref{FunApp} satisfy
 \begin{code}
 fmap f p = p >>= \ a -> pure (f a)
 
-liftA2 h p q = p >>= \ u -> q >>= \ v -> pure (h u v)
+liftA2 h p q  = p >>= \ u -> q >>= \ v -> pure (h u v)
+              = p >>= \ u -> fmap (h u) q
 \end{code}
 \end{theorem}
+
+\workingHere
+
+\begin{theorem}
+The following property holds:
+\begin{code}
+   liftA2 h (F f) (F g)
+=  F (\ w -> bigSum (u,v) f u * g v * pure (h u v) w)
+=  bigSum (u,v) ((f u * g v) .> single (h u v))
+=  bigSum u (f u .> bigSum v (g v .> single (h u v)))
+=  bigSum u (f u .> fmap (h u) (F g))
+\end{code}
+\vspace{-3ex}
+\end{theorem}
+
+\mynote{
+\begin{itemize}
+\item We no longer need to open up |F g|.
+   Instead, |liftA2 h (F f) q = bigSum u (f u .> fmap (h u) q)|.
+\item Hm! This form looks a lot like a Brzozowski-style language convolution implementation I've used, with |h = (<>)| and |fmap (u NOP <>) q| implemented carefully.
+\item I think I want to use this sort of formulation as early as \figref{<--}. Simplify \proofRef{theorem:standard FunApp}.
+\end{itemize}
+}
 
 \sectionl{More Variations}
 
@@ -871,7 +899,6 @@ liftA2 h p q = p >>= \ u -> q >>= \ v -> pure (h u v)
 \sectionl{What else?}
 
 \begin{itemize}
-\item Optimizing away scaling by |zero| via |DetectableZero|.
 \item Context-free languages (recursion).
 \item Other applications:
 \begin{itemize}
@@ -954,6 +981,10 @@ Similarly for |liftA2|:
 == f >>= \ u -> g >>= \ v -> pure (h u v)
 \end{code}
 \end{spacing}
+
+\subsection{\thmRef{decompose liftA2}}\proofLabel{theorem:decompose liftA2}
+
+\mynote{Will become trivial when I re-express |fmap|. Then the result follows from |fmap id == id|.}
 
 \bibliography{bib}
 

@@ -5,7 +5,7 @@ targ = convolution
 
 otarg = $(outdir)/$(targ)
 
-.PRECIOUS: %.tex
+.PRECIOUS: $(outdir)/%.tex
 
 default: $(otarg).pdf
 
@@ -14,7 +14,7 @@ default: $(otarg).pdf
 
 #latex=pdflatex
 latex=latexmk -pdf
-# latex+= -outdir=${outdir} -outdir=${outdir}
+latex+= -outdir=${outdir} -outdir=${outdir}
 # latex+= -halt-on-error
 # # Preview continuously
 # latex+= -pvc

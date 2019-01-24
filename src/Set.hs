@@ -8,6 +8,7 @@ import Prelude hiding (sum,product)
 import Control.Arrow (second)
 import Control.Applicative (liftA2)
 import Control.Monad ((>=>))
+import Text.Show.Functions ()  -- for Decomp
 import Data.List (stripPrefix)
 import GHC.Types (Constraint)
 import Data.Maybe (maybeToList)
@@ -58,6 +59,67 @@ instance Eq a => Decomposable (Set a) a Bool where
 
 #endif
 
+{--------------------------------------------------------------------
+    Lists
+--------------------------------------------------------------------}
+
+-- Data.Semiring (in semiring-num) gives instances for [a], but I want a
+-- different choice. For now, add a newtype. In the paper, perhaps hide the
+-- constructor via a %format directive.
+
+newtype L a = L [a]
+#if 0
+  deriving Show
+#else
+instance Show a => Show (L a) where show (L as) = show as
+#endif
+
+instance Scalable (L a) Bool where
+  scale False = const (L [])
+  scale True  = id
+
+instance Monoid a => Semiring (L a) where
+  zero = L []
+  one = L [mempty]
+  L u <+> L v = L (u ++ v)
+  L u <.> L v = L (liftA2 (<>) u v)
+
+instance Monoid a => StarSemiring (L a)
+
+#ifdef SINGLE
+instance HasSingle (L a) a where
+  single a = L [a]
+#else
+instance Eq a => HasSingle (Pred a) a Bool where
+  a +-> s = if s then [a] else zero
+#endif
+
+instance Ord c => Decomposable (L [c]) (Map c) Bool where
+  e <: m = L $
+    (if e then ([] :) else id) $
+    [c:w | (c,L ws) <- M.toList m, w <- ws]
+  atEps (L ws) = any null ws
+  deriv (L ws) = M.unionsWith (<+>) [M.singleton c (L [cs]) | c:cs <- ws]
+
+takeL :: Int -> L a -> L a
+takeL n (L as) = L (take n as)
+
+-- >>> one :: L String
+-- [""]
+
+-- >>> single "a" :: L String
+-- ["a"]
+
+-- >>> takeL 5 (star (single "a") :: L String)
+-- ["","a","aa","aaa","aaaa"]
+
+-- >>> deriv (single "a" :: L String)
+-- ... <hang> ...
+
+-- Oh! deriv on an infinite list cannot give any information, becausse it 
+
+-- >>> deriv (star (single "a") :: L String)
+
 -- listElems :: Ord a => [a] -> Set a
 
 -- listElems = foldr insert S.empty where insert a as = S.singleton a `S.union` as
@@ -71,7 +133,10 @@ instance Eq a => Decomposable (Set a) a Bool where
     Predicates
 --------------------------------------------------------------------}
 
-newtype Pred s = Pred { unPred :: s -> Bool }
+newtype Pred a = Pred { unPred :: a -> Bool } deriving Show
+
+-- >>> one :: [String]
+-- [1]
 
 #if 0
 
@@ -82,6 +147,9 @@ predSet :: Pred a -> Set a
 predSet (Pred f) = set (a | f a)
 
 #endif
+
+instance Scalable (Pred a) Bool where
+  s `scale` Pred f = Pred ((s <.>) . f)
 
 instance Splittable a => Semiring (Pred a) where
   zero = Pred (const False)

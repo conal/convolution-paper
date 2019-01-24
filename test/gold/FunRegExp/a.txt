@@ -1,1 +1,1 @@
-(Char 'a' :<.> Value True) :<.> Value True
+Char 'a' :<.> Value True

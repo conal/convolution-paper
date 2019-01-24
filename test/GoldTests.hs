@@ -40,9 +40,9 @@ basicTests = testGroup "Various representations"
 
 -- TODO: some tests with s other than Bool.
 
-tests :: forall z h s.
-  ( StarSemiring z, HasSingle z String s, Decomposable z h s
-  , Indexable (h z) Char z, Show z, Semiring s, Show s )
+tests :: forall x h s.
+  ( StarSemiring x, HS x Char s, Decomposable x h s
+  , Indexable (h x) Char x, Show x, Semiring s, Show s )
   => String -> TestTree
 tests group = testGroup group
   [ testGroup "" []
@@ -83,7 +83,7 @@ tests group = testGroup group
 
   ]
  where
-   sing = single @z
+   sing = single @x
    a = sing "a"
    b = sing "b"
    as = star a

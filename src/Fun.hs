@@ -39,9 +39,14 @@ instance (Splittable a, Semiring s) => Semiring (s <-- a) where
 
 instance Semiring s => StarSemiring (s <-- [c])
 
+#ifdef SINGLE
+instance (Semiring s, Eq a) => HasSingle (s <-- a) a where
+  single a = F (boolVal . (== a))
+#else
 instance (Semiring s, Eq a) => HasSingle (s <-- a) a s where
   a +-> s = F (a +-> s)
   -- a +-> s = F (\ a' -> if a == a' then s else zero)
+#endif
 
 instance Semiring s => Decomposable (s <-- [c]) ((->) c) s where
   b <: h = F (b <: unF . h)
@@ -75,9 +80,6 @@ instance Semiring b => ApplicativeC ((<--) b) where
 -- value :: (Monoid a, Eq a) => b -> (b <-- a)
 -- value b = F (\ x -> if x == mempty then b else zero)
 
-value :: (HasSingle x a s, Monoid a) => s -> x
-value b = mempty +-> b
-
 -- infix 1 +->
 -- (+->) :: (DetectableZero s, Eq w, Splittable w) => s -> w -> (s <-- w)
 -- a +-> b = a .> single b
@@ -103,8 +105,13 @@ instance (Monoid a, Ord a, Semiring b) => Semiring (b :<-- a) where
   M p <.> M q = M (fromListWith (<+>)
                      [(u <> v, s <.> t) | (u,s) <- toList p, (v,t) <- toList q])
 
+#ifdef SINGLE
+instance Semiring s => HasSingle (s :<-- a) a where
+  single a = M (singleton a one)
+#else
 instance Semiring s => HasSingle (s :<-- a) a s where
   a +-> s = M (singleton a s)
+#endif
 
 instance (Ord c, Semiring s) => Decomposable (s :<-- [c]) (Map c) s where
   b <: d = M (insert [] b (unionsWith (<+>)
@@ -227,8 +234,13 @@ instance Semiring s => Semiring (RegExp c s) where
 instance Semiring s => StarSemiring (RegExp c s) where
   star = Star
 
+#ifdef SINGLE
+instance Semiring s => HasSingle (RegExp c s) [c] where
+  single = product . map Char
+#else
 instance Semiring s => HasSingle (RegExp c s) [c] s where
   w +-> s = product (map Char w) <.> Value s
+#endif
 
 #if 0
 
@@ -298,11 +310,10 @@ instance (Eq c, StarSemiring s) => Decomposable (RegExp c s) ((->) c) s where
 -- just once. Do a bit of inlining and simplification.
 
 -- | Interpret a regular expression
-regexp :: (StarSemiring x, Semiring s, HasSingle x [c] s)
-       => RegExp c s -> x
+regexp :: (StarSemiring x, Semiring s, HS x c s) => RegExp c s -> x
 regexp (Char c)      = -- [c] +-> one
                        single [c]
-regexp (Value s)     = [] +-> s
+regexp (Value s)     = value s
 regexp (u  :<+>  v)  = regexp u <+> regexp v
 regexp (u  :<.>  v)  = regexp u <.> regexp v
 regexp (Star u)   = star (regexp u)
@@ -323,13 +334,13 @@ scaleD s = go
  where
    go (e :<: ts) = (s <.> e) :<: (go . ts)
 
+instance (DetectableZero s, Eq c) => Scalable (Decomp c s) s where
+  scale = scaleD
+
 -- instance Semiring s => Scalable (Decomp c s) s where
 --   scale s = go
 --    where
 --      go (s' :<: f) = (s <.> s') :<: go . f
-
-instance (DetectableZero s, Eq c) => Scalable (Decomp c s) s where
-  scale = scaleD
 
 -- TODO: remove Eq c constraints from the signature of scaleD and Decomp
 -- instances below if I stop needing it.
@@ -394,6 +405,12 @@ instance (StarSemiring s, DetectableZero s, Eq c) => StarSemiring (Decomp c s) w
       as = star a
       h d = as .> d <.> q
 
+#ifdef SINGLE
+instance (DetectableZero s, Eq c) => HasSingle (Decomp c s) [c] where
+  single = foldr cons one
+   where
+     cons c x = zero :<: (\ c' -> if c' == c then x else zero)
+#else
 instance (DetectableZero s, Eq c) => HasSingle (Decomp c s) [c] s where
 #if 0
   w +-> s = product (map symbol w) <.> (s :<: zero)
@@ -407,11 +424,24 @@ instance (DetectableZero s, Eq c) => HasSingle (Decomp c s) [c] s where
      cons c x = zero :<: (\ c' -> if c' == c then x else zero)
      nil = s :<: zero
 #endif
+#endif
 
 instance (DetectableZero s, Eq c) => Decomposable (Decomp c s) ((->) c) s where
   (<:) = (:<:)
   atEps (a :<: _) = a
   deriv (_ :<: d) = d
+
+type DC = Decomp Char Bool
+
+-- >>> zero :: DC
+-- False :<: <function>
+
+-- >>> single "" :: DC
+-- False :<: <function>
+
+-- >>> single "pig" :: DC
+-- <interactive>:908:2-7: error:
+--     Variable not in scope: single :: [Char] -> DC
 
 {--------------------------------------------------------------------
     List trie with finite maps
@@ -536,6 +566,20 @@ instance (Ord c, StarSemiring s, DetectableZero s) => StarSemiring (Trie c s) wh
 
 -- TODO: Fix so that scaleT checks isZero as only once.
 
+#ifdef SINGLE
+instance OD c s => HasSingle (Trie c s) [c] where
+#if 0
+  single = product . map symbol
+   where
+     symbol c = zero :< singleton c one
+#else
+  -- More streamlined
+  single = foldr cons one
+   where
+     cons c x = zero :< singleton c x
+#endif
+#else
+
 instance OD c s => HasSingle (Trie c s) [c] s where
 #if 0
   w +-> s = product (map symbol w) <.> (s :< empty)
@@ -547,6 +591,8 @@ instance OD c s => HasSingle (Trie c s) [c] s where
    where
      cons c x = zero :< singleton c x
      nil = s :< empty
+#endif
+
 #endif
 
 instance OD c s => Decomposable (Trie c s) (Map c) s where

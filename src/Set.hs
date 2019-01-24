@@ -91,8 +91,13 @@ instance Splittable a => Semiring (Pred a) where
 
 instance StarSemiring (Pred [c])
 
+#ifdef SINGLE
+instance Eq a => HasSingle (Pred a) a where
+  single a = Pred (boolVal . (== a))
+#else
 instance Eq a => HasSingle (Pred a) a Bool where
   a +-> s = Pred (a +-> s)
+#endif
 
 instance Decomposable (Pred [c]) ((->) c) Bool where
   e <: h = boolVal e <+> Pred (\ w -> or [ unPred (h c) w | c <- allVals ])
@@ -131,8 +136,13 @@ instance Semiring (Resid c) where
 
 instance StarSemiring (Resid c)
 
+#ifdef SINGLE
+instance Eq c => HasSingle (Resid c) [c] where
+  single w = Resid (maybeToList . stripPrefix w)
+#else
 instance Eq c => HasSingle (Resid c) [c] Bool where
   (+->) = oneBool (\ w -> Resid (maybeToList . stripPrefix w))
+#endif
 
 -- instance Decomposable (Resid s) s Bool where
 --   (<:) = error "(<:) not yet defined on Resid"
@@ -208,21 +218,13 @@ instance StarSemiring (RegExp c) where
 
 #endif
 
-#if 1
-
+#ifdef SINGLE
+instance OkSym c => HasSingle (RegExp c) [c] where
+  single = product . fmap Char
+#else
 instance OkSym c => HasSingle (RegExp c) [c] Bool where
   -- single = foldr (\ c e -> Char c <.> e) One
   (+->) = oneBool (product . map Char)
-
-#else
--- Or from an arbitrary foldable
-instance (Functor f, Foldable f, OkSym c) => HasSingle (RegExp c) (f c) where
-  single = product . fmap Char
-  -- single = foldr (\ c e -> Char c <.> e) One
-
--- We could even define balanced folding of sums and products via two monoid
--- wrappers.
-
 #endif
 
 instance Eq c => Decomposable (RegExp c) ((->) c) Bool where
@@ -252,8 +254,14 @@ instance Eq c => Decomposable (RegExp c) ((->) c) Bool where
                         -- = deriv (p <.> Star p) c -- since deriv c one = zero
                         -- = deriv c (one <+> p <.> Star p)
 
+instance Scalable (RegExp c) Bool where
+  scale True  = id
+  scale False = const Zero
+
+-- TODO: Maybe use (.>) in deriv (p :<.> q)
+
 -- | Interpret a regular expression
-regexp :: (StarSemiring a, HasSingle a [c] Bool) => RegExp c -> a
+regexp :: (StarSemiring x, HS x c Bool) => RegExp c -> x
 regexp (Char c)      = single [c]
 regexp Zero          = zero
 regexp One           = one
@@ -276,9 +284,10 @@ inDecomp (_ :<: ds) (c:cs) = inDecomp (ds c) cs
 
 -- decompPred' (e :<: f) = list e (\ c cs -> decompPred' (f c) cs)
 
-scaleD :: Bool -> Decomp c -> Decomp c
-scaleD False _ = zero
-scaleD s (e :<: ts) = (s <.> e) :<: (scaleD s . ts)
+instance Scalable (Decomp c) Bool where
+  scale s = go
+   where
+     go (e :<: ts) = (s <.> e) :<: (go . ts)
 
 -- A hopefully temporary hack for testing.
 -- (Some of the tests show the language representation.)
@@ -339,15 +348,19 @@ instance StarSemiring (Decomp c) where
     where
       q = as :<: fmap h dp
       as = star a
-      h d = as `scaleD` d <.> q
+      h d = as .> d <.> q
 
+#ifdef SINGLE
+instance Eq c => HasSingle (Decomp c) [c] where
+  single = product . map symbol
+   where
+     symbol c = False :<: (\ c' -> if c'==c then one else zero)
+#else
 instance Eq c => HasSingle (Decomp c) [c] Bool where
   (+->) = oneBool (product . map symbol)
    where
      symbol c = False :<: (\ c' -> if c'==c then one else zero)
-
-  -- single [] = one
-  -- single (c:cs) = False :<: (\ c' -> if c==c' then single cs else zero)
+#endif
 
 instance Decomposable (Decomp c) ((->) c) Bool where
   (<:) = (:<:)
@@ -358,7 +371,7 @@ instance Decomposable (Decomp c) ((->) c) Bool where
     List trie with finite maps as language
 --------------------------------------------------------------------}
 
--- infix 1 :<
+infix 1 :<
 data Trie c = Bool :< Map c (Trie c) deriving Show
 
 inTrie :: Ord c => Trie c -> [c] -> Bool
@@ -375,6 +388,11 @@ decomp :: Ord c => Trie c -> Decomp c
 -- decomp (e :< ds) = e :<: (\ c -> decomp (ds `mat` c))
 -- decomp (e :< ds) = e :<: (\ c -> decomp (mat ds c))
 decomp (e :< ds) = e :<: (decomp . (ds `mat`))
+
+instance Scalable (Trie c) Bool where
+  scale s = go
+   where
+     go (e :< ts) = (s <.> e) :< fmap go ts
 
 -- triePred = decompPred . decomp
 
@@ -416,15 +434,17 @@ instance Ord c => StarSemiring (Trie c) where
   --   where
   --     q = as :< fmap h dp
   --     as = star a
-  --     h d = as `scaleT` d <.> q
+  --     h d = as .> d <.> q
 
+#ifdef SINGLE
+instance Ord c => HasSingle (Trie c) [c] where
+  single = foldr (\ c p -> False :< M.singleton c p) one
+#else
 instance Ord c => HasSingle (Trie c) [c] Bool where
-  -- single = foldr (\ c p -> False :< M.singleton c p) one
-  -- single [] = one
-  -- single (c:cs) = False :< M.singleton c (single cs)
   (+->) = oneBool (product . map symbol)
    where
      symbol c = False :< M.singleton c one
+#endif
 
 instance Ord c => DetectableZero (Trie c) where
   isZero (b :< m) = isZero b && M.null m

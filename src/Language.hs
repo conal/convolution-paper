@@ -17,7 +17,33 @@ import qualified Data.Map as M
 -- import Data.TotalMap (TMap)
 -- import qualified Data.TotalMap as T
 
+-- SINGLE controlled by package.yaml
+
 import Data.Semiring
+
+#ifdef SINGLE
+
+class HasSingle x a | x -> a where
+  single :: a -> x
+
+infix 1 +->
+(+->) :: (Semiring x, Scalable x s, HasSingle x a, DetectableZero s)
+      => a -> s -> x
+a +-> s = s .> single a
+
+value :: (Scalable x s, HasSingle x a, DetectableZero s, Monoid a, Semiring x)
+      => s -> x
+value b = mempty +-> b
+
+-- -- Suitable?
+-- instance (Semiring s, Eq a) => HasSingle (a -> s) a s where
+--   a +-> s = \ a' -> if a == a' then s else zero
+
+instance HasSingle [a] a where single a = [a]
+
+instance HasSingle (Set a) a where single a = S.singleton a
+
+#else
 
 class HasSingle x a s | x -> a s where
   infix 1 +->
@@ -26,9 +52,8 @@ class HasSingle x a s | x -> a s where
 single :: (HasSingle x a s, Semiring s) => a -> x
 single a = a +-> one
 
-oneBool :: Semiring x => (a -> x) -> a -> Bool -> x
-oneBool _ _ False = zero
-oneBool f a True  = f a
+value :: (HasSingle x a s, Monoid a) => s -> x
+value b = mempty +-> b
 
 instance (Semiring s, Eq a) => HasSingle (a -> s) a s where
   a +-> s = \ a' -> if a == a' then s else zero
@@ -36,12 +61,24 @@ instance (Semiring s, Eq a) => HasSingle (a -> s) a s where
 instance HasSingle [a] a Bool where
   a +-> s = if s then [a] else []
 
+instance HasSingle (Set a) a Bool where
+  a +-> s = if s then S.singleton a else S.empty
+
+#endif
+
+#ifdef SINGLE
+type HS x c s = (Scalable x s, DetectableZero s, HasSingle x [c])
+#else
+type HS x c s = HasSingle x [c] s
+#endif
+
+oneBool :: Semiring x => (a -> x) -> a -> Bool -> x
+oneBool _ _ False = zero
+oneBool f a True  = f a
+
 -- instance Eq c => Decomposable [[c]] ((->) c) Bool where
 --   atEps p   = [] `elem` p
 --   deriv p c = [cs | c' : cs <- p, c' == c]
-
-instance HasSingle (Set a) a Bool where
-  a +-> s = if s then S.singleton a else S.empty
 
 -- (.>) :: Semiring s => s -> (a -> s) -> (a -> s)
 -- s .> f = (s <.>) . f
@@ -130,8 +167,8 @@ product = getProduct . foldMap Product
 
 class Scalable b s | b -> s where scale :: s -> b -> b
 
--- instance Semiring s => Scalable (a -> s) s where
---   scale s f = (s <.>) . f
+instance Semiring s => Scalable (a -> s) s where
+  scale s f = (s <.>) . f
 
 infixl 7 .>
 -- | 'scale' optimized for zero scalar

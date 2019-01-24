@@ -26,8 +26,9 @@ default-extensions:
   - ConstraintKinds
   - DefaultSignatures
 
-ghc-options:
-  - -Wall
+ghc-options: -Wall
+
+cpp-options: -DSINGLE
 
 library:
   dependencies:

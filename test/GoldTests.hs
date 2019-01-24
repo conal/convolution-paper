@@ -39,12 +39,6 @@ basicTests = testGroup "Various representations"
   , tests @(F.Trie    Char Bool) "FunTrie"
   ]
 
--- I don't think these ones can work:
--- 
---   , tests @(S.L String)    "List"
---   , tests @(S.Pred String) "Pred"
-
-
 -- TODO: some tests with s other than Bool.
 
 tests :: forall x h s.

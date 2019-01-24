@@ -50,7 +50,6 @@ library:
     - Language
     - Set
     - Fun
-    - Other
 
 tests:
   test:

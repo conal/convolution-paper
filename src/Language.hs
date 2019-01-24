@@ -19,11 +19,30 @@ import qualified Data.Map as M
 
 import Data.Semiring
 
-class HasSingle a w | a -> w where
-  single :: w -> a
+class HasSingle x a s | x -> a s where
+  infix 1 |->
+  (|->) :: a -> s -> x
 
-instance HasSingle b w => HasSingle (a -> b) w where
-  single w = const (single w)
+single :: (HasSingle x a s, Semiring s) => a -> x
+single a = a |-> one
+
+oneBool :: Semiring x => (a -> x) -> a -> Bool -> x
+oneBool _ _ False = zero
+oneBool f a True  = f a
+
+instance (Semiring s, Eq a) => HasSingle (a -> s) a s where
+  a |-> s = \ a' -> if a == a' then s else zero
+
+instance HasSingle [a] a Bool where
+  a |-> s = if s then [a] else []
+
+-- instance Eq c => Decomposable [[c]] ((->) c) Bool where
+--   atEps p   = [] `elem` p
+--   deriv p c = [cs | c' : cs <- p, c' == c]
+
+
+instance HasSingle (Set a) a Bool where
+  a |-> s = if s then S.singleton a else S.empty
 
 -- (.>) :: Semiring s => s -> (a -> s) -> (a -> s)
 -- s .> f = (s <.>) . f
@@ -65,19 +84,6 @@ instance Semiring b => Decomposable ([c] -> b) ((->) c) b where
   atEps f = f []
   -- deriv f c = f . (c :)
   deriv f = \ c cs -> f (c : cs)
-
-instance (Eq a, Semiring b) => HasSingle (a -> b) a where
-  single a = boolVal . (== a)
-  -- single a a' = boolVal (a' == a)
-
-instance HasSingle [a] a where single a = [a]
-
--- instance Eq c => Decomposable [[c]] ((->) c) Bool where
---   atEps p   = [] `elem` p
---   deriv p c = [cs | c' : cs <- p, c' == c]
-
-
-instance HasSingle (Set a) a where single = S.singleton
 
 instance Ord c => Decomposable (Set [c]) (Map c) Bool where
   e <: d  = boolVal e <+> S.unions [ S.map (c:) css | (c,css) <- M.toList d ]

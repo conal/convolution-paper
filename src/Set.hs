@@ -74,16 +74,16 @@ predSet (Pred f) = set (a | f a)
 
 #endif
 
-instance Semiring (Pred [c]) where
+instance Splittable a => Semiring (Pred a) where
   zero = Pred (const False)
-  one = Pred null
+  one = Pred isEmpty
   Pred f <+> Pred g = Pred (\ w -> f w || g w)
   Pred f <.> Pred g = Pred (\ w -> or [ f u && g v | (u,v) <- splits w ] )
 
 instance StarSemiring (Pred [c])
 
-instance Eq s => HasSingle (Pred s) s where
-  single s = Pred (== s)
+instance Eq a => HasSingle (Pred a) a Bool where
+  a |-> s = Pred (a |-> s)
 
 instance Decomposable (Pred [c]) ((->) c) Bool where
   e <: h = boolVal e <+> Pred (\ w -> or [ unPred (h c) w | c <- allVals ])
@@ -97,14 +97,14 @@ instance Decomposable (Pred [c]) ((->) c) Bool where
 
 -- Match a prefix of given string and yield corresponding suffixes for all
 -- successful matches.
-newtype Resid s = Resid ([s] -> [[s]])
+newtype Resid c = Resid ([c] -> [[c]])
 
-residPred :: Resid s -> Pred [s]
+residPred :: Resid c -> Pred [c]
 residPred (Resid f) = Pred (any null . f)
 
 #if 1
 
-instance Semiring (Resid s) where
+instance Semiring (Resid c) where
   zero = Resid (fail "no match")
   one = Resid return
   Resid f <+> Resid g = Resid (liftA2 (<>) f g)
@@ -112,21 +112,18 @@ instance Semiring (Resid s) where
 
 #else
 
-instance Semiring (Resid s) where
+instance Semiring (Resid c) where
   zero = Resid (const [])
-  one = Resid (\ s -> [s])
-  Resid f <+> Resid g = Resid (\ s -> f s <> g s)
-  Resid f <.> Resid g = Resid (\ s -> [s'' | s' <- f s, s'' <- g s'])
+  one = Resid (\ c -> [c])
+  Resid f <+> Resid g = Resid (\ w -> f w <> g w)
+  Resid f <.> Resid g = Resid (\ w -> [w'' | w' <- f w, w'' <- g w'])
 
 #endif
 
-instance StarSemiring (Resid s)
+instance StarSemiring (Resid c)
 
-instance Eq s => HasSingle (Resid s) [s] where
-  -- single x = Resid (\ s -> case stripPrefix x s of
-  --                            Just s' -> [s']
-  --                            Nothing -> [])
-  single x = Resid (maybeToList . stripPrefix x)
+instance Eq c => HasSingle (Resid c) [c] Bool where
+  (|->) = oneBool (\ w -> Resid (maybeToList . stripPrefix w))
 
 -- instance Decomposable (Resid s) s Bool where
 --   (<:) = error "(<:) not yet defined on Resid"
@@ -204,9 +201,9 @@ instance StarSemiring (RegExp c) where
 
 #if 1
 
-instance OkSym c => HasSingle (RegExp c) [c] where
+instance OkSym c => HasSingle (RegExp c) [c] Bool where
   -- single = foldr (\ c e -> Char c <.> e) One
-  single = product . map Char
+  (|->) = oneBool (product . map Char)
 
 #else
 -- Or from an arbitrary foldable
@@ -247,7 +244,7 @@ instance Eq c => Decomposable (RegExp c) ((->) c) Bool where
                         -- = deriv c (one <+> p <.> Star p)
 
 -- | Interpret a regular expression
-regexp :: (StarSemiring a, HasSingle a [c]) => RegExp c -> a
+regexp :: (StarSemiring a, HasSingle a [c] Bool) => RegExp c -> a
 regexp (Char c)      = single [c]
 regexp Zero          = zero
 regexp One           = one
@@ -335,8 +332,8 @@ instance StarSemiring (Decomp c) where
       as = star a
       h d = as `scaleD` d <.> q
 
-instance Eq c => HasSingle (Decomp c) [c] where
-  single = product . map symbol
+instance Eq c => HasSingle (Decomp c) [c] Bool where
+  (|->) = oneBool (product . map symbol)
    where
      symbol c = False :<: (\ c' -> if c'==c then one else zero)
 
@@ -412,11 +409,11 @@ instance Ord c => StarSemiring (Trie c) where
   --     as = star a
   --     h d = as `scaleT` d <.> q
 
-instance Ord c => HasSingle (Trie c) [c] where
+instance Ord c => HasSingle (Trie c) [c] Bool where
   -- single = foldr (\ c p -> False :< M.singleton c p) one
   -- single [] = one
   -- single (c:cs) = False :< M.singleton c (single cs)
-  single = product . map symbol
+  (|->) = oneBool (product . map symbol)
    where
      symbol c = False :< M.singleton c one
 

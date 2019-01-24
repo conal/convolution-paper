@@ -49,6 +49,9 @@ SHELL = bash
 clean:
 	rm -f ${outdir}/*
 
+# TAGS:
+# 	etags $(targ).lhs src/*.hs
+
 web: web-token
 
 web-token: $(otarg).pdf

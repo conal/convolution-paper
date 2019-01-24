@@ -28,6 +28,8 @@ import Constrained
 
 newtype b <-- a = F { unF :: a -> b }
 
+instance Show (b <-- a) where show = const "<F>"
+
 instance Semiring s => Scalable (s <-- a) s where
   s `scale` F f = F ((s <.>) . f) 
 

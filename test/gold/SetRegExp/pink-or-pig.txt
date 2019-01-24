@@ -1,1 +1,0 @@
-Char 'p' :<.> (Char 'i' :<.> (Char 'n' :<.> (Char 'k' :<.> One))) :<+> Char 'p' :<.> (Char 'i' :<.> (Char 'g' :<.> One))

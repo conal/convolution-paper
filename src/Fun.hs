@@ -36,7 +36,8 @@ instance (Splittable a, Semiring s) => Semiring (s <-- a) where
 instance Semiring s => StarSemiring (s <-- [c])
 
 instance (Semiring s, Eq a) => HasSingle (s <-- a) a s where
-  a |-> s = F (\ a' -> if a == a' then s else zero)
+  a +-> s = F (a +-> s)
+  -- a +-> s = F (\ a' -> if a == a' then s else zero)
 
 instance Semiring s => Decomposable (s <-- [c]) ((->) c) s where
   b <: h = F (b <: unF . h)
@@ -75,9 +76,9 @@ s .> F f | isZero s  = zero
          | otherwise = F ((s <.>) . f)
 #endif
 
--- infix 1 |->
--- (|->) :: (DetectableZero s, Eq w, Splittable w) => s -> w -> (s <-- w)
--- a |-> b = a .> single b
+-- infix 1 +->
+-- (+->) :: (DetectableZero s, Eq w, Splittable w) => s -> w -> (s <-- w)
+-- a +-> b = a .> single b
 
 
 {--------------------------------------------------------------------
@@ -98,7 +99,7 @@ instance (Monoid a, Ord a, Semiring b) => Semiring (b :<-- a) where
                      [(u <> v, s <.> t) | (u,s) <- toList p, (v,t) <- toList q])
 
 instance Semiring s => HasSingle (s :<-- a) a s where
-  a |-> s = M (singleton a s)
+  a +-> s = M (singleton a s)
 
 instance (Ord c, Semiring s) => Decomposable (s :<-- [c]) (Map c) s where
   b <: d = M (insert [] b (unionsWith (<+>)
@@ -210,7 +211,7 @@ instance Semiring s => StarSemiring (RegExp c s) where
   star = Star
 
 instance Semiring s => HasSingle (RegExp c s) [c] s where
-  w |-> s = product (map Char w) <.> Value s
+  w +-> s = product (map Char w) <.> Value s
 
 scaleRE :: DetectableZero s => s -> RegExp c s -> RegExp c s
 scaleRE s e | isZero s  = zero
@@ -282,9 +283,9 @@ instance (Eq c, StarSemiring s) => Decomposable (RegExp c s) ((->) c) s where
 -- | Interpret a regular expression
 regexp :: (StarSemiring x, Semiring s, HasSingle x [c] s)
        => RegExp c s -> x
-regexp (Char c)      = -- [c] |-> one
+regexp (Char c)      = -- [c] +-> one
                        single [c]
-regexp (Value s)     = [] |-> s
+regexp (Value s)     = [] +-> s
 regexp (u  :<+>  v)  = regexp u <+> regexp v
 regexp (u  :<.>  v)  = regexp u <.> regexp v
 regexp (Star u)   = star (regexp u)
@@ -366,13 +367,13 @@ instance (StarSemiring s, DetectableZero s) => StarSemiring (Decomp c s) where
 
 instance (DetectableZero s, Eq c) => HasSingle (Decomp c s) [c] s where
 #if 0
-  w |-> s = product (map symbol w) <.> (s :<: zero)
+  w +-> s = product (map symbol w) <.> (s :<: zero)
    where
      symbol c = zero :<: (boolVal . (== c))
      -- symbol c = zero :<: (\ c' -> boolVal (c' == c))
 #else
   -- More streamlined
-  w |-> s = foldr cons nil w
+  w +-> s = foldr cons nil w
    where
      cons c x = zero :<: (\ c' -> if c' == c then x else zero)
      nil = s :<: zero
@@ -506,12 +507,12 @@ instance (Ord c, StarSemiring s, DetectableZero s) => StarSemiring (Trie c s) wh
 
 instance OD c s => HasSingle (Trie c s) [c] s where
 #if 0
-  w |-> s = product (map symbol w) <.> (s :< empty)
+  w +-> s = product (map symbol w) <.> (s :< empty)
    where
      symbol c = zero :< singleton c one
 #else
   -- More streamlined
-  w |-> s = foldr cons nil w
+  w +-> s = foldr cons nil w
    where
      cons c x = zero :< singleton c x
      nil = s :< empty

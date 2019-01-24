@@ -276,8 +276,8 @@ where |splits| inverts |(<>)|:
 \notefoot{Maybe generalize from \emph{lists} of pairs to an associated |Foldable|.}
 \begin{code}
 class Monoid t => Splittable t where
-  isEmpty  :: t -> Bool     -- Whether equal to |mempty|
-  splits   :: t -> [(t,t)]  -- The inverse of |mappend|
+  isEmpty  :: t -> Bool     -- whether equal to |mempty|
+  splits   :: t -> [(t,t)]  -- the inverse of |mappend|
 
 instance Splittable [a] where
   isEmpty = null
@@ -291,7 +291,7 @@ Given the definitions in \figref{pred}, |setPred| and |predSet| are homomorphism
 
 \sectionl{Booleans and Beyond}
 
-As an example other than numbers and languages, booleans form a star semiring:
+For examples other than numbers and languages, |Bool| is a star semiring, and |a -> b| is a star semiring when |b| is, as in \figrefdef{bool and function}{Booleans and functions as semirings}{
 \begin{code}
 instance Semiring Bool where
   zero  = False
@@ -303,53 +303,7 @@ instance StarSemiring Bool where
   closure b  = one <+> b <.> closure b
              = True || (b && closure b)
              = True
-\end{code}
 
-%format bigSum (lim) (body) = "\bigSumZ{" lim "}{0}" body
-%format bigSumQ (lim) (body) = "\bigSumZ{" lim "}{1.5}" body
-\nc\bigSumZ[2]{\displaystyle\hspace{-#2ex}\sum_{\substack{#1}}\,\hspace{-#2ex}}
-%format <-- = "\leftarrow"
-%format .> = "\cdot"
-%format |-> = "\mapsto"
-
-\noindent
-Re-examining the instances in \figref{pred}, we can see uses of |False|, |(||||)|, and |(&&)|, as well as an equality test (for |single w|), which yields |False| or |True|.
-We can therefore easily generalize the codomain of ``predicates'' from booleans to \emph{any} semiring, as in \figrefdef{<--}{|b <-- a| as generalized language representation}{
-\begin{code}
-newtype b <-- a = F { unF :: a -> b }
-
-instance (Semiring b, Monoid a, Eq a) => Semiring (b <-- a) where
-  zero = F (\ w -> zero)
-  one = single mempty
-  F f  <+>  F g = F (\ w -> f w <+> g w)
-
-  F f  <.>  F g = bigSum (u,v) (f u <.> g v |-> u <> v))
-
-  F f  <.>  F g = bigSum (u,v) ((f u <.> g v) .> single (u <> v))
-
-instance (Monoid a, Eq a) => StarSemiring (b <-- a)
-
-instance Eq a => HasSingle (b <-- a) a where
-  single w = F (\ w' -> boolVal (w' == w))
-
-boolVal :: Semiring s => Bool -> s
-boolVal False  = zero
-boolVal True   = one
-\end{code}
-\vspace{-4ex}
-}.
-It will be useful to reverse the usual notation from ``|a -> b|'' to ``|b <-- a|''.
-\begin{theorem}[\provedIn{theorem:<--}]\thmLabel{<--}
-Given the instance definitions in \figref{<--}, |b <-- a| satisfies the laws of the instantiated classes whenever |a| is a monoid and |b| is a semiring.
-\end{theorem}
-
-When the monoid |a| is a list, we can again express the product operation from \figref{<--} in a more clearly computable form:
-\begin{code}
-  F f <.> F g  = F (\ w -> sum [ f u <.> g v | (u,v) <- splits w ])
-\end{code}
-
-One reason to introduce the new data type |b <-- a| is to allow us to define a simpler instance for functions in which operations are defined pointwise, as in \figrefdef{function}{|a -> b| as generalized language representation}{
-\begin{code}
 instance Semiring b => Semiring (a -> b) where
   zero  = \ a -> zero
   one   = \ a -> one
@@ -358,14 +312,67 @@ instance Semiring b => Semiring (a -> b) where
 
 instance StarSemiring b => StarSemiring (a -> b) where
   closure f = \ a -> closure (f a)
-
-instance HasSingle b w => HasSingle (a -> b) w where
-  single w = \ a -> single w
 \end{code}
 \vspace{-4ex}
 }.
 \notefoot{Maybe a theorem here saying that these instances satisfy the necessary laws. Otherwise suggest that the reader verify. I'm unsure how to prove the closure property. Perhaps coinduction. See journal notes for 2019-01-16.}
-We will use the |a -> b| semiring in \secref{Convolution}.\notefoot{Check that we did.}
+\out{We will use the |a -> b| semiring in \secref{Convolution}.\notefoot{Check that we did.}}
+
+%format bigSum (lim) (body) = "\bigSumZ{" lim "}{0}" body
+%format bigSumQ (lim) (body) = "\bigSumZ{" lim "}{1.5}" body
+\nc\bigSumZ[2]{\displaystyle\hspace{-#2ex}\sum_{\substack{#1}}\,\hspace{-#2ex}}
+%format <-- = "\leftarrow"
+%format .> = "\cdot"
+%format +-> = "\mapsto"
+
+Re-examining the instances in \figref{pred}, we can see uses of |False|, |(||||)|, and |(&&)|, as well as an equality test (for |single w|), which yields |False| or |True|.
+We can therefore easily generalize the codomain of ``predicates'' from booleans to \emph{any} semiring.
+It will also be useful to generalize |single a| to |a +-> s|, mapping |a| to |s| and everything else to zero:
+\begin{code}
+class HasSingle x a s | x -> a s where
+  infix 1 +->
+  (+->) :: a -> s -> x
+
+instance (Semiring s, Eq a) => HasSingle (a -> s) a s where
+  a +-> s = \ a' -> if a == a' then s else zero
+
+single :: (HasSingle x a s, Semiring s) => a -> x
+single a = a +-> one
+\end{code}
+For sets and lists, |s| will be |Bool|:
+\begin{code}
+instance HasSingle (Set a)  a Bool where a +-> s = if s then set a  else emptyset
+
+instance HasSingle [a] a Bool where a +-> s = if s then [a] else []
+\end{code}
+
+\noindent
+Since we already have a semiring of functions (\figref{bool and function}), let's refer to the generalized |Pred a| as ``|b <-- a|'', as in \figrefdef{<--}{|b <-- a| as generalized language representation}{
+\begin{code}
+newtype b <-- a = F { unF :: a -> b }
+
+instance (Semiring b, Monoid a, Eq a) => Semiring (b <-- a) where
+  zero = F (\ w -> zero)
+  one = single mempty
+  F f  <+>  F g = F (\ w -> f w <+> g w)
+  F f  <.>  F g = bigSum (u,v) (u <> v +-> f u <.> g v)
+
+instance (Monoid a, Eq a) => StarSemiring (b <-- a)
+
+instance (Semiring s, Eq a) => HasSingle (s <-- a) a s where
+  a +-> s = F (\ a' -> if a == a' then s else zero)
+\end{code}
+\vspace{-4ex}
+}.
+
+\begin{theorem}[\provedIn{theorem:<--}]\thmLabel{<--}
+Given the instance definitions in \figref{<--}, |b <-- a| satisfies the laws of the instantiated classes whenever |a| is a monoid and |b| is a semiring.
+\end{theorem}
+
+When the monoid |a| is a list, we can again express the product operation from \figref{<--} in a more clearly computable form:
+\begin{code}
+  F f <.> F g  = F (\ w -> sum [ f u <.> g v | (u,v) <- splits w ])
+\end{code}
 
 %format :<-- = "\leftarrowtriangle"
 
@@ -388,8 +395,8 @@ instance (Monoid a, Ord a, Semiring b) => Semiring (b :<-- a) where
   M p  <.>  M q = M  (fromListWith (<+>)
                        [(u <> v, s <.> t) | (u,s) <- toList p, (v,t) <- toList q])
 
-instance Semiring b => HasSingle (b :<-- a) a where
-  single a = M (singleton a one)
+instance Semiring s => HasSingle (s :<-- a) a s where
+  a +-> s = M (singleton a s)
 \end{code}
 \vspace{-4ex}
 }, |mapTo| is a homomorphism with respect to each instantiated class.
@@ -533,7 +540,7 @@ s .> f  = \ a -> s <.> (f a)
         = (s NOP <.>) . f
 \end{code}
 \end{lemma}
-\workingHere \mynote{I'm moving |(.>)| sooner. Fix this part.}
+% \workingHere \mynote{I'm moving |(.>)| sooner. Fix this part.}
 \begin{corollary}
 The following properties hold:
 \begin{code}

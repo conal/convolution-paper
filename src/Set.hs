@@ -39,8 +39,17 @@ instance Semiring (Set a) where
 instance StarSemiring (Set a) where
   star p = bigunion (n >= 0) (p^n)
 
-instance HasSingle (Set a) a where
-  single a = set a
+-- instance HasSingle (Set a) a where
+--   single a = set a
+
+oneBool :: Semiring x => (a -> x) -> a -> Bool -> x
+oneBool _ _ False = zero
+oneBool f a True  = f a
+
+instance HasSingle (Set a) a Bool where
+  a +-> s = if s then set a else emptyset
+  -- (+->) = oneBool set
+  -- single a = set a
 
 instance Eq a => Decomposable (Set a) a Bool where
   e <: h = (if e then set mempty else emptyset) `union` bigunion c h c
@@ -83,7 +92,7 @@ instance Splittable a => Semiring (Pred a) where
 instance StarSemiring (Pred [c])
 
 instance Eq a => HasSingle (Pred a) a Bool where
-  a |-> s = Pred (a |-> s)
+  a +-> s = Pred (a +-> s)
 
 instance Decomposable (Pred [c]) ((->) c) Bool where
   e <: h = boolVal e <+> Pred (\ w -> or [ unPred (h c) w | c <- allVals ])
@@ -123,7 +132,7 @@ instance Semiring (Resid c) where
 instance StarSemiring (Resid c)
 
 instance Eq c => HasSingle (Resid c) [c] Bool where
-  (|->) = oneBool (\ w -> Resid (maybeToList . stripPrefix w))
+  (+->) = oneBool (\ w -> Resid (maybeToList . stripPrefix w))
 
 -- instance Decomposable (Resid s) s Bool where
 --   (<:) = error "(<:) not yet defined on Resid"
@@ -203,7 +212,7 @@ instance StarSemiring (RegExp c) where
 
 instance OkSym c => HasSingle (RegExp c) [c] Bool where
   -- single = foldr (\ c e -> Char c <.> e) One
-  (|->) = oneBool (product . map Char)
+  (+->) = oneBool (product . map Char)
 
 #else
 -- Or from an arbitrary foldable
@@ -333,7 +342,7 @@ instance StarSemiring (Decomp c) where
       h d = as `scaleD` d <.> q
 
 instance Eq c => HasSingle (Decomp c) [c] Bool where
-  (|->) = oneBool (product . map symbol)
+  (+->) = oneBool (product . map symbol)
    where
      symbol c = False :<: (\ c' -> if c'==c then one else zero)
 
@@ -413,7 +422,7 @@ instance Ord c => HasSingle (Trie c) [c] Bool where
   -- single = foldr (\ c p -> False :< M.singleton c p) one
   -- single [] = one
   -- single (c:cs) = False :< M.singleton c (single cs)
-  (|->) = oneBool (product . map symbol)
+  (+->) = oneBool (product . map symbol)
    where
      symbol c = False :< M.singleton c one
 

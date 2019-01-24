@@ -20,29 +20,28 @@ import qualified Data.Map as M
 import Data.Semiring
 
 class HasSingle x a s | x -> a s where
-  infix 1 |->
-  (|->) :: a -> s -> x
+  infix 1 +->
+  (+->) :: a -> s -> x
 
 single :: (HasSingle x a s, Semiring s) => a -> x
-single a = a |-> one
+single a = a +-> one
 
 oneBool :: Semiring x => (a -> x) -> a -> Bool -> x
 oneBool _ _ False = zero
 oneBool f a True  = f a
 
 instance (Semiring s, Eq a) => HasSingle (a -> s) a s where
-  a |-> s = \ a' -> if a == a' then s else zero
+  a +-> s = \ a' -> if a == a' then s else zero
 
 instance HasSingle [a] a Bool where
-  a |-> s = if s then [a] else []
+  a +-> s = if s then [a] else []
 
 -- instance Eq c => Decomposable [[c]] ((->) c) Bool where
 --   atEps p   = [] `elem` p
 --   deriv p c = [cs | c' : cs <- p, c' == c]
 
-
 instance HasSingle (Set a) a Bool where
-  a |-> s = if s then S.singleton a else S.empty
+  a +-> s = if s then S.singleton a else S.empty
 
 -- (.>) :: Semiring s => s -> (a -> s) -> (a -> s)
 -- s .> f = (s <.>) . f

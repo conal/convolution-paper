@@ -29,14 +29,19 @@ main = do
 basicTests :: TestTree
 basicTests = testGroup "Various representations"
   [ testGroup "" []
-  -- TODO: lists
-  , tests @(S.RegExp  Char) "SetRegExp"
-  , tests @(F.RegExp  Char Bool) "FunRegExp"
-  , tests @(S.Decomp  Char) "SetDecomp"
+  , tests @(S.Decomp  Char     ) "SetDecomp"
+  , tests @(S.RegExp  Char     ) "SetRegExp"
+  , tests @(S.Trie    Char     ) "SetTrie"
   , tests @(F.Decomp  Char Bool) "FunDecomp"
-  , tests @(S.Trie    Char) "SetTrie"
+  , tests @(F.RegExp  Char Bool) "FunRegExp"
   , tests @(F.Trie    Char Bool) "FunTrie"
   ]
+
+-- I don't think these ones can work:
+-- 
+--   , tests @(S.L String)    "List"
+--   , tests @(S.Pred String) "Pred"
+
 
 -- TODO: some tests with s other than Bool.
 

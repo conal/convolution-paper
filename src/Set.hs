@@ -116,6 +116,7 @@ takeL n (L as) = L (take n as)
 -- >>> deriv (single "a" :: L String)
 -- ... <hang> ...
 
+
 -- Oh! deriv on an infinite list cannot give any information, becausse it 
 
 -- >>> deriv (star (single "a") :: L String)
@@ -133,10 +134,9 @@ takeL n (L as) = L (take n as)
     Predicates
 --------------------------------------------------------------------}
 
-newtype Pred a = Pred { unPred :: a -> Bool } deriving Show
+newtype Pred a = Pred { unPred :: a -> Bool }
 
--- >>> one :: [String]
--- [1]
+instance Show (Pred a) where show = const "<Pred>"
 
 #if 0
 
@@ -172,6 +172,24 @@ instance Decomposable (Pred [c]) ((->) c) Bool where
   atEps (Pred f) = f []
   -- deriv (Pred f) c = Pred (f . (c :))
   deriv (Pred f) c = Pred (\ cs -> f (c : cs))
+
+-- >>> unPred one ""
+-- True
+-- >>> unPred one "a"
+-- False
+
+-- >>> unPred (single "a") ""
+-- False
+-- >>> unPred (single "a") "a"
+-- True
+
+-- >>> unPred (star (single "a")) ""
+-- >>> unPred (star (single "a")) "a"
+
+-- >>> unPred (star (single "a")) "aa"
+-- True
+-- >>> unPred (star (single "a")) "b"
+-- False
 
 {--------------------------------------------------------------------
     Classic list-of-successes

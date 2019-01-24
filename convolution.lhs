@@ -333,9 +333,6 @@ class HasSingle x a s | x -> a s where
   infix 1 +->
   (+->) :: a -> s -> x
 
-instance (Semiring s, Eq a) => HasSingle (a -> s) a s where
-  a +-> s = \ a' -> if a == a' then s else zero
-
 single :: (HasSingle x a s, Semiring s) => a -> x
 single a = a +-> one
 \end{code}
@@ -459,8 +456,9 @@ deriv p c = set (cs | c:cs <# p)
 \end{code}
 To see the relationship between Brzozowski's two operations and the decomposition above, recast |delta| and |deriv| in terms of predicates (functions to booleans):
 \begin{code}
-delta p []      = p []
-delta p (c:cs)  = False
+delta p  = \ NOP case  []   -> p []
+                       _:_  -> False
+         = [] +-> p []
 
 deriv p = \ c cs -> p (c : cs)
 \end{code}

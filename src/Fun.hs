@@ -8,6 +8,7 @@ module Fun where
 import Prelude hiding (sum,product)
 
 import Control.Applicative (liftA2)
+import Control.Arrow (second)
 import Text.Show.Functions ()  -- for Decomp
 import Data.Map
   ( Map,toList,fromListWith,empty,singleton,insert,unionWith
@@ -26,6 +27,9 @@ import Constrained
 --------------------------------------------------------------------}
 
 newtype b <-- a = F { unF :: a -> b }
+
+instance Semiring s => Scalable (s <-- a) s where
+  s `scale` F f = F ((s <.>) . f) 
 
 instance (Splittable a, Semiring s) => Semiring (s <-- a) where
   zero = F (const zero)
@@ -66,15 +70,13 @@ instance Semiring b => ApplicativeC ((<--) b) where
   pureC a = F (\ w -> undefined a w)
   liftA2C h (F f) (F g) = F (\w -> undefined h f g w)
 
-infixl 7 .>
-#if 0
-(.>) :: Semiring s => s -> (s <-- a) -> (s <-- a)
-s .> F f = F ((s <.>) . f)
-#else
-(.>) :: (Splittable a, DetectableZero s) => s -> (s <-- a) -> (s <-- a)
-s .> F f | isZero s  = zero
-         | otherwise = F ((s <.>) . f)
-#endif
+-- Move elsewhere:
+
+-- value :: (Monoid a, Eq a) => b -> (b <-- a)
+-- value b = F (\ x -> if x == mempty then b else zero)
+
+value :: (HasSingle x a s, Monoid a) => s -> x
+value b = mempty +-> b
 
 -- infix 1 +->
 -- (+->) :: (DetectableZero s, Eq w, Splittable w) => s -> w -> (s <-- w)
@@ -89,6 +91,9 @@ newtype b :<-- a = M (Map a b) deriving Show
 
 mapTo :: (Ord a, Semiring b) => (b :<-- a) -> (b <-- a)
 mapTo (M m) = F (\ a -> M.findWithDefault zero a m)
+
+instance Semiring s => Scalable (s :<-- a) s where
+  s `scale` M m = M (fmap (s <.>) m)
 
 instance (Monoid a, Ord a, Semiring b) => Semiring (b :<-- a) where
   zero = M empty
@@ -144,6 +149,9 @@ newtype Resid c s = Resid ([c] -> [([c], s)])
 
 residF :: Semiring s => Resid c s -> (s <-- [c])
 residF (Resid f) = F (\ w -> sum [ s | (w',s) <- f w, null w' ])
+
+instance Semiring s => Scalable (Resid c s) s where
+  s `scale` Resid f = Resid (map (second (s <.>)) . f)
 
 #if 0
 
@@ -201,6 +209,15 @@ data RegExp c s =
   | Star (RegExp c s)
  deriving (Show,Eq)
 
+instance Semiring s => Scalable (RegExp c s) s where
+  scale s = go
+   where
+     go (Char c) = Char c
+     go (Value s') = Value (s <.> s')
+     go (u :<+> v) = go u <+> go v
+     go (u :<.> v) = go u <.> go v
+     go (Star u)   = star (go u)
+
 instance Semiring s => Semiring (RegExp c s) where
   zero  = Value zero
   one   = Value one
@@ -213,11 +230,11 @@ instance Semiring s => StarSemiring (RegExp c s) where
 instance Semiring s => HasSingle (RegExp c s) [c] s where
   w +-> s = product (map Char w) <.> Value s
 
+#if 0
+
 scaleRE :: DetectableZero s => s -> RegExp c s -> RegExp c s
 scaleRE s e | isZero s  = zero
             | otherwise = Value s <.> e
-
-#if 0
 
 instance (Ord c, StarSemiring s, DetectableZero s) => Decomposable (RegExp c s) (Map c) s where
   e <: d = Value e <+> sum [ single [c] <.> dc | (c,dc) <- toList d ]
@@ -301,9 +318,21 @@ regexp (Star u)   = star (regexp u)
 infix 1 :<:
 data Decomp c s = s :<: (c -> Decomp c s) deriving Show
 
-scaleD :: DetectableZero s => s -> Decomp c s -> Decomp c s
-scaleD s _ | isZero s = zero
-scaleD s (e :<: ts) = (s <.> e) :<: (scaleD s . ts)
+scaleD :: (DetectableZero s, Eq c) => s -> Decomp c s -> Decomp c s
+scaleD s = go
+ where
+   go (e :<: ts) = (s <.> e) :<: (go . ts)
+
+-- instance Semiring s => Scalable (Decomp c s) s where
+--   scale s = go
+--    where
+--      go (s' :<: f) = (s <.> s') :<: go . f
+
+instance (DetectableZero s, Eq c) => Scalable (Decomp c s) s where
+  scale = scaleD
+
+-- TODO: remove Eq c constraints from the signature of scaleD and Decomp
+-- instances below if I stop needing it.
 
 decompFun :: Semiring s => Decomp c s -> ([c] -> s)
 decompFun (e :<: ds) = e <: decompFun . ds
@@ -336,34 +365,34 @@ funDecomp f = atEps f :<: funDecomp . deriv f
 decompF :: Semiring s => Decomp c s -> (s <-- [c])
 decompF = F . decompFun
 
-instance DetectableZero s => Semiring (Decomp c s) where
+instance (DetectableZero s, Eq c) => Semiring (Decomp c s) where
 #if 0
   -- For the paper
   zero = zero :<: \ _c -> zero
   one  = one  :<: \ _c -> zero
   (a :<: dp) <+> (b :<: dq) = (a <+> b) :<: \ c -> dp c <+> dq c
-  (a :<: dp) <.> ~q@(b :<: dq) = (a <.> b) :<: \ c -> scaleD a (dq c) <+> dp c <.> q
+  (a :<: dp) <.> ~q@(b :<: dq) = (a <.> b) :<: \ c -> a .< dq c <+> dp c <.> q
 #else
   zero = zero :<: const zero
   one  = one  :<: const zero
   (a :<: dp) <+> (b :<: dq) = (a <+> b) :<: liftA2 (<+>) dp dq
 #if 1
-  (a :<: dp) <.> q = scaleD a q <+> (zero :<: (<.> q) . dp)
+  (a :<: dp) <.> q = a .> q <+> (zero :<: (<.> q) . dp)
 #else
   (a :<: dp) <.> ~q@(b :<: dq) = (a <.> b) :<: liftA2 h dp dq
    where
-     h u v = scaleD a v <+> u <.> q
+     h u v = a .> v <+> u <.> q
 #endif
 
 #endif
 
-instance (StarSemiring s, DetectableZero s) => StarSemiring (Decomp c s) where
+instance (StarSemiring s, DetectableZero s, Eq c) => StarSemiring (Decomp c s) where
   -- See 2019-01-13 joural
   star (a :<: dp) = q
     where
       q = as :<: fmap h dp
       as = star a
-      h d = as `scaleD` d <.> q
+      h d = as .> d <.> q
 
 instance (DetectableZero s, Eq c) => HasSingle (Decomp c s) [c] s where
 #if 0
@@ -379,7 +408,7 @@ instance (DetectableZero s, Eq c) => HasSingle (Decomp c s) [c] s where
      nil = s :<: zero
 #endif
 
-instance DetectableZero s => Decomposable (Decomp c s) ((->) c) s where
+instance (DetectableZero s, Eq c) => Decomposable (Decomp c s) ((->) c) s where
   (<:) = (:<:)
   atEps (a :<: _) = a
   deriv (_ :<: d) = d
@@ -428,6 +457,8 @@ s `scaleT` t | isZero s  = zero
              | otherwise = go t
  where
    go ~(e :< ts) = (s <.> e) :< fmap go ts
+
+instance OD c s => Scalable (Trie c s) s where scale = scaleT
 
 -- scaleT s | isZero s  = const zero
 --          | otherwise = go

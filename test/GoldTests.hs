@@ -29,8 +29,7 @@ main = do
 basicTests :: TestTree
 basicTests = testGroup "Various representations"
   [ testGroup "" []
-  -- TODO: lists!
-
+  -- TODO: lists
   , tests @(S.RegExp  Char) "SetRegExp"
   , tests @(F.RegExp  Char Bool) "FunRegExp"
   , tests @(S.Decomp  Char) "SetDecomp"

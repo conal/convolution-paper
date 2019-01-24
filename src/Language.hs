@@ -125,6 +125,22 @@ product :: (Foldable f, Semiring a) => f a -> a
 product = getProduct . foldMap Product
 
 {--------------------------------------------------------------------
+    Experiment
+--------------------------------------------------------------------}
+
+class Scalable b s | b -> s where scale :: s -> b -> b
+
+-- instance Semiring s => Scalable (a -> s) s where
+--   scale s f = (s <.>) . f
+
+infixl 7 .>
+-- | 'scale' optimized for zero scalar
+(.>) :: (Semiring x, Scalable x s, DetectableZero s) => s -> x -> x
+s .> x | isZero s = zero
+       | otherwise = s `scale` x
+
+
+{--------------------------------------------------------------------
     Temporary hack
 --------------------------------------------------------------------}
 

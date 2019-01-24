@@ -164,6 +164,7 @@ class HasSingle a w | a -> w where
 \end{code}
 \vspace{-4ex}
 } shows Haskell classes for representations of languages (and later generalizations), combining the star semiring vocabulary (from the semiring-num library \citep{semiring-num}) with an operation for singletons.
+\notefoot{Consider replacing |HasSingle| with |Pointed| (and |single| with |point|).}
 The singleton-forming operation must satisfy the following properties:
 \begin{align*}
 \single \mempty &= \one \\

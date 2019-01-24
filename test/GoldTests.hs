@@ -54,40 +54,33 @@ tests :: forall x h s.
 tests group = testGroup group
   [ testGroup "" []
 
-  -- , gold "a"                            $ a
-  -- , gold "pig"                          $ pig
-  -- , gold "pink-or-pig"                  $ pp
-  -- , gold "derivs-pp-q"                  $ derivs pp "q"
-  -- , gold "derivs-pp-pi"                 $ derivs pp "pi"
-  -- , gold "derivs-pp-pig"                $ derivs pp "pig"
-
-  , gold "accept-as-eps"                $ accept as ""
-  , gold "accept-as-a"                  $ accept as "a"
-  , gold "accept-ass-eps"               $ accept ass ""
+  , gold "as-eps"                $ accept as ""
+  , gold "as-a"                  $ accept as "a"
+  , gold "ass-eps"               $ accept ass ""
   , groupNot ["Pred","F"] $
-    gold "accept-ass-a"                 $ accept ass "a"
+    gold "ass-a"                 $ accept ass "a"
 
-  , gold "accept-pp-pi"                 $ app "pi"
-  , gold "accept-pp-pig"                $ app "pig"
-  , gold "accept-pp-pig"                $ app "pig"
-  , gold "accept-pp-pink"               $ app "pink"
-  , gold "accept-pp-ping"               $ app "ping"
+  , gold "pp-pi"                 $ app "pi"
+  , gold "pp-pig"                $ app "pig"
+  , gold "pp-pig"                $ app "pig"
+  , gold "pp-pink"               $ app "pink"
+  , gold "pp-ping"               $ app "ping"
 
-  , gold "accept-pps-q"                 $ apps "q"
-  , gold "accept-pps-pig"               $ apps "pig"
-  , gold "accept-pps-pigpig"            $ apps "pigpig"
-  , gold "accept-pps-pigping"           $ apps "pigping"
-  , gold "accept-pps-pinkpigpinkpigpig" $ apps "pinkpigpinkpigpig"
+  , gold "pps-q"                 $ apps "q"
+  , gold "pps-pig"               $ apps "pig"
+  , gold "pps-pigpig"            $ apps "pigpig"
+  , gold "pps-pigping"           $ apps "pigping"
+  , gold "pps-pinkpigpinkpigpig" $ apps "pinkpigpinkpigpig"
 
   -- These recursive examples are challenging.
   -- OptimizeRegexp in Set.hs causes these recursive examples to diverge.
-  , gold "accept-anbn-eps"              $ ranbn ""
-  , gold "accept-anbn-ab"               $ ranbn "ab"
-  , gold "accept-anbn-ba"               $ ranbn "ba"
-  , gold "accept-anbn-aabb"             $ ranbn "aabb"
-  , gold "accept-anbn-aacbb"            $ ranbn "aacbb"
-  , gold "accept-anbn-aaabbb"           $ ranbn "aaabbb"
-  , gold "accept-anbn-aaabbbb"          $ ranbn "aaabbbb"
+  , gold "anbn-eps"              $ ranbn ""
+  , gold "anbn-ab"               $ ranbn "ab"
+  , gold "anbn-ba"               $ ranbn "ba"
+  , gold "anbn-aabb"             $ ranbn "aabb"
+  , gold "anbn-aacbb"            $ ranbn "aacbb"
+  , gold "anbn-aaabbb"           $ ranbn "aaabbb"
+  , gold "anbn-aaabbbb"          $ ranbn "aaabbbb"
 
   ]
  where

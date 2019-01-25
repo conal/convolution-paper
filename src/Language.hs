@@ -172,9 +172,9 @@ instance Semiring s => Scalable (a -> s) s where
 
 infixl 7 .>
 -- | 'scale' optimized for zero scalar
-(.>) :: (Semiring x, Scalable x s, DetectableZero s) => s -> x -> x
-s .> x | isZero s = zero
-       | otherwise = s `scale` x
+(.>) :: (Semiring b, Scalable b s, DetectableZero s) => s -> b -> b
+s .> b | isZero s = zero
+       | otherwise = s `scale` b
 
 
 {--------------------------------------------------------------------

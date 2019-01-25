@@ -200,24 +200,32 @@ instance HasSingle (Pow s) s where single s = set s
 \vspace{-4ex}
 }, which generalizes from strings to any monoid.\footnote{The |Monoid| class defines |mempty| and |mappend|.}
 \notefoot{Perhaps postpone generalization from lists to monoids later.}
+%% Data.Semiring defines instances for lists, so I'm using a newtype.
+%% Hide the distinction for now at least. To do: discuss with Donnacha.
+%% %format (List a) = [a]
+%% %format L (as) = as
 More concretely, we might instead use a type of (possibly infinite) lists, as in \figrefdef{list}{Lists as a language representation}{
 \begin{code}
-instance Monoid a => Semiring [a] where
-  zero = []
-  one = single mempty
-  p  <+>  q = p ++ q
-  p  <.>  q = [u <> v | u <- p, v <- q]
+newtype List a = L [a]
 
-instance Monoid a => StarSemiring [a] -- default
+instance Monoid a => Semiring (List a) where
+  zero = L []
+  one = L [mempty]
+  L u  <+>  L v = L (u ++ v)
+  L u  <.>  L v = L (liftA2 (<>) u v)
 
-instance HasSingle [a] a where single a = [a]
+instance Monoid a => StarSemiring (List a)  -- default
+
+instance HasSingle (List a) a where single a = L [a]
 \end{code}
 \vspace{-4ex}
 }.
+Rather than using lists directly, \figref{list} defines |List a|, freeing regular lists for another interpretation.
+\notefoot{Refer to a later section that treats a list as a function from |Nat|, with finite lists getting padded with |zero|.}
 Lists relate to sets as follows:
 \begin{code}
-listElems :: [a] -> Pow a
-listElems = foldr insert emptyset where insert a as = single a <+> as
+listElems :: List a -> Pow a
+listElems (L as) = foldr insert emptyset as where insert a s = single a <+> s
 \end{code}
 The instance definitions in \figreftwo{set}{list} bear a family resemblance to each other, which we can readily make precise:
 \begin{theorem}[\provedIn{theorem:list}]\thmLabel{list}
@@ -228,7 +236,8 @@ Given the definitions in \figref{list}, |listElems| is a homomorphism with respe
 \sectionl{Matching}
 
 Now consider how we can computably \emph{match} a string for membership in a language described in the vocabulary given in the previous section.
-Aside from closure, which introduces infinite languages, we could test membership in sets or lists.
+Aside from closure, which introduces infinite languages, we could test membership in sets or lists.%
+\footnote{For infinite lists, if we defined |(<+>)| via interleaving instead of concatenation, we could detect members, but not non-members.}
 \out{
 The set-based language definition does not lead directly to effective string matching, because the sets may be infinite.
 The list and finite set types do have computable membership testing so we could use them instead.
@@ -328,20 +337,24 @@ instance StarSemiring b => StarSemiring (a -> b) where
 
 Re-examining the instances in \figref{pred}, we can see uses of |False|, |(||||)|, and |(&&)|, as well as an equality test (for |single w|), which yields |False| or |True|.
 We can therefore easily generalize the codomain of ``predicates'' from booleans to \emph{any} semiring.
-It will also be useful to generalize |single a| to |a +-> s|, mapping |a| to |s| and everything else to zero:
+It will also be useful to extend |single a| to |a +-> s|, mapping |a| to |s| and everything else to zero:
+We can build |a +-> s| from |single a| and a new ``scaling'' operation |s .> p|, which multiplies each of codomain values in |p| by |s|:\footnote{
+For sets, lists, and predicates, |s| will be |Bool|, e.g.,
 \begin{code}
-class HasSingle x a s | x -> a s where
-  infix 1 +->
-  (+->) :: a -> s -> x
-
-single :: (HasSingle x a s, Semiring s) => a -> x
-single a = a +-> one
+instance Monoid a => Scalable (List a) Bool where
+  s .> as = if s then as else zero
 \end{code}
-For sets and lists, |s| will be |Bool|:
+\mynote{Maybe it's not worth bothering with |Scalable| and |(+->)| for sets, lists and predicates.}
+}
+\notefoot{Consider changing both |HasSingle| and |Scalable| to type \emph{constructor} classes.}
 \begin{code}
-instance HasSingle (Set a)  a Bool where a +-> s = if s then set a  else emptyset
+class Scalable b s | b -> s where
+  infixl 7 .>
+  (.>) :: s -> b -> b
 
-instance HasSingle [a] a Bool where a +-> s = if s then [a] else []
+infix 1 +->
+(+->) :: (Semiring x, Scalable x s, HasSingle x a) => a -> s -> x
+a +-> s = s .> single a
 \end{code}
 
 \noindent
@@ -357,11 +370,19 @@ instance (Semiring b, Monoid a, Eq a) => Semiring (b <-- a) where
 
 instance (Monoid a, Eq a) => StarSemiring (b <-- a)
 
-instance (Semiring s, Eq a) => HasSingle (s <-- a) a s where
-  a +-> s = F (\ a' -> if a == a' then s else zero)
+instance (Semiring b, Eq a) => HasSingle (b <-- a) a where
+  single a = F (boolVal . (== a))
+
+boolVal :: Semiring b => Bool -> b
+boolVal False  = zero
+boolVal True   = one
+
+instance Semiring s => Scalable (s <-- a) s where
+  s .> F f = F ((s NOP <.>) . f) 
 \end{code}
 \vspace{-4ex}
 }.
+\notefoot{If I change |HasSingle| and |Scalable| to type constructor classes, the reversal of parameters will be necessary, as it already is for |Functor|, |Applicative|, and |Monad| instances.}
 
 \begin{theorem}[\provedIn{theorem:<--}]\thmLabel{<--}
 Given the instance definitions in \figref{<--}, |b <-- a| satisfies the laws of the instantiated classes whenever |a| is a monoid and |b| is a semiring.
@@ -402,6 +423,10 @@ instance Semiring s => HasSingle (s :<-- a) a s where
 \notefoot{Look for a better name than ``|mapTo|''.}
 \end{theorem}
 The finiteness of finite maps interferes with giving a useful |StarSemiring| instance.
+
+\mynote{Define another wrapper for |[a]| that represents |a <-- Sum Nat|.
+Maybe also multidimensional arrays.
+Probably save for later when I discuss spatial convolution and polynomials.}
 
 \sectionl{Decomposing Functions}
 
@@ -459,7 +484,8 @@ To see the relationship between Brzozowski's two operations and the decompositio
 \begin{code}
 delta p  = \ NOP case  []   -> p []
                        _:_  -> False
-         = [] +-> p []
+         = mempty +-> p mempty
+         = p mempty .> one
 
 deriv p = \ c cs -> p (c : cs)
 \end{code}
@@ -531,14 +557,8 @@ deriv (closure p) c == closure (p mempty) .> deriv p c * closure p
 
 deriv (single [d]) c == boolVal (d == c)
 \end{code}
-where |(.>)| scales the result of a function:\footnote{Equivalently, |deriv (p  <.>  q) c = delta p * deriv q c <+> deriv p c <.> q|, where |delta p = p mempty .> one|, generalizing a notion of \citet[Definition 3.2]{Brzozowski64}.}
-\begin{code}
-infixl 7 .>
-(.>) :: Semiring s => s -> (a -> s) -> (a -> s)
-s .> f  = \ a -> s <.> (f a)
-        = (s NOP <.>) . f
-\end{code}
 \end{lemma}
+Equivalently, |deriv (p  <.>  q) c = delta p * deriv q c <+> deriv p c <.> q|, generalizing a notion of \citet[Definition 3.2]{Brzozowski64}.
 % \workingHere \mynote{I'm moving |(.>)| sooner. Fix this part.}
 \begin{corollary}
 The following properties hold:
@@ -578,12 +598,16 @@ closure (a <: dp) = q where q = closure a .> (one <: (<.> NOP q) .  dp)
 \end{lemma}
 %endif
 
-Returning to the definition of |s .> f| above, there's a very important optimization to be made.
-When |s == zero|, |s .> f == zero| (exercise), so we can discard |f| entirely:
+Returning to scaling, there's a very important optimization to be made.
+When |s == zero|, |s .> p == zero|, so we can discard |p| entirely.
+Rather than give this responsibility to each |Scalable| instance, let's define |(.>)| to apply this optimization on top of a more primitive |scale| method:
 \begin{code}
-(.>) :: DetectableZero s => s -> (a -> s) -> (a -> s)
-s .> f  | isZero s   = zero
-        | otherwise  = (s NOP <.>) . f
+class Scalable b s | b -> s where
+  scale :: s -> b -> b
+
+(.>) :: (Semiring b, Scalable b s, DetectableZero s) => s -> b -> b
+s .> b  | isZero s   = zero
+        | otherwise  = s `scale` b
 \end{code}
 The |DetectableZero| class \citep{semiring-num}:
 \begin{code}

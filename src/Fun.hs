@@ -30,9 +30,6 @@ newtype b <-- a = F { unF :: a -> b }
 
 instance Show (b <-- a) where show = const "<F>"
 
-instance Semiring s => Scalable (s <-- a) s where
-  s `scale` F f = F ((s <.>) . f) 
-
 instance (Splittable a, Semiring s) => Semiring (s <-- a) where
   zero = F (const zero)
   one = F (boolVal . isEmpty)
@@ -43,12 +40,16 @@ instance Semiring s => StarSemiring (s <-- [c])
 
 #ifdef SINGLE
 instance (Semiring b, Eq a) => HasSingle (b <-- a) a where
-  single a = F (boolVal . (== a))
+  single a = F (\ a' -> boolVal (a' == a))
+  -- single a = F (boolVal . (== a))
 #else
 instance (Semiring s, Eq a) => HasSingle (s <-- a) a s where
-  a +-> s = F (a +-> s)
-  -- a +-> s = F (\ a' -> if a == a' then s else zero)
+  a +-> s = F (\ a' -> if a == a' then s else zero)
 #endif
+
+instance Semiring s => Scalable (s <-- a) s where
+  s `scale` F f = F (\ a -> s <.> f a) 
+  -- s `scale` F f = F ((s <.>) . f) 
 
 instance Semiring s => Decomposable (s <-- [c]) ((->) c) s where
   b <: h = F (b <: unF . h)
@@ -483,23 +484,11 @@ trimT :: OD c s => Int -> Trie c s -> Trie c s
 trimT 0 _ = zero
 trimT n (c :< ts) = c :< fmap (trimT (n-1)) ts
 
-scaleT :: OD c s => s -> Trie c s -> Trie c s
-
-s `scaleT` t | isZero s  = zero
-             | otherwise = go t
- where
-   go ~(e :< ts) = (s <.> e) :< fmap go ts
-
-instance OD c s => Scalable (Trie c s) s where scale = scaleT
-
--- scaleT s | isZero s  = const zero
---          | otherwise = go
---  where
---    go ~(e :< ts) = (s <.> e) :< fmap go ts
-
--- scaleT s (e :< ts) = (s <.> e) :< fmap (scaleT s) ts
-
--- TODO: generalize scaleT to tmap, and then let scaleT s = tmap (s <.>).
+instance OD c s => Scalable (Trie c s) s where
+  s `scale` t | isZero s  = zero
+              | otherwise = go t
+   where
+     go ~(e :< ts) = (s <.> e) :< fmap go ts
 
 -- -- Oops. We'd need to enumerate all of c.
 -- funTrie :: ([c] -> s) -> Trie c s
@@ -531,21 +520,21 @@ instance OD c s => Semiring (Trie c s) where
 #if 0
   -- Wedges for the recursive anbn examples even with the lazy pattern.
   (a :< dp) <.> ~q@(b :< dq) =
-    (a <.> b) :< unionWith (<+>) (fmap (<.> q) dp) (fmap (scaleT a) dq)
+    (a <.> b) :< unionWith (<+>) (fmap (<.> q) dp) (fmap (a .>) dq)
 #elif 0
   -- Wedges for recursive anbn examples even with the lazy pattern.
   (a :< dp) <.> ~q@(b :< dq) = (a <.> b) :< unionWith (<+>) us vs
    where
      us = fmap (<.> q) dp
-     vs = fmap (scaleT a) dq
+     vs = fmap (a .>) dq
 #elif 1
   -- Works even for recursive anbn examples.
-  ~(a :< ps) <.> q = a `scaleT` q <+> (zero :< fmap (<.> q) ps)
+  ~(a :< ps) <.> q = a .> q <+> (zero :< fmap (<.> q) ps)
 #else
   -- Works even for recursive anbn examples.
   (a :< dp) <.> ~q@(b :< dq)
     | isZero a  = zero :< fmap (<.> q) dp
-    | otherwise = a <.> b :< unionWith (<+>) (fmap (<.> q) dp) (fmap (scaleT a) dq)
+    | otherwise = a <.> b :< unionWith (<+>) (fmap (<.> q) dp) (fmap (a .>) dq)
 #endif
 
 -- instance OD c s => StarSemiring (Trie c s) where
@@ -555,7 +544,7 @@ instance OD c s => Semiring (Trie c s) where
 instance (Ord c, StarSemiring s, DetectableZero s) => StarSemiring (Trie c s) where
 #if 1
   -- Works
-  star (a :< dp) = q where q = star a `scaleT` (one :< fmap (<.> q) dp)
+  star (a :< dp) = q where q = star a .> (one :< fmap (<.> q) dp)
 #else
   -- Works
   -- See 2019-01-13 joural
@@ -563,10 +552,8 @@ instance (Ord c, StarSemiring s, DetectableZero s) => StarSemiring (Trie c s) wh
     where
       q = as :< fmap h dp
       as = star a
-      h d = as `scaleT` d <.> q
+      h d = as .> d <.> q
 #endif
-
--- TODO: Fix so that scaleT checks isZero as only once.
 
 #ifdef SINGLE
 instance OD c s => HasSingle (Trie c s) [c] where

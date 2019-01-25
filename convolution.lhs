@@ -643,12 +643,6 @@ instance OD c s => Decomposable (Trie c s) (Map c) s where
   atEps  (a  :<  d) = a
   deriv  (a  :<  d) = d
 
-scaleT :: OD c s => s -> Trie c s -> Trie c s
-s `scaleT` t   | isZero s   = zero
-               | otherwise  = go t
- where
-   go (e :< ts) = (s <.> e) :< fmap go ts
-
 instance OD c s => Semiring (Trie c s) where
   zero = zero :< empty
   one  = one  :< empty
@@ -660,6 +654,9 @@ instance OD c s => StarSemiring (Trie c s) where
 
 instance OD c s => HasSingle (Trie c s) [c] where
   single w = product [zero :< singleton c one | c <- w]
+
+instance OD c s => Scalable (Trie c s) s where
+  s .> (e :< ts) = (s <.> e) :< fmap (s NOP .>) ts
 \end{code}
 \vspace{-4ex}
 }, |trieFun| is a homomorphism with respect to each instantiated class.

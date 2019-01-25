@@ -75,7 +75,7 @@ instance Semiring b => FunctorC ((<--) b) where
   fmapC h (F f) = F (\ w -> undefined h f w)
 
 instance Semiring b => ApplicativeC ((<--) b) where
-  pureC a = single a
+  pureC = single
   liftA2C h (F f) (F g) = F (\w -> undefined h f g w)
 
 -- Move elsewhere:
@@ -139,7 +139,7 @@ instance SRM b => FunctorC ((:<--) b) where
 -- to return to defining my own classes. Tip my hat to semiring-num.
 
 instance SRM b => ApplicativeC ((:<--) b) where
-  pureC a = single a
+  pureC = single
   liftA2C h (M p) (M q) =
     sum [ h a b +-> s <.> t | (a,s) <- toList p, (b,t) <- toList q]
   -- liftA2C h (M p) (M q) =
@@ -472,7 +472,7 @@ instance FunctorC (Trie c) where
   fmapC h (s :< ts) = h s :< (fmapC.fmapC) h ts
 
 instance ApplicativeC (Trie c) where
-  pureC a = single a
+  pureC = single
   liftA2C h (a :< us) (b :< vs) = h a b :< (liftA2C.liftA2C) h us vs
 
 -- Hm. I need Applicative (Map c). Define in Semiring.
@@ -482,7 +482,7 @@ instance ApplicativeC (Trie c) where
 instance FunctorC (Map k)
 
 instance ApplicativeC (Map k) where
-  pureC v = single v
+  pureC = single
   liftA2C h u v =
     fromListWith (<+>)
       [h (u!k) (v!k) | k <- S.toList (keysSet u `S.union` keysSet v)]

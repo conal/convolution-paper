@@ -100,13 +100,18 @@ mapTo (M m) = F (\ a -> M.findWithDefault zero a m)
 instance Semiring s => Scalable (s :<-- a) s where
   s `scale` M m = M (fmap (s <.>) m)
 
-instance (Monoid a, Ord a, Semiring b) => Semiring (b :<-- a) where
+type SRM b = DetectableZero b
+
+instance (Monoid a, Ord a, SRM b) => Semiring (b :<-- a) where
   zero = M empty
   one = single mempty
   -- one = M (singleton mempty one)
   M p <+> M q = M (unionWith (<+>) p q)
-  M p <.> M q = M (fromListWith (<+>)
-                     [(u <> v, s <.> t) | (u,s) <- toList p, (v,t) <- toList q])
+
+  -- M p <.> M q = M (fromListWith (<+>)
+  --                    [(u <> v, s <.> t) | (u,s) <- toList p, (v,t) <- toList q])
+
+  M p <.> M q = sum [u <> v +-> s <.> t | (u,s) <- toList p, (v,t) <- toList q]
 
 #ifdef SINGLE
 instance Semiring s => HasSingle (s :<-- a) a where
@@ -116,21 +121,24 @@ instance Semiring s => HasSingle (s :<-- a) a s where
   a +-> s = M (singleton a s)
 #endif
 
-instance (Ord c, Semiring s) => Decomposable (s :<-- [c]) (Map c) s where
+instance (Ord c, SRM s) => Decomposable (s :<-- [c]) (Map c) s where
   b <: d = M (insert [] b (unionsWith (<+>)
                             [ mapKeys (c:) css | (c,M css) <- toList d ]))
   atEps (M p) = p ! []
               -- findWithDefault zero [] p
   deriv (M p) = fromListWith (<+>) [(c, M (singleton cs s)) | (c:cs,s) <- toList p]
 
-instance Semiring b => FunctorC ((:<--) b) where
-  type Ok ((:<--) b) a = Ord a
-  fmapC h (M p) = M (fromListWith (<+>) [(h a, b) | (a,b) <- toList p])
+instance SRM b => FunctorC ((:<--) b) where
+  type Ok ((:<--) b) a = (Ord a, Monoid a)
+  fmapC h (M p) = sum [h a +-> b | (a,b) <- toList p]
+  -- fmapC h (M p) = M (fromListWith (<+>) [(h a, b) | (a,b) <- toList p])
 
-instance Semiring b => ApplicativeC ((:<--) b) where
-  pureC b = M (singleton b one)
+instance SRM b => ApplicativeC ((:<--) b) where
+  pureC a = M (singleton a one)
   liftA2C h (M p) (M q) =
-    M (fromListWith (<+>) [(h a b, s <.> t) | (a,s) <- toList p, (b,t) <- toList q])
+    sum [ h a b +-> s <.> t | (a,s) <- toList p, (b,t) <- toList q]
+  -- liftA2C h (M p) (M q) =
+  --   M (fromListWith (<+>) [(h a b, s <.> t) | (a,s) <- toList p, (b,t) <- toList q])
 
 -- >>> zero :: Bool :<-- String
 -- M (fromList [])

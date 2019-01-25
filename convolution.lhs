@@ -225,8 +225,10 @@ Rather than using lists directly, \figref{list} defines |List a|, freeing regula
 Lists relate to sets as follows:
 \begin{code}
 listElems :: List a -> Pow a
-listElems (L as) = foldr insert emptyset as where insert a s = single a <+> s
+listElems (L as) = bigUnion (a <# as) single a
 \end{code}
+%% listElems (L as) = foldr insert emptyset as
+%%   where insert a s = single a <+> s
 The instance definitions in \figreftwo{set}{list} bear a family resemblance to each other, which we can readily make precise:
 \begin{theorem}[\provedIn{theorem:list}]\thmLabel{list}
 Given the definitions in \figref{list}, |listElems| is a homomorphism with respect to each instantiated class.
@@ -254,12 +256,11 @@ predSet :: Pred a -> Pow a
 predSet (Pred f) = set (a | f a)
 \end{code}
 It's easy to show that |setPred . predSet == id| and |predSet . setPred == id|.
+\nc\bigOp[3]{\hspace{-#3ex}#1\limits_{\substack{#2}}\hspace{-#3ex}}
 % See 2018-12-10 notes.
 %format exists = "\exists"
-%format DOT = "\!."
-\nc\bigOrZ[2]{\hspace{-#2ex}\bigvee\limits_{\substack{#1}}\hspace{-#2ex}}
-%format bigOr (lim) = "\bigOrZ{" lim "}{0}"
-%format bigOrQ (lim) = "\bigOrZ{" lim "}{1.5}"
+%format bigOr (lim) = "\bigOp\bigvee{" lim "}{0}"
+%format bigOrQ (lim) = "\bigOp\bigvee{" lim "}{1.5}"
 %format BR = "\!\!\\\!\!"
 %% %format BR = "\hspace{-5mu}\\\hspace{-5mu}"
 We can require that |predSet| (and thus |setPred|) is semiring homomorphism and solve the required homomorphism equations to yield a |Semiring| instance, as shown in \figrefdef{pred}{Membership predicate as semiring (language representation)}{
@@ -329,10 +330,9 @@ instance StarSemiring b => StarSemiring (a -> b) where
 \notefoot{Maybe a theorem here saying that these instances satisfy the necessary laws. Otherwise suggest that the reader verify. I'm unsure how to prove the closure property. Perhaps coinduction. See journal notes for 2019-01-16.}
 \out{We will use the |a -> b| semiring in \secref{Convolution}.\notefoot{Check that we did.}}
 
-%format bigSum (lim) = "\bigSumZ{" lim "}{0}"
-%format bigSumQ (lim) = "\bigSumZ{" lim "}{1.5}"
-%format bigSumKeys (lim) = "\bigSumZ{" lim "}{2}"
-\nc\bigSumZ[2]{\displaystyle\hspace{-#2ex}\sum_{\substack{#1}}\hspace{-#2ex}}
+%format bigSum (lim) = "\bigOp\sum{" lim "}{0}"
+%format bigSumQ (lim) = "\bigOp\sum{" lim "}{1.5}"
+%format bigSumKeys (lim) = "\bigOp\sum{" lim "}{2}"
 %format <-- = "\leftarrow"
 %format .> = "\cdot"
 %format +-> = "\mapsto"
@@ -696,7 +696,7 @@ By specializing the \emph{domain} of the functions to sequences (from general mo
 %format R = "\mathbb R"
 %format C = "\mathbb C"
 
-%format bigSumPlus (lim) = "\bigSumZ{" lim "}{1.5}"
+%format bigSumPlus (lim) = "\bigOp\sum{" lim "}{1.5}"
 Let's now consider specializing the functions' domains to \emph{integers} instead of sequences, recalling that integers (and numeric types in general) form a monoid under addition.
 \vspace{-2ex}
 \begin{spacing}{1.5}
@@ -986,10 +986,10 @@ For |deriv (closure p)|, see 2019-01-13 notes.
 First consider |fmap|, as defined in \figref{FunApp}.
 \begin{code}
     fmap h (F f)
-==  bigSum u h u +-> f u            -- definition of |fmap| on |(<--) b|
-==  bigSum u (f u .> single (h u))  -- definition of |(+->)|
-==  bigSum u (f u .> pure (h u))    -- |single = pure|
-==  F f >>= pure . h                -- definition of |(>>=)|
+==  bigSum u h u +-> f u          -- definition of |fmap| on |(<--) b|
+==  bigSum u f u .> single (h u)  -- definition of |(+->)|
+==  bigSum u f u .> pure (h u)    -- |single = pure|
+==  F f >>= pure . h              -- definition of |(>>=)|
 \end{code}
 \noindent
 Similarly for |liftA2|:
@@ -997,13 +997,13 @@ Similarly for |liftA2|:
 \begin{spacing}{1.5}
 \begin{code}
     liftA2 h (F f) (F g)
-==  bigSum (u,v) h u v +-> f u <.> g v                  -- definition of |liftA2|
-==  bigSum (u,v) ((f u * g v) .> single (h u v))        -- definition of |(+->)|
-==  bigSum (u,v) (f u .> (g v .> single (h u v)))       -- associativity
-==  bigSum u (f u .> bigSum v (g v .> single (h u v)))  -- linearity
-==  bigSum u (f u .> bigSum v (h u v +-> g v)           -- definition of |(+->)|
-==  bigSum u (f u .> fmap (h u) (F g))                  -- definition of |fmap|
-==  f >>= \ u -> fmap (h u) (F g)                       -- definition of |(>>=)|
+==  bigSum (u,v) h u v +-> f u <.> g v              -- definition of |liftA2|
+==  bigSum (u,v) (f u * g v) .> single (h u v)      -- definition of |(+->)|
+==  bigSum (u,v) f u .> (g v .> single (h u v))     -- associativity
+==  bigSum u f u .> bigSum v g v .> single (h u v)  -- linearity
+==  bigSum u f u .> bigSum v h u v +-> g v          -- definition of |(+->)|
+==  bigSum u f u .> fmap (h u) (F g)                -- definition of |fmap|
+==  f >>= \ u -> fmap (h u) (F g)                   -- definition of |(>>=)|
 \end{code}
 \end{spacing}
 

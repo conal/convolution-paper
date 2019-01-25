@@ -1,5 +1,9 @@
-## To-do items for the paper and code
+---
+title: To-do items for the paper and code
+substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
+...
 
+## To-do items for the paper and code
 
 *   Summation (etc) notation style:
     *   Consider moving the condition to the body where it becomes multiplication:
@@ -26,10 +30,11 @@
         ```
 
     *   Then simplify the "standard FunApp" proof.
-    *   Introduce notation "`a |-> b = b .> single a`".
-        Then `liftA2 h (F f) (F g) = sum (u,v) (f u * g v |-> h u v)`.
+    *   Introduce notation "`a +-> b = b .> single a`".
+        Then `liftA2 h (F f) (F g) = sum (u,v) (f u * g v +-> h u v)`.
 
 *   Maybe drop `HasSingle` and define `single` via `fmap` and `one`.
+*   Derive a semiring for lists based on a homomorphism from `[a]` to `a <-- Nat`.
 *   Try using `TMap` from [total-map](https://github.com/conal/total-map) in place of `Map` from containers, including the `Applicative` and `Monad` instances.
     I may have to add some operations.
 *   Consider the following intuition.
@@ -74,6 +79,7 @@
         *   [*Monads from Comonads, Comonads from Monads*]
         *   [*Should I use a Monad or a Comonad?*]
     *   Other:
+        *   [*Fun with Semirings: A functional pearl on the abuse of linear algebra*]
         *   [*Quantifiers on languages and codensity monads*]
         *   [What is a coalgebra intuitively?](https://mathoverflow.net/questions/76509/what-is-a-coalgebra-intuitively)
         *   [*Bases as coalgebras*](https://arxiv.org/pdf/1309.0844.pdf)
@@ -139,3 +145,5 @@
 [*Towards a Coalgebraic Chomsky Hierarchy*]: https://arxiv.org/abs/1401.5277v3 "paper by Sergey Goncharov, Stefan Milius, Alexandra Silva (2014)"
 
 [*The monads of classical algebra are seldom weakly cartesian*]: https://link.springer.com/article/10.1007/s40062-013-0063-2 "paper by Maria Manuel Clementino, Dirk Hofmann, and George Janelidze (2013)"
+
+[*Fun with Semirings: A functional pearl on the abuse of linear algebra*]: http://stedolan.net/research/semirings.pdf "paper by Stephen Dolan (2013)"

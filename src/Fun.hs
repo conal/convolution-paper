@@ -51,7 +51,7 @@ instance Semiring s => Scalable (s <-- a) s where
   s `scale` F f = F (\ a -> s <.> f a) 
   -- s `scale` F f = F ((s <.>) . f) 
 
-instance Semiring s => Decomposable (s <-- [c]) ((->) c) s where
+instance Semiring b => Decomposable (b <-- [c]) ((->) c) b where
   b <: h = F (b <: unF . h)
 
   -- b <: h = F f where  f []      = b

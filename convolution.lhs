@@ -794,9 +794,11 @@ lift0 b  = b +-> one
 
 %format FunctorC = Functor
 %format ApplicativeC = Applicative
+%format MonadC = Monad
 %format fmapC = fmap
 %format pureC = pure
 %format liftA2C = liftA2
+%format >>== = >>=
 %format SRM = DetectableZero
 %format bigSumZ (lim) = "\bigSumZ{" lim "}{1}"
 %% %format keys p = p
@@ -812,6 +814,10 @@ class FunctorC f where
 class FunctorC f => ApplicativeC f where
   pureC :: Ok f a => a -> f a
   liftA2C :: (Ok f a, Ok f b, Ok f c) => (a -> b -> c) -> f a -> f b -> f c
+
+infixl 1 >>==
+class ApplicativeC f => MonadC f where
+  (>>==) :: (Ok f a, Ok f b) => f a -> (a -> f b) -> f b
 
 instance Functor Pow where
   fmap h p = set (h a | a <# p)
@@ -882,6 +888,7 @@ For |b <-- a|, the monad is known as the ``free semimodule monad'' (or sometimes
 One can think of a free semimodule over a semiring |b| as |b <-- a| for some set |a| of ``indices'' and semiring |b| of ``scalars''.
 The dimension of the semimodule is the cardinality of |a|.
 Basis vectors have the form |single u| for some |u :: a|, mapping |u| to |one| and everything else to |zero| as in \figref{<--}.
+%if False
 \begin{theorem}[\provedIn{theorem:decompose liftA2}]\thmLabel{decompose liftA2}
 Every function |f :: b <-- a| can be decomposed into this basis as follows:
 \notefoot{I'm not assuming finite support, which is part of the usual definition but problematic for the applications in this paper. Is nthere a problem with dropping finite support and finiteness of linear combinations?}
@@ -890,38 +897,26 @@ F f = bigSum u (f u .> single u)
 \end{code}
 \vspace{-4ex}
 \end{theorem}
+%endif
 
 The monad instance is defined as follows:\footnote{The |return| method does not appear here, since it is equivalent to |pure| from Applicative.}
 \begin{code}
 instance Semiring s => Monad ((<--) s) where
   (>>=) :: (s <-- a) -> (a -> (s <-- b))) -> (s <-- b)
-  F f >>= h = bigSum a (f a) .> unF (h a)
+  F f >>= h = bigSum a f a .> h a
 \end{code}
 \vspace{-4ex}
 \begin{theorem}[\provedIn{theorem:standard FunApp}]\thmLabel{standard FunApp}
 The definitions of |fmap| and |liftA2| on |((<--) b)| in \figref{FunApp} satisfy the following standard equations for monads:
 \begin{code}
-fmap f p = p >>= \ a -> pure (f a)
+fmap h p = p >>= pure . h
 
-liftA2 h p q  = p >>= \ u -> q >>= \ v -> pure (h u v)
-              = p >>= \ u -> fmap (h u) q
+liftA2 h p q  = p >>= \ u -> fmap (h u) q
+              = p >>= \ u -> q >>= \ v -> pure (h u v)
 \end{code}
 \end{theorem}
 
-\begin{theorem}[\provedIn{theorem:liftA2 via fmap}]\thmLabel{liftA2 via fmap}
-The following property holds:
-\begin{code}
-liftA2 h (F f) q == bigSum u (f u .> fmap (h u) q)
-\end{code}
-\vspace{-3ex}
-\end{theorem}
-
-\mynote{
-\begin{itemize}
-\item Hm! This form looks a lot like a Brzozowski-style language convolution implementation I've used, with |h = (<>)| and |fmap (u NOP <>) q| implemented carefully.
-\item I think I want to use this sort of formulation as early as \figref{<--}. Simplify \proofRef{theorem:standard FunApp}.
-\end{itemize}
-}
+\mynote{This form looks a lot like a Brzozowski-style language convolution implementation I've used, with |h = (<>)| and |fmap (u NOP <>) q| implemented carefully. Use it to derive an efficient |(*)| for tries. Compare with \figref{Trie} and \thmRef{Trie}.}
 
 \sectionl{More Variations}
 
@@ -980,54 +975,32 @@ For |deriv (closure p)|, see 2019-01-13 notes.
 
 \subsection{\thmRef{Fourier}}\proofLabel{theorem:Fourier}
 
-%format F = "\mathcal F"
-\mynote{Additivity of |F|, and the convolution theorem. What about |closure p| and $single w$?}
+%format T = "\mathcal F"
+\mynote{Additivity of |T|, and the convolution theorem. What about |closure p| and |single w|?}
 
 \subsection{\thmRef{standard FunApp}}\proofLabel{theorem:standard FunApp}
 
 First consider |fmap|, as defined in \figref{FunApp}.
-Eliding the |F| constructors,
-\begin{spacing}{1.5}
 \begin{code}
-    fmap h f
-==  \ w -> bigSumQ (u BR h u == w) (f u)                              -- definition of |fmap| on |(<--) b|
-==  \ w -> bigSum u (if h u == w then f u else zero)                  -- |zero| as additive identity
-==  \ w -> bigSum u (if h u == w then f u <.> one else f u <.> zero)  -- semiring laws
-==  \ w -> bigSum u (f u <.> (if h u == w then one else zero))        -- refactor |if|
-==  bigSum u (\ w -> f u <.> (if h u == w then one else zero))        -- addition of functions
-==  bigSum u (f u .> (\ w -> if h u == w then one else zero))         -- definition of |(.>)|
-==  bigSum u (f u .> pure (h u))                                      -- definition of |pure|
-==  f >>= \ u -> pure (h u)                                           -- definition of |(>>=)|
+    fmap h (F f)
+==  bigSum u h u +-> f u            -- definition of |fmap| on |(<--) b|
+==  bigSum u (f u .> single (h u))  -- definition of |(+->)|
+==  bigSum u (f u .> pure (h u))    -- |single = pure|
+==  F f >>= pure . h                -- definition of |(>>=)|
 \end{code}
-\end{spacing}
 \noindent
 Similarly for |liftA2|:
-\begin{spacing}{1.5}
-\begin{code}
-    liftA2 h f g
-==  \ w -> bigSumQ (u,v BR h u v == w) (f u <.> g v)
-==  bigSum (u,v) ((f u <.> g v) .> pure (h u v))
-==  bigSum (u,v) (f u .> (g v .> pure (h u v)))
-==  bigSum u (f u .> paren (bigSum v (g v .> pure (h u v))))
-== f >>= \ u -> g >>= \ v -> pure (h u v)
-\end{code}
-\end{spacing}
-
-\subsection{\thmRef{decompose liftA2}}\proofLabel{theorem:decompose liftA2}
-
-\mynote{Will become trivial when I re-express |fmap|. Then the result follows from |fmap id == id|.}
-
-\subsection{\thmRef{liftA2 via fmap}}\proofLabel{theorem:liftA2 via fmap}
-
+\vspace{-1ex}
 \begin{spacing}{1.5}
 \begin{code}
     liftA2 h (F f) (F g)
-==  bigSum (u,v) h u v +-> f u <.> g v
-==  bigSum (u,v) ((f u * g v) .> single (h u v))
-==  bigSum (u,v) (f u .> (g v .> single (h u v)))
-==  bigSum u (f u .> bigSum v (g v .> single (h u v)))
-==  bigSum u (f u .> bigSum v (h u v +-> g v)
-==  bigSum u (f u .> fmap (h u) (F g))
+==  bigSum (u,v) h u v +-> f u <.> g v                  -- definition of |liftA2|
+==  bigSum (u,v) ((f u * g v) .> single (h u v))        -- definition of |(+->)|
+==  bigSum (u,v) (f u .> (g v .> single (h u v)))       -- associativity
+==  bigSum u (f u .> bigSum v (g v .> single (h u v)))  -- linearity
+==  bigSum u (f u .> bigSum v (h u v +-> g v)           -- definition of |(+->)|
+==  bigSum u (f u .> fmap (h u) (F g))                  -- definition of |fmap|
+==  f >>= \ u -> fmap (h u) (F g)                       -- definition of |(>>=)|
 \end{code}
 \end{spacing}
 

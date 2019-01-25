@@ -133,6 +133,11 @@ instance SRM b => FunctorC ((:<--) b) where
   fmapC h (M p) = sum [h a +-> b | (a,b) <- toList p]
   -- fmapC h (M p) = M (fromListWith (<+>) [(h a, b) | (a,b) <- toList p])
 
+-- The Monoid constraint here is for Semiring (b :<-- a), but really just for
+-- one and (<.>), which we're not using. TODO: factor Additive out of Semiring,
+-- and drop the Monoid requirement here and for Additive (b :<-- a). I'll have
+-- to return to defining my own classes. Tip my hat to semiring-num.
+
 instance SRM b => ApplicativeC ((:<--) b) where
   pureC a = M (singleton a one)
   liftA2C h (M p) (M q) =

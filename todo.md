@@ -5,6 +5,9 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 
 ## To-do items for the paper and code
 
+*   Factor `Additive` out of `Semiring`, and drop the `Monoid` requirement for `Additive (b :<-- a)` and `Applicative ((:<--) a)`.
+    I'll have to return to defining my own classes. Tip my hat to semiring-num.
+    
 *   Summation (etc) notation style:
     *   Consider moving the condition to the body where it becomes multiplication:
 
@@ -31,7 +34,7 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 
     *   Then simplify the "standard FunApp" proof.
     *   Introduce notation "`a +-> b = b .> single a`".
-        Then `liftA2 h (F f) (F g) = sum (u,v) (f u * g v +-> h u v)`.
+        Then `liftA2 h (F f) (F g) = sum (u,v) (f u * g v +-> h u v)`. 
 
 *   Maybe drop `HasSingle` and define `single` via `fmap` and `one`.
 *   Derive a semiring for lists based on a homomorphism from `[a]` to `a <-- Nat`.

@@ -67,41 +67,58 @@ instance Eq a => Decomposable (Set a) a Bool where
 -- different choice. For now, add a newtype. In the paper, perhaps hide the
 -- constructor via a %format directive.
 
-newtype L a = L [a]
+newtype List a = L [a]
 #if 0
   deriving Show
 #else
-instance Show a => Show (L a) where show (L as) = show as
+instance Show a => Show (List a) where show (L as) = show as
 #endif
 
-instance Scalable (L a) Bool where
-  scale False = const (L [])
-  scale True  = id
+instance Monoid a => Scalable (List a) Bool where
+  s `scale` as = if s then as else zero
+  -- scale False = const (L [])
+  -- scale True  = id
 
-instance Monoid a => Semiring (L a) where
+instance Monoid a => Semiring (List a) where
   zero = L []
   one = L [mempty]
-  L u <+> L v = L (u ++ v)
+  L u <+> L v = L (u +#+ v)
   L u <.> L v = L (liftA2 (<>) u v)
 
-instance Monoid a => StarSemiring (L a)
+infixr 5 +#+
+(+#+) :: [a] -> [a] -> [a]
+[] +#+ bs = bs
+(a:as) +#+ bs = a : (bs +#+ as)
+
+-- >>> "abcd" +#+ "efghij"
+-- "aebfcgdhij"
+-- >>> takeL 5 (star (single "ab"))
+-- ["","ab","abab","ababab","abababab"]
+-- >>> takeL 5 (star (star (single "ab")))
+-- ["","","","",""]
+-- >>> (single "a" <+> single "b") :: L String
+-- ["a","b"]
+-- >>> (single "a" <+> single "b") <+> (single "c" <+> single "d") :: L String
+-- ["a","c","b","d"]
+
+instance Monoid a => StarSemiring (List a)
 
 #ifdef SINGLE
-instance HasSingle (L a) a where
+instance HasSingle (List a) a where
   single a = L [a]
 #else
 instance Eq a => HasSingle (Pred a) a Bool where
   a +-> s = if s then [a] else zero
 #endif
 
-instance Ord c => Decomposable (L [c]) (Map c) Bool where
+instance Ord c => Decomposable (List [c]) (Map c) Bool where
   e <: m = L $
     (if e then ([] :) else id) $
     [c:w | (c,L ws) <- M.toList m, w <- ws]
   atEps (L ws) = any null ws
   deriv (L ws) = M.unionsWith (<+>) [M.singleton c (L [cs]) | c:cs <- ws]
 
-takeL :: Int -> L a -> L a
+takeL :: Int -> List a -> List a
 takeL n (L as) = L (take n as)
 
 -- >>> one :: L String
@@ -112,6 +129,12 @@ takeL n (L as) = L (take n as)
 
 -- >>> takeL 5 (star (single "a") :: L String)
 -- ["","a","aa","aaa","aaaa"]
+
+-- >>> takeL 5 (star zero :: L String)
+-- [""]
+
+-- >>> takeL 5 (star one :: L String)
+-- ["","","","",""]
 
 -- >>> deriv (single "a" :: L String)
 -- ... <hang> ...

@@ -329,9 +329,10 @@ instance StarSemiring b => StarSemiring (a -> b) where
 \notefoot{Maybe a theorem here saying that these instances satisfy the necessary laws. Otherwise suggest that the reader verify. I'm unsure how to prove the closure property. Perhaps coinduction. See journal notes for 2019-01-16.}
 \out{We will use the |a -> b| semiring in \secref{Convolution}.\notefoot{Check that we did.}}
 
-%format bigSum (lim) (body) = "\bigSumZ{" lim "}{0}" body
-%format bigSumQ (lim) (body) = "\bigSumZ{" lim "}{1.5}" body
-\nc\bigSumZ[2]{\displaystyle\hspace{-#2ex}\:\sum_{\substack{#1}}\,\hspace{-#2ex}}
+%format bigSum (lim) = "\bigSumZ{" lim "}{0}"
+%format bigSumQ (lim) = "\bigSumZ{" lim "}{1.5}"
+%format bigSumKeys (lim) = "\bigSumZ{" lim "}{2}"
+\nc\bigSumZ[2]{\displaystyle\hspace{-#2ex}\sum_{\substack{#1}}\hspace{-#2ex}}
 %format <-- = "\leftarrow"
 %format .> = "\cdot"
 %format +-> = "\mapsto"
@@ -412,10 +413,10 @@ instance (Monoid a, Ord a, Semiring b) => Semiring (b :<-- a) where
   zero = M empty
   one = single mempty
   M p  <+>  M q = M (unionWith (<+>) p q)
-  M p <.> M q = sum [u <> v +-> s <.> t | (u,s) <- toList p, (v,t) <- toList q]
+  M p <.> M q = bigSumKeys (a <# keys p BR b <# keys q) h a b +-> (p!a) <.> (q!b)
 
 instance Semiring s => HasSingle (s :<-- a) a s where
-  a +-> s = M (singleton a s)
+  single a = M (singleton a one)
 \end{code}
 \vspace{-4ex}
 }, |mapTo| is a homomorphism with respect to each instantiated class.
@@ -695,18 +696,18 @@ By specializing the \emph{domain} of the functions to sequences (from general mo
 %format R = "\mathbb R"
 %format C = "\mathbb C"
 
+%format bigSumPlus (lim) = "\bigSumZ{" lim "}{1.5}"
 Let's now consider specializing the functions' domains to \emph{integers} instead of sequences, recalling that integers (and numeric types in general) form a monoid under addition.
 \vspace{-2ex}
 \begin{spacing}{1.5}
 \begin{code}
-f <.> g  = bigSum (u,v) (u <> v +-> f u <.> g v)
-         = bigSum (u,v) (u + v +-> f u <.> g v)
-         = bigSum (u,v) (\ w -> if w == u + v then f u <.> g v else zero)
-         = \ w -> bigSum (u,v) (if w == u + v then f u <.> g v else zero)
-         = \ w -> bigSumQ (u,v BR u + v == w) (f u <.> g v)
-         = \ w -> bigSumQ (u,v BR u + v == w) (f u <.> g v)
-         = \ w -> bigSumQ (u,v BR v = w - u) (f u <.> g v)
-         = \ w -> bigSum u (f u <.> g (w - u))
+f <.> g  == bigSum (u,v) u <> v +-> f u <.> g v
+         == bigSum (u,v) u + v +-> f u <.> g v
+         == bigSum (u,v) (\ w -> if w == u + v then f u <.> g v else zero)
+         == \ w -> bigSum (u,v) (if w == u + v then f u <.> g v else zero)
+         == \ w -> bigSumPlus (u,v BR u + v == w) f u <.> g v
+         == \ w -> bigSumPlus (u,v BR v == w - u) f u <.> g v
+         == \ w -> bigSum u f u <.> g (w - u)
 
 \end{code}
 \end{spacing}
@@ -776,7 +777,6 @@ We can similarly lift functions of \emph{any} arity:
 %format fn = f "_n"
 %format u1
 %format un = u "_n"
-%format bigSumZ (lim) (body) = "\bigSumZ{" lim "}{3}" body
 \begin{code}
 liftn :: Semiring s => (a1 -> ... -> an -> b) -> (s <-- a1) -> ... -> (s <-- an) -> (s <-- b)
 liftn h f1 ... fn = bigSumQ (u1, ..., un) h u1 cdots un +-> f1 u1 <.> cdots <.> fn un
@@ -800,7 +800,6 @@ lift0 b  = b +-> one
 %format liftA2C = liftA2
 %format >>== = >>=
 %format SRM = DetectableZero
-%format bigSumZ (lim) = "\bigSumZ{" lim "}{1}"
 %% %format keys p = p
 \noindent
 The signatures of |lift2|, |lift1|, and |lift0| generalize to those of |liftA2|, |fmap|, and |pure| from the |Functor| and |Applicative| type classes \needcite, so let's replace the specialized operations with standard ones.
@@ -835,14 +834,14 @@ instance Applicative [] where
 
 instance SRM b => FunctorC ((:<--) b) where
   type Ok ((:<--) b) a = (Ord a, Monoid a)
-  fmapC h (M p) = bigSumQ (a <# keys p) h a +-> p ! a
+  fmapC h (M p) = bigSumKeys (a <# keys p) h a +-> p ! a
 
 instance SRM b => ApplicativeC ((:<--) b) where
   pureC a = single a
-  liftA2C h (M p) (M q) = bigSumQ (a <# keys p BR b <# keys q) h a b +-> (p!a) <.> (q!b)
+  liftA2C h (M p) (M q) = bigSumKeys (a <# keys p BR b <# keys q) h a b +-> (p!a) <.> (q!b)
 
 instance Semiring b => Functor ((<--) b) where
-  type Ok ((<--) b) a = Eq a
+  type Ok ((<--) b) a = (Eq a, Monoid a)
   fmap h (F f) = bigSum u h u +-> f u
 
 instance Semiring b => Applicative ((<--) b) where
@@ -853,6 +852,7 @@ instance Semiring b => Applicative ((<--) b) where
 }, along with instances for some of the language representations we've considered so far.%
 \footnote{The enhancement is the associated constraint \citep{Bolingbroke2011CK} |Ok|, limiting the types that the class methods must support. The line ``|type Ok f a = ()|'' means that the constraint on |a| defaults to |()|, which holds vacuously for all |a|.}%
 \footnote{Originally, |Applicative| had a |(<*>)| method from which one can easily define |liftA2|. Since the base library version 4.10 \needcite, |liftA2| was added as a method (along with a default definition of |(<*>)|) to allow for more efficient implementation. \mynote{Cite \href{https://ghc.haskell.org/trac/ghc/ticket/13191}{GHC ticket 13191} if I can't find a better reference.}}%
+%if False
 \footnote{The methods on |(:<--) b| (finite maps to |b|) are written in straight Haskell as follows:
 \vspace{-0.5ex}
 \begin{code}
@@ -861,7 +861,10 @@ instance Semiring b => Applicative ((<--) b) where
   liftA2C h (M p) (M q) = sum [ h a b +-> s <.> t | (a,s) <- toList p, (b,t) <- toList q]
 \end{code}
 \vspace{-3ex}
-}
+}%
+%endif
+\notefoot{The |Monoid a| requirement for |(:<--) b| and |(<--) b| is due to the corresponding |Semiring| instances, but really just for
+|one| and |(<.>)|, which we're not using. To do: factor |Additive| out of |Semiring|, and drop the |Monoid a| requirements here. I'll have to return to defining my own classes.}
 Higher-arity liftings can be defined via these three.
 (Exercise.)
 The use of |s <-- t| as an alternative to |t -> s| allows us to give instances for both and to stay within Haskell's type system (and ability to infer types via first-order unification).
@@ -899,7 +902,7 @@ F f = bigSum u (f u .> single u)
 \end{theorem}
 %endif
 
-The monad instance is defined as follows:\footnote{The |return| method does not appear here, since it is equivalent to |pure| from Applicative.}
+The monad instance is defined as follows:\footnote{The |return| method does not appear here, since it is equivalent to |pure| from |Applicative|.}
 \begin{code}
 instance Semiring s => Monad ((<--) s) where
   (>>=) :: (s <-- a) -> (a -> (s <-- b))) -> (s <-- b)

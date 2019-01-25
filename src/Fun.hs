@@ -42,7 +42,7 @@ instance (Splittable a, Semiring s) => Semiring (s <-- a) where
 instance Semiring s => StarSemiring (s <-- [c])
 
 #ifdef SINGLE
-instance (Semiring s, Eq a) => HasSingle (s <-- a) a where
+instance (Semiring b, Eq a) => HasSingle (b <-- a) a where
   single a = F (boolVal . (== a))
 #else
 instance (Semiring s, Eq a) => HasSingle (s <-- a) a s where

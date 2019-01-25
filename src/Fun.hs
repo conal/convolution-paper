@@ -485,10 +485,15 @@ trimT 0 _ = zero
 trimT n (c :< ts) = c :< fmap (trimT (n-1)) ts
 
 instance OD c s => Scalable (Trie c s) s where
-  s `scale` t | isZero s  = zero
-              | otherwise = go t
+  scale s = go
    where
      go ~(e :< ts) = (s <.> e) :< fmap go ts
+
+  -- s `scale` (e :< ts) = (s <.> e) :< fmap (scale s) ts
+
+  -- s `scale` t = go t
+  --  where
+  --    go ~(e :< ts) = (s <.> e) :< fmap go ts
 
 -- -- Oops. We'd need to enumerate all of c.
 -- funTrie :: ([c] -> s) -> Trie c s

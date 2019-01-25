@@ -89,6 +89,8 @@ Conal Elliott
 
 %% TODO: eliminate most of these latex macros, in favor of lhs2tex rendering.
 
+\nc\bigOp[3]{\hspace{-#3ex}#1\limits_{\substack{#2}}\hspace{-#3ex}}
+
 \begin{document}
 
 \maketitle
@@ -223,9 +225,10 @@ instance HasSingle (List a) a where single a = L [a]
 Rather than using lists directly, \figref{list} defines |List a|, freeing regular lists for another interpretation.
 \notefoot{Refer to a later section that treats a list as a function from |Nat|, with finite lists getting padded with |zero|.}
 Lists relate to sets as follows:
+%format bigUnion (lim) = "\bigOp\bigcup{" lim "}{0}"
 \begin{code}
 listElems :: List a -> Pow a
-listElems (L as) = bigUnion (a <# as) single a
+listElems (L as) = bigUnion (a <# as) (single a)
 \end{code}
 %% listElems (L as) = foldr insert emptyset as
 %%   where insert a s = single a <+> s
@@ -256,7 +259,6 @@ predSet :: Pred a -> Pow a
 predSet (Pred f) = set (a | f a)
 \end{code}
 It's easy to show that |setPred . predSet == id| and |predSet . setPred == id|.
-\nc\bigOp[3]{\hspace{-#3ex}#1\limits_{\substack{#2}}\hspace{-#3ex}}
 % See 2018-12-10 notes.
 %format exists = "\exists"
 %format bigOr (lim) = "\bigOp\bigvee{" lim "}{0}"
@@ -955,6 +957,39 @@ liftA2 h p q  = p >>= \ u -> fmap (h u) q
 \sectionl{Proofs}
 
 \subsection{\thmRef{list}}\proofLabel{theorem:list}
+
+\mynote{Needs annotations and maybe some simplification. Or leave as an exercise.}
+
+%format bigUnionA (lim) = "\bigOp\bigcup{" lim "}{1}"
+%format bigUnionB (lim) = "\bigOp\bigcup{" lim "}{2}"
+\begin{code}
+listElems (L as) = bigUnionA (a <# as) (single a)
+
+    listElems zero
+==  listElems (L [])
+==  bigUnionA (a <# []) (single a)
+==  emptyset
+==  zero
+
+    listElems one
+==  listElems (L [mempty])
+==  bigUnionA (a <# [mempty]) (single a)
+==  single mempty
+==  one
+
+    listElems (L u <+> L v)
+==  listElems (L (u ++ v))
+==  bigUnionA (a <# u ++ v) (single a)
+==  (bigUnionA (a <# u) (single a)) `union` (bigUnionA (a <# v) (single a))
+==  listElems u `union` listElems v
+==  listElems u <+> listElems v
+
+    listElems (L u <.> L v)
+==  listElems (L (liftA2 (<>) u v))
+==  bigUnionB (a <# liftA2 (<>) u v) (single a)
+==  ...
+==  listElems u <.> listElems v
+\end{code}
 
 \subsection{\thmRef{pred}}\proofLabel{theorem:pred}
 

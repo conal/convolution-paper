@@ -1,7 +1,7 @@
 % -*- latex -*-
 
 %% While editing/previewing, use 12pt and tiny margin.
-\documentclass[twoside]{article}  % fleqn, 
+\documentclass[hidelinks,twoside]{article}  % fleqn, 
 \usepackage[margin=0.12in]{geometry}  % 0.12in, 0.9in, 1in
 
 \usepackage{setspace}
@@ -369,8 +369,9 @@ newtype b <-- a = F { unF :: a -> b }
 instance (Semiring b, Monoid a, Eq a) => Semiring (b <-- a) where
   zero = F (\ w -> zero)
   one = single mempty
-  F f  <+>  F g = F (\ w -> f w <+> g w)
-  F f  <.>  F g = bigSum (u,v) (u <> v +-> f u <.> g v)
+  F f  <+>  F g  = F (\ a -> f a <+> g a)
+  F f  <.>  F g  = F (\ w -> bigSumQ (u,v BR u <> v == w) f u <.> g v)
+                 = bigSum (u,v) (u <> v +-> f u <.> g v)
 
 instance (Monoid a, Eq a) => StarSemiring (b <-- a)
 
@@ -521,7 +522,7 @@ instance (Ord k, Semiring v) => Indexable (Map k v) k v where (!) = mat
 \noindent
 Now adapt the |[c] -> b| instance of |Decomposable| to |b <-- [c]|:
 \begin{code}
-instance Semiring s => Decomposable (s <-- [c]) ((->) c) s where
+instance Semiring b => Decomposable (b <-- [c]) ((->) c) b where
   b <: h = F (b <: unF . h)
   atEps  (F f) = f mempty
   deriv  (F f) = \ c -> F (\ cs -> f (c:cs))
@@ -546,15 +547,15 @@ Moreover, |atEps (single [d]) == zero|.
 
 \end{lemma}
 \begin{lemma}[\provedIn{lemma:deriv}, generalizing Lemma 3.1 of \citet{Brzozowski64}]\lemLabel{deriv}
-Differentiation on |b <-- a|, has the following properties:
+Differentiation on |b <-- [c]|, has the following properties:
 \notefoot{If I replace application to |c| by indexing by |c| (i.e., |(! NOP c)|), will this lemma hold for all of the representations? I suspect so. Idea: Define $\derivOp_c\,p = \derivOp\,p\:!\:c$.}
 \begin{code}
 deriv zero  c == zero
 deriv one   c == zero
 deriv (p  <+>  q) c == deriv p c <+> deriv q c
-deriv (p  <.>  q) c == p mempty .> deriv q c <+> deriv p c <.> q
+deriv (p  <.>  q) c == atEps p .> deriv q c <+> deriv p c <.> q
 
-deriv (closure p) c == closure (p mempty) .> deriv p c * closure p
+deriv (closure p) c == closure (atEps p) .> deriv p c * closure p
 
 deriv (single [d]) c == boolVal (d == c)
 \end{code}
@@ -588,8 +589,8 @@ Combine \lemRefThree{decompose function}{atEps}{deriv}.
 
 %if derivProduct
 \begin{lemma}[\provedIn{lemma:derivProduct}]\lemLabel{derivProduct}
-The following alternative characterizations of products and closure on functions hold:%
-\notefoot{Since I moved the |one| addend to after |a .> q|, I think we're going to look for long matches before short ones, possibly with harmful results. Test thoroughly, and describe results later in the paper.}%
+The following alternative characterizations of products and closure on functions hold:
+\notefoot{Since I moved the |one| addend to after |a .> q|, I think we're going to look for long matches before short ones, possibly with harmful results. Test thoroughly, and describe results later in the paper.}
 \notefoot{Check on convergence. If I can't get it, then drop this lemma, and change \figref{Trie}.}
 \begin{code}
 (a <: dp) <.> q = a .> q <+> (zero <: (<.> NOP q) . dp)
@@ -946,6 +947,7 @@ liftA2 h p q  = p >>= \ u -> fmap (h u) q
 \item \emph{Polynomial Functors Constrained by Regular Expressions}
 \item \href{https://doisinkidney.com/}{Donnacha Oisín Kidney's blog}
 \item Dan Piponi's blog
+\item \citet{Uustalu2002:DSR}, since tries appear to be cotrees, and the function comonad seems closely related to Brzozowski-style ``derivatives''.
 \item Many more references in \verb|todo.md|.
 \end{itemize}
 
@@ -999,9 +1001,132 @@ listElems (L as) = bigUnionA (a <# as) (single a)
 
 \subsection{\lemRef{atEps}}\proofLabel{lemma:atEps}
 
+\begin{code}
+
+    atEps zero
+==  atEps (F (\ a -> zero))  -- definition of |zero| on |b <-- a|
+==  (\ a -> zero) []         -- definition of |atEps|
+==  zero                     -- $\beta$-reduction
+
+    atEps one
+==  atEps (F (\ a -> boolVal (a == mempty)))  -- definition of |one| on |b <-- a|
+==  (\ a -> boolVal (a == mempty)) []         -- definition of |atEps|            
+==  boolVal ([] == mempty)                    -- $\beta$-reduction                
+==  boolVal True                              -- definition of |boolVal|
+==  one
+
+    atEps (F f <+> F g)
+==  atEps (F (\ a -> f a <+> g a))
+==  (\ a -> f a <+> g a) []
+==  f [] <+> g []
+==  atEps (F f) <+> atEps (F g)
+
+    atEps (F f <.> F g)
+==  atEps (bigSum (u,v) u <> v +-> f u <.> g v)
+==  atEps (\ w -> bigSumQ (u,v BR u <> v == []) f u <.> g v)  -- alternative definition from \figref{<--}
+==  bigSumKeys (u,v BR u == [] && v == []) NOP f u <.> g v
+==  f [] <.> g []
+==  atEps (F f) <.> atEps (F g)
+
+    atEps (star p)
+==  atEps (one <+> p <.> star p)        -- defining property of |star|
+==  one <+> atEps p <.> atEps (star p)  -- |atEps| distributes over |one|, |(<+>)| and |(<.>)|
+==  one <+> atEps p <.> star (atEps p)  -- coinduction (?)
+==  star (atEps p)                      -- defining property of |star|
+
+\end{code}
+
 \subsection{\lemRef{deriv}}\proofLabel{lemma:deriv}
 
-For |deriv (closure p)|, see 2019-01-13 notes.
+\begin{lemma}\lemLabel{deriv +->}
+Differentiation and |(+->)| have the following relationship:
+\begin{code}
+deriv (c' : w +-> b) c == if c' == c then w +-> b else zero
+\end{code}
+\end{lemma}
+\begin{proof}~
+\begin{code}
+deriv (c' : w +-> b) c
+deriv (F (\ a -> if a == c':w then b else zero)) c
+F (\ cs -> (\ a -> if a == c':w then b else zero) (c:cs))
+F (\ cs -> if c:cs == c':w then b else zero)
+F (\ cs -> if c==c' && cs == w then b else zero)
+if c==c' then F (\ cs -> if cs == w then b else zero) else zero
+if c==c' then w +-> b else zero
+\end{code}
+\end{proof}
+
+The homomorphism proofs:
+\begin{code}
+    deriv zero c
+==  deriv (F (\ w -> zero)) c
+==  F (\ cs -> (\ w -> zero) (c:cs))
+==  F (\ cs -> zero)
+==  zero
+\end{code}
+\vspace{-3ex}
+\begin{code}
+    deriv one c
+==  deriv (single mempty) c
+==  deriv (F (\ a' -> boolVal (a' == mempty))) c
+==  F (\ cs -> (\ a' -> boolVal (a' == mempty)) (c:cs))
+==  F (\ cs -> boolVal (c:cs == mempty))
+==  F (\ cs -> zero)
+==  zero
+\end{code}
+\vspace{-3ex}
+\begin{code}
+    deriv (F f <+> F g) c
+==  deriv (F (\ w -> f w <+> g w))                 -- |(<+>)| on |b <-- a|
+==  F (\ cs -> (\ w -> f w <+> g w) (c:cs))        -- |deriv| on |b <-- a|
+==  F (\ cs -> f (c:cs) <+> g (c:cs))              -- $\beta$-reduction
+==  F (\ cs -> f (c:cs)) <+> F (\ cs -> g (c:cs))  -- |(<+>)| on |b <-- a|
+==  deriv (F f) c <+> deriv (F g) c                -- |deriv| on |b <-- a|
+\end{code}
+\vspace{-3ex}
+\begin{code}
+    deriv (F f <.> F g) c
+==  deriv (bigSum (u,v) u <> v +-> f u <.> g v) c
+==  deriv (bigSum v (mempty <> v +-> f mempty <.> g v) <+> bigSumQ (c',u',v) ((c':u') <> v +-> f (c':u') <.> g v)) c
+==  deriv (bigSum v (mempty <> v +-> f mempty <.> g v)) c <+> deriv (bigSumQ (c',u',v) ((c':u') <> v +-> f (c':u') <.> g v)) c
+\end{code}
+\vspace{-1ex}
+
+\noindent
+First addend:
+\begin{code}
+    deriv (bigSum v (mempty <> v +-> f mempty <.> g v)) c
+==  deriv (bigSum v (v +-> f mempty <.> g v)) c
+==  deriv (f mempty .> bigSum v (v +-> g v)) c
+==  f mempty .> deriv (bigSum v v +-> g v) c
+==  f mempty .> deriv (F g) c
+==  atEps (F f) .> deriv (F g) c
+\end{code}
+\vspace{-3ex}
+
+\noindent
+Second addend:
+\begin{code}
+    deriv (bigSumQ (c',u',v) ((c':u') <> v +-> f (c':u') <.> g v)) c
+==  bigSumQ (c',u',v) deriv ((c':u') <> v +-> f (c':u') <.> g v) c
+==  bigSumQ (c',u',v) deriv (c' : (u' <> v) +-> f (c':u') <.> g v) c
+==  bigSum (u',v) u' <> v +-> f (c:u') <.> g v
+==  bigSum (u',v) u' <> v +-> (\ cs -> f (c:cs)) u' <.> g v
+==  F (\ cs -> f (c:cs)) <.> F g
+==  deriv (F f) c <.> F g
+\end{code}
+
+Combine addends, and let |p = F f| and |q = F g|:
+\begin{code}
+    deriv (p <.> q) c
+==  deriv (F f <.> F g) c
+==  ...
+==  atEps (F f) .> deriv (F g) c <+> deriv (F f) c <.> F g
+==  atEps p .> deriv q c <+> deriv p c <.> q
+\end{code}    
+
+\workingHere
+\mynote{For |deriv (closure p)|, see 2019-01-13 notes.}
 
 %if derivProduct
 \subsection{\lemRef{derivProduct}}\proofLabel{lemma:derivProduct}

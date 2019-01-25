@@ -57,6 +57,7 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
         *   [*Quantifiers on languages and codensity monads*]
         *   [What is a coalgebra intuitively?](https://mathoverflow.net/questions/76509/what-is-a-coalgebra-intuitively)
         *   [*Bases as coalgebras*](https://arxiv.org/pdf/1309.0844.pdf)
+        *   [*The Dual of Substitution is Redecoration*]
 *   Super-memoization.
     See notes from 2018-12-02 and 2018-12-05
 
@@ -148,3 +149,5 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 [*The monads of classical algebra are seldom weakly cartesian*]: https://link.springer.com/article/10.1007/s40062-013-0063-2 "paper by Maria Manuel Clementino, Dirk Hofmann, and George Janelidze (2013)"
 
 [*Fun with Semirings: A functional pearl on the abuse of linear algebra*]: http://stedolan.net/research/semirings.pdf "paper by Stephen Dolan (2013)"
+
+[*The Dual of Substitution is Redecoration*]: http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.16.9369 "paper by Tarmo Uustalu and Varmo Vene (2002)"

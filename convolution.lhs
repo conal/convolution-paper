@@ -371,14 +371,14 @@ instance (Semiring b, Monoid a, Eq a) => Semiring (b <-- a) where
 instance (Monoid a, Eq a) => StarSemiring (b <-- a)
 
 instance (Semiring b, Eq a) => HasSingle (b <-- a) a where
-  single a = F (boolVal . (== a))
+  single a = F (\ a' -> boolVal (a' == a))
 
 boolVal :: Semiring b => Bool -> b
 boolVal False  = zero
 boolVal True   = one
 
 instance Semiring s => Scalable (s <-- a) s where
-  s .> F f = F ((s NOP <.>) . f) 
+  s .> F f = F (\ a -> s <.> f a) 
 \end{code}
 \vspace{-4ex}
 }.

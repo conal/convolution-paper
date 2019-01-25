@@ -799,6 +799,7 @@ lift0 b  = b +-> one
 %format liftA2C = liftA2
 %format SRM = DetectableZero
 %format bigSumZ (lim) = "\bigSumZ{" lim "}{1}"
+%% %format keys p = p
 \noindent
 The signatures of |lift2|, |lift1|, and |lift0| generalize to those of |liftA2|, |fmap|, and |pure| from the |Functor| and |Applicative| type classes \needcite, so let's replace the specialized operations with standard ones.
 An enhanced version of these classes appear in \figrefdef{FunApp}{|Functor| and |Applicative| classes and some instances}{
@@ -816,48 +817,33 @@ instance Functor Pow where
   fmap h p = set (h a | a <# p)
 
 instance Applicative Pow where
-  pure b  = set b
-          = single b
+  pure b = single b
   liftA2 h p q = set (h a b | a <# p && b <# q)
 
 instance Functor [] where
   fmap h as = [h a | a <- as]
 
 instance Applicative [] where
-  pure b  = [b]
-          = single b
-  liftA2 h as bs = [h a b | a <- as, b <- bs]
-
-newtype b :<-- a = M (Map a b)
+  pure a = single a
+  liftA2 h p q = [h u v | u <- p, v <- q]
 
 instance SRM b => FunctorC ((:<--) b) where
   type Ok ((:<--) b) a = (Ord a, Monoid a)
-  fmapC h (M p) = bigSumZ (p ! a == s) h a +-> s
+  fmapC h (M p) = bigSumQ (a <# keys p) h a +-> p ! a
 
 instance SRM b => ApplicativeC ((:<--) b) where
-  pureC a  = M (singleton a one)
-           = single a
-  liftA2C h (M p) (M q) = bigSumZ (p ! a==s BR q ! b==t) h a b +-> s <.> t
+  pureC a = single a
+  liftA2C h (M p) (M q) = bigSumQ (a <# keys p BR b <# keys q) h a b +-> (p!a) <.> (q!b)
 
 instance Semiring b => Functor ((<--) b) where
   type Ok ((<--) b) a = Eq a
-  fmap h (F f) = F (paren (bigSum u h u +-> f u))
+  fmap h (F f) = bigSum u h u +-> f u
 
 instance Semiring b => Applicative ((<--) b) where
-  pure a  = F (\ w -> boolVal (w == a))
-          = single a
-  liftA2 h (F f) (F g) = F (paren (bigSum (u,v) h u v +-> f u <.> g v))
+  pure a = single a
+  liftA2 h (F f) (F g) = bigSum (u,v) h u v +-> f u <.> g v
 \end{code}
-%if False
-\begin{code}
-instance Functor ((->) a) where
-  fmap h f = \ a -> f (h a)
-
-instance Applicative ((->) a) where
-  pure b  = \ a -> b
-  liftA2 h f g = \ a -> h (f a) (g a)
-\end{code}
-%endif
+\vspace{-3ex}
 }, along with instances for some of the language representations we've considered so far.%
 \footnote{The enhancement is the associated constraint \citep{Bolingbroke2011CK} |Ok|, limiting the types that the class methods must support. The line ``|type Ok f a = ()|'' means that the constraint on |a| defaults to |()|, which holds vacuously for all |a|.}%
 \footnote{Originally, |Applicative| had a |(<*>)| method from which one can easily define |liftA2|. Since the base library version 4.10 \needcite, |liftA2| was added as a method (along with a default definition of |(<*>)|) to allow for more efficient implementation. \mynote{Cite \href{https://ghc.haskell.org/trac/ghc/ticket/13191}{GHC ticket 13191} if I can't find a better reference.}}%
@@ -898,7 +884,7 @@ The dimension of the semimodule is the cardinality of |a|.
 Basis vectors have the form |single u| for some |u :: a|, mapping |u| to |one| and everything else to |zero| as in \figref{<--}.
 \begin{theorem}[\provedIn{theorem:decompose liftA2}]\thmLabel{decompose liftA2}
 Every function |f :: b <-- a| can be decomposed into this basis as follows:
-\notefoot{I'm not assuming finite support, which is part of the usual definition but problematic for the applications in this paper. Is there a problem with dropping finite support and finiteness of linear combinations?}
+\notefoot{I'm not assuming finite support, which is part of the usual definition but problematic for the applications in this paper. Is nthere a problem with dropping finite support and finiteness of linear combinations?}
 \begin{code}
 F f = bigSum u (f u .> single u)
 \end{code}
@@ -922,24 +908,16 @@ liftA2 h p q  = p >>= \ u -> q >>= \ v -> pure (h u v)
 \end{code}
 \end{theorem}
 
-\workingHere
-
-\begin{theorem}
+\begin{theorem}[\provedIn{theorem:liftA2 via fmap}]\thmLabel{liftA2 via fmap}
 The following property holds:
 \begin{code}
-   liftA2 h (F f) (F g)
-=  F (\ w -> bigSum (u,v) f u * g v * pure (h u v) w)
-=  bigSum (u,v) ((f u * g v) .> single (h u v))
-=  bigSum u (f u .> bigSum v (g v .> single (h u v)))
-=  bigSum u (f u .> fmap (h u) (F g))
+liftA2 h (F f) q == bigSum u (f u .> fmap (h u) q)
 \end{code}
 \vspace{-3ex}
 \end{theorem}
 
 \mynote{
 \begin{itemize}
-\item We no longer need to open up |F g|.
-   Instead, |liftA2 h (F f) q = bigSum u (f u .> fmap (h u) q)|.
 \item Hm! This form looks a lot like a Brzozowski-style language convolution implementation I've used, with |h = (<>)| and |fmap (u NOP <>) q| implemented carefully.
 \item I think I want to use this sort of formulation as early as \figref{<--}. Simplify \proofRef{theorem:standard FunApp}.
 \end{itemize}
@@ -1038,6 +1016,20 @@ Similarly for |liftA2|:
 \subsection{\thmRef{decompose liftA2}}\proofLabel{theorem:decompose liftA2}
 
 \mynote{Will become trivial when I re-express |fmap|. Then the result follows from |fmap id == id|.}
+
+\subsection{\thmRef{liftA2 via fmap}}\proofLabel{theorem:liftA2 via fmap}
+
+\begin{spacing}{1.5}
+\begin{code}
+    liftA2 h (F f) (F g)
+==  bigSum (u,v) h u v +-> f u <.> g v
+==  bigSum (u,v) ((f u * g v) .> single (h u v))
+==  bigSum (u,v) (f u .> (g v .> single (h u v)))
+==  bigSum u (f u .> bigSum v (g v .> single (h u v)))
+==  bigSum u (f u .> bigSum v (h u v +-> g v)
+==  bigSum u (f u .> fmap (h u) (F g))
+\end{code}
+\end{spacing}
 
 \bibliography{bib}
 

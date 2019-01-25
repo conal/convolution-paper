@@ -7,35 +7,6 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 
 *   Factor `Additive` out of `Semiring`, and drop the `Monoid` requirement for `Additive (b :<-- a)` and `Applicative ((:<--) a)`.
     I'll have to return to defining my own classes. Tip my hat to semiring-num.
-    
-*   Summation (etc) notation style:
-    *   Consider moving the condition to the body where it becomes multiplication:
-
-        ``` haskell
-          liftA2 h (Pred f) (Pred g) = Pred (\ w -> or (u,v) (f u && g v && h u v == w))
-        ``` 
-
-        Note that `w` appears only in the third conjunct.
-    *   Generalizing from predicates to flipped functions, 
-
-        ``` haskell
-          liftA2 h (F f) (F g) = F (\ w -> sum (u,v) (f u * g v * single (h u v) w))
-        ```
-
-    *   Simplify further
-
-        ``` haskell
-          liftA2 h (F f) (F g)
-        = F (\ w -> sum (u,v) (f u * g v * single (h u v) w))
-        = sum (u,v) (\ w -> f u * g v * single (h u v) w)
-        = sum (u,v) ((f u * g v) .> (\ w -> single (h u v) w))
-        = sum (u,v) ((f u * g v) .> single (h u v))
-        ```
-
-    *   Then simplify the "standard FunApp" proof.
-    *   Introduce notation "`a +-> b = b .> single a`".
-        Then `liftA2 h (F f) (F g) = sum (u,v) (f u * g v +-> h u v)`. 
-
 *   Maybe drop `HasSingle` and define `single` via `fmap` and `one`.
 *   Derive a semiring for lists based on a homomorphism from `[a]` to `a <-- Nat`.
 *   Try using `TMap` from [total-map](https://github.com/conal/total-map) in place of `Map` from containers, including the `Applicative` and `Monad` instances.
@@ -92,6 +63,33 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 ## Did
 
 *   Remove a bunch of unused code, first moving to `Other`.
+*   Summation (etc) notation style:
+    *   Consider moving the condition to the body where it becomes multiplication:
+
+        ``` haskell
+          liftA2 h (Pred f) (Pred g) = Pred (\ w -> or (u,v) (f u && g v && h u v == w))
+        ``` 
+
+        Note that `w` appears only in the third conjunct.
+    *   Generalizing from predicates to flipped functions, 
+
+        ``` haskell
+          liftA2 h (F f) (F g) = F (\ w -> sum (u,v) (f u * g v * single (h u v) w))
+        ```
+
+    *   Simplify further
+
+        ``` haskell
+          liftA2 h (F f) (F g)
+        = F (\ w -> sum (u,v) (f u * g v * single (h u v) w))
+        = sum (u,v) (\ w -> f u * g v * single (h u v) w)
+        = sum (u,v) ((f u * g v) .> (\ w -> single (h u v) w))
+        = sum (u,v) ((f u * g v) .> single (h u v))
+        ```
+
+    *   Then simplify the "standard FunApp" proof.
+    *   Introduce notation "`a +-> b = b .> single a`".
+        Then `liftA2 h (F f) (F g) = sum (u,v) (f u * g v +-> h u v)`. 
 
 
 [*Differentiation of higher-order types*]: http://conal.net/blog/posts/differentiation-of-higher-order-types/ "blog post"

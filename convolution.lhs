@@ -117,7 +117,7 @@ Conal Elliott
 %format Pow = "\Pow"
 %format emptyset = "\emptyset"
 %format (single (s)) = "\single{"s"}"
-%format set (e) = "\set{"e"}"
+%format (set (e)) = "\set{"e"}"
 %format bigunion (lim) (body) = "\bigunion_{" lim "}{" body "}"
 %format pow a (b) = a "^{" b "}"
 %format `union` = "\cup"
@@ -226,9 +226,12 @@ Rather than using lists directly, \figref{list} defines |List a|, freeing regula
 \notefoot{Refer to a later section that treats a list as a function from |Nat|, with finite lists getting padded with |zero|.}
 Lists relate to sets as follows:
 %format bigUnion (lim) = "\bigOp\bigcup{" lim "}{0}"
+%format bigSum (lim) = "\bigOp\sum{" lim "}{0}"
+%format bigSumQ (lim) = "\bigOp\sum{" lim "}{1.5}"
 \begin{code}
 listElems :: List a -> Pow a
-listElems (L as) = bigUnion (a <# as) (single a)
+listElems (L as)  = bigUnion (a <# as) (set a)
+                  = bigSum (a <# as) (single a)
 \end{code}
 %% listElems (L as) = foldr insert emptyset as
 %%   where insert a s = single a <+> s
@@ -332,8 +335,6 @@ instance StarSemiring b => StarSemiring (a -> b) where
 \notefoot{Maybe a theorem here saying that these instances satisfy the necessary laws. Otherwise suggest that the reader verify. I'm unsure how to prove the closure property. Perhaps coinduction. See journal notes for 2019-01-16.}
 \out{We will use the |a -> b| semiring in \secref{Convolution}.\notefoot{Check that we did.}}
 
-%format bigSum (lim) = "\bigOp\sum{" lim "}{0}"
-%format bigSumQ (lim) = "\bigOp\sum{" lim "}{1.5}"
 %format bigSumKeys (lim) = "\bigOp\sum{" lim "}{2}"
 %format <-- = "\leftarrow"
 %format .> = "\cdot"
@@ -418,8 +419,11 @@ instance (Monoid a, Ord a, Semiring b) => Semiring (b :<-- a) where
   M p  <+>  M q = M (unionWith (<+>) p q)
   M p <.> M q = bigSumKeys (a <# keys p BR b <# keys q) h a b +-> (p!a) <.> (q!b)
 
-instance Semiring s => HasSingle (s :<-- a) a s where
+instance Semiring b => HasSingle (b :<-- a) a s where
   single a = M (singleton a one)
+
+instance Semiring s => Scalable (s :<-- a) s where
+  s .> M m = M (fmap (s NOP <.>) m)
 \end{code}
 \vspace{-4ex}
 }, |mapTo| is a homomorphism with respect to each instantiated class.
@@ -708,7 +712,7 @@ f <.> g  == bigSum (u,v) u <> v +-> f u <.> g v
 \end{spacing}
 \vspace{-3ex}
 \noindent
-This last form is the standard definition of discrete \emph{convolution} \needcite{}\footnote{Note that this reasoning applies to \emph{any} group (monoid with inverses)}.
+This last form is the standard definition of one-dimensional, discrete \emph{convolution} \needcite{}\footnote{Note that this reasoning applies to \emph{any} group (monoid with inverses)}.
 Therefore, just as \eqnref{convolution} generalizes language concatenation (via the predicate/set isomorphism), it also generalizes the usual notion of discrete convolution.
 Moreover, if the domain is a continuous type such as |R| or |C|, we can reinterpret summation as integration, resulting in \emph{continuous} convolution \needcite{}.
 Additionally, for multi-dimensional (discrete or continuous) convolution, we can simply use tuples of scalar indices for |w| and |u|, and define tuple subtraction componentwise.
@@ -869,9 +873,8 @@ For each instance defined in \figref{FunApp}, the following equalities hold:
 \notefoot{Probe more into the pattern of |single = pure|, |one = single mempty| and |(*) = liftA2 (<>)|.
 Also the relationship between forward and reverse functions and maps.}
 \begin{code}
-single  = pure
-one     = single mempty
-(*)     = liftA2 (<>)
+one  = pure mempty
+(*)  = liftA2 (<>)
 \end{code}
 \end{theorem}
 \begin{proof}
@@ -954,33 +957,34 @@ liftA2 h p q  = p >>= \ u -> fmap (h u) q
 
 \mynote{Needs annotations and maybe some simplification. Or leave as an exercise.}
 
-%format bigUnionA (lim) = "\bigOp\bigcup{" lim "}{1}"
-%format bigUnionB (lim) = "\bigOp\bigcup{" lim "}{2}"
+%format bigSumA (lim) = "\bigOp\sum{" lim "}{1}"
+%format bigSumB (lim) = "\bigOp\sum{" lim "}{2}"
+Recall the definition of |listElems|:
 \begin{code}
-listElems (L as) = bigUnionA (a <# as) (single a)
-
+listElems (L as) = bigSum (a <# as) (single a)
+\end{code}
+The homomorphism proofs:
+\begin{code}
     listElems zero
-==  listElems (L [])
-==  bigUnionA (a <# []) (single a)
-==  emptyset
-==  zero
+==  listElems (L [])                    -- |zero| on |List a|
+==  bigSum (a <# []) (single a)         -- |listElems| definition
+==  zero                                -- vacuous sum
 
     listElems one
-==  listElems (L [mempty])
-==  bigUnionA (a <# [mempty]) (single a)
-==  single mempty
-==  one
+==  listElems (L [mempty])              -- |one| on |List a|
+==  bigSum (a <# [mempty]) (single a)   -- |listElems| definition
+==  single mempty                       -- singleton sum
+==  one                                 -- |one| on |List a|
 
     listElems (L u <+> L v)
-==  listElems (L (u ++ v))
-==  bigUnionA (a <# u ++ v) (single a)
-==  (bigUnionA (a <# u) (single a)) `union` (bigUnionA (a <# v) (single a))
-==  listElems u `union` listElems v
-==  listElems u <+> listElems v
+==  listElems (L (u ++ v))                                         -- |(<+>)| on |List a|
+==  bigSum (a <# u ++ v) (single a)                                -- |listElems| definition
+==  (bigSum (a <# u) (single a)) <+> (bigSum (a <# v) (single a))  -- property of |(++)|
+==  listElems u <+> listElems v                                    -- definition of |listElems|
 
     listElems (L u <.> L v)
-==  listElems (L (liftA2 (<>) u v))
-==  bigUnionB (a <# liftA2 (<>) u v) (single a)
+==  listElems (L (liftA2 (<>) u v))            -- |(<.>)| on |List a|
+==  bigSumB (a <# liftA2 (<>) u v) (single a)  -- |listElems| definition
 ==  ...
 ==  listElems u <.> listElems v
 \end{code}

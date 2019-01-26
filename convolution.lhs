@@ -121,19 +121,19 @@ Conal Elliott
 %format bigunion (lim) (body) = "\bigunion_{" lim "}{" body "}"
 %format pow a (b) = a "^{" b "}"
 %format `union` = "\cup"
-%format closure p = "\closure{"p"}"
+%format star p = "\closure{"p"}"
 
 \sectionl{Languages}
 
 A \emph{language} is a set of strings, where a string is a sequence of values of some given type (``symbols'' from an ``alphabet'').
 Languages are commonly built up via a few simple operations:
-\notefoot{Maybe use the standard terminology |zero|, |(<+>)|, |(<.>)|, and |closure| here.}
+\notefoot{Maybe use the standard terminology |zero|, |(<+>)|, |(<.>)|, and |star| here.}
 \begin{itemize}
 \item The \emph{empty} language |zero = set ()|.
 \item For a string |s|, the \emph{singleton} language |single s = set s|.
 \item For two languages |p| and |q|, the \emph{union} |p <+> q = set (u # u <# p || u <# q)|.
 \item For two languages |p| and |q|, the element-wise \emph{concatenation} |p <.> q = set (u <> v # u <# p && v <# q)|, where ``|<>|'' denotes string concatenation.
-\item For a language |p|, the \emph{closure} |closure p = bigunion (n > 0) (pow p n)|, where |pow p n| is |p| concatenated with itself |n| times.
+\item For a language |p|, the \emph{closure} |star p = bigunion (n > 0) (pow p n)|, where |pow p n| is |p| concatenated with itself |n| times.
 \end{itemize}
 These operations suffice to describe all \emph{regular} languages.
 The language specifications (language-denoting \emph{expressions} rather than languages themselves) finitely constructed from these operations are called \emph{regular expressions}.
@@ -146,7 +146,7 @@ Some observations:
 \item Element-Wise concatenation is associative and commutative, with |single mempty| as its identity, where |mempty| is the empty string.
 \item Left- and right-concatenation distribute over union.
 \item The empty language annihilates under concatenation, i.e., |p <.> zero = zero <.> q = zero|.
-\item The closure operation satisfies the equation |closure p = mempty <+> p <.> closure p|.\footnote{Syntactically, we'll take concatenation (``|<.>|'') to bind more tightly than union (``|<+>|''), so the RHS of this definition is equivalent to |mempty <+> (p <.> closure p)|}
+\item The closure operation satisfies the equation |star p = mempty <+> p <.> star p|.\footnote{Syntactically, we'll take concatenation (``|<.>|'') to bind more tightly than union (``|<+>|''), so the RHS of this definition is equivalent to |mempty <+> (p <.> star p)|}
 \end{itemize}
 These observations are the defining properties of a \emph{star semiring} (also called a \emph{closed semiring}) \needcite{}.
 \figrefdef{classes}{Abstract interface for languages (and later generalizations)}{
@@ -158,8 +158,8 @@ class Semiring a where
   (<+>)   , (<.>)  :: a -> a -> a
 
 class Semiring a => StarSemiring a where
-  closure :: a -> a
-  closure p = q where q = one <+> p <.> q  -- default
+  star :: a -> a
+  star p = q where q = one <+> p <.> q  -- default
 
 class HasSingle a w | a -> w where
   single :: w -> a
@@ -195,7 +195,7 @@ instance Monoid s => Semiring (Pow s) where
              = set (u | u <# p || u <# q)
   p  <.>  q  = set (u <> v | u <# p && v <# q)
 
-instance StarSemiring (Pow s) where closure p = bigunion (n >= 0) (pow p n)
+instance StarSemiring (Pow s) where star p = bigunion (n >= 0) (pow p n)
 
 instance HasSingle (Pow s) s where single s = set s
 \end{code}
@@ -278,7 +278,7 @@ instance (Monoid a, Eq a) => Semiring (Pred a) where
   Pred f  <+>  Pred g = Pred (\ w -> f w || g w)
   Pred f  <.>  Pred g = Pred (\ w -> bigOr (u,v) f u && g v && u <> v == w)
 
-instance (Monoid a, Eq a) => StarSemiring (Pred a)  -- default |closure|
+instance (Monoid a, Eq a) => StarSemiring (Pred a)  -- default |star|
 
 instance Eq a => HasSingle (Pred a) a where
   single w = Pred (\ w' -> w' == w)
@@ -317,9 +317,9 @@ instance Semiring Bool where
   (<.>)  = (&&)
 
 instance StarSemiring Bool where
-  closure b  = one <+> b <.> closure b
-             = True || (b && closure b)
-             = True
+  star b  = one <+> b <.> star b
+          = True || (b && star b)
+          = True
 
 instance Semiring b => Semiring (a -> b) where
   zero  = \ a -> zero
@@ -328,7 +328,7 @@ instance Semiring b => Semiring (a -> b) where
   f  <.>  g  = \ a -> f a <.> g a
 
 instance StarSemiring b => StarSemiring (a -> b) where
-  closure f = \ a -> closure (f a)
+  star f = \ a -> star (f a)
 \end{code}
 \vspace{-4ex}
 } shows instances for |Bool| and |a -> b|.
@@ -485,7 +485,7 @@ To see the relationship between Brzozowski's two operations and the decompositio
 delta p  = \ NOP case  []   -> p []
                        _:_  -> False
          = mempty +-> p mempty
-         = p mempty .> one
+         = atEps p .> one
 
 deriv p = \ c cs -> p (c : cs)
 \end{code}
@@ -537,7 +537,7 @@ atEps one          == one
 atEps (p  <+>  q)  == atEps p  <+>  atEps q 
 atEps (p  <.>  q)  == atEps p  <.>  atEps q 
 
-atEps (closure p)  == closure (atEps p)
+atEps (star p)     == star (atEps p)
 \end{code}
 Moreover, |atEps (single [d]) == zero|.
 
@@ -551,7 +551,7 @@ deriv one   c == zero
 deriv (p  <+>  q) c == deriv p c <+> deriv q c
 deriv (p  <.>  q) c == atEps p .> deriv q c <+> deriv p c <.> q
 
-deriv (closure p) c == closure (atEps p) .> deriv p c * closure p
+deriv (star p) c == star (atEps p) .> deriv p c * star p
 
 deriv (single [d]) c == boolVal (d == c)
 \end{code}
@@ -566,10 +566,10 @@ one   = one   <: \ c -> zero
 (a  <:  dp)  <+>  (b <: dq) = (a  <+>  b) <: (\ c -> dp c <+> dq c)
 (a  <:  dp)  <.>  (b <: dq) = (a  <.>  b) <: (\ c -> a .> dq c <+> dp c <.> (b <: dq))
 
-closure (a <: dp) = q
+star (a <: dp) = q
   where
      q = as <: (h . dp)
-     as = closure a
+     as = star a
      h d = as .> d <.> q
 
 single w = product (map symbol w)
@@ -591,7 +591,7 @@ The following alternative characterizations of products and closure on functions
 \begin{code}
 (a <: dp) <.> q = a .> q <+> (zero <: (<.> NOP q) . dp)
 
-closure (a <: dp) = q where q = closure a .> (one <: (<.> NOP q) .  dp)
+star (a <: dp) = q where q = star a .> (one <: (<.> NOP q) .  dp)
 \end{code}
 \end{lemma}
 %endif
@@ -650,7 +650,7 @@ instance OD c s => Semiring (Trie c s) where
   (a :< ps) <.> q = a .> q <+> (zero :< fmap (<.> NOP q) ps)
 
 instance OD c s => StarSemiring (Trie c s) where
-  closure (a :< dp) = q where q = closure a .> (one <: (<.> NOP q) .  dp)
+  star (a :< dp) = q where q = star a .> (one <: (<.> NOP q) .  dp)
 
 instance OD c s => HasSingle (Trie c s) [c] where
   single w = product [zero :< singleton c one | c <- w]
@@ -985,7 +985,7 @@ The homomorphism proofs:
     listElems (L u <.> L v)
 ==  listElems (L (liftA2 (<>) u v))            -- |(<.>)| on |List a|
 ==  bigSumB (a <# liftA2 (<>) u v) (single a)  -- |listElems| definition
-==  ...
+==  ...                                        -- \mynote{finish}
 ==  listElems u <.> listElems v
 \end{code}
 
@@ -1012,12 +1012,12 @@ Any argument to |f| must be either |[]| or |c : cs| for some value |c| and list 
 Consider each case:
 \begin{code}
     (atEps f <: deriv f) []
-==  atEps f []                   -- definition of |b <: h|
-==  f []                         -- definition of |atEps|
+==  atEps f []                   -- |b <: h| definition
+==  f []                         -- |atEps| definition
                                            
     (atEps f <: deriv f) (c:cs)  NOP
-==  deriv f (c:cs)               -- definition of |b <: h|
-==  f (c:cs)                     -- definition of |deriv|
+==  deriv f (c:cs)               -- |b <: h| definition
+==  f (c:cs)                     -- |deriv| definition
 \end{code}
 Thus, for \emph{all} |w :: [c]|, |f w == (atEps f <: deriv f) w|, from which the lemma follows by extensionality.
 \end{proof}
@@ -1027,29 +1027,29 @@ Thus, for \emph{all} |w :: [c]|, |f w == (atEps f <: deriv f) w|, from which the
 \begin{code}
 
     atEps zero
-==  atEps (F (\ a -> zero))  -- definition of |zero| on |b <-- a|
-==  (\ a -> zero) []         -- definition of |atEps|
+==  atEps (F (\ a -> zero))  -- |zero| on |b <-- a|
+==  (\ a -> zero) []         -- |atEps| definition
 ==  zero                     -- $\beta$-reduction
 
     atEps one
-==  atEps (F (\ a -> boolVal (a == mempty)))  -- definition of |one| on |b <-- a|
-==  (\ a -> boolVal (a == mempty)) []         -- definition of |atEps|            
+==  atEps (F (\ a -> boolVal (a == mempty)))  -- |one| on |b <-- a|
+==  (\ a -> boolVal (a == mempty)) []         -- |atEps| definition            
 ==  boolVal ([] == mempty)                    -- $\beta$-reduction                
-==  boolVal True                              -- definition of |boolVal|
+==  boolVal True                              -- |boolVal| definition
 ==  one
 
     atEps (F f <+> F g)
-==  atEps (F (\ a -> f a <+> g a))
-==  (\ a -> f a <+> g a) []
-==  f [] <+> g []
-==  atEps (F f) <+> atEps (F g)
+==  atEps (F (\ a -> f a <+> g a))      -- |(<+>)| on |b <-- a|
+==  (\ a -> f a <+> g a) []             -- |atEps| definition
+==  f [] <+> g []                       -- $\beta$-reduction
+==  atEps (F f) <+> atEps (F g)         -- |atEps| definition
 
     atEps (F f <.> F g)
-==  atEps (bigSum (u,v) u <> v +-> f u <.> g v)
+==  atEps (bigSum (u,v) u <> v +-> f u <.> g v)               -- |(<.>)| on |b <-- a|
 ==  atEps (\ w -> bigSumQ (u,v BR u <> v == []) f u <.> g v)  -- alternative definition from \figref{<--}
-==  bigSumKeys (u,v BR u == [] && v == []) NOP f u <.> g v
-==  f [] <.> g []
-==  atEps (F f) <.> atEps (F g)
+==  bigSumKeys (u,v BR u == [] && v == []) NOP f u <.> g v    -- |u <> v == [] <=> u == [] && v == []| 
+==  f [] <.> g []                                             -- singleton sum
+==  atEps (F f) <.> atEps (F g)                               -- |atEps| definition
 
     atEps (star p)
 ==  atEps (one <+> p <.> star p)        -- defining property of |star|
@@ -1061,37 +1061,6 @@ Thus, for \emph{all} |w :: [c]|, |f w == (atEps f <: deriv f) w|, from which the
 
 \subsection{\lemRef{deriv}}\proofLabel{lemma:deriv}
 
-\begin{lemma}\lemLabel{deriv +->}
-Differentiation and |(+->)| satisfy the following relationships:
-\begin{code}
-deriv (mempty +-> b) c == zero
-
-deriv (c' : w +-> b) c == if c' == c then w +-> b else zero
-\end{code}
-\end{lemma}
-\begin{proof}~
-\begin{code}
-    deriv (mempty +-> b) c
-==  deriv (F (\ w -> if w == mempty then b else zero)) c         -- |(+->)| def
-==  F (\ cs -> (\ w -> if w == mempty then b else zero) (c:cs))  -- |deriv| on |b <-- a|
-==  F (\ cs -> if c:cs == mempty then b else zero)               -- $\beta$-reduction
-==  F (\ cs -> if False then b else zero)                        -- |c:cs /== mempty|
-==  F (\ cs -> zero)                                             -- property of |if|
-==  zero                                                         -- |zero| on |b <-- a|
-\end{code}
-
-\begin{code}
-    deriv (c' : w +-> b) c
-==  deriv (F (\ a -> if a == c':w then b else zero)) c
-==  F (\ cs -> (\ a -> if a == c':w then b else zero) (c:cs))
-==  F (\ cs -> if c:cs == c':w then b else zero)
-==  F (\ cs -> if c==c' && cs == w then b else zero)
-==  if c==c' then F (\ cs -> if cs == w then b else zero) else zero
-==  if c==c' then w +-> b else zero
-\end{code}
-\end{proof}
-
-The homomorphism proofs:
 \begin{code}
     deriv zero c
 ==  deriv (F (\ w -> zero)) c           -- |zero| on |b <-- a|
@@ -1102,20 +1071,17 @@ The homomorphism proofs:
 \vspace{-3ex}
 \begin{code}
     deriv one c
-==  deriv (single mempty) c           -- |one| on |b <-- a|
-==  F (\ cs -> (\ w -> zero) (c:cs))  -- |deriv| on |b <-- a|
-==  F (\ cs -> zero)                  -- $\beta$-reduction
-==  zero                              -- |zero| on |b <-- a|
-==  deriv (F (\ a' -> boolVal (a' == mempty))) c
-==  F (\ cs -> (\ a' -> boolVal (a' == mempty)) (c:cs))
-==  F (\ cs -> boolVal (c:cs == mempty))
-==  F (\ cs -> zero)
-==  zero
+==  deriv (single mempty) c                              -- |one| on |b <-- a|
+==  deriv (F (\ a' -> boolVal (a' == mempty))) c         -- |single| on |b <-- a|
+==  F (\ cs -> (\ a' -> boolVal (a' == mempty)) (c:cs))  -- |deriv| on |b <-- a|
+==  F (\ cs -> boolVal (c:cs == mempty))                 -- $\beta$-reduction
+==  F (\ cs -> zero)                                     -- |c:cs /= mempty|
+==  zero                                                 -- |zero| on |b <-- a|
 \end{code}
 \vspace{-3ex}
 \begin{code}
     deriv (F f <+> F g) c
-==  deriv (F (\ w -> f w <+> g w))                 -- |(<+>)| on |b <-- a|
+==  deriv (F (\ w -> f w <+> g w))           -- |(<+>)| on |b <-- a|
 ==  F (\ cs -> (\ w -> f w <+> g w) (c:cs))        -- |deriv| on |b <-- a|
 ==  F (\ cs -> f (c:cs) <+> g (c:cs))              -- $\beta$-reduction
 ==  F (\ cs -> f (c:cs)) <+> F (\ cs -> g (c:cs))  -- |(<+>)| on |b <-- a|
@@ -1126,7 +1092,7 @@ The homomorphism proofs:
     deriv (F f <.> F g) c
 ==  deriv (bigSum (u,v) u <> v +-> f u <.> g v) c                                                                               -- |(<.>)| on |b <-- a|
 ==  deriv (bigSum v (mempty <> v +-> f mempty <.> g v) <+> bigSumQ (c',u',v) ((c':u') <> v +-> f (c':u') <.> g v)) c            -- empty vs nonempty |u|
-==  deriv (bigSum v (mempty <> v +-> f mempty <.> g v)) c <+> deriv (bigSumQ (c',u',v) ((c':u') <> v +-> f (c':u') <.> g v)) c  -- additivity of |deriv| (above)
+==  deriv (bigSum v (mempty <> v +-> f mempty <.> g v)) c <+> deriv (bigSumA (c',u',v) ((c':u') <> v +-> f (c':u') <.> g v)) c  -- additivity of |deriv| (above)
 \end{code}
 \vspace{-1ex}
 
@@ -1136,7 +1102,7 @@ First addend:
     deriv (bigSum v (mempty <> v +-> f mempty <.> g v)) c
 ==  deriv (bigSum v (v +-> f mempty <.> g v)) c  -- monoid law
 ==  deriv (f mempty .> bigSum v (v +-> g v)) c   -- distributivity (semiring law)
-==  f mempty .> deriv (bigSum v v +-> g v) c     -- linearity of deriv \mynote{(needs lemma)}
+==  f mempty .> deriv (bigSum v v +-> g v) c     -- linearity of |deriv| \mynote{(needs lemma)}
 ==  f mempty .> deriv (F g) c                    -- \mynote{needs lemma}
 ==  atEps (F f) .> deriv (F g) c                 -- |atEps| on |b <-- a|
 \end{code}
@@ -1145,10 +1111,10 @@ First addend:
 \noindent
 Second addend:
 \begin{code}
-    deriv (bigSumQ (c',u',v) ((c':u') <> v +-> f (c':u') <.> g v)) c
-==  bigSumQ (c',u',v) deriv ((c':u') <> v +-> f (c':u') <.> g v) c    -- additivity of |deriv|
-==  bigSumQ (c',u',v) deriv (c' : (u' <> v) +-> f (c':u') <.> g v) c  -- definition of |(<>)| on lists
-==  bigSum (u',v) u' <> v +-> f (c:u') <.> g v                        -- \lemRef{deriv +->}
+    deriv (bigSumA (c',u',v) ((c':u') <> v +-> f (c':u') <.> g v)) c
+==  bigSumA (c',u',v) deriv ((c':u') <> v +-> f (c':u') <.> g v) c    -- additivity of |deriv|
+==  bigSumA (c',u',v) deriv (c' : (u' <> v) +-> f (c':u') <.> g v) c  -- |(<>)| on lists
+==  bigSum (u',v) u' <> v +-> f (c:u') <.> g v                        -- \lemRef{deriv +->} below
 ==  bigSum (u',v) u' <> v +-> (\ cs -> f (c:cs)) u' <.> g v           -- $\beta$-expansion
 ==  F (\ cs -> f (c:cs)) <.> F g                                      -- |(<.>)| on |b <-- a|
 ==  deriv (F f) c <.> F g                                             -- |deriv| on |b <-- a|
@@ -1162,9 +1128,90 @@ Combine addends, and let |p = F f| and |q = F g|:
 ==  atEps (F f) .> deriv (F g) c <+> deriv (F f) c <.> F g
 ==  atEps p .> deriv q c <+> deriv p c <.> q
 \end{code}    
+Finally, closure:
+\begin{code}
+    deriv (star p) c
+==  deriv (one <+> p <.> star p) c                        -- defining property of |star p|
+==  deriv one c <+> deriv (p <.> star p) c                -- additivity of |deriv|
+==  deriv (p <.> star p) c                                -- |deriv one c == zero| (above)
+==  atEps p .> deriv (star p) c <+> deriv p c <.> star p  -- |deriv (p * q)| above
+\end{code}
+Thus, by \corRef{affine fixed point} below,
+\begin{code}
+deriv (star p) c == star (atEps p) .> deriv p c <.> star p
+\end{code}
 
+\begin{lemma}\lemLabel{deriv +->}
+Differentiation and |(+->)| satisfy the following relationships:
+\begin{code}
+deriv (mempty +-> b) c == zero
+
+deriv (c' : w +-> b) c == if c' == c then w +-> b else zero
+\end{code}
+\end{lemma}
+\begin{proof}~
+\begin{code}
+    deriv (mempty +-> b) c
+==  deriv (F (\ w -> if w == mempty then b else zero)) c         -- |(+->)| defining
+==  F (\ cs -> (\ w -> if w == mempty then b else zero) (c:cs))  -- |deriv| on |b <-- a|
+==  F (\ cs -> if c:cs == mempty then b else zero)               -- $\beta$-reduction
+==  F (\ cs -> if False then b else zero)                        -- |c:cs /== mempty|
+==  F (\ cs -> zero)                                             -- |if-then-else| definition
+==  zero                                                         -- |zero| on |b <-- a|
+\end{code}
+
+\begin{code}
+    deriv (c' : w +-> b) c
+==  deriv (F (\ a -> if a == c':w then b else zero)) c               -- |(+->)| definition
+==  F (\ cs -> (\ a -> if a == c':w then b else zero) (c:cs))        -- |deriv| on |b <-- a|
+==  F (\ cs -> if c:cs == c':w then b else zero)                     -- $\beta$-reduction
+==  F (\ cs -> if c==c' && cs == w then b else zero)                 -- injectivity of |(:)|
+==  if c==c' then F (\ cs -> if cs == w then b else zero) else zero  -- property of |if-then-else|
+==  if c==c' then w +-> b else zero                                  -- |(+->)| on |b <-- a|
+\end{code}
+\end{proof}
+\vspace{-2ex}
+
+\begin{lemma}\lemLabel{affine fixed point}
+If |s| any star semiring , the equation |q == r <+> p <.> q| has solution |q = star p <.> r|.
+\end{lemma}
+\begin{proof}
+\begin{code}
+    star p <.> r
+==  (one <+> p <.> star p) <.> r        -- star semiring law
+==  one <.> r <+> (p <.> star p) <.> r  -- distributivity
+==  r <+> (p <.> star p) <.> r          -- multiplicative identity
+==  r <+> p <.> (star p <.> r)          -- associativity
+\end{code}
+\end{proof}
+\begin{corollary}\corLabel{affine fixed point}
+In |b <-- a|, the equation |q == r <+> s .> q| has solution |q = star s .> r|.
+\end{corollary}
+\begin{proof}
 \workingHere
-\mynote{For |deriv (closure p)|, see 2019-01-13 notes.}
+\mynote{Return to my notes of 2019-01-13.}
+
+\mynote{Idea: use |s .> q = (s .> one) <.> q|, and show that |star (s .> one) = star s .> one|.}
+
+\mynote{Follows from |s .> q == (mempty +-> s) <.> q|.}
+
+\begin{code}
+star (mempty +-> s) <.> r
+
+star (mempty +-> s)
+one <+> (mempty +-> s) <.> star (mempty +-> s)
+
+delta p = atEps p .> one
+
+q = star (delta s) <.> r
+
+star (delta s)
+one <+> delta s <.> star (delta s)
+one <+> s .> star (delta s)
+...
+\end{code}
+
+\end{proof}
 
 %if derivProduct
 \subsection{\lemRef{derivProduct}}\proofLabel{lemma:derivProduct}
@@ -1177,7 +1224,7 @@ Combine addends, and let |p = F f| and |q = F g|:
 \subsection{\thmRef{Fourier}}\proofLabel{theorem:Fourier}
 
 %format T = "\mathcal F"
-\mynote{Additivity of |T|, and the convolution theorem. What about |closure p| and |single w|?}
+\mynote{Additivity of |T|, and the convolution theorem. What about |star p| and |single w|?}
 
 \subsection{\thmRef{standard FunApp}}\proofLabel{theorem:standard FunApp}
 

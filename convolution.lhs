@@ -1039,35 +1039,50 @@ listElems (L as) = bigUnionA (a <# as) (single a)
 \subsection{\lemRef{deriv}}\proofLabel{lemma:deriv}
 
 \begin{lemma}\lemLabel{deriv +->}
-Differentiation and |(+->)| have the following relationship:
+Differentiation and |(+->)| satisfy the following relationships:
 \begin{code}
+deriv (mempty +-> b) c == zero
+
 deriv (c' : w +-> b) c == if c' == c then w +-> b else zero
 \end{code}
 \end{lemma}
 \begin{proof}~
 \begin{code}
-deriv (c' : w +-> b) c
-deriv (F (\ a -> if a == c':w then b else zero)) c
-F (\ cs -> (\ a -> if a == c':w then b else zero) (c:cs))
-F (\ cs -> if c:cs == c':w then b else zero)
-F (\ cs -> if c==c' && cs == w then b else zero)
-if c==c' then F (\ cs -> if cs == w then b else zero) else zero
-if c==c' then w +-> b else zero
+    deriv (mempty +-> b) c
+==  deriv (F (\ w -> if w == mempty then b else zero)) c         -- |(+->)| def
+==  F (\ cs -> (\ w -> if w == mempty then b else zero) (c:cs))  -- |deriv| on |b <-- a|
+==  F (\ cs -> if c:cs == mempty then b else zero)               -- $\beta$-reduction
+==  F (\ cs -> if False then b else zero)                        -- |c:cs /== mempty|
+==  F (\ cs -> zero)                                             -- property of |if|
+==  zero                                                         -- |zero| on |b <-- a|
+\end{code}
+
+\begin{code}
+    deriv (c' : w +-> b) c
+==  deriv (F (\ a -> if a == c':w then b else zero)) c
+==  F (\ cs -> (\ a -> if a == c':w then b else zero) (c:cs))
+==  F (\ cs -> if c:cs == c':w then b else zero)
+==  F (\ cs -> if c==c' && cs == w then b else zero)
+==  if c==c' then F (\ cs -> if cs == w then b else zero) else zero
+==  if c==c' then w +-> b else zero
 \end{code}
 \end{proof}
 
 The homomorphism proofs:
 \begin{code}
     deriv zero c
-==  deriv (F (\ w -> zero)) c
-==  F (\ cs -> (\ w -> zero) (c:cs))
-==  F (\ cs -> zero)
-==  zero
+==  deriv (F (\ w -> zero)) c           -- |zero| on |b <-- a|
+==  F (\ cs -> (\ w -> zero) (c:cs))    -- |deriv| on |b <-- a|
+==  F (\ cs -> zero)                    -- $\beta$-reduction
+==  zero                                -- |zero| on |b <-- a|
 \end{code}
 \vspace{-3ex}
 \begin{code}
     deriv one c
-==  deriv (single mempty) c
+==  deriv (single mempty) c           -- |one| on |b <-- a|
+==  F (\ cs -> (\ w -> zero) (c:cs))  -- |deriv| on |b <-- a|
+==  F (\ cs -> zero)                  -- $\beta$-reduction
+==  zero                              -- |zero| on |b <-- a|
 ==  deriv (F (\ a' -> boolVal (a' == mempty))) c
 ==  F (\ cs -> (\ a' -> boolVal (a' == mempty)) (c:cs))
 ==  F (\ cs -> boolVal (c:cs == mempty))
@@ -1086,9 +1101,9 @@ The homomorphism proofs:
 \vspace{-3ex}
 \begin{code}
     deriv (F f <.> F g) c
-==  deriv (bigSum (u,v) u <> v +-> f u <.> g v) c
-==  deriv (bigSum v (mempty <> v +-> f mempty <.> g v) <+> bigSumQ (c',u',v) ((c':u') <> v +-> f (c':u') <.> g v)) c
-==  deriv (bigSum v (mempty <> v +-> f mempty <.> g v)) c <+> deriv (bigSumQ (c',u',v) ((c':u') <> v +-> f (c':u') <.> g v)) c
+==  deriv (bigSum (u,v) u <> v +-> f u <.> g v) c                                                                               -- |(<.>)| on |b <-- a|
+==  deriv (bigSum v (mempty <> v +-> f mempty <.> g v) <+> bigSumQ (c',u',v) ((c':u') <> v +-> f (c':u') <.> g v)) c            -- empty vs nonempty |u|
+==  deriv (bigSum v (mempty <> v +-> f mempty <.> g v)) c <+> deriv (bigSumQ (c',u',v) ((c':u') <> v +-> f (c':u') <.> g v)) c  -- additivity of |deriv| (above)
 \end{code}
 \vspace{-1ex}
 
@@ -1096,11 +1111,11 @@ The homomorphism proofs:
 First addend:
 \begin{code}
     deriv (bigSum v (mempty <> v +-> f mempty <.> g v)) c
-==  deriv (bigSum v (v +-> f mempty <.> g v)) c
-==  deriv (f mempty .> bigSum v (v +-> g v)) c
-==  f mempty .> deriv (bigSum v v +-> g v) c
-==  f mempty .> deriv (F g) c
-==  atEps (F f) .> deriv (F g) c
+==  deriv (bigSum v (v +-> f mempty <.> g v)) c  -- monoid law
+==  deriv (f mempty .> bigSum v (v +-> g v)) c   -- distributivity (semiring law)
+==  f mempty .> deriv (bigSum v v +-> g v) c     -- linearity of deriv \mynote{(needs lemma)}
+==  f mempty .> deriv (F g) c                    -- \mynote{needs lemma}
+==  atEps (F f) .> deriv (F g) c                 -- |atEps| on |b <-- a|
 \end{code}
 \vspace{-3ex}
 
@@ -1108,12 +1123,12 @@ First addend:
 Second addend:
 \begin{code}
     deriv (bigSumQ (c',u',v) ((c':u') <> v +-> f (c':u') <.> g v)) c
-==  bigSumQ (c',u',v) deriv ((c':u') <> v +-> f (c':u') <.> g v) c
-==  bigSumQ (c',u',v) deriv (c' : (u' <> v) +-> f (c':u') <.> g v) c
-==  bigSum (u',v) u' <> v +-> f (c:u') <.> g v
-==  bigSum (u',v) u' <> v +-> (\ cs -> f (c:cs)) u' <.> g v
-==  F (\ cs -> f (c:cs)) <.> F g
-==  deriv (F f) c <.> F g
+==  bigSumQ (c',u',v) deriv ((c':u') <> v +-> f (c':u') <.> g v) c    -- additivity of |deriv|
+==  bigSumQ (c',u',v) deriv (c' : (u' <> v) +-> f (c':u') <.> g v) c  -- definition of |(<>)| on lists
+==  bigSum (u',v) u' <> v +-> f (c:u') <.> g v                        -- \lemRef{deriv +->}
+==  bigSum (u',v) u' <> v +-> (\ cs -> f (c:cs)) u' <.> g v           -- $\beta$-expansion
+==  F (\ cs -> f (c:cs)) <.> F g                                      -- |(<.>)| on |b <-- a|
+==  deriv (F f) c <.> F g                                             -- |deriv| on |b <-- a|
 \end{code}
 
 Combine addends, and let |p = F f| and |q = F g|:

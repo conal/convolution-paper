@@ -89,7 +89,7 @@ Conal Elliott
 
 %% TODO: eliminate most of these latex macros, in favor of lhs2tex rendering.
 
-\nc\bigOp[3]{\hspace{-#3ex}#1\limits_{\substack{#2}}\hspace{-#3ex}}
+\nc\bigOp[3]{{\displaystyle \hspace{-#3ex}#1\limits_{\substack{#2}}\hspace{-#3ex}}}
 
 \begin{document}
 
@@ -392,7 +392,7 @@ instance Semiring s => Scalable (s <-- a) s where
 \begin{theorem}[\provedIn{theorem:<--}]\thmLabel{<--}
 Given the instance definitions in \figref{<--}, |b <-- a| satisfies the laws of the instantiated classes whenever |a| is a monoid and |b| is a semiring.
 \end{theorem}
-
+\noindent
 When the monoid |a| is a list, we can again express the product operation from \figref{<--} in a more clearly computable form:
 \begin{code}
   F f <.> F g  = F (\ w -> sum [ f u <.> g v | (u,v) <- splits w ])
@@ -439,9 +439,15 @@ Probably save for later when I discuss spatial convolution and polynomials.}
 %format atEps = "\Varid{at}_\epsilon"
 %format deriv = "\derivOp"
 
-The implementations in previous sections work but can be made much more efficient.
-As preparation, let's now explore a decomposition of functions of lists.
+The |(+->)| operation gives a way to decompose arbitrary functions:
+\begin{lemma}[\provedIn{lemma:decomp +->}]\lemLabel{decomp +->}
+For all |f :: a -> b| where |b| is a semiring,
+\begin{code}
+F f == bigSum a a +-> f a
+\end{code}
+\end{lemma}
 
+For functions from \emph{lists} specifically, we can decompose in another way, which will lay the groundwork for more efficient implementations than the ones in previous sections.
 Any function on lists can be expressed in terms of how it handles the empty list |[]| and non-empty lists |c:cs|, as made precise by the following definition:
 \begin{code}
 infix 1 <:
@@ -998,6 +1004,16 @@ listElems (L as) = bigUnionA (a <# as) (single a)
 \subsection{\thmRef{<--}}\proofLabel{theorem:<--}
 
 \subsection{\thmRef{Map}}\proofLabel{theorem:Map}
+
+\subsection{\lemRef{decomp +->}}\proofLabel{lemma:decomp +->}
+
+\begin{code}
+    bigSum a a +-> f a
+==  bigSum a (F (\ w -> if w == a then f a else zero))  -- |(+->)| on |b <-- a|
+==  F (\ w -> bigSum a if w == a then f a else zero)    -- |(<+>)| on |b <-- a|
+==  F (\ w -> f w)                                      -- summation property
+==  F f                                                 -- $\eta$-reduction
+\end{code}
 
 \subsection{\lemRef{atEps}}\proofLabel{lemma:atEps}
 

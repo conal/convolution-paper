@@ -447,7 +447,7 @@ F f == bigSum a a +-> f a
 \end{code}
 \end{lemma}
 
-For functions from \emph{lists} specifically, we can decompose in another way, which will lay the groundwork for more efficient implementations than the ones in previous sections.
+For functions from \emph{lists} specifically, we can decompose in a way that lays the groundwork for more efficient implementations than the ones in previous sections.
 Any function on lists can be expressed in terms of how it handles the empty list |[]| and non-empty lists |c:cs|, as made precise by the following definition:
 \begin{code}
 infix 1 <:
@@ -455,7 +455,7 @@ infix 1 <:
 (b <: h) []      = b
 (b <: h) (c:cs)  = h c cs
 \end{code}
-\begin{lemma}\lemLabel{decompose function}
+\begin{lemma}[\provedIn{lemma:decompose function of list}]\lemLabel{decompose function of list}
 Any function from lists |f :: [c] -> b| can be decomposed as follows:
 \begin{code}
 f == atEps f <: deriv f
@@ -469,21 +469,7 @@ deriv :: ([c] -> b) -> c -> ([c] -> b)
 deriv f = \ c cs -> f (c : cs)
 \end{code}
 \end{lemma}
-\begin{proof}
-Any argument to |f| must be either |[]| or |c : cs| for some value |c| and list |cs|.
-Consider each case:
-\begin{code}
-    (atEps f <: deriv f) []
-==  atEps f []                   -- definition of |b <: h|
-==  f []                         -- definition of |atEps|
-                                           
-    (atEps f <: deriv f) (c:cs)  NOP
-==  deriv f (c:cs)               -- definition of |b <: h|
-==  f (c:cs)                     -- definition of |deriv|
-\end{code}
-Thus, for \emph{all} |w :: [c]|, |f w == (atEps f <: deriv f) w|, from which the lemma follows by extensionality.
-\end{proof}
-
+\noindent
 This decomposition generalizes a pair of operations used by \citet{Brzozowski64} mapping languages to languages (as sets of strings):\footnote{Brzozowski wrote ``$\derivOp_c\,p$'' instead of ``|deriv p c|'', but the latter will prove more convenient below.}
 \begin{code}
 delta p = if mempty <# p then set mempty else emptyset 
@@ -588,7 +574,7 @@ single w = product (map symbol w)
 \end{code}
 \end{corollary}
 \begin{proof}
-Combine \lemRefThree{decompose function}{atEps}{deriv}.
+Combine \lemRefThree{decompose function of list}{atEps}{deriv}.
 \end{proof}
 
 %let derivProduct = True
@@ -1014,6 +1000,23 @@ listElems (L as) = bigUnionA (a <# as) (single a)
 ==  F (\ w -> f w)                                      -- summation property
 ==  F f                                                 -- $\eta$-reduction
 \end{code}
+
+\subsection{\lemRef{decompose function of list}}\proofLabel{lemma:decompose function of list}
+
+\begin{proof}
+Any argument to |f| must be either |[]| or |c : cs| for some value |c| and list |cs|.
+Consider each case:
+\begin{code}
+    (atEps f <: deriv f) []
+==  atEps f []                   -- definition of |b <: h|
+==  f []                         -- definition of |atEps|
+                                           
+    (atEps f <: deriv f) (c:cs)  NOP
+==  deriv f (c:cs)               -- definition of |b <: h|
+==  f (c:cs)                     -- definition of |deriv|
+\end{code}
+Thus, for \emph{all} |w :: [c]|, |f w == (atEps f <: deriv f) w|, from which the lemma follows by extensionality.
+\end{proof}
 
 \subsection{\lemRef{atEps}}\proofLabel{lemma:atEps}
 

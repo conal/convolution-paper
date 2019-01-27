@@ -1131,12 +1131,12 @@ Combine addends, and let |p = F f| and |q = F g|:
 Finally, closure:
 \begin{code}
     deriv (star p) c
-==  deriv (one <+> p <.> star p) c                        -- defining property of |star p|
+==  deriv (one <+> p <.> star p) c                        -- star semiring law
 ==  deriv one c <+> deriv (p <.> star p) c                -- additivity of |deriv|
 ==  deriv (p <.> star p) c                                -- |deriv one c == zero| (above)
 ==  atEps p .> deriv (star p) c <+> deriv p c <.> star p  -- |deriv (p * q)| above
 \end{code}
-Thus, by \corRef{affine fixed point} below,
+Thus, by \lemRef{affine fixed point} below,
 \begin{code}
 deriv (star p) c == star (atEps p) .> deriv p c <.> star p
 \end{code}
@@ -1173,44 +1173,15 @@ deriv (c' : w +-> b) c == if c' == c then w +-> b else zero
 \vspace{-2ex}
 
 \begin{lemma}\lemLabel{affine fixed point}
-If |s| any star semiring , the equation |q == r <+> p <.> q| has solution |q = star p <.> r|.
+The equation |q == r <+> s .> q| has solution |q = star s .> r|.
 \end{lemma}
-\begin{proof}
+\begin{proof}~
 \begin{code}
-    star p <.> r
-==  (one <+> p <.> star p) <.> r        -- star semiring law
-==  one <.> r <+> (p <.> star p) <.> r  -- distributivity
-==  r <+> (p <.> star p) <.> r          -- multiplicative identity
-==  r <+> p <.> (star p <.> r)          -- associativity
+    star s .> r
+==  (one <+> s <.> star s) .> r         -- star semiring law
+==  one .> r <+> (s <.> star s) .> r    -- distributivity
+==  r <+> s .> (star s .> r)            -- multiplicative identity and associativity
 \end{code}
-\end{proof}
-\begin{corollary}\corLabel{affine fixed point}
-In |b <-- a|, the equation |q == r <+> s .> q| has solution |q = star s .> r|.
-\end{corollary}
-\begin{proof}
-\workingHere
-\mynote{Return to my notes of 2019-01-13.}
-
-\mynote{Idea: use |s .> q = (s .> one) <.> q|, and show that |star (s .> one) = star s .> one|.}
-
-\mynote{Follows from |s .> q == (mempty +-> s) <.> q|.}
-
-\begin{code}
-star (mempty +-> s) <.> r
-
-star (mempty +-> s)
-one <+> (mempty +-> s) <.> star (mempty +-> s)
-
-delta p = atEps p .> one
-
-q = star (delta s) <.> r
-
-star (delta s)
-one <+> delta s <.> star (delta s)
-one <+> s .> star (delta s)
-...
-\end{code}
-
 \end{proof}
 
 %if derivProduct

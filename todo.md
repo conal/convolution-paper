@@ -16,7 +16,18 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
     Similarly for `liftA2`.
     Graphics has a similar issue!
     Spatial transformations may be one-to-many, especially if non-projective.
-*   Use semiring-num instead of my own classes for `Semiring`, `ClosedSemiring`, and `DetectableZero`.
+*   Convolution commutes with currying and with uncurrying.
+    See 2019-01-28 notes.
+*   Implement convolution (really `liftA2 add`) on statically sized arrays.
+    I think I'll want an interface for enumerating all values of a type.
+    The finite-typelits library has useful operations:
+    ``` haskell
+    finites :: KnownNat n => [Finite n]
+    add :: Finite n -> Finite m -> Finite (n + m)
+    ```
+
+    Try 1D and 2D examples.
+*   Use semiring-num instead of my own classes for `Semiring`, `ClosedSemiring`, and `DetectableZero`. 
     Consider uses for the other instances defined there.
 *   Define `sum` and `product` at their first use.
     Consider renaming as in semiring-num.

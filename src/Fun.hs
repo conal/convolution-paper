@@ -617,10 +617,31 @@ instance OD c s => Decomposable (Trie c s) (Map c) s where
 
 data Stream b = b :# Stream b
 
--- instance Semiring b => Semiring (Stream b) where
---   zero = q where q = zero :# q
---   one = one :# zero
---   (<+>) = 
+instance Indexable (Stream b) Natural b where
+  (b :# _)  ! 0 = b
+  (_ :# bs) ! n = bs ! (n-1)
+
+streamF :: Stream b -> (b <-- N)
+streamF bs = F (\ (Sum i) -> bs ! i)
+
+#if 0
+
+
+
+sum i 
+
+#endif
+
+
+-- TODO: give real instances for b <-- a, in terms of Splittable.
+
+instance Semiring b => Semiring (Stream b) where
+  zero = q where q = zero :# q
+  one = one :# zero
+  (u :# us) <+> (v :# vs) = (u <+> v) :# (us <+> vs)
+
+instance DetectableZero s => Scalable (Stream s) s where
+  s `scale` (b :# bs) = (s <.> b) :# (s .> bs)
 
 {--------------------------------------------------------------------
     Polynomials

@@ -9,6 +9,7 @@
 
 module Language where
 
+import GHC.Natural (Natural)
 import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Map (Map)
@@ -133,13 +134,40 @@ instance Ord c => Decomposable (Set [c]) (Map c) Bool where
 --   e <: d  = 
 
 {--------------------------------------------------------------------
+    Invertible monoids
+--------------------------------------------------------------------}
+
+class Monoid t => Splittable t where
+  -- Whether equal to 'mempty'
+  isEmpty :: t -> Bool
+  -- | The inverse of 'mappend'
+  splits :: t -> [(t,t)]
+
+instance Splittable [a] where
+  isEmpty = null
+  splits []     = [([],[])]
+  splits (a:as) = ([],a:as) : [((a:l),r) | (l,r) <- splits as]
+
+-- Equivalently,
+
+--   splits as@(a:as') = ([],as) : map (first (a:)) (splits as')
+
+--   splits' as = ([],as) : go as
+--    where
+--      go []       = []
+--      go (a:as')  = [((a:l),r) | (l,r) <- splits' as']
+
+{--------------------------------------------------------------------
     Sum and product
 --------------------------------------------------------------------}
 
 -- semiring-num defines 'add' and 'mul' via foldl', but I think I want foldr
 -- instead.
 
-newtype Sum a = Sum { getSum :: a }
+newtype Sum a = Sum a deriving (Eq,Show)
+
+getSum :: Sum a -> a
+getSum (Sum a) = a
 
 instance Semiring a => Semigroup (Sum a) where
   Sum a <> Sum b = Sum (a <+> b)
@@ -150,7 +178,19 @@ instance Semiring a => Monoid (Sum a) where
 sum :: (Foldable f, Semiring a) => f a -> a
 sum = getSum . foldMap Sum
 
-newtype Product a = Product { getProduct :: a }
+type N = Sum Natural
+
+instance Splittable N where
+  isEmpty (Sum n) = n == 0
+  splits (Sum n) = [(Sum i, Sum (n-i)) | i <- [0 .. n]]
+
+-- >>> splits (Sum (4 :: N))
+-- [(Sum 0,Sum 4),(Sum 1,Sum 3),(Sum 2,Sum 2),(Sum 3,Sum 1),(Sum 4,Sum 0)]
+
+newtype Product a = Product a deriving (Eq,Show)
+
+getProduct :: Product a -> a
+getProduct (Product a) = a
 
 instance Semiring a => Semigroup (Product a) where
   Product a <> Product b = Product (a <.> b)

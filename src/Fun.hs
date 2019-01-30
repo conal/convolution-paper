@@ -1,5 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE ParallelListComp #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
+-- {-# OPTIONS_GHC -Wno-orphans #-} -- TEMP
 
 -- | Languages as functions to semirings
 
@@ -8,8 +10,9 @@ module Fun where
 import Prelude hiding (sum,product)
 
 import Control.Applicative (liftA2)
-import Control.Arrow (second)
+import Control.Arrow (second,(***))
 import Text.Show.Functions ()  -- for Decomp
+import GHC.Natural (Natural)
 import Data.Map
   ( Map,toList,fromListWith,empty,singleton,insert,unionWith
   , unionsWith,mapKeys,findWithDefault,keysSet )
@@ -26,6 +29,7 @@ import Constrained
     Flipped functions / generalized predicates
 --------------------------------------------------------------------}
 
+infixl 1 <--
 newtype b <-- a = F { unF :: a -> b }
 
 instance Show (b <-- a) where show = const "<F>"
@@ -606,6 +610,58 @@ instance OD c s => Decomposable (Trie c s) (Map c) s where
   (<:) = (:<)
   atEps (a :< _) = a
   deriv (_ :< d) = d
+
+{--------------------------------------------------------------------
+    Streams
+--------------------------------------------------------------------}
+
+data Stream b = b :# Stream b
+
+-- instance Semiring b => Semiring (Stream b) where
+--   zero = q where q = zero :# q
+--   one = one :# zero
+--   (<+>) = 
+
+{--------------------------------------------------------------------
+    Polynomials
+--------------------------------------------------------------------}
+
+-- Polynomial represented by coefficient stream
+type PS b = Stream b
+
+-- Polynomial represented as a finite map
+type PMN b = b :<-- N
+
+type PFN b = b <-- N
+
+pow :: Semiring b => b -> N -> b
+pow b (Sum n) = product [b | _i <- [0 .. n-1]]
+
+-- pow _ 0 = one
+-- pow x n = x <.> pow x (n-1)
+
+assocsPoly :: (Semiring p, Scalable p s, HasSingle p N, DetectableZero s)
+           => [(Natural,s)] -> p
+assocsPoly l = sum [Sum i +-> s | (i,s) <- l]
+
+coeffsPoly :: (Semiring p, Scalable p s, HasSingle p N, DetectableZero s)
+           => [s] -> p
+coeffsPoly bs = assocsPoly ([0 ..] `zip` bs)
+
+polyMap :: Semiring b => (b :<-- N) -> (b -> b)
+polyMap (M m) x = sum [b <.> pow x i | (i, b) <- M.toList m]
+
+-- TODO: efficient exponentiations via scan. Also generalizes nicely.
+
+-- listToS :: ...
+-- listToS bs x    = go one
+--  where
+--    go _  []     = zero
+--    go xk (c:cs) = b * xk + go (
+
+{--------------------------------------------------------------------
+    Orphans
+--------------------------------------------------------------------}
 
 {--------------------------------------------------------------------
     Temporary for testing

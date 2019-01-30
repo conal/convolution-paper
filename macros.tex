@@ -21,15 +21,9 @@
 %% To redefine for a non-draft
 \nc\indraft[1]{#1}
 
-\nc\mynote[1]{\indraft{\textcolor{red}{#1}}}
+\nc\note[1]{\indraft{\textcolor{red}{#1}}}
 
-% While working, use these defs
-\nc\note[1]{{\em [#1]}}
-\nc\notefoot[1]{\mynote{\footnote{\mynote{#1}}}}
-
-%% % But for the submission, use these
-%% \rnc\mynote\out
-%% \rnc\notefoot\out
+\nc\notefoot[1]{\note{\footnote{\note{#1}}}}
 
 \nc\todo[1]{\note{To do: #1}}
 
@@ -52,7 +46,7 @@
 \nc\subsectiondef[1]{\subsection{#1}\seclabel{#1}}
 \nc\subsubsectiondef[1]{\subsubsection{#1}\seclabel{#1}}
 
-\nc\needcite{\mynote{[ref]}}
+\nc\needcite{\note{[ref]}}
 
 % \nc\myurl\texttt
 

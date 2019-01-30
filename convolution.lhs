@@ -2,7 +2,7 @@
 
 %% While editing/previewing, use 12pt and tiny margin.
 \documentclass[hidelinks,twoside]{article}  % fleqn, 
-\usepackage[margin=0.12in]{geometry}  % 0.12in, 0.9in, 1in
+\usepackage[margin=0.9in]{geometry}  % 0.12in, 0.9in, 1in
 
 \usepackage{setspace}
 
@@ -10,7 +10,7 @@
 %% \usepackage{fullpage}
 
 %% Temporary title
-\def\tit{Efficient parsing and generalized convolution}
+\def\tit{Efficient language recognition and generalized convolution}
 
 \author{Conal Elliott}
 
@@ -143,10 +143,10 @@ Some observations:
 \begin{itemize}
 \item Union is associative, with |zero| as its identity.
       \notefoot{Maybe state equations for this observations and the next two.}
-\item Element-Wise concatenation is associative and commutative, with |single mempty| as its identity, where |mempty| is the empty string.
+\item Element-wise concatenation is associative and commutative, with |single mempty| as its identity, where |mempty| is the empty string.
 \item Left- and right-concatenation distribute over union.
 \item The empty language annihilates under concatenation, i.e., |p <.> zero = zero <.> q = zero|.
-\item The closure operation satisfies the equation |star p = mempty <+> p <.> star p|.\footnote{Syntactically, we'll take concatenation (``|<.>|'') to bind more tightly than union (``|<+>|''), so the RHS of this definition is equivalent to |mempty <+> (p <.> star p)|}
+\item The closure operation satisfies the equation |star p = mempty <+> p <.> star p|.\footnote{Syntactically, we'll take ``|<.>|'' to bind more tightly than ``|<+>|'', so the RHS of this definition is equivalent to |mempty <+> (p <.> star p)|}
 \end{itemize}
 These observations are the defining properties of a \emph{star semiring} (also called a \emph{closed semiring}) \needcite{}.
 \figrefdef{classes}{Abstract interface for languages (and later generalizations)}{
@@ -363,8 +363,15 @@ a +-> s = s .> single a
 \end{code}
 
 \noindent
+Laws:
+\notefoot{Can I point to a more standard development of these notion and laws? For instance, I might start with semimodules (generalizing vector spaces) instead of semirings.}
+\begin{code}
+s .> (t  .>   p)  == (s  <.>  t)  .>   p
+s .> (p  <.>  q)  == (s  .>   p)  <.>  q
+\end{code}
 Since we already have a semiring of functions (\figref{bool and function}), let's refer to the generalized |Pred a| as ``|b <-- a|'', as in \figrefdef{<--}{|b <-- a| as generalized language representation}{
 \begin{code}
+infixl 1 <--
 newtype b <-- a = F { unF :: a -> b }
 
 instance (Semiring b, Monoid a, Eq a) => Semiring (b <-- a) where
@@ -394,7 +401,7 @@ instance Semiring s => Scalable (s <-- a) s where
 Given the instance definitions in \figref{<--}, |b <-- a| satisfies the laws of the instantiated classes whenever |a| is a monoid and |b| is a semiring.
 \end{theorem}
 \noindent
-When the monoid |a| is a list, we can again express the product operation from \figref{<--} in a more clearly computable form:
+When the monoid |a| is a list or other splittable type, we can again express the product operation from \figref{<--} in a more clearly computable form:
 \begin{code}
   F f <.> F g  = F (\ w -> sum [ f u <.> g v | (u,v) <- splits w ])
 \end{code}
@@ -405,8 +412,8 @@ Another representation of functions from |a| to |b| is |Map a b|, where |Map| is
 Although we can think of |Map a b| as denoting partial functions from |a| to |b|, if we further require |b| to be semiring, we can treat missing entries as being implicitly zero, yielding a \emph{total} function.
 \notefoot{Describe finite maps and |findWithDefault|.}
 As with functions, it will be helpful later to flip the order of type parameters to |Map|.
-\begin{theorem}[\provedIn{theorem:Map}]\thmLabel{Map}
-Given the definitions in \figrefdef{Map}{Finite maps as a language representation}{
+\begin{theorem}[\provedIn{theorem::<--}]\thmLabel{:<--}
+Given the definitions in \figrefdef{:<--}{Finite maps as a language representation}{
 \begin{code}
 newtype b :<-- a = M (Map a b) deriving Show
 
@@ -427,7 +434,7 @@ instance Semiring s => Scalable (s :<-- a) s where
 \end{code}
 \vspace{-4ex}
 }, |mapTo| is a homomorphism with respect to each instantiated class.
-\notefoot{Describe the |Map| operations used in \figref{Map}.}
+\notefoot{Describe the |Map| operations used in \figref{:<--}.}
 \notefoot{Look for a better name than ``|mapTo|''.}
 \end{theorem}
 The finiteness of finite maps interferes with giving a useful |StarSemiring| instance.
@@ -507,12 +514,14 @@ instance Semiring b => Decomposable ([c] -> b) ((->) c) b where
   deriv  f = \ c cs -> f (c : cs)
 \end{code}
 We'll need a way to index into |h|:
+\notefoot{Perhaps introduce |Indexable| earlier and use in defining |mapTo| in \figref{:<--}.}
 \begin{code}
 class Indexable p k v | p -> k v  where (!) :: p -> k -> v
 
 instance Indexable (k -> v) k v   where f ! k = f k
 
-instance (Ord k, Semiring v) => Indexable (Map k v) k v where (!) = mat
+instance (Ord k, Semiring v) => Indexable (Map k v) k v where
+  m ! k = findWithDefault zero k m
 \end{code}
 
 \noindent
@@ -729,7 +738,7 @@ The Fourier transform is a semiring homomorphism from |b <- a| to |a -> b|.
 %format Array (m) = Array "_{" m "}"
 
 Some uses of convolution (including convolutional neural networks \needcite{}) involve functions having finite support, i.e., non-zero on only a finite subset of their domains.
-\notefoot{First suggest finite maps, using instances from \figref{Map}. Then intervals/arrays.}
+\notefoot{First suggest finite maps, using instances from \figref{:<--}. Then intervals/arrays.}
 In many cases, these domain subsets may be defined by finite \emph{intervals}.
 For instance, such a 2D operation would be given by intervals in each dimension, together specifying lower left and upper right corners of a 2D interval (rectangle) outside of which the functions are guaranteed to be zero.
 The two input intervals needn't have the same size, and the result's interval of support is larger than both inputs, with size equaling the sum of the sizes in each dimension (minus one for the discrete case).
@@ -919,21 +928,43 @@ liftA2 h p q  = p >>= \ u -> fmap (h u) q
 
 \mynote{This form looks a lot like a Brzozowski-style language convolution implementation I've used, with |h = (<>)| and |fmap (u NOP <>) q| implemented carefully. Use it to derive an efficient |(*)| for tries. Compare with \figref{Trie} and \thmRef{Trie}.}
 
-\sectionl{More Variations}
+\sectionl{More applications}
 
-\mynote{Variations: counting, probability distributions, temporal/spatial convolution.}
+\sectionl{Polynomials}
+
+\mynote{Univariate and multivariate. See notes from 2018-01-\{28,29\}.}
+
+%format N = "\mathbb{N}"
+
+As is well known, univariate polynomials form a semiring and can be multiplied by \emph{convolving} their coefficients.
+Perhaps less known is that this trick extends naturally to multivariate polynomials and to (univariate and multivariate) power series.
+
+Looking more closely, univariate polynomials (and even power series) can be represented by a collection of coefficients indexed by exponents.
+For a polynomial in a variable |x|, an association of exponent |i| to coefficient |c| represents the polynomial term |c * pow x i|.
+One can use a variety of representations for these indexed collections.
+We'll consider efficient representations below, but let's begin as |b <-- N| along with a denotation as |b -> b|, where |N| is the additive monoid of natural numbers:
+\begin{code}
+type N = Sum Natural
+
+poly :: Semiring b => (b <-- N) -> (b -> b)
+poly (F f) = \ x -> bigSum i  f i * pow x i
+\end{code}
+Polynomial multiplication via convolution follows from the following property:
+\begin{theorem}[\provedIn{theorem:poly fun}]\thmLabel{poly fun}
+The function |poly| is a semiring homomorphism.
+\end{theorem}
+
 
 \sectionl{What else?}
 
 \begin{itemize}
-\item Context-free languages (recursion).
+\item Counting
+\item Probability distributions
+\item Temporal/spatial convolution
+\item Discrete and continuous
+\item Context-free languages (recursion)
 \item Other applications:
-\begin{itemize}
-  \item Univariate and multivariate polynomials.
-  \item Convolution: discrete and continuous, one- and multi-dimensional, dense and sparse.
-  \item Probability distributions.
-  \item 2D parsing?
-\end{itemize}
+\item 2D parsing?
 \end{itemize}
 
 \sectionl{Related Work}
@@ -942,7 +973,7 @@ liftA2 h p q  = p >>= \ u -> fmap (h u) q
 \item \emph{Polynomial Functors Constrained by Regular Expressions}
 \item \href{https://doisinkidney.com/}{Donnacha Oisín Kidney's blog}
 \item Dan Piponi's blog
-\item \citet{Uustalu2002:DSR}, since tries appear to be cotrees, and the function comonad seems closely related to Brzozowski-style ``derivatives''.
+\item \citet{Uustalu2002:DSR}, since tries appear to be cotrees, and the function comonad relates closely to Brzozowski-style ``derivatives''.
 \item Many more references in \verb|todo.md|.
 \end{itemize}
 
@@ -954,8 +985,6 @@ liftA2 h p q  = p >>= \ u -> fmap (h u) q
 \sectionl{Proofs}
 
 \subsection{\thmRef{list}}\proofLabel{theorem:list}
-
-\mynote{Needs annotations and maybe some simplification. Or leave as an exercise.}
 
 %format bigSumA (lim) = "\bigOp\sum{" lim "}{1}"
 %format bigSumB (lim) = "\bigOp\sum{" lim "}{2}"
@@ -993,16 +1022,16 @@ The homomorphism proofs:
 
 \subsection{\thmRef{<--}}\proofLabel{theorem:<--}
 
-\subsection{\thmRef{Map}}\proofLabel{theorem:Map}
+\subsection{\thmRef{:<--}}\proofLabel{theorem::<--}
 
 \subsection{\lemRef{decomp +->}}\proofLabel{lemma:decomp +->}
 
 \begin{code}
     bigSum a a +-> f a
-==  bigSum a (F (\ w -> if w == a then f a else zero))  -- |(+->)| on |b <-- a|
-==  F (\ w -> bigSum a if w == a then f a else zero)    -- |(<+>)| on |b <-- a|
-==  F (\ w -> f w)                                      -- summation property
-==  F f                                                 -- $\eta$-reduction
+==  bigSum a F (\ w -> if w == a then f a else zero)  -- |(+->)| on |b <-- a|
+==  F (\ w -> bigSum a if w == a then f a else zero)  -- |(<+>)| on |b <-- a|
+==  F (\ w -> f w)                                    -- summation property
+==  F f                                               -- $\eta$-reduction
 \end{code}
 
 \subsection{\lemRef{decompose function of list}}\proofLabel{lemma:decompose function of list}
@@ -1058,6 +1087,7 @@ Thus, for \emph{all} |w :: [c]|, |f w == (atEps f <: deriv f) w|, from which the
 ==  star (atEps p)                      -- defining property of |star|
 
 \end{code}
+\mynote{For this last proof, maybe instead show inductively that |atEps (pow p n) == pow (atEps p) n| for all |n >= 0|, and then appeal to the summation definition of |star p|.}
 
 \subsection{\lemRef{deriv}}\proofLabel{lemma:deriv}
 
@@ -1222,6 +1252,54 @@ Similarly for |liftA2|:
 ==  f >>= \ u -> fmap (h u) (F g)                   -- definition of |(>>=)|
 \end{code}
 \end{spacing}
+
+\subsection{\thmRef{poly fun}}\proofLabel{theorem:poly fun}
+
+\begin{code}
+    poly zero
+==  poly (F (\ i -> zero))             -- |zero| on |b <-- a|
+==  \ x -> bigSum i  zero <.> pow x i  -- |poly| definition
+==  \ x -> bigSum i  zero              -- |zero| as annihilator
+==  \ x -> zero                        -- |zero| as additive identity
+==  zero                               -- |zero| on |a -> b|
+\end{code}
+
+\begin{code}
+    poly one
+==  poly (F (\ i -> if i == mempty then one else zero))                         -- |one| on |b <-- a|
+==  poly (F (\ i -> if i == Sum 0 then one else zero))                          -- |mempty| on |N|
+==  \ x -> bigSum i (if i == Sum 0 then one else zero) <.> pow x i              -- |poly| definition
+==  \ x -> bigSum i (if i == Sum 0 then one <.> pow x i else zero <.> pow x i)  -- |poly| definition
+==  \ x -> bigSum (i BR i == Sum 0) one <.> pow x i                             -- summation property
+==  \ x -> one <.> pow x 0                                                      -- summation property
+==  \ x -> one                                                                  -- exponentiation property
+==  one                                                                         -- |one| on |a -> b|
+\end{code}
+
+\begin{code}
+    poly (F f <+> F g)
+==  poly (F (\ i -> f i <+> g i))                                       -- |(<+>)| on |b <-- a|
+==  \ x -> bigSum i  (f i <+> g i) <.> pow x i                          -- |poly| definition
+==  \ x -> bigSum i  f i <.> pow x i <+> g i <.> pow x i                -- distributivity
+==  \ x -> (bigSum i  f i <.> pow x i) <+> (bigSum i  g i <.> pow x i)  -- summation property
+==  \ x -> poly (F f) x <+> poly (F g) x                                -- |poly| definition
+==  poly (F f) <+> poly (F g)                                           -- |(<+>)| on |a -> b|
+\end{code}
+
+%format bigSumA (lim) = "\bigOp\sum{" lim "}{0.75}"
+
+\begin{code}
+    poly (F f <.> F g)
+==  poly (bigSum (i,j)  i <> j +-> f i <.> g j)                                     -- |(<.>)| on |b <-- a|
+==  poly (F (\ k -> bigSumA (i,j BR i <> j == k)  f i <.> g j))                     -- alternative formulation
+==  \ x -> bigSum k (bigSumA (i,j BR i <> j == k)  (f i <.> g j) <.> pow x (i<>j))  -- |poly| definition
+==  \ x -> bigSum (i,j)  (f i <.> g j) <.> pow x (i<>j)                             -- summation property
+==  \ x -> bigSum (i,j)  (f i <.> pow x i) <.> (g j <.> pow x j)                    -- exponentiation property
+==  \ x -> (bigSum i  f i <.> pow x i) <.> (bigSum j  g j <.> pow x j)              -- summation/product property\mynote{, but see ``oops'' below}
+==  \ x -> poly (F f) x <.> poly (F g) x                                            -- |poly| definition
+==  poly (F f) <.> poly (F g)                                                       -- |(<.>)| on |a -> b|
+\end{code}
+\mynote{Oops! I commuted multiplication in the third to last line. Does this homomorphism property hold only when multiplication commutes?}
 
 \bibliography{bib}
 

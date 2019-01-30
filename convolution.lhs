@@ -184,7 +184,7 @@ forall a b NOP . NOP h (a  <+>  b) == h a  <+>  h b
 forall a b NOP . NOP h (a  <.>  b) == h a  <.>  h b
 \end{code}
 \end{definition}
-\mynote{Explain the value of homomorphisms to the methodology of this paper: simple and consistent specification style, non-leaky abstraction, guarantee that the laws hold. Refer to my TCM and AD papers.}
+\note{Explain the value of homomorphisms to the methodology of this paper: simple and consistent specification style, non-leaky abstraction, guarantee that the laws hold. Refer to my TCM and AD papers.}
 
 Languages as sets fulfill this combined interface as described above and again in the pseudocode in \figrefdef{set}{Mathematical sets as a ``language'' (pseudocode)}{
 \begin{code}
@@ -285,12 +285,16 @@ instance Eq a => HasSingle (Pred a) a where
 \end{code}
 \vspace{-4ex}
 }.
+%format isEmpty = "\Varid{is}_\epsilon"
+%% %format splits = split
 For some monoids, including lists, we can also express the product operation in a more clearly computable form via \emph{splittings}:
+%format bigOrSplits (lim) = "\bigOp\bigvee{" lim "}{2.5}"
 \begin{code}
-  Pred f <.> Pred g  = Pred (\ w -> or [ f u && g v | (u,v) <- splits w ])
+  Pred f <.> Pred g = Pred (\ w -> bigOrSplits ((u,v) <# splits w) f u && g v)
 \end{code}
 where |splits| inverts |(<>)|:
 \notefoot{Maybe generalize from \emph{lists} of pairs to an associated |Foldable|.}
+\notefoot{If I don't end up using |isEmpty|, drop it here. I think it's good for avoiding unnecessary equality tests and hence |Eq| constraints.}
 \begin{code}
 class Monoid t => Splittable t where
   isEmpty  :: t -> Bool     -- whether equal to |mempty|
@@ -349,7 +353,7 @@ For sets, lists, and predicates, |s| will be |Bool|, e.g.,
 instance Monoid a => Scalable (List a) Bool where
   s .> as = if s then as else zero
 \end{code}
-\mynote{Maybe it's not worth bothering with |Scalable| and |(+->)| for sets, lists and predicates.}
+\note{Maybe it's not worth bothering with |Scalable| and |(+->)| for sets, lists and predicates.}
 }
 \notefoot{Consider changing both |HasSingle| and |Scalable| to type \emph{constructor} classes.}
 \begin{code}
@@ -439,7 +443,7 @@ instance Semiring s => Scalable (s :<-- a) s where
 \end{theorem}
 The finiteness of finite maps interferes with giving a useful |StarSemiring| instance.
 
-\mynote{Define another wrapper for |[a]| that represents |a <-- Sum Nat|.
+\note{Define another wrapper for |[a]| that represents |a <-- Sum Nat|.
 Maybe also multidimensional arrays.
 Probably save for later when I discuss spatial convolution and polynomials.}
 
@@ -566,7 +570,7 @@ deriv (single [d]) c == boolVal (d == c)
 \end{code}
 \end{lemma}
 Equivalently, |deriv (p  <.>  q) c = delta p * deriv q c <+> deriv p c <.> q|, generalizing a notion of \citet[Definition 3.2]{Brzozowski64}.
-% \workingHere \mynote{I'm moving |(.>)| sooner. Fix this part.}
+% \workingHere \note{I'm moving |(.>)| sooner. Fix this part.}
 \begin{corollary}
 The following properties hold:
 \begin{code}
@@ -676,7 +680,7 @@ This optimization applies quite often in practice, since languages tend to be sp
 
 \sectionl{Regular Expressions}
 
-\mynote{A sort of ``free'' variant of functions. Easy to derive homomorphically.}
+\note{A sort of ``free'' variant of functions. Easy to derive homomorphically.}
 
 \sectionl{Convolution}
 
@@ -698,7 +702,7 @@ Using the set/predicate isomorphism from \secref{Matching}, we can translate thi
 
 which is the definition of the concatenation of two languages from \secref{Languages}.
 
-By specializing the \emph{domain} of the functions to sequences (from general monoids), we can get efficient matching of semiring-generalized ``languages'', as in \secreftwo{Decomposing Functions}{Tries}, which translates to regular expressions (\secref{Regular Expressions}), generalizing work of \citet{Brzozowski64}\mynote{, while apparently improving performance.
+By specializing the \emph{domain} of the functions to sequences (from general monoids), we can get efficient matching of semiring-generalized ``languages'', as in \secreftwo{Decomposing Functions}{Tries}, which translates to regular expressions (\secref{Regular Expressions}), generalizing work of \citet{Brzozowski64}\note{, while apparently improving performance.
 \notefoot{Measure and compare in \secref{Regular Expressions}.}}
 
 %format R = "\mathbb R"
@@ -732,7 +736,7 @@ At the least, it's useful to combine finite dimensions of different sizes.}
 The Fourier transform is a semiring homomorphism from |b <- a| to |a -> b|.
 \end{theorem}
 
-\mynote{Maybe give some convolution examples.}
+\note{Maybe give some convolution examples.}
 
 %format Fin (m) = Fin "_{" m "}"
 %format Array (m) = Array "_{" m "}"
@@ -859,7 +863,7 @@ instance Semiring b => Applicative ((<--) b) where
 \vspace{-3ex}
 }, along with instances for some of the language representations we've considered so far.%
 \footnote{The enhancement is the associated constraint \citep{Bolingbroke2011CK} |Ok|, limiting the types that the class methods must support. The line ``|type Ok f a = ()|'' means that the constraint on |a| defaults to |()|, which holds vacuously for all |a|.}%
-\footnote{Originally, |Applicative| had a |(<*>)| method from which one can easily define |liftA2|. Since the base library version 4.10 \needcite, |liftA2| was added as a method (along with a default definition of |(<*>)|) to allow for more efficient implementation. \mynote{Cite \href{https://ghc.haskell.org/trac/ghc/ticket/13191}{GHC ticket 13191} if I can't find a better reference.}}%
+\footnote{Originally, |Applicative| had a |(<*>)| method from which one can easily define |liftA2|. Since the base library version 4.10 \needcite, |liftA2| was added as a method (along with a default definition of |(<*>)|) to allow for more efficient implementation. \note{Cite \href{https://ghc.haskell.org/trac/ghc/ticket/13191}{GHC ticket 13191} if I can't find a better reference.}}%
 %if False
 \footnote{The methods on |(:<--) b| (finite maps to |b|) are written in straight Haskell as follows:
 \vspace{-0.5ex}
@@ -926,13 +930,13 @@ liftA2 h p q  = p >>= \ u -> fmap (h u) q
 \end{code}
 \end{theorem}
 
-\mynote{This form looks a lot like a Brzozowski-style language convolution implementation I've used, with |h = (<>)| and |fmap (u NOP <>) q| implemented carefully. Use it to derive an efficient |(*)| for tries. Compare with \figref{Trie} and \thmRef{Trie}.}
+\note{This form looks a lot like a Brzozowski-style language convolution implementation I've used, with |h = (<>)| and |fmap (u NOP <>) q| implemented carefully. Use it to derive an efficient |(*)| for tries. Compare with \figref{Trie} and \thmRef{Trie}.}
 
 \sectionl{More applications}
 
 \sectionl{Polynomials}
 
-\mynote{Univariate and multivariate. See notes from 2018-01-\{28,29\}.}
+\note{Univariate and multivariate. See notes from 2018-01-\{28,29\}.}
 
 %format N = "\mathbb{N}"
 
@@ -954,6 +958,42 @@ Polynomial multiplication via convolution follows from the following property:
 The function |poly| is a semiring homomorphism.
 \end{theorem}
 
+%format :# = "\mathbin{:\!\!\#}"
+While the |b <-- N| representation makes for simple semantics and reasoning, there are more efficient alternatives.
+For instance, consider streams, as shown in \figrefdef{Stream}{Streams}{
+\begin{code}
+infixr 1 :#
+data Stream b = b :# Stream b
+
+instance Indexable (Stream b) N b where
+  (b  :# _   ) ! Sum 0  = b
+  (_  :# bs  ) ! Sum n  = bs ! Sum (n-1)
+
+streamF :: Stream b -> (b <-- N)
+streamF bs = F (bs NOP !)
+
+instance DetectableZero b => Semiring (Stream b) where
+  zero = q where q = zero :# q
+  one = one :# zero
+  (u :# us') <+> (v :# vs') = (u <+> v) :# (us' <+> vs')
+  (u :# us') <.> vs = (u .> vs) <+> (zero :# us' <.> vs)
+
+instance DetectableZero s => Scalable (Stream s) s where
+  s `scale` (b :# bs) = (s <.> b) :# (s .> bs)
+\end{code}
+\vspace{-6ex}
+}
+\begin{theorem}[\provedIn{theorem:Stream}]\thmLabel{Stream}
+Given the definitions in \figref{Stream}, |streamF| is a homomorphism with respect to each instantiated class.
+\end{theorem}
+
+\note{Add |StarSemiring| instance, or say why not.}
+
+\note{Discuss how |Stream b| is much more efficient than |b <-- N|.}
+
+\note{Somewhere I think I should be showing and using the |Splittable N| instance. See previous note.}
+
+\workingHere
 
 \sectionl{What else?}
 
@@ -1014,7 +1054,7 @@ The homomorphism proofs:
     listElems (L u <.> L v)
 ==  listElems (L (liftA2 (<>) u v))            -- |(<.>)| on |List a|
 ==  bigSumB (a <# liftA2 (<>) u v) (single a)  -- |listElems| definition
-==  ...                                        -- \mynote{finish}
+==  ...                                        -- \note{finish}
 ==  listElems u <.> listElems v
 \end{code}
 
@@ -1087,7 +1127,7 @@ Thus, for \emph{all} |w :: [c]|, |f w == (atEps f <: deriv f) w|, from which the
 ==  star (atEps p)                      -- defining property of |star|
 
 \end{code}
-\mynote{For this last proof, maybe instead show inductively that |atEps (pow p n) == pow (atEps p) n| for all |n >= 0|, and then appeal to the summation definition of |star p|.}
+\note{For this last proof, maybe instead show inductively that |atEps (pow p n) == pow (atEps p) n| for all |n >= 0|, and then appeal to the summation definition of |star p|.}
 
 \subsection{\lemRef{deriv}}\proofLabel{lemma:deriv}
 
@@ -1132,8 +1172,8 @@ First addend:
     deriv (bigSum v (mempty <> v +-> f mempty <.> g v)) c
 ==  deriv (bigSum v (v +-> f mempty <.> g v)) c  -- monoid law
 ==  deriv (f mempty .> bigSum v (v +-> g v)) c   -- distributivity (semiring law)
-==  f mempty .> deriv (bigSum v v +-> g v) c     -- linearity of |deriv| \mynote{(needs lemma)}
-==  f mempty .> deriv (F g) c                    -- \mynote{needs lemma}
+==  f mempty .> deriv (bigSum v v +-> g v) c     -- linearity of |deriv| \note{(needs lemma)}
+==  f mempty .> deriv (F g) c                    -- \note{needs lemma}
 ==  atEps (F f) .> deriv (F g) c                 -- |atEps| on |b <-- a|
 \end{code}
 \vspace{-3ex}
@@ -1217,7 +1257,7 @@ The equation |q == r <+> s .> q| has solution |q = star s .> r|.
 %if derivProduct
 \subsection{\lemRef{derivProduct}}\proofLabel{lemma:derivProduct}
 
-\mynote{See 2019-01-10 journal.}
+\note{See 2019-01-10 journal.}
 %endif
 
 \subsection{\thmRef{Trie}}\proofLabel{theorem:Trie}
@@ -1225,7 +1265,7 @@ The equation |q == r <+> s .> q| has solution |q = star s .> r|.
 \subsection{\thmRef{Fourier}}\proofLabel{theorem:Fourier}
 
 %format T = "\mathcal F"
-\mynote{Additivity of |T|, and the convolution theorem. What about |star p| and |single w|?}
+\note{Additivity of |T|, and the convolution theorem. What about |star p| and |single w|?}
 
 \subsection{\thmRef{standard FunApp}}\proofLabel{theorem:standard FunApp}
 
@@ -1255,6 +1295,13 @@ Similarly for |liftA2|:
 
 \subsection{\thmRef{poly fun}}\proofLabel{theorem:poly fun}
 
+The semantics as polynomial functions:
+\begin{code}
+poly :: Semiring b => (b <-- N) -> (b -> b)
+poly (F f) = \ x -> bigSum i  f i * pow x i
+\end{code}
+
+Homomorphism proofs:
 \begin{code}
     poly zero
 ==  poly (F (\ i -> zero))             -- |zero| on |b <-- a|
@@ -1263,7 +1310,6 @@ Similarly for |liftA2|:
 ==  \ x -> zero                        -- |zero| as additive identity
 ==  zero                               -- |zero| on |a -> b|
 \end{code}
-
 \begin{code}
     poly one
 ==  poly (F (\ i -> if i == mempty then one else zero))                         -- |one| on |b <-- a|
@@ -1275,7 +1321,6 @@ Similarly for |liftA2|:
 ==  \ x -> one                                                                  -- exponentiation property
 ==  one                                                                         -- |one| on |a -> b|
 \end{code}
-
 \begin{code}
     poly (F f <+> F g)
 ==  poly (F (\ i -> f i <+> g i))                                       -- |(<+>)| on |b <-- a|
@@ -1285,9 +1330,7 @@ Similarly for |liftA2|:
 ==  \ x -> poly (F f) x <+> poly (F g) x                                -- |poly| definition
 ==  poly (F f) <+> poly (F g)                                           -- |(<+>)| on |a -> b|
 \end{code}
-
 %format bigSumA (lim) = "\bigOp\sum{" lim "}{0.75}"
-
 \begin{code}
     poly (F f <.> F g)
 ==  poly (bigSum (i,j)  i <> j +-> f i <.> g j)                                     -- |(<.>)| on |b <-- a|
@@ -1295,11 +1338,53 @@ Similarly for |liftA2|:
 ==  \ x -> bigSum k (bigSumA (i,j BR i <> j == k)  (f i <.> g j) <.> pow x (i<>j))  -- |poly| definition
 ==  \ x -> bigSum (i,j)  (f i <.> g j) <.> pow x (i<>j)                             -- summation property
 ==  \ x -> bigSum (i,j)  (f i <.> pow x i) <.> (g j <.> pow x j)                    -- exponentiation property
-==  \ x -> (bigSum i  f i <.> pow x i) <.> (bigSum j  g j <.> pow x j)              -- summation/product property\mynote{, but see ``oops'' below}
+==  \ x -> (bigSum i  f i <.> pow x i) <.> (bigSum j  g j <.> pow x j)              -- summation/product property\note{, but see ``oops'' below}
 ==  \ x -> poly (F f) x <.> poly (F g) x                                            -- |poly| definition
 ==  poly (F f) <.> poly (F g)                                                       -- |(<.>)| on |a -> b|
 \end{code}
-\mynote{Oops! I commuted multiplication in the third to last line. Does this homomorphism property hold only when multiplication commutes?}
+\note{Oops! I commuted multiplication in the third to last line. Does this homomorphism property hold only when multiplication commutes?}
+
+\note{The sum and product derivations might read more easily in reverse.}
+
+
+\subsection{\thmRef{Stream}}\proofLabel{theorem:Stream}
+
+\begin{code}
+    zero
+==  F (\ i -> zero)
+==  F (\ i -> zero ! i)
+==  streamF zero
+\end{code}
+\begin{code}
+    one
+==  F (\ a -> if a == mempty then one else zero)
+==  F (\ (Sum i) -> if i == 0 then one else zero)
+==  F (\ (Sum i) -> one ! Sum i)
+==  F (one NOP !)
+==  streamF one
+\end{code}
+\begin{code}
+    streamF as <+> streamF bs
+==  F (\ i -> as ! i) <+> F (\ i -> bs ! i)
+==  F ((\ i -> as ! i) <+> (\ i -> bs ! i))
+==  F ((\ i -> (as ! i) <+> (bs ! i)))
+==  F (\ i -> (as <+> bs) ! i)
+==  streamF (as <+> bs)
+\end{code}
+\begin{code}
+    streamF as <.> streamF bs
+==  F (\ i -> as ! i) <.> F (\ j -> bs ! j)
+==  F (\ k -> bigSumA (i,j BR i <> j == k) (as ! i) <.> (bs ! j))
+==  ... ??
+==  streamF (as <.> bs)
+\end{code}
+
+\note{I think another approach will simplify the |(<.>)| derivation.
+Start with the definition of |(<.>)| via |liftA2| and |liftA2| via |(>>=)|.
+I think this argument is very similar to the one for the trie representation of generalized languages (functions from sequences to some semiring).
+Now I'm even more inclined to reorganize the paper so that these more familiar applications of convolution come before languages.
+See 2019-01-30 notes.
+}
 
 \bibliography{bib}
 

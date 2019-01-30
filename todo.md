@@ -17,7 +17,18 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
     Graphics has a similar issue!
     Spatial transformations may be one-to-many, especially if non-projective.
 *   Convolution commutes with currying and with uncurrying.
+    So do addition, zero, and one, but `single` is different.
     See 2019-01-28 notes.
+*   Sets are to languages as binary relations are to what?
+    Currying gets us to `String -> String -> Bool` (for sets).
+    Is there anything interesting and/or useful here?
+    Note that a (generalized) trie from pairs of strings is going to look like a curried trie anyway.
+*   Generalize lists to end with a value, where the usual lists end with unit.
+    Then monadic bind generalizes appending, i.e., `(++) = (>>)`.
+    Now generalize from the unary/sequential nature of lists, and we get monadic bind as "substitution".
+    I think the generalization here is to the free monad induced by some functor.
+    For `[a]`, that functor is `(a :*)`.
+*   Polynomials and perhaps integer multiplication.
 *   Implement convolution (really `liftA2 add`) on statically sized arrays.
     I think I'll want an interface for enumerating all values of a type.
     The finite-typelits library has useful operations:
@@ -69,6 +80,7 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
         *   [What is a coalgebra intuitively?](https://mathoverflow.net/questions/76509/what-is-a-coalgebra-intuitively)
         *   [*Bases as coalgebras*](https://arxiv.org/pdf/1309.0844.pdf)
         *   [*The Dual of Substitution is Redecoration*]
+        *   [*Higher Dimensional Trees, Algebraically*]
 *   Super-memoization.
     See notes from 2018-12-02 and 2018-12-05
 
@@ -162,3 +174,5 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 [*Fun with Semirings: A functional pearl on the abuse of linear algebra*]: http://stedolan.net/research/semirings.pdf "paper by Stephen Dolan (2013)"
 
 [*The Dual of Substitution is Redecoration*]: http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.16.9369 "paper by Tarmo Uustalu and Varmo Vene (2002)"
+
+[*Higher Dimensional Trees, Algebraically*]: https://www.semanticscholar.org/paper/Higher-Dimensional-Trees%2C-Algebraically-Ghani-Kurz/3b650d5ee01ac35c721c5bd51e4859aebe3880e2 "paper by Neil Ghani, Alexander Kurz (2007)"

@@ -224,20 +224,19 @@ instance HasSingle (List a) a where single a = L [a]
 }.
 Rather than using lists directly, \figref{list} defines |List a|, freeing regular lists for another interpretation.
 \notefoot{Refer to a later section that treats a list as a function from |Nat|, with finite lists getting padded with |zero|.}
-Lists relate to sets as follows:
+Lists relate to sets and other semirings as follows:
 %format bigUnion (lim) = "\bigOp\bigcup{" lim "}{0}"
 %format bigSum (lim) = "\bigOp\sum{" lim "}{0}"
 %format bigSumQ (lim) = "\bigOp\sum{" lim "}{1.5}"
 \begin{code}
-listElems :: List a -> Pow a
-listElems (L as)  = bigUnion (a <# as) (set a)
-                  = bigSum (a <# as) (single a)
+elems :: (Semiring p, HasSingle p a) => [a] -> p
+elems as = bigSum (a <# as) single a
 \end{code}
-%% listElems (L as) = foldr insert emptyset as
+%% elems (L as) = foldr insert emptyset as
 %%   where insert a s = single a <+> s
 The instance definitions in \figreftwo{set}{list} bear a family resemblance to each other, which we can readily make precise:
 \begin{theorem}[\provedIn{theorem:list}]\thmLabel{list}
-Given the definitions in \figref{list}, |listElems| is a homomorphism with respect to each instantiated class.
+Given the definitions in \figref{list}, |elems| is a homomorphism with respect to each instantiated class.
 \end{theorem}
 %% Further, one can take this homomorphism property as an algebraic \emph{specifications} and \emph{calculate} the instance definitions in \figref{list}, explaining the resemblances.
 
@@ -995,9 +994,21 @@ Given the definitions in \figref{Stream}, |streamF| is a homomorphism with respe
 
 \workingHere
 
-\sectionl{What else?}
+\noindent
+\note{Next:
+\begin{itemize}\itemsep0ex
+\item Fixed |(<.>)| proof in \proofRef{theorem:Stream}
+\item Examples
+\item Finite maps
+\item Non-scalar domains (``multivariate'' polynomials)
+\item Non-scalar codomains
+\end{itemize}
+}
 
-\begin{itemize}
+\sectionl{What else?}
+\vspace{-3ex}
+\note{
+\begin{itemize}\itemsep0ex
 \item Counting
 \item Probability distributions
 \item Temporal/spatial convolution
@@ -1006,9 +1017,10 @@ Given the definitions in \figref{Stream}, |streamF| is a homomorphism with respe
 \item Other applications:
 \item 2D parsing?
 \end{itemize}
+}
 
 \sectionl{Related Work}
-\begin{itemize}
+\begin{itemize}\itemsep0ex
 \item \emph{Fun with semirings}
 \item \emph{Polynomial Functors Constrained by Regular Expressions}
 \item \href{https://doisinkidney.com/}{Donnacha Oisín Kidney's blog}
@@ -1028,35 +1040,47 @@ Given the definitions in \figref{Stream}, |streamF| is a homomorphism with respe
 
 %format bigSumA (lim) = "\bigOp\sum{" lim "}{1}"
 %format bigSumB (lim) = "\bigOp\sum{" lim "}{2}"
-Recall the definition of |listElems|:
+Recall the definition of |elems|:
 \begin{code}
-listElems (L as) = bigSum (a <# as) (single a)
+elems :: (Semiring p, HasSingle p a) => [a] -> p
+elems as = bigSum (a <# as) (single a)
 \end{code}
 The homomorphism proofs:
 \begin{code}
-    listElems zero
-==  listElems (L [])                    -- |zero| on |List a|
-==  bigSum (a <# []) (single a)         -- |listElems| definition
-==  zero                                -- vacuous sum
+    elems zero
+==  elems (L [])                 -- |zero| on |List a|
+==  bigSum (a <# []) (single a)  -- |elems| definition
+==  zero                         -- vacuous sum
 
-    listElems one
-==  listElems (L [mempty])              -- |one| on |List a|
-==  bigSum (a <# [mempty]) (single a)   -- |listElems| definition
-==  single mempty                       -- singleton sum
-==  one                                 -- |one| on |List a|
+    elems one
+==  elems (L [mempty])                 -- |one| on |List a|
+==  bigSum (a <# [mempty]) (single a)  -- |elems| definition
+==  single mempty                      -- singleton sum
+==  one                                -- |one| on |List a|
 
-    listElems (L u <+> L v)
-==  listElems (L (u ++ v))                                         -- |(<+>)| on |List a|
-==  bigSum (a <# u ++ v) (single a)                                -- |listElems| definition
-==  (bigSum (a <# u) (single a)) <+> (bigSum (a <# v) (single a))  -- property of |(++)|
-==  listElems u <+> listElems v                                    -- definition of |listElems|
+    elems (L u <+> L v)
+==  elems (L (u ++ v))                                             -- |(<+>)| on |List a|
+==  bigSum (a <# u ++ v) (single a)                                -- |elems| definition
+==  (bigSum (a <# u) (single a)) <+> (bigSum (a <# v) (single a))  -- \lemRef{elems plus}
+==  elems u <+> elems v                                            -- definition of |elems|
 
-    listElems (L u <.> L v)
-==  listElems (L (liftA2 (<>) u v))            -- |(<.>)| on |List a|
-==  bigSumB (a <# liftA2 (<>) u v) (single a)  -- |listElems| definition
+    elems (L u <.> L v)
+==  elems (L (liftA2 (<>) u v))                -- |(<.>)| on |List a|
+==  bigSumB (a <# liftA2 (<>) u v) (single a)  -- |elems| definition
 ==  ...                                        -- \note{finish}
-==  listElems u <.> listElems v
+==  elems u <.> elems v
 \end{code}
+
+\begin{lemma}\lemLabel{elems plus}
+The |elems| function is a monoid homomorphism targeting the sum monoid, i.e.,
+\begin{code}
+elems [] == zero
+elems (xs ++ ys) == elems xs <+> elems ys
+\end{code}
+\end{lemma}
+\begin{proof}
+By list induction.
+\end{proof}
 
 \subsection{\thmRef{pred}}\proofLabel{theorem:pred}
 

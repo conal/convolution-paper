@@ -724,7 +724,7 @@ f <.> g  == bigSum (u,v) u <> v +-> f u <.> g v
 \end{spacing}
 \vspace{-3ex}
 \noindent
-This last form is the standard definition of one-dimensional, discrete \emph{convolution} \needcite{}\footnote{Note that this reasoning applies to \emph{any} group (monoid with inverses)}.
+This last form is the standard definition of one-dimensional, discrete \emph{convolution} \needcite{}.\footnote{Note that this reasoning applies to \emph{any} group (monoid with inverses)}
 Therefore, just as \eqnref{convolution} generalizes language concatenation (via the predicate/set isomorphism), it also generalizes the usual notion of discrete convolution.
 Moreover, if the domain is a continuous type such as |R| or |C|, we can reinterpret summation as integration, resulting in \emph{continuous} convolution \needcite{}.
 Additionally, for multi-dimensional (discrete or continuous) convolution, we can simply use tuples of scalar indices for |w| and |u|, and define tuple subtraction componentwise.
@@ -935,9 +935,8 @@ liftA2 h p q  = p >>= \ u -> fmap (h u) q
 
 \sectionl{Polynomials}
 
-\note{Univariate and multivariate. See notes from 2018-01-\{28,29\}.}
-
 %format N = "\mathbb{N}"
+%format (Sum a) = a
 
 As is well known, univariate polynomials form a semiring and can be multiplied by \emph{convolving} their coefficients.
 Perhaps less known is that this trick extends naturally to multivariate polynomials and to (univariate and multivariate) power series.
@@ -946,9 +945,9 @@ Looking more closely, univariate polynomials (and even power series) can be repr
 For a polynomial in a variable |x|, an association of exponent |i| to coefficient |c| represents the polynomial term |c * pow x i|.
 One can use a variety of representations for these indexed collections.
 We'll consider efficient representations below, but let's begin as |b <-- N| along with a denotation as |b -> b|, where |N| is the additive monoid of natural numbers:
+%% Elide the Sum isomorphism
+% type N = Sum Natural
 \begin{code}
-type N = Sum Natural
-
 poly :: Semiring b => (b <-- N) -> (b -> b)
 poly (F f) = \ x -> bigSum i  f i * pow x i
 \end{code}
@@ -978,7 +977,7 @@ instance DetectableZero b => Semiring (Stream b) where
   (u :# us') <.> vs = (u .> vs) <+> (zero :# us' <.> vs)
 
 instance DetectableZero s => Scalable (Stream s) s where
-  s `scale` (b :# bs) = (s <.> b) :# (s .> bs)
+  s `scale` (b :# bs) = (s <.> b) :# (s `scale` bs)
 \end{code}
 \vspace{-6ex}
 }
@@ -1000,7 +999,7 @@ Given the definitions in \figref{Stream}, |streamF| is a homomorphism with respe
 \item Fixed |(<.>)| proof in \proofRef{theorem:Stream}
 \item Examples
 \item Finite maps
-\item Non-scalar domains (``multivariate'' polynomials)
+\item Non-scalar domains (``multivariate'' polynomials) as in notes from 2018-01-\{28,29\}
 \item Non-scalar codomains
 \end{itemize}
 }
@@ -1355,6 +1354,20 @@ Homomorphism proofs:
 ==  poly (F f) <+> poly (F g)                                           -- |(<+>)| on |a -> b|
 \end{code}
 %format bigSumA (lim) = "\bigOp\sum{" lim "}{0.75}"
+%if True
+\begin{code}
+    poly (F f <.> F g)
+==  poly (sum (i,j)  i + j +-> f i <.> g j)                              -- |(<.>)| on |b <-- a|
+==  sum (i,j)  poly (i + j +-> f i <.> g j)                              -- additivity of |poly| (previous property)
+==  sum (i,j) (\ x -> (f i <.> g j) <.> pow x (i + j))                   -- \lemRef{poly +->}
+==  sum (i,j) (\ x -> (f i <.> g j) <.> (pow x i <.> pow x j))           -- \lemRef{poly +->}
+==  sum (i,j) (\ x -> (f i <.> pow x i) <.> (g j <.> pow x j)            -- \note{see ``oops'' below}
+==  \ x -> sum (i,j)  (f i <.> pow x i) <.> (g j <.> pow x j)            -- |(<+>)| on functions
+==  \ x -> (sum i  f i <.> pow x i) <.> (sum j  g j <.> pow x j)         -- \note{working here}
+==  (\ x -> sum i  f i <.> pow x i) <.> (\ x -> sum j  g j <.> pow x j)  -- \note{working here}
+==  poly (F f) <.> poly (F g)                                            -- \note{working here}
+\end{code}
+%else
 \begin{code}
     poly (F f <.> F g)
 ==  poly (bigSum (i,j)  i <> j +-> f i <.> g j)                                     -- |(<.>)| on |b <-- a|
@@ -1366,6 +1379,7 @@ Homomorphism proofs:
 ==  \ x -> poly (F f) x <.> poly (F g) x                                            -- |poly| definition
 ==  poly (F f) <.> poly (F g)                                                       -- |(<.>)| on |a -> b|
 \end{code}
+%endif
 \note{Oops! I commuted multiplication in the third to last line. Does this homomorphism property hold only when multiplication commutes?}
 
 \note{The sum and product derivations might read more easily in reverse.}
@@ -1381,7 +1395,6 @@ Homomorphism proofs:
 \end{code}
 \begin{code}
     one
-==  F (\ a -> if a == mempty then one else zero)
 ==  F (\ (Sum i) -> if i == 0 then one else zero)
 ==  F (\ (Sum i) -> one ! Sum i)
 ==  F (one NOP !)
@@ -1398,7 +1411,7 @@ Homomorphism proofs:
 \begin{code}
     streamF as <.> streamF bs
 ==  F (\ i -> as ! i) <.> F (\ j -> bs ! j)
-==  F (\ k -> bigSumA (i,j BR i <> j == k) (as ! i) <.> (bs ! j))
+==  F (\ k -> bigSumA (i,j BR i + j == k) (as ! i) <.> (bs ! j))
 ==  ... ??
 ==  streamF (as <.> bs)
 \end{code}

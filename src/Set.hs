@@ -144,14 +144,8 @@ takeL n (L as) = L (take n as)
 
 -- >>> deriv (star (single "a") :: L String)
 
--- listElems :: Ord a => [a] -> Set a
-
--- listElems = foldr insert S.empty where insert a as = S.singleton a `S.union` as
-
--- listElems = foldr S.insert S.empty
-
--- listElems []      = S.empty
--- listElems (a:as)  = S.singleton a `S.union` listElems as
+elems :: (Semiring p, HasSingle p a) => [a] -> p
+elems as = sum [single a | a <- as]
 
 {--------------------------------------------------------------------
     Predicates

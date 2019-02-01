@@ -631,10 +631,11 @@ instance DetectableZero b => Semiring (Stream b) where
   zero = q where q = zero :# q
   one = one :# zero
   (u :# us') <+> (v :# vs') = (u <+> v) :# (us' <+> vs')
-  (u :# us') <.> vs = (u .> vs) <+> (zero :# us' <.> vs)
+  -- (u :# us') <.> vs = (u .> vs) <+> (zero :# us' <.> vs)
+  (u :# us') <.> vs@(v :# vs') = u <.> v :# u .> vs' <+> us' <.> vs
 
 instance DetectableZero s => Scalable (Stream s) s where
-  s `scale` (b :# bs) = (s <.> b) :# (s .> bs)
+  s `scale` (b :# bs) = (s <.> b) :# (s `scale` bs)
 
 {--------------------------------------------------------------------
     Polynomials

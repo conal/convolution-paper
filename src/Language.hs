@@ -178,6 +178,22 @@ instance Semiring a => Monoid (Sum a) where
 sum :: (Foldable f, Semiring a) => f a -> a
 sum = getSum . foldMap Sum
 
+-- Handy for eliding the Sum Natural vs Natural distinction in the paper.
+instance Num a => Num (Sum a) where
+  fromInteger = Sum . fromInteger
+  Sum a + Sum b = Sum (a + b)
+  (-)    = noSum "(-)"
+  (*)    = noSum "(*)"
+  negate = noSum "negate"
+  abs    = noSum "abs"
+  signum = noSum "signum"
+
+missing :: String -> String -> z
+missing ty op = error ("No " ++ op ++ " method for " ++ ty)
+
+noSum :: String -> z
+noSum = missing "Sum" "(*)"
+
 type N = Sum Natural
 
 instance Splittable N where

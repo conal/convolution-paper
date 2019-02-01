@@ -1413,6 +1413,7 @@ poly (\ i -> if i == n then b else zero)                  -- |(+->)| definition
 \end{code}
 \end{proof}
 
+\noindent
 Homomorphism proofs for \thmRef{poly fun}:
 \begin{code}
     poly zero
@@ -1422,6 +1423,7 @@ Homomorphism proofs for \thmRef{poly fun}:
 ==  \ x -> zero                        -- |zero| as additive identity
 ==  zero                               -- |zero| on |a -> b|
 \end{code}
+
 \begin{code}
     poly one
 ==  poly (F (\ i -> if i == mempty then one else zero))             -- |one| on |b <-- a|
@@ -1432,6 +1434,7 @@ Homomorphism proofs for \thmRef{poly fun}:
 ==  \ x -> one                                                      -- multiplicative identity
 ==  one                                                             -- |one| on |a -> b|
 \end{code}
+
 \begin{code}
     poly (F f <+> F g)
 ==  poly (F (\ i -> f i <+> g i))                                       -- |(<+>)| on |b <-- a|
@@ -1441,33 +1444,19 @@ Homomorphism proofs for \thmRef{poly fun}:
 ==  \ x -> poly (F f) x <+> poly (F g) x                                -- |poly| definition
 ==  poly (F f) <+> poly (F g)                                           -- |(<+>)| on |a -> b|
 \end{code}
-%format bigSumA (lim) = "\bigOp\sum{" lim "}{0.75}"
-%if True
+
 \begin{code}
     poly (F f <.> F g)
-==  poly (bigSum (i,j)  i + j +-> f i <.> g j)                                   -- |(<.>)| on |b <-- a|
-==  bigSum (i,j)  poly (i + j +-> f i <.> g j)                                   -- additivity of |poly| (previous property)
-==  bigSum (i,j) (\ x -> (f i <.> g j) <.> pow x (i + j))                        -- \lemRef{poly +->}
-==  bigSum (i,j) (\ x -> (f i <.> g j) <.> (pow x i <.> pow x j))                -- exponentiation property
-==  bigSum (i,j) (\ x -> (f i <.> pow x i) <.> (g j <.> pow x j)                 -- commutativity assumption
-==  bigSum (i,j) (\ x -> f i <.> pow x i) <.> (\ x -> g j <.> pow x j)           -- |(<.>)| on functions
-==  (bigSum i (\ x -> f i <.> pow x i)) <.> (bigSum j (\ x -> g j <.> pow x j))  -- summation property
-==  (\ x -> bigSum i  f i <.> pow x i) <.> (\ x -> bigSum j g j <.> pow x j)     -- |(<+>)| on functions
-==  poly (F f) <.> poly (F g)                                                    -- |poly| definition
+==  poly (bigSum (i,j)  i + j +-> f i <.> g j)                          -- |(<.>)| on |b <-- a|
+==  bigSum (i,j)  poly (i + j +-> f i <.> g j)                          -- additivity of |poly| (previous property)
+==  bigSum (i,j) (\ x -> (f i <.> g j) <.> pow x (i + j))               -- \lemRef{poly +->}
+==  \ x -> bigSum (i,j) (f i <.> g j) <.> pow x (i + j)                 -- |(<+>)| on functions
+==  \ x -> bigSum (i,j) (f i <.> g j) <.> (pow x i <.> pow x j)         -- exponentiation property
+==  \ x -> bigSum (i,j) (f i <.> pow x i) <.> (g j <.> pow x j)         -- commutativity assumption
+==  \ x -> (bigSum i  f i <.> pow x i) <.> (bigSum j  g j <.> pow x j)  -- summation property
+==  \ x -> poly (F f) x <.> poly (F g) x                                -- |poly| definition
+==  poly (F f) <.> poly (F g)                                           -- |(<.>)| on functions
 \end{code}
-%else
-\begin{code}
-    poly (F f <.> F g)
-==  poly (bigSum (i,j)  i <> j +-> f i <.> g j)                                     -- |(<.>)| on |b <-- a|
-==  poly (F (\ k -> bigSumA (i,j BR i <> j == k)  f i <.> g j))                     -- alternative formulation
-==  \ x -> bigSum k (bigSumA (i,j BR i <> j == k)  (f i <.> g j) <.> pow x (i<>j))  -- |poly| definition
-==  \ x -> bigSum (i,j)  (f i <.> g j) <.> pow x (i<>j)                             -- summation property
-==  \ x -> bigSum (i,j)  (f i <.> pow x i) <.> (g j <.> pow x j)                    -- exponentiation property
-==  \ x -> (bigSum i  f i <.> pow x i) <.> (bigSum j  g j <.> pow x j)              -- summation/product property\note{, but see ``oops'' below}
-==  \ x -> poly (F f) x <.> poly (F g) x                                            -- |poly| definition
-==  poly (F f) <.> poly (F g)                                                       -- |(<.>)| on |a -> b|
-\end{code}
-%endif
 
 \note{The sum and product derivations might read more easily in reverse.}
 

@@ -182,11 +182,11 @@ sum = getSum . foldMap Sum
 instance Num a => Num (Sum a) where
   fromInteger = Sum . fromInteger
   Sum a + Sum b = Sum (a + b)
-  Sum a - Sum b = Sum (a - b)  -- use with care!
-  (*)    = noSum "(*)"
-  negate = noSum "negate"
-  abs    = noSum "abs"
-  signum = noSum "signum"
+  Sum a - Sum b = Sum (a - b)
+  Sum a * Sum b = Sum (a * b)
+  negate (Sum a) = Sum (negate a)
+  abs    (Sum a) = Sum (abs a)
+  signum (Sum a) = Sum (signum a)
 
 missing :: String -> String -> z
 missing ty op = error ("No " ++ op ++ " method for " ++ ty)
@@ -194,13 +194,21 @@ missing ty op = error ("No " ++ op ++ " method for " ++ ty)
 noSum :: String -> z
 noSum = missing "Sum" "(*)"
 
+instance Enum a => Enum (Sum a) where
+  toEnum = Sum . toEnum
+  fromEnum = fromEnum . getSum
+
 type N = Sum Natural
 
-instance Splittable N where
-  isEmpty (Sum n) = n == 0
-  splits (Sum n) = [(Sum i, Sum (n-i)) | i <- [0 .. n]]
+-- instance Splittable N where
+--   isEmpty (Sum n) = n == 0
+--   splits (Sum n) = [(Sum i, Sum (n-i)) | i <- [0 .. n]]
 
--- >>> splits (Sum (4 :: N))
+instance Splittable N where
+  isEmpty n = n == 0
+  splits n = [(i, n-i) | i <- [0 .. n]]
+
+-- >>> splits (4 :: N)
 -- [(Sum 0,Sum 4),(Sum 1,Sum 3),(Sum 2,Sum 2),(Sum 3,Sum 1),(Sum 4,Sum 0)]
 
 newtype Product a = Product a deriving (Eq,Show)

@@ -7,6 +7,8 @@
 
 %format liftA2
 
+%format =~ = " \simeq "
+
 %format NOP = "{}"
 
 %% optional double-dollar spelling, to avoid $ confusing emacs latex-mode.

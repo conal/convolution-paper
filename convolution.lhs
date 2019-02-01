@@ -372,6 +372,16 @@ Laws:
 s .> (t  .>   p)  == (s  <.>  t)  .>   p
 s .> (p  <.>  q)  == (s  .>   p)  <.>  q
 \end{code}
+
+\noindent
+The |(+->)| operation gives a way to decompose arbitrary functions:
+\begin{lemma}[\provedIn{lemma:decomp +->}]\lemLabel{decomp +->}
+For all |f :: a -> b| where |b| is a semiring,
+\begin{code}
+F f == bigSum a a +-> f a
+\end{code}
+\end{lemma}
+
 Since we already have a semiring of functions (\figref{bool and function}), let's refer to the generalized |Pred a| as ``|b <-- a|'', as in \figrefdef{<--}{|b <-- a| as generalized language representation}{
 \begin{code}
 infixl 1 <--
@@ -446,20 +456,12 @@ The finiteness of finite maps interferes with giving a useful |StarSemiring| ins
 Maybe also multidimensional arrays.
 Probably save for later when I discuss spatial convolution and polynomials.}
 
-\sectionl{Decomposing Functions}
+\sectionl{Decomposing Functions from Lists}
 
 %format <: = "\blacktriangleleft"
 %format <: = "\triangleleft"
 %format atEps = "\Varid{at}_\epsilon"
 %format deriv = "\derivOp"
-
-The |(+->)| operation gives a way to decompose arbitrary functions:
-\begin{lemma}[\provedIn{lemma:decomp +->}]\lemLabel{decomp +->}
-For all |f :: a -> b| where |b| is a semiring,
-\begin{code}
-F f == bigSum a a +-> f a
-\end{code}
-\end{lemma}
 
 For functions from \emph{lists} specifically, we can decompose in a way that lays the groundwork for more efficient implementations than the ones in previous sections.
 Any function on lists can be expressed in terms of how it handles the empty list |[]| and non-empty lists |c:cs|, as made precise by the following definition:
@@ -469,7 +471,7 @@ infix 1 <:
 (b <: h) []      = b
 (b <: h) (c:cs)  = h c cs
 \end{code}
-\begin{lemma}[\provedIn{lemma:decompose function of list}]\lemLabel{decompose function of list}
+\begin{lemma}[\provedIn{lemma:decomp (b <-- [c])}]\lemLabel{decomp (b <-- [c])}
 Any function from lists |f :: [c] -> b| can be decomposed as follows:
 \begin{code}
 f == atEps f <: deriv f
@@ -569,7 +571,6 @@ deriv (single [d]) c == boolVal (d == c)
 \end{code}
 \end{lemma}
 Equivalently, |deriv (p  <.>  q) c = delta p * deriv q c <+> deriv p c <.> q|, generalizing a notion of \citet[Definition 3.2]{Brzozowski64}.
-% \workingHere \note{I'm moving |(.>)| sooner. Fix this part.}
 \begin{corollary}
 The following properties hold:
 \begin{code}
@@ -590,7 +591,7 @@ single w = product (map symbol w)
 \end{code}
 \end{corollary}
 \begin{proof}
-Combine \lemRefThree{decompose function of list}{atEps}{deriv}.
+Combine \lemRefThree{decomp (b <-- [c])}{atEps}{deriv}.
 \end{proof}
 
 %let derivProduct = True
@@ -637,14 +638,14 @@ Putting genericity aside\notefoot{Re-raise later?} and restricting our attention
 
 > data Trie c s = s :< Map c (Trie c s)
 
-The similarity between the |Trie| type and the function decomposition from \secref{Decomposing Functions} (motivating the constructor's name) makes the denotation of tries quite simple to express:\footnote{Equivalently, |trieFun (e :< d) = e <: \ c cs -> trieFun (d ! c) cs|.}
+The similarity between the |Trie| type and the function decomposition from \secref{Decomposing Functions from Lists} (motivating the constructor's name) makes the denotation of tries quite simple to express:\footnote{Equivalently, |trieFun (e :< d) = e <: \ c cs -> trieFun (d ! c) cs|.}
 %format OD c s = Ord SPC c
 %format OD c s = (Ord SPC c, DetectableZero SPC s)
 \begin{code}
 trieFun :: OD c => Trie c s -> ([c] -> s)
 trieFun (e :< d) = e <: trieFun . (d NOP !)
 \end{code}
-Likewise, the properties from section \secref{Decomposing Functions} make it fairly easy to calculate instances for |Trie|.
+Likewise, the properties from section \secref{Decomposing Functions from Lists} make it fairly easy to calculate instances for |Trie|.
 \begin{theorem}[\provedIn{theorem:Trie}]\thmLabel{Trie}
 Given the definitions in \figrefdef{Trie}{Tries as a language representation}{
 \begin{code}
@@ -701,7 +702,7 @@ Using the set/predicate isomorphism from \secref{Matching}, we can translate thi
 
 which is the definition of the concatenation of two languages from \secref{Languages}.
 
-By specializing the \emph{domain} of the functions to sequences (from general monoids), we can get efficient matching of semiring-generalized ``languages'', as in \secreftwo{Decomposing Functions}{Tries}, which translates to regular expressions (\secref{Regular Expressions}), generalizing work of \citet{Brzozowski64}\note{, while apparently improving performance.
+By specializing the \emph{domain} of the functions to sequences (from general monoids), we can get efficient matching of semiring-generalized ``languages'', as in \secreftwo{Decomposing Functions from Lists}{Tries}, which translates to regular expressions (\secref{Regular Expressions}), generalizing work of \citet{Brzozowski64}\note{, while apparently improving performance.
 \notefoot{Measure and compare in \secref{Regular Expressions}.}}
 
 %format R = "\mathbb R"
@@ -737,6 +738,67 @@ The Fourier transform is a semiring homomorphism from |b <- a| to |a -> b|.
 
 \note{Maybe give some convolution examples.}
 
+\workingHere
+
+Let's now consider functions from |N| rather than from |Z|.
+As in \secref{Decomposing Functions from Lists}, we can define a decomposition on functions from |N|:
+\notefoot{I'm leaning toward inverting the paper, starting with convolution, then semimodule function/applicative/monad, and languages later still.}
+%format Identity = I
+\begin{code}
+instance Semiring b => Decomposable (b <-- N) Identity b where
+  b <: Identity (F f) = F (\ i -> if i == 0 then b else f (i - 1))
+  atEps  (F f)  = f 0
+  deriv  (F f)  = Identity (F (f . (1 +)))
+\end{code}
+where |Identity| is the identity functor:
+\begin{code}
+newtype Identity a = Identity a
+\end{code}
+\begin{theorem}[\provedIn{theorem:decomp (b <-- N)}]\thmLabel{decomp (b <-- N)}
+For all |p :: b <-- N|, |p == atEps p <: deriv p|.
+\end{theorem}
+Differentiation is much as in \lemRef{deriv}:
+\begin{lemma}[\provedIn{lemma:deriv (b <-- N)}]\lemLabel{deriv (b <-- N)}
+Differentiation on |b <-- N|, has the following properties (eliding |Identity| constructors):
+\notefoot{If I give a |Semiring| instance for |Identity b| (for semirings |b|), then I think these equations hold as written. I bet I can do the same for |b <-- [c]|, and maybe for all domains |a| for which |Decomposable a|. Try it!}
+\notefoot{What about |single i|? Important?}
+\begin{code}
+deriv zero  == zero
+deriv one   == zero
+deriv (p  <+>  q) == deriv p <+> deriv q
+deriv (p  <.>  q) == atEps p .> deriv q <+> deriv p <.> q
+
+deriv (star p) == star (atEps p) .> deriv p <.> star p
+\end{code}
+%% deriv (single [d]) c == boolVal (d == c)
+\end{lemma}
+\begin{corollary}
+The following properties hold:
+\begin{code}
+zero  = zero  <: zero
+one   = one   <: zero
+(a  <:  dp)  <+>  (b <: dq) = (a  <+>  b) <: (dp <+> dq)
+(a  <:  dp)  <.>  (b <: dq) = (a  <.>  b) <: (a .> dq <+> dp <.> (b <: dq))
+
+star (a <: dp) = q
+  where
+     q = as <: (h . dp)
+     as = star a
+     h d = as .> d <.> q
+\end{code}
+%% single w = product (map symbol w)
+%%   where
+%%      symbol d = zero <: (\ c -> boolVal (c == d))
+\end{corollary}
+
+\note{Remark that |N =~ [()]|, so this decomposition is a special case of  \secref{Decomposing Functions from Lists}. On the other hand, I think I'll move the whole language discussion to \emph{after} this decomposition.}
+
+\workingHere
+
+\note{Move discussion of streams and multi-dimensional convolution here from \secref{Polynomials}.}
+
+\sectionl{Beyond Convolution}
+
 %format Fin (m) = Fin "_{" m "}"
 %format Array (m) = Array "_{" m "}"
 
@@ -756,15 +818,14 @@ Unfortunately, this signature is incompatible with the general type of |(*)|, in
 
 From the perspective of functions, an array of size |n| is a memoized function from |Fin n|, which represents the finite set |set (0, ..., n-1)|.
 Although we can still define a convolution-like operation in terms of index addition, indices no longer form a monoid, simply due to the non-uniformity of types.
-
-\sectionl{Beyond Convolution}
-
 %format lift0
 %format lift1
 %format lift2
 %format liftn = lift "_n"
+%if False
 
 The inability to support convolution on statically sized arrays (or other memoized forms of functions over finite domains) as semiring multiplication came from the expectation that index/argument combination is via a monoid.
+%endif
 This limitation is a shame, since convolution still makes sense:
 \begin{code}
 f <.> g = bigSum (u,v) u + v +-> f u <.> g v
@@ -1083,10 +1144,6 @@ By list induction.
 
 \subsection{\thmRef{pred}}\proofLabel{theorem:pred}
 
-\subsection{\thmRef{<--}}\proofLabel{theorem:<--}
-
-\subsection{\thmRef{:<--}}\proofLabel{theorem::<--}
-
 \subsection{\lemRef{decomp +->}}\proofLabel{lemma:decomp +->}
 
 \begin{code}
@@ -1097,7 +1154,11 @@ By list induction.
 ==  F f                                               -- $\eta$-reduction
 \end{code}
 
-\subsection{\lemRef{decompose function of list}}\proofLabel{lemma:decompose function of list}
+\subsection{\thmRef{<--}}\proofLabel{theorem:<--}
+
+\subsection{\thmRef{:<--}}\proofLabel{theorem::<--}
+
+\subsection{\lemRef{decomp (b <-- [c])}}\proofLabel{lemma:decomp (b <-- [c])}
 
 \begin{proof}
 Any argument to |f| must be either |[]| or |c : cs| for some value |c| and list |cs|.
@@ -1289,6 +1350,20 @@ The equation |q == r <+> s .> q| has solution |q = star s .> r|.
 
 %format T = "\mathcal F"
 \note{Additivity of |T|, and the convolution theorem. What about |star p| and |single w|?}
+
+\subsection{\thmRef{decomp (b <-- N)}}\proofLabel{theorem:decomp (b <-- N)}
+
+\begin{code}
+    atEps (F f) <: deriv (F f)
+==  f 0 <: I (F (f . (1 +)))                                -- |atEps| and |deriv| on |b <-- N|
+==  F (\ i -> if i == 0 then f 0 else (f . (1 +)) (i - 1))  -- |(<:)| on |b <-- N|
+==  F (\ i -> if i == 0 then f 0 else f (1 + (i - 1)))      -- |(.)| definition
+==  F (\ i -> if i == 0 then f 0 else f i)                  -- arithmetic
+==  F (\ i -> if i == 0 then f i else f i)                  -- |i == 0| in |then| branch
+==  F f                                                     -- property of conditional
+\end{code}
+
+\subsection{\lemRef{deriv (b <-- N)}}\proofLabel{lemma:deriv (b <-- N)}
 
 \subsection{\thmRef{standard FunApp}}\proofLabel{theorem:standard FunApp}
 

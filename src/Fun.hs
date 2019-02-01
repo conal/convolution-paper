@@ -18,6 +18,7 @@ import Data.Map
   , unionsWith,mapKeys,findWithDefault,keysSet )
 import qualified Data.Map as M
 import qualified Data.Set as S
+import Data.Functor.Identity (Identity(..))
 
 import Data.Semiring
 
@@ -71,6 +72,11 @@ instance Semiring b => Decomposable (b <-- [c]) ((->) c) b where
 
   atEps (F f) = f mempty
   deriv (F f) = \ c -> F (\ cs -> f (c:cs))
+
+instance Semiring b => Decomposable (b <-- N) Identity b where
+  b <: Identity (F f) = F (\ i -> if i == 0 then b else f (i - 1))
+  atEps (F f) = f 0
+  deriv (F f) = Identity (F (f . (1 +)))
 
 -- The Functor and Applicative instances exist but are not computable.
 
@@ -619,8 +625,12 @@ infixr 1 :#
 data Stream b = b :# Stream b
 
 instance Indexable (Stream b) N b where
-  (b :# _)  ! Sum 0 = b
-  (_ :# bs) ! Sum n = bs ! Sum (n-1)
+  (b :# _)  ! 0 = b
+  (_ :# bs) ! n = bs ! (n-1)
+
+-- instance Indexable (Stream b) N b where
+--   (b :# _)  ! Sum 0 = b
+--   (_ :# bs) ! Sum n = bs ! Sum (n-1)
 
 streamF :: Stream b -> (b <-- N)
 streamF bs = F (bs !)

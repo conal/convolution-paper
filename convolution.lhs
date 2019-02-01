@@ -742,7 +742,6 @@ The Fourier transform is a semiring homomorphism from |b <- a| to |a -> b|.
 
 Let's now consider functions from |N| rather than from |Z|.
 As in \secref{Decomposing Functions from Lists}, we can define a decomposition on functions from |N|:
-\notefoot{I'm leaning toward inverting the paper, starting with convolution, then semimodule function/applicative/monad, and languages later still.}
 %format Identity = I
 \begin{code}
 instance Semiring b => Decomposable (b <-- N) Identity b where
@@ -758,6 +757,7 @@ newtype Identity a = Identity a
 For all |p :: b <-- N|, |p == atEps p <: deriv p|.
 \end{theorem}
 Differentiation is much as in \lemRef{deriv}:
+\notefoot{I'm leaning toward inverting the paper, starting with convolution, then semimodule function/applicative/monad, and languages later still.}
 \begin{lemma}[\provedIn{lemma:deriv (b <-- N)}]\lemLabel{deriv (b <-- N)}
 Differentiation on |b <-- N|, has the following properties (eliding |Identity| constructors):
 \notefoot{If I give a |Semiring| instance for |Identity b| (for semirings |b|), then I think these equations hold as written. I bet I can do the same for |b <-- [c]|, and maybe for all domains |a| for which |Decomposable a|. Try it!}
@@ -1014,7 +1014,7 @@ poly (F f) = \ x -> bigSum i  f i * pow x i
 \end{code}
 Polynomial multiplication via convolution follows from the following property:
 \begin{theorem}[\provedIn{theorem:poly fun}]\thmLabel{poly fun}
-The function |poly| is a semiring homomorphism.
+The function |poly| is a semiring homomorphism when multiplication on |b| commutes.
 \end{theorem}
 
 %format :# = "\mathbin{:\!\!\#}"
@@ -1041,7 +1041,7 @@ instance DetectableZero s => Scalable (Stream s) s where
   s `scale` (b :# bs) = (s <.> b) :# (s `scale` bs)
 \end{code}
 \vspace{-6ex}
-}
+}.
 \begin{theorem}[\provedIn{theorem:Stream}]\thmLabel{Stream}
 Given the definitions in \figref{Stream}, |streamF| is a homomorphism with respect to each instantiated class.
 \end{theorem}
@@ -1396,10 +1396,24 @@ Similarly for |liftA2|:
 The semantics as polynomial functions:
 \begin{code}
 poly :: Semiring b => (b <-- N) -> (b -> b)
-poly (F f) = \ x -> bigSum i  f i * pow x i
+poly (F f) = \ x -> bigSum i  f i <.> pow x i
 \end{code}
+Monomials are especially simple:
+\begin{lemma}\lemLabel{poly +->}
+\begin{code}
+poly (n +-> b) = \ x -> b * pow x n
+\end{code}
+\end{lemma}
+\begin{proof}~
+\begin{code}
+poly (n +-> b)
+poly (\ i -> if i == n then b else zero)                  -- |(+->)| definition
+\ x -> bigSum i (if i == n then b else zero) <.> pow x n  -- |poly| definition
+\ x -> b * pow x n                                        -- other terms vanish
+\end{code}
+\end{proof}
 
-Homomorphism proofs:
+Homomorphism proofs for \thmRef{poly fun}:
 \begin{code}
     poly zero
 ==  poly (F (\ i -> zero))             -- |zero| on |b <-- a|
@@ -1410,14 +1424,13 @@ Homomorphism proofs:
 \end{code}
 \begin{code}
     poly one
-==  poly (F (\ i -> if i == mempty then one else zero))                         -- |one| on |b <-- a|
-==  poly (F (\ i -> if i == Sum 0 then one else zero))                          -- |mempty| on |N|
-==  \ x -> bigSum i (if i == Sum 0 then one else zero) <.> pow x i              -- |poly| definition
-==  \ x -> bigSum i (if i == Sum 0 then one <.> pow x i else zero <.> pow x i)  -- |poly| definition
-==  \ x -> bigSum (i BR i == Sum 0) one <.> pow x i                             -- summation property
-==  \ x -> one <.> pow x 0                                                      -- summation property
-==  \ x -> one                                                                  -- exponentiation property
-==  one                                                                         -- |one| on |a -> b|
+==  poly (F (\ i -> if i == mempty then one else zero))             -- |one| on |b <-- a|
+==  poly (F (\ i -> if i == Sum 0 then one else zero))              -- |mempty| on |N|
+==  \ x -> bigSum i (if i == Sum 0 then one else zero) <.> pow x i  -- |poly| definition
+==  \ x -> bigSum i (if i == Sum 0 then pow x i else zero)          -- simplify
+==  \ x -> pow x 0                                                  -- other terms vanish
+==  \ x -> one                                                      -- multiplicative identity
+==  one                                                             -- |one| on |a -> b|
 \end{code}
 \begin{code}
     poly (F f <+> F g)
@@ -1432,15 +1445,15 @@ Homomorphism proofs:
 %if True
 \begin{code}
     poly (F f <.> F g)
-==  poly (sum (i,j)  i + j +-> f i <.> g j)                              -- |(<.>)| on |b <-- a|
-==  sum (i,j)  poly (i + j +-> f i <.> g j)                              -- additivity of |poly| (previous property)
-==  sum (i,j) (\ x -> (f i <.> g j) <.> pow x (i + j))                   -- \lemRef{poly +->}
-==  sum (i,j) (\ x -> (f i <.> g j) <.> (pow x i <.> pow x j))           -- \lemRef{poly +->}
-==  sum (i,j) (\ x -> (f i <.> pow x i) <.> (g j <.> pow x j)            -- \note{see ``oops'' below}
-==  \ x -> sum (i,j)  (f i <.> pow x i) <.> (g j <.> pow x j)            -- |(<+>)| on functions
-==  \ x -> (sum i  f i <.> pow x i) <.> (sum j  g j <.> pow x j)         -- \note{working here}
-==  (\ x -> sum i  f i <.> pow x i) <.> (\ x -> sum j  g j <.> pow x j)  -- \note{working here}
-==  poly (F f) <.> poly (F g)                                            -- \note{working here}
+==  poly (bigSum (i,j)  i + j +-> f i <.> g j)                                   -- |(<.>)| on |b <-- a|
+==  bigSum (i,j)  poly (i + j +-> f i <.> g j)                                   -- additivity of |poly| (previous property)
+==  bigSum (i,j) (\ x -> (f i <.> g j) <.> pow x (i + j))                        -- \lemRef{poly +->}
+==  bigSum (i,j) (\ x -> (f i <.> g j) <.> (pow x i <.> pow x j))                -- exponentiation property
+==  bigSum (i,j) (\ x -> (f i <.> pow x i) <.> (g j <.> pow x j)                 -- commutativity assumption
+==  bigSum (i,j) (\ x -> f i <.> pow x i) <.> (\ x -> g j <.> pow x j)           -- |(<.>)| on functions
+==  (bigSum i (\ x -> f i <.> pow x i)) <.> (bigSum j (\ x -> g j <.> pow x j))  -- summation property
+==  (\ x -> bigSum i  f i <.> pow x i) <.> (\ x -> bigSum j g j <.> pow x j)     -- |(<+>)| on functions
+==  poly (F f) <.> poly (F g)                                                    -- |poly| definition
 \end{code}
 %else
 \begin{code}
@@ -1455,10 +1468,8 @@ Homomorphism proofs:
 ==  poly (F f) <.> poly (F g)                                                       -- |(<.>)| on |a -> b|
 \end{code}
 %endif
-\note{Oops! I commuted multiplication in the third to last line. Does this homomorphism property hold only when multiplication commutes?}
 
 \note{The sum and product derivations might read more easily in reverse.}
-
 
 \subsection{\thmRef{Stream}}\proofLabel{theorem:Stream}
 

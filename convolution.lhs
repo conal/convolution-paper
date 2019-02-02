@@ -756,6 +756,7 @@ newtype Identity a = Identity a
 \begin{theorem}[\provedIn{theorem:decomp (b <-- N)}]\thmLabel{decomp (b <-- N)}
 For all |p :: b <-- N|, |p == atEps p <: deriv p|.
 \end{theorem}
+
 Differentiation is much as in \lemRef{deriv}:
 \notefoot{I'm leaning toward inverting the paper, starting with convolution, then semimodule function/applicative/monad, and languages later still.}
 \begin{lemma}[\provedIn{lemma:deriv (b <-- N)}]\lemLabel{deriv (b <-- N)}
@@ -772,8 +773,8 @@ deriv (star p) == star (atEps p) .> deriv p <.> star p
 \end{code}
 %% deriv (single [d]) c == boolVal (d == c)
 \end{lemma}
-\begin{corollary}
-The following properties hold:
+\begin{corollary}\corLabel{decomp b <-- N}
+The following properties hold for |b <-- N|:
 \begin{code}
 zero  = zero  <: zero
 one   = one   <: zero
@@ -793,9 +794,54 @@ star (a <: dp) = q
 
 \note{Remark that |N =~ [()]|, so this decomposition is a special case of  \secref{Decomposing Functions from Lists}. On the other hand, I think I'll move the whole language discussion to \emph{after} this decomposition.}
 
+%format :# = "\mathbin{:\!\!\#}"
+While the |b <-- N| representation makes for simple semantics and reasoning, there are more efficient alternatives.
+For instance, consider streams, as shown in \figrefdef{Stream}{Streams}{
+\begin{code}
+infixr 1 :#
+data Stream b = b :# Stream b
+
+instance Indexable (Stream b) N b where
+  (b :# bs) ! n = if n == 0 then b else bs ! (n-1)
+
+streamF :: Stream b -> (b <-- N)
+streamF bs = F (bs NOP !)
+
+instance DetectableZero b => Decomposable (Stream b) Identity b where
+  b <: Identity bs = b :# bs
+  atEps  (b  :# _   )  = b
+  deriv  (_  :# bs  )  = Identity bs
+
+instance DetectableZero b => Semiring (Stream b) where
+  zero = q where q = zero :# q
+  one = one :# zero
+  (u :# us') <+> (v :# vs') = (u <+> v) :# (us' <+> vs')
+  (u :# us') <.> vs@(v :# vs') = u <.> v :# u .> vs' <+> us' <.> vs
+
+instance DetectableZero s => Scalable (Stream s) s where
+  s `scale` (b :# bs) = (s <.> b) :# (s `scale` bs)
+\end{code}
+\vspace{-6ex}
+}.
+\begin{theorem}\thmLabel{Stream}
+Given the definitions in \figref{Stream}, |streamF| is a homomorphism with respect to each instantiated class.
+\end{theorem}
+\begin{proof}
+Immediate from \corRef{decomp b <-- N}.
+\end{proof}
+
 \workingHere
 
-\note{Move discussion of streams and multi-dimensional convolution here from \secref{Polynomials}.}
+\noindent
+\note{Next:
+\begin{itemize}
+\item Add |StarSemiring| instance, or say why not.
+\item Discuss how |Stream b| is much more efficient than |b <-- N|.
+\item Somewhere I think I should be showing and using the |Splittable N| instance. See previous note.
+\item Lists (finite) instead of streams (infinite), with a semantic function that zero-pads.
+\item Multi-dimensional convolution.
+\end{itemize}
+}
 
 \sectionl{Beyond Convolution}
 
@@ -1017,47 +1063,11 @@ Polynomial multiplication via convolution follows from the following property:
 The function |poly| is a semiring homomorphism when multiplication on |b| commutes.
 \end{theorem}
 
-%format :# = "\mathbin{:\!\!\#}"
-While the |b <-- N| representation makes for simple semantics and reasoning, there are more efficient alternatives.
-For instance, consider streams, as shown in \figrefdef{Stream}{Streams}{
-\begin{code}
-infixr 1 :#
-data Stream b = b :# Stream b
-
-instance Indexable (Stream b) N b where
-  (b  :# _   ) ! Sum 0  = b
-  (_  :# bs  ) ! Sum n  = bs ! Sum (n-1)
-
-streamF :: Stream b -> (b <-- N)
-streamF bs = F (bs NOP !)
-
-instance DetectableZero b => Semiring (Stream b) where
-  zero = q where q = zero :# q
-  one = one :# zero
-  (u :# us') <+> (v :# vs') = (u <+> v) :# (us' <+> vs')
-  (u :# us') <.> vs = (u .> vs) <+> (zero :# us' <.> vs)
-
-instance DetectableZero s => Scalable (Stream s) s where
-  s `scale` (b :# bs) = (s <.> b) :# (s `scale` bs)
-\end{code}
-\vspace{-6ex}
-}.
-\begin{theorem}[\provedIn{theorem:Stream}]\thmLabel{Stream}
-Given the definitions in \figref{Stream}, |streamF| is a homomorphism with respect to each instantiated class.
-\end{theorem}
-
-\note{Add |StarSemiring| instance, or say why not.}
-
-\note{Discuss how |Stream b| is much more efficient than |b <-- N|.}
-
-\note{Somewhere I think I should be showing and using the |Splittable N| instance. See previous note.}
-
 \workingHere
 
 \noindent
 \note{Next:
 \begin{itemize}\itemsep0ex
-\item Fixed |(<.>)| proof in \proofRef{theorem:Stream}
 \item Examples
 \item Finite maps
 \item Non-scalar domains (``multivariate'' polynomials) as in notes from 2018-01-\{28,29\}
@@ -1365,6 +1375,8 @@ The equation |q == r <+> s .> q| has solution |q = star s .> r|.
 
 \subsection{\lemRef{deriv (b <-- N)}}\proofLabel{lemma:deriv (b <-- N)}
 
+See journal notes 2019-01-31.
+
 \subsection{\thmRef{standard FunApp}}\proofLabel{theorem:standard FunApp}
 
 First consider |fmap|, as defined in \figref{FunApp}.
@@ -1459,44 +1471,6 @@ Homomorphism proofs for \thmRef{poly fun}:
 \end{code}
 
 \note{The sum and product derivations might read more easily in reverse.}
-
-\subsection{\thmRef{Stream}}\proofLabel{theorem:Stream}
-
-\begin{code}
-    zero
-==  F (\ i -> zero)
-==  F (\ i -> zero ! i)
-==  streamF zero
-\end{code}
-\begin{code}
-    one
-==  F (\ (Sum i) -> if i == 0 then one else zero)
-==  F (\ (Sum i) -> one ! Sum i)
-==  F (one NOP !)
-==  streamF one
-\end{code}
-\begin{code}
-    streamF as <+> streamF bs
-==  F (\ i -> as ! i) <+> F (\ i -> bs ! i)
-==  F ((\ i -> as ! i) <+> (\ i -> bs ! i))
-==  F ((\ i -> (as ! i) <+> (bs ! i)))
-==  F (\ i -> (as <+> bs) ! i)
-==  streamF (as <+> bs)
-\end{code}
-\begin{code}
-    streamF as <.> streamF bs
-==  F (\ i -> as ! i) <.> F (\ j -> bs ! j)
-==  F (\ k -> bigSumA (i,j BR i + j == k) (as ! i) <.> (bs ! j))
-==  ... ??
-==  streamF (as <.> bs)
-\end{code}
-
-\note{I think another approach will simplify the |(<.>)| derivation.
-Start with the definition of |(<.>)| via |liftA2| and |liftA2| via |(>>=)|.
-I think this argument is very similar to the one for the trie representation of generalized languages (functions from sequences to some semiring).
-Now I'm even more inclined to reorganize the paper so that these more familiar applications of convolution come before languages.
-See 2019-01-30 notes.
-}
 
 \bibliography{bib}
 

@@ -747,7 +747,7 @@ As in \secref{Decomposing Functions from Lists}, we can define a decomposition o
 instance Semiring b => Decomposable (b <-- N) Identity b where
   b <: Identity (F f) = F (\ i -> if i == 0 then b else f (i - 1))
   atEps  (F f)  = f 0
-  deriv  (F f)  = Identity (F (f . (1 +)))
+  deriv  (F f)  = Identity (F (f . (1 NOP +)))
 \end{code}
 where |Identity| is the identity functor:
 \begin{code}
@@ -775,17 +775,14 @@ deriv (star p) == star (atEps p) .> deriv p <.> star p
 \end{lemma}
 \begin{corollary}\corLabel{decomp b <-- N}
 The following properties hold for |b <-- N|:
+\notefoot{Work out |single n| or |n +-> b|, probably as a simple generalization of |one|.}
 \begin{code}
 zero  = zero  <: zero
 one   = one   <: zero
 (a  <:  dp)  <+>  (b <: dq) = (a  <+>  b) <: (dp <+> dq)
 (a  <:  dp)  <.>  (b <: dq) = (a  <.>  b) <: (a .> dq <+> dp <.> (b <: dq))
 
-star (a <: dp) = q
-  where
-     q = as <: (h . dp)
-     as = star a
-     h d = as .> d <.> q
+star (a <: as) = q where q = star a .> (one <: as <.> q)
 \end{code}
 %% single w = product (map symbol w)
 %%   where
@@ -815,7 +812,7 @@ instance DetectableZero b => Decomposable (Stream b) Identity b where
 instance DetectableZero b => Semiring (Stream b) where
   zero = q where q = zero :# q
   one = one :# zero
-  (u :# us') <+> (v :# vs') = (u <+> v) :# (us' <+> vs')
+  (u :# us') <+> (v :# vs') = u <+> v :# us' <+> vs'
   (u :# us') <.> vs@(v :# vs') = u <.> v :# u .> vs' <+> us' <.> vs
 
 instance DetectableZero s => Scalable (Stream s) s where
@@ -839,7 +836,7 @@ Immediate from \corRef{decomp b <-- N}.
 \item Discuss how |Stream b| is much more efficient than |b <-- N|.
 \item Somewhere I think I should be showing and using the |Splittable N| instance. See previous note.
 \item Lists (finite) instead of streams (infinite), with a semantic function that zero-pads.
-\item Multi-dimensional convolution.
+\item Non-scalar domains as in notes from 2018-01-\{28,29\}.
 \end{itemize}
 }
 
@@ -1161,7 +1158,7 @@ By list induction.
 ==  bigSum a F (\ w -> if w == a then f a else zero)  -- |(+->)| on |b <-- a|
 ==  F (\ w -> bigSum a if w == a then f a else zero)  -- |(<+>)| on |b <-- a|
 ==  F (\ w -> f w)                                    -- summation property
-==  F f                                               -- $\eta$-reduction
+==  F f                                               -- $\eta$ reduction
 \end{code}
 
 \subsection{\thmRef{<--}}\proofLabel{theorem:<--}
@@ -1192,19 +1189,19 @@ Thus, for \emph{all} |w :: [c]|, |f w == (atEps f <: deriv f) w|, from which the
     atEps zero
 ==  atEps (F (\ a -> zero))  -- |zero| on |b <-- a|
 ==  (\ a -> zero) []         -- |atEps| definition
-==  zero                     -- $\beta$-reduction
+==  zero                     -- $\beta$ reduction
 
     atEps one
 ==  atEps (F (\ a -> boolVal (a == mempty)))  -- |one| on |b <-- a|
 ==  (\ a -> boolVal (a == mempty)) []         -- |atEps| definition            
-==  boolVal ([] == mempty)                    -- $\beta$-reduction                
+==  boolVal ([] == mempty)                    -- $\beta$ reduction                
 ==  boolVal True                              -- |boolVal| definition
 ==  one
 
     atEps (F f <+> F g)
 ==  atEps (F (\ a -> f a <+> g a))      -- |(<+>)| on |b <-- a|
 ==  (\ a -> f a <+> g a) []             -- |atEps| definition
-==  f [] <+> g []                       -- $\beta$-reduction
+==  f [] <+> g []                       -- $\beta$ reduction
 ==  atEps (F f) <+> atEps (F g)         -- |atEps| definition
 
     atEps (F f <.> F g)
@@ -1229,7 +1226,7 @@ Thus, for \emph{all} |w :: [c]|, |f w == (atEps f <: deriv f) w|, from which the
     deriv zero c
 ==  deriv (F (\ w -> zero)) c           -- |zero| on |b <-- a|
 ==  F (\ cs -> (\ w -> zero) (c:cs))    -- |deriv| on |b <-- a|
-==  F (\ cs -> zero)                    -- $\beta$-reduction
+==  F (\ cs -> zero)                    -- $\beta$ reduction
 ==  zero                                -- |zero| on |b <-- a|
 \end{code}
 \vspace{-3ex}
@@ -1238,7 +1235,7 @@ Thus, for \emph{all} |w :: [c]|, |f w == (atEps f <: deriv f) w|, from which the
 ==  deriv (single mempty) c                              -- |one| on |b <-- a|
 ==  deriv (F (\ a' -> boolVal (a' == mempty))) c         -- |single| on |b <-- a|
 ==  F (\ cs -> (\ a' -> boolVal (a' == mempty)) (c:cs))  -- |deriv| on |b <-- a|
-==  F (\ cs -> boolVal (c:cs == mempty))                 -- $\beta$-reduction
+==  F (\ cs -> boolVal (c:cs == mempty))                 -- $\beta$ reduction
 ==  F (\ cs -> zero)                                     -- |c:cs /= mempty|
 ==  zero                                                 -- |zero| on |b <-- a|
 \end{code}
@@ -1247,7 +1244,7 @@ Thus, for \emph{all} |w :: [c]|, |f w == (atEps f <: deriv f) w|, from which the
     deriv (F f <+> F g) c
 ==  deriv (F (\ w -> f w <+> g w))           -- |(<+>)| on |b <-- a|
 ==  F (\ cs -> (\ w -> f w <+> g w) (c:cs))        -- |deriv| on |b <-- a|
-==  F (\ cs -> f (c:cs) <+> g (c:cs))              -- $\beta$-reduction
+==  F (\ cs -> f (c:cs) <+> g (c:cs))              -- $\beta$ reduction
 ==  F (\ cs -> f (c:cs)) <+> F (\ cs -> g (c:cs))  -- |(<+>)| on |b <-- a|
 ==  deriv (F f) c <+> deriv (F g) c                -- |deriv| on |b <-- a|
 \end{code}
@@ -1279,7 +1276,7 @@ Second addend:
 ==  bigSumA (c',u',v) deriv ((c':u') <> v +-> f (c':u') <.> g v) c    -- additivity of |deriv|
 ==  bigSumA (c',u',v) deriv (c' : (u' <> v) +-> f (c':u') <.> g v) c  -- |(<>)| on lists
 ==  bigSum (u',v) u' <> v +-> f (c:u') <.> g v                        -- \lemRef{deriv +->} below
-==  bigSum (u',v) u' <> v +-> (\ cs -> f (c:cs)) u' <.> g v           -- $\beta$-expansion
+==  bigSum (u',v) u' <> v +-> (\ cs -> f (c:cs)) u' <.> g v           -- $\beta$ expansion
 ==  F (\ cs -> f (c:cs)) <.> F g                                      -- |(<.>)| on |b <-- a|
 ==  deriv (F f) c <.> F g                                             -- |deriv| on |b <-- a|
 \end{code}
@@ -1318,7 +1315,7 @@ deriv (c' : w +-> b) c == if c' == c then w +-> b else zero
     deriv (mempty +-> b) c
 ==  deriv (F (\ w -> if w == mempty then b else zero)) c         -- |(+->)| defining
 ==  F (\ cs -> (\ w -> if w == mempty then b else zero) (c:cs))  -- |deriv| on |b <-- a|
-==  F (\ cs -> if c:cs == mempty then b else zero)               -- $\beta$-reduction
+==  F (\ cs -> if c:cs == mempty then b else zero)               -- $\beta$ reduction
 ==  F (\ cs -> if False then b else zero)                        -- |c:cs /== mempty|
 ==  F (\ cs -> zero)                                             -- |if-then-else| definition
 ==  zero                                                         -- |zero| on |b <-- a|
@@ -1328,7 +1325,7 @@ deriv (c' : w +-> b) c == if c' == c then w +-> b else zero
     deriv (c' : w +-> b) c
 ==  deriv (F (\ a -> if a == c':w then b else zero)) c               -- |(+->)| definition
 ==  F (\ cs -> (\ a -> if a == c':w then b else zero) (c:cs))        -- |deriv| on |b <-- a|
-==  F (\ cs -> if c:cs == c':w then b else zero)                     -- $\beta$-reduction
+==  F (\ cs -> if c:cs == c':w then b else zero)                     -- $\beta$ reduction
 ==  F (\ cs -> if c==c' && cs == w then b else zero)                 -- injectivity of |(:)|
 ==  if c==c' then F (\ cs -> if cs == w then b else zero) else zero  -- property of |if-then-else|
 ==  if c==c' then w +-> b else zero                                  -- |(+->)| on |b <-- a|
@@ -1365,17 +1362,88 @@ The equation |q == r <+> s .> q| has solution |q = star s .> r|.
 
 \begin{code}
     atEps (F f) <: deriv (F f)
-==  f 0 <: I (F (f . (1 +)))                                -- |atEps| and |deriv| on |b <-- N|
-==  F (\ i -> if i == 0 then f 0 else (f . (1 +)) (i - 1))  -- |(<:)| on |b <-- N|
-==  F (\ i -> if i == 0 then f 0 else f (1 + (i - 1)))      -- |(.)| definition
-==  F (\ i -> if i == 0 then f 0 else f i)                  -- arithmetic
-==  F (\ i -> if i == 0 then f i else f i)                  -- |i == 0| in |then| branch
-==  F f                                                     -- property of conditional
+==  f 0 <: I (F (f . (1 NOP +)))                                -- |atEps| and |deriv| on |b <-- N|
+==  F (\ i -> if i == 0 then f 0 else (f . (1 NOP +)) (i - 1))  -- |(<:)| on |b <-- N|
+==  F (\ i -> if i == 0 then f 0 else f (1 + (i - 1)))          -- |(.)| definition
+==  F (\ i -> if i == 0 then f 0 else f i)                      -- arithmetic
+==  F (\ i -> if i == 0 then f i else f i)                      -- |i == 0| in |then| branch
+==  F f                                                         -- property of conditional
 \end{code}
 
 \subsection{\lemRef{deriv (b <-- N)}}\proofLabel{lemma:deriv (b <-- N)}
 
-See journal notes 2019-01-31.
+\begin{lemma}\lemLabel{deriv +-> Nat}
+Differentiation on |b <-- N| satisfies the following properties on singletons:
+\begin{code}
+    deriv (0 +-> b)
+==  deriv (F (\ j -> if j == 0 then b else zero))    -- |(+->)| definition
+==  F (\ j -> if j+1 == 0 then b else zero)          -- |deriv| on |b <-- N|
+==  F (\ j -> zero)                                  -- |j+1 /= 0| (for |N|)
+==  zero                                             -- |zero| on |b <-- a|
+
+    deriv (i+1 +-> b)
+==  deriv (F (\ j -> if j == i+1 then b else zero))  -- |(+->)| definition   
+==  F (\ j -> if j+1 == i+1 then b else zero)        -- |deriv| on |b <-- N| 
+==  F (\ j -> if j == i then b else zero)            -- |(+ NOP 1)| is injective
+==  i +-> b                                          -- |zero| on |b <-- a|  
+\end{code}
+\end{lemma}
+
+Homomorphism proofs:
+
+\begin{code}
+    deriv zero
+==  deriv (F (\ i -> zero))        -- |zero| on |b <-- a|
+==  F ((\ i -> zero) . (+ NOP 1))  -- |deriv| definition
+==  F (\ i -> zero)                -- $\beta$ reduction
+==  zero                           -- |zero| on |b <-- a|
+\end{code}
+\begin{code}
+    deriv one
+==  deriv (F (\ i -> if i == 0 then one else zero))   -- |one| on |b <-- a|
+==  F (\ i -> if i+1 == 0 then one else zero)         -- |deriv| definition
+==  F (\ i -> zero)                                   -- |i+1 /= 0|
+==  zero                                              -- |zero| on |b <-- a|
+\end{code}
+\begin{code}
+    deriv (F f <+> F g)
+==  deriv (F (\ i -> f i <+> g i))             -- |(<+>)| on |b <-- a|
+==  F (\ i -> f (i+1) <+> g (i+1))             -- |deriv| definition; $\beta$ reduction
+==  F (\ i -> f (i+1)) <+> F (\ i -> g (i+1))  -- |(<+>)| on |b <-- a|
+==  deriv (F f) <+> deriv (F g)                -- |deriv| definition
+\end{code}
+\begin{code}
+    deriv (F f <.> F g)
+==  deriv (bigSum (u,v)  u + v +-> f u <.> g v)                 -- |(<.>)| on |b <-- a|
+==  bigSum (u,v)  deriv (u + v +-> f u <.> g v)                 -- |deriv| additivity (previous property)
+==  (bigSum v  deriv (0 + v +-> f 0 <.> g v)) <+>
+    (bigSum (u',v)  deriv (1 + u' + v +-> f (1 + u') <.> g v))  -- case split |u|
+\end{code}
+First addend:
+\begin{code}
+    bigSum v  deriv (0 + v +-> f 0 <.> g v)
+==  f 0 .> (bigSum v  deriv (v +-> g v))                        -- linearity
+==  f 0 .> deriv (bigSum v  (v +-> g v))                        -- additivity
+==  f 0 .> deriv (F g)                                          -- \lemRef{decomp +->}
+\end{code}
+Second addend:
+\begin{code}
+    bigSum (u',v)  deriv (1 + u' + v +-> f (1 + u') <.> g v)
+==  bigSum (u',v)  u' + v +-> f (1 + u') <.> g v                -- \lemRef{deriv +-> Nat}
+==  F (f . (1 NOP +)) <.> F g                                   -- |(<.>)| on |b <-- a|
+==  deriv (F f) <.> F g                                         -- |deriv| on |b <-- a|
+\end{code}
+Combining results:
+\begin{code}
+deriv (F f <.> F g) == f 0 .> deriv (F g) <+> deriv (F f) <.> F g
+\end{code}
+i.e.,
+\begin{code}
+deriv (p <.> q) == atEps p .> deriv q <+> deriv p <.> q
+\end{code}
+
+\noindent
+\note{Next, derivations for |closure p| and either |single n| or |n +-> b|.}
 
 \subsection{\thmRef{standard FunApp}}\proofLabel{theorem:standard FunApp}
 

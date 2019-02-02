@@ -570,12 +570,12 @@ instance OD c s => Semiring (Trie c s) where
 --   star (_ :< ds) = q where q = one :< fmap (<.> q) ds
 
 instance (Ord c, StarSemiring s, DetectableZero s) => StarSemiring (Trie c s) where
-#if 1
+#if 0
   -- Works
   star (a :< dp) = q where q = star a .> (one :< fmap (<.> q) dp)
 #else
   -- Works
-  -- See 2019-01-13 joural
+  -- See 2019-01-13 journal
   star (a :< dp) = q
     where
       q = as :< fmap h dp
@@ -625,8 +625,11 @@ infixr 1 :#
 data Stream b = b :# Stream b
 
 instance Indexable (Stream b) N b where
-  (b :# _)  ! 0 = b
-  (_ :# bs) ! n = bs ! (n-1)
+  (b :# bs) ! n = if n == 0 then b else bs ! (n-1)
+
+-- instance Indexable (Stream b) N b where
+--   (b :# _)  ! 0 = b
+--   (_ :# bs) ! n = bs ! (n-1)
 
 -- instance Indexable (Stream b) N b where
 --   (b :# _)  ! Sum 0 = b
@@ -634,6 +637,11 @@ instance Indexable (Stream b) N b where
 
 streamF :: Stream b -> (b <-- N)
 streamF bs = F (bs !)
+
+instance DetectableZero b => Decomposable (Stream b) Identity b where
+  b <: Identity bs = b :# bs
+  atEps (b :# _) = b
+  deriv (_ :# bs) = Identity bs
 
 -- TODO: give real instances for b <-- a, in terms of Splittable.
 
@@ -643,6 +651,9 @@ instance DetectableZero b => Semiring (Stream b) where
   (u :# us') <+> (v :# vs') = (u <+> v) :# (us' <+> vs')
   -- (u :# us') <.> vs = (u .> vs) <+> (zero :# us' <.> vs)
   (u :# us') <.> vs@(v :# vs') = u <.> v :# u .> vs' <+> us' <.> vs
+
+instance (DetectableZero b, StarSemiring b) => StarSemiring (Stream b) where
+  star (a :# as) = q where q = star a .> (one :# as <.> q)
 
 instance DetectableZero s => Scalable (Stream s) s where
   s `scale` (b :# bs) = (s <.> b) :# (s `scale` bs)

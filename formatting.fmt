@@ -54,6 +54,7 @@
 %format BACKquad = "\hspace{-2.2ex}"
 
 %format == = =
+%format /= = "\not="
 
 % Got from Andres L:
 \newcommand{\calculationcomments}{%

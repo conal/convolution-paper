@@ -409,10 +409,15 @@ instance (DetectableZero s, Eq c) => Semiring (Decomp c s) where
   one  = one  :<: \ _c -> zero
   (a :<: dp) <+> (b :<: dq) = (a <+> b) :<: \ c -> dp c <+> dq c
   (a :<: dp) <.> ~q@(b :<: dq) = (a <.> b) :<: \ c -> a .< dq c <+> dp c <.> q
+#elif 1
+  zero = zero :<: zero
+  one  = one  :<: zero
+  (a :<: dp) <+> (b :<: dq) = a <+> b :<: dp <+> dq
 #else
   zero = zero :<: const zero
   one  = one  :<: const zero
   (a :<: dp) <+> (b :<: dq) = (a <+> b) :<: liftA2 (<+>) dp dq
+#endif
 #if 1
   (a :<: dp) <.> q = a .> q <+> (zero :<: (<.> q) . dp)
 #else
@@ -421,15 +426,17 @@ instance (DetectableZero s, Eq c) => Semiring (Decomp c s) where
      h u v = a .> v <+> u <.> q
 #endif
 
-#endif
-
 instance (StarSemiring s, DetectableZero s, Eq c) => StarSemiring (Decomp c s) where
+#if 1
+  star (a :<: dp) = q where q = star a .> (one :<: (<.> q) .  dp)
+#else
   -- See 2019-01-13 joural
   star (a :<: dp) = q
     where
       q = as :<: fmap h dp
       as = star a
       h d = as .> d <.> q
+#endif
 
 #ifdef SINGLE
 instance (DetectableZero s, Eq c) => HasSingle (Decomp c s) [c] where
@@ -649,10 +656,10 @@ instance DetectableZero b => Semiring (Stream b) where
   zero = q where q = zero :# q
   one = one :# zero
   (u :# us') <+> (v :# vs') = (u <+> v) :# (us' <+> vs')
-  -- (u :# us') <.> vs = (u .> vs) <+> (zero :# us' <.> vs)
-  (u :# us') <.> vs@(v :# vs') = u <.> v :# u .> vs' <+> us' <.> vs
+  (u :# us') <.> vs = (u .> vs) <+> (zero :# us' <.> vs)
+  -- (u :# us') <.> vs@(v :# vs') = u <.> v :# u .> vs' <+> us' <.> vs
 
-instance (DetectableZero b, StarSemiring b) => StarSemiring (Stream b) where
+instance (StarSemiring b, DetectableZero b) => StarSemiring (Stream b) where
   star (a :# as) = q where q = star a .> (one :# as <.> q)
 
 instance DetectableZero s => Scalable (Stream s) s where

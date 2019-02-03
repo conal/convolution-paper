@@ -4,6 +4,7 @@
 \documentclass[hidelinks,twoside]{article}  % fleqn, 
 \usepackage[margin=0.9in]{geometry}  % 0.12in, 0.9in, 1in
 
+\usepackage[us,12hr]{datetime}
 \usepackage{setspace}
 
 %% \documentclass{article}
@@ -42,7 +43,7 @@ Conal Elliott
 \let\cite=\citep
 
 \title\tit
-\date{Early draft of \today}
+\date{Early draft of \today{} \currenttime}
 
 \setlength{\blanklineskip}{2ex} % blank lines in code environment
 
@@ -174,7 +175,7 @@ The singleton-forming operation must satisfy the following properties:
 \end{align*}
 i.e., |single| is a monoid homomorphism (targeting the product monoid).
 
-The semiring interface has a corresponding notion of structure preservation:
+The semiring and star semiring interfaces have corresponding notions of structure preservation:
 \begin{definition}
 A function |h| from one semiring to another is called \emph{semiring homomorphism} when the following conditions hold:
 \begin{code}
@@ -182,6 +183,12 @@ h zero == zero
 h one == one
 forall a b NOP . NOP h (a  <+>  b) == h a  <+>  h b
 forall a b NOP . NOP h (a  <.>  b) == h a  <.>  h b
+\end{code}
+\end{definition}
+\begin{definition}
+A function |h| from one \emph{star} semiring to another is called \emph{star semiring homomorphism} when |h| is a semiring homomorphism and the following additional condition holds:
+\begin{code}
+forall a NOP . NOP h (star a) == star (h a)
 \end{code}
 \end{definition}
 \note{Explain the value of homomorphisms to the methodology of this paper: simple and consistent specification style, non-leaky abstraction, guarantee that the laws hold. Refer to my TCM and AD papers.}
@@ -216,7 +223,7 @@ instance Monoid a => Semiring (List a) where
   L u  <+>  L v = L (u ++ v)
   L u  <.>  L v = L (liftA2 (<>) u v)
 
-instance Monoid a => StarSemiring (List a)  -- default
+instance Monoid a => StarSemiring (List a)  -- default |closure a|
 
 instance HasSingle (List a) a where single a = L [a]
 \end{code}
@@ -230,7 +237,7 @@ Lists relate to sets and other semirings as follows:
 %format bigSumQ (lim) = "\bigOp\sum{" lim "}{1.5}"
 \begin{code}
 elems :: (Semiring p, HasSingle p a) => [a] -> p
-elems as = bigSum (a <# as) single a
+elems as = bigSum (a <# as) (single a)
 \end{code}
 %% elems (L as) = foldr insert emptyset as
 %%   where insert a s = single a <+> s
@@ -277,7 +284,7 @@ instance (Monoid a, Eq a) => Semiring (Pred a) where
   Pred f  <+>  Pred g = Pred (\ w -> f w || g w)
   Pred f  <.>  Pred g = Pred (\ w -> bigOr (u,v) f u && g v && u <> v == w)
 
-instance (Monoid a, Eq a) => StarSemiring (Pred a)  -- default |star|
+instance (Monoid a, Eq a) => StarSemiring (Pred a)  -- default |closure a|
 
 instance Eq a => HasSingle (Pred a) a where
   single w = Pred (\ w' -> w' == w)
@@ -320,9 +327,9 @@ instance Semiring Bool where
   (<.>)  = (&&)
 
 instance StarSemiring Bool where
-  star b  = one <+> b <.> star b
-          = True || (b && star b)
-          = True
+  star b   = one <+> b <.> star b
+           = True || (b && star b)
+           = True
 
 instance Semiring b => Semiring (a -> b) where
   zero  = \ a -> zero
@@ -458,8 +465,8 @@ Probably save for later when I discuss spatial convolution and polynomials.}
 
 \sectionl{Decomposing Functions from Lists}
 
-%format <: = "\blacktriangleleft"
-%format <: = "\triangleleft"
+%format <: = "\mathrel{\blacktriangleleft}"
+%format <: = "\mathrel\triangleleft"
 %format atEps = "\Varid{at}_\epsilon"
 %format deriv = "\derivOp"
 
@@ -543,7 +550,7 @@ instance Semiring b => Decomposable (b <-- [c]) ((->) c) b where
 %%                           c:cs  -> unF (h c) cs)
 %% \end{code}
 
-\begin{lemma}[\provedIn{lemma:atEps}]\lemLabel{atEps}
+\begin{lemma}[\provedIn{lemma:atEps b <-- [c]}]\lemLabel{atEps b <-- [c]}
 On |b <-- a|, the |atEps| function is a star semiring homomorphism, i.e.,
 \begin{code}
 atEps zero         == zero
@@ -556,7 +563,7 @@ atEps (star p)     == star (atEps p)
 Moreover, |atEps (single [d]) == zero|.
 
 \end{lemma}
-\begin{lemma}[\provedIn{lemma:deriv}, generalizing Lemma 3.1 of \citet{Brzozowski64}]\lemLabel{deriv}
+\begin{lemma}[\provedIn{lemma:deriv b <-- [c]}, generalizing Lemma 3.1 of \citet{Brzozowski64}]\lemLabel{deriv b <-- [c]}
 Differentiation on |b <-- [c]|, has the following properties:
 \notefoot{If I replace application to |c| by indexing by |c| (i.e., |(! NOP c)|), will this lemma hold for all of the representations? I suspect so. Idea: Define $\derivOp_c\,p = \derivOp\,p\:!\:c$.}
 \begin{code}
@@ -570,50 +577,26 @@ deriv (star p) c == star (atEps p) .> deriv p c * star p
 deriv (single [d]) c == boolVal (d == c)
 \end{code}
 \end{lemma}
-Equivalently, |deriv (p  <.>  q) c = delta p * deriv q c <+> deriv p c <.> q|, generalizing a notion of \citet[Definition 3.2]{Brzozowski64}.
-\begin{corollary}
+\begin{theorem}[\provedIn{theorem:semiring decomp b <-- [c]}]\thmLabel{semiring decomp b <-- [c]}
 The following properties hold:
 \begin{code}
-zero  = zero  <: \ c -> zero
-one   = one   <: \ c -> zero
-(a  <:  dp)  <+>  (b <: dq) = (a  <+>  b) <: (\ c -> dp c <+> dq c)
-(a  <:  dp)  <.>  (b <: dq) = (a  <.>  b) <: (\ c -> a .> dq c <+> dp c <.> (b <: dq))
-
-star (a <: dp) = q
-  where
-     q = as <: (h . dp)
-     as = star a
-     h d = as .> d <.> q
+zero  == zero  <: zero
+one   == one   <: zero
+(a  <:  dp)  <+>  (b <: dq)  == a  <+>  b <: dp <+> dq
+(a  <:  dp)  <.>  q == a .> q <+> (zero <: (<.> NOP q) . dp)
+star (a <: dp) = q where q = star a .> (one <: (<.> NOP q) .  dp)
 
 single w = product (map symbol w)
   where
      symbol d = zero <: (\ c -> boolVal (c == d))
 \end{code}
-\end{corollary}
-\begin{proof}
-Combine \lemRefThree{decomp (b <-- [c])}{atEps}{deriv}.
-\end{proof}
-
-%let derivProduct = True
-
-%if derivProduct
-\begin{lemma}[\provedIn{lemma:derivProduct}]\lemLabel{derivProduct}
-The following alternative characterizations of products and closure on functions hold:
-\notefoot{Since I moved the |one| addend to after |a .> q|, I think we're going to look for long matches before short ones, possibly with harmful results. Test thoroughly, and describe results later in the paper.}
-\notefoot{Check on convergence. If I can't get it, then drop this lemma, and change \figref{Trie}.}
-\begin{code}
-(a <: dp) <.> q = a .> q <+> (zero <: (<.> NOP q) . dp)
-
-star (a <: dp) = q where q = star a .> (one <: (<.> NOP q) .  dp)
-\end{code}
-\end{lemma}
-%endif
+\end{theorem}
 
 %format `scale` = "\mathbin{\hat{" .> "}}"
 %format scale = ( `scale` )
 Returning to scaling, there's a very important optimization to be made.
 When |s == zero|, |s .> p == zero|, so we can discard |p| entirely.
-Rather than give this responsibility to each |Scalable| instance, let's define |(.>)| to apply this optimization on top of a more primitive |scale| method:
+Rather than burden each |Scalable| instance with this optimization, let's define |(.>)| to apply this optimization on top of a more primitive |scale| method:
 \begin{code}
 class Scalable b s | b -> s where
   scale :: s -> b -> b
@@ -709,18 +692,17 @@ By specializing the \emph{domain} of the functions to sequences (from general mo
 %format C = "\mathbb C"
 
 %format bigSumPlus (lim) = "\bigOp\sum{" lim "}{1.5}"
-Let's now consider specializing the functions' domains to \emph{integers} instead of sequences, recalling that integers (and numeric types in general) form a monoid under addition.
+Let's now consider specializing the functions' domains to \emph{integers} rather than sequences, recalling that integers (and numeric types in general) form a monoid under addition.
 \vspace{-2ex}
 \begin{spacing}{1.5}
 \begin{code}
 f <.> g  == bigSum (u,v) u <> v +-> f u <.> g v
-         == bigSum (u,v) u + v +-> f u <.> g v
-         == bigSum (u,v) (\ w -> if w == u + v then f u <.> g v else zero)
-         == \ w -> bigSum (u,v) (if w == u + v then f u <.> g v else zero)
-         == \ w -> bigSumPlus (u,v BR u + v == w) f u <.> g v
-         == \ w -> bigSumPlus (u,v BR v == w - u) f u <.> g v
-         == \ w -> bigSum u f u <.> g (w - u)
-
+         == bigSum (u,v) u + v +-> f u <.> g v                              -- monoid under addition
+         == bigSum (u,v) (\ w -> if w == u + v then f u <.> g v else zero)  -- |(+->)| definition
+         == \ w -> bigSum (u,v) (if w == u + v then f u <.> g v else zero)  -- |(<+>)| on functions
+         == \ w -> bigSumPlus (u,v BR u + v == w) f u <.> g v               -- skip zeros (additive identity)
+         == \ w -> bigSumPlus (u,v BR v == w - u) f u <.> g v               -- solve |u + v == w| for |v|
+         == \ w -> bigSum u f u <.> g (w - u)                               -- substitute |w - u| for |v|
 \end{code}
 \end{spacing}
 \vspace{-3ex}
@@ -728,7 +710,7 @@ f <.> g  == bigSum (u,v) u <> v +-> f u <.> g v
 This last form is the standard definition of one-dimensional, discrete \emph{convolution} \needcite{}.\footnote{Note that this reasoning applies to \emph{any} group (monoid with inverses)}
 Therefore, just as \eqnref{convolution} generalizes language concatenation (via the predicate/set isomorphism), it also generalizes the usual notion of discrete convolution.
 Moreover, if the domain is a continuous type such as |R| or |C|, we can reinterpret summation as integration, resulting in \emph{continuous} convolution \needcite{}.
-Additionally, for multi-dimensional (discrete or continuous) convolution, we can simply use tuples of scalar indices for |w| and |u|, and define tuple subtraction componentwise.
+Additionally, for multi-dimensional (discrete or continuous) convolution, we can simply use tuples of scalar indices for |w| and |u|, defining tuple addition and subtraction componentwise.
 \notefoot{More generally, cartesian products of monoids are also monoids.
 Consider multi-dimensional convolution in which different dimensions have different types, even mixing discrete and continuous, and maybe even sequences and numbers.
 At the least, it's useful to combine finite dimensions of different sizes.}
@@ -740,25 +722,25 @@ The Fourier transform is a semiring homomorphism from |b <- a| to |a -> b|.
 
 \workingHere
 
+%format Identity = I
 Let's now consider functions from |N| rather than from |Z|.
 As in \secref{Decomposing Functions from Lists}, we can define a decomposition on functions from |N|:
-%format Identity = I
+\notefoot{I suspect that the |Decomposable| interface isn't quite the right generalization. Try some additional monoids, and examine via more generic constructions for underlying monoids, including general sums and products. Relate to generalized tries \citep{Hinze2000:GGT}.}
 \begin{code}
+newtype Identity a = Identity a  -- identity functor
+
 instance Semiring b => Decomposable (b <-- N) Identity b where
   b <: Identity (F f) = F (\ i -> if i == 0 then b else f (i - 1))
   atEps  (F f)  = f 0
   deriv  (F f)  = Identity (F (f . (1 NOP +)))
 \end{code}
-where |Identity| is the identity functor:
-\begin{code}
-newtype Identity a = Identity a
-\end{code}
 \begin{theorem}[\provedIn{theorem:decomp (b <-- N)}]\thmLabel{decomp (b <-- N)}
 For all |p :: b <-- N|, |p == atEps p <: deriv p|.
 \end{theorem}
 
-Differentiation is much as in \lemRef{deriv}:
-\notefoot{I'm leaning toward inverting the paper, starting with convolution, then semimodule function/applicative/monad, and languages later still.}
+Differentiation is much as in \lemRef{deriv b <-- [c]}:
+\notefoot{I'm leaning toward inverting the organization of this paper, starting with convolution, then semimodule function/applicative/monad, and languages later still.
+That way, I can introduce |b <-- N| before the somewhat more complicated |b <-- [c]|.}
 \begin{lemma}[\provedIn{lemma:deriv (b <-- N)}]\lemLabel{deriv (b <-- N)}
 Differentiation on |b <-- N|, has the following properties (eliding |Identity| constructors):
 \notefoot{If I give a |Semiring| instance for |Identity b| (for semirings |b|), then I think these equations hold as written. I bet I can do the same for |b <-- [c]|, and maybe for all domains |a| for which |Decomposable a|. Try it!}
@@ -815,6 +797,9 @@ instance DetectableZero b => Semiring (Stream b) where
   (u :# us') <+> (v :# vs') = u <+> v :# us' <+> vs'
   (u :# us') <.> vs@(v :# vs') = u <.> v :# u .> vs' <+> us' <.> vs
 
+instance (StarSemiring b, DetectableZero b) => StarSemiring (Stream b) where
+  star (a :# as) = q where q = star a .> (one :# as <.> q)
+
 instance DetectableZero s => Scalable (Stream s) s where
   s `scale` (b :# bs) = (s <.> b) :# (s `scale` bs)
 \end{code}
@@ -832,7 +817,6 @@ Immediate from \corRef{decomp b <-- N}.
 \noindent
 \note{Next:
 \begin{itemize}
-\item Add |StarSemiring| instance, or say why not.
 \item Discuss how |Stream b| is much more efficient than |b <-- N|.
 \item Somewhere I think I should be showing and using the |Splittable N| instance. See previous note.
 \item Lists (finite) instead of streams (infinite), with a semantic function that zero-pads.
@@ -1182,7 +1166,7 @@ Consider each case:
 Thus, for \emph{all} |w :: [c]|, |f w == (atEps f <: deriv f) w|, from which the lemma follows by extensionality.
 \end{proof}
 
-\subsection{\lemRef{atEps}}\proofLabel{lemma:atEps}
+\subsection{\lemRef{atEps b <-- [c]}}\proofLabel{lemma:atEps b <-- [c]}
 
 \begin{code}
 
@@ -1220,67 +1204,62 @@ Thus, for \emph{all} |w :: [c]|, |f w == (atEps f <: deriv f) w|, from which the
 \end{code}
 \note{For this last proof, maybe instead show inductively that |atEps (pow p n) == pow (atEps p) n| for all |n >= 0|, and then appeal to the summation definition of |star p|.}
 
-\subsection{\lemRef{deriv}}\proofLabel{lemma:deriv}
+\subsection{\lemRef{deriv b <-- [c]}}\proofLabel{lemma:deriv b <-- [c]}
 
 \begin{code}
-    deriv zero c
-==  deriv (F (\ w -> zero)) c           -- |zero| on |b <-- a|
-==  F (\ cs -> (\ w -> zero) (c:cs))    -- |deriv| on |b <-- a|
-==  F (\ cs -> zero)                    -- $\beta$ reduction
-==  zero                                -- |zero| on |b <-- a|
+    deriv zero
+==  deriv (F (\ w -> zero))                  -- |zero| on |b <-- a|
+==  \ c -> F (\ cs -> (\ w -> zero) (c:cs))  -- |deriv| on |b <-- a|
+==  \ c -> F (\ cs -> zero)                  -- $\beta$ reduction
+==  \ c -> zero                              -- |zero| on |b <-- a|
+==  zero                                     -- |zero| on |a -> b|
 \end{code}
 \vspace{-3ex}
 \begin{code}
-    deriv one c
-==  deriv (single mempty) c                              -- |one| on |b <-- a|
-==  deriv (F (\ a' -> boolVal (a' == mempty))) c         -- |single| on |b <-- a|
-==  F (\ cs -> (\ a' -> boolVal (a' == mempty)) (c:cs))  -- |deriv| on |b <-- a|
-==  F (\ cs -> boolVal (c:cs == mempty))                 -- $\beta$ reduction
-==  F (\ cs -> zero)                                     -- |c:cs /= mempty|
-==  zero                                                 -- |zero| on |b <-- a|
+    deriv one
+==  deriv (single mempty)                                       -- |one| on |b <-- a|
+==  deriv (F (\ a' -> boolVal (a' == mempty)))                  -- |single| on |b <-- a|
+==  \ c -> F (\ cs -> (\ a' -> boolVal (a' == mempty)) (c:cs))  -- |deriv| on |b <-- a|
+==  \ c -> F (\ cs -> boolVal (c:cs == mempty))                 -- $\beta$ reduction
+==  \ c -> F (\ cs -> zero)                                     -- |c:cs /= mempty|
+==  \ c -> zero                                                 -- |zero| on |b <-- a|
+==  zero                                                        -- |zero| on |a -> b|
 \end{code}
 \vspace{-3ex}
 \begin{code}
-    deriv (F f <+> F g) c
-==  deriv (F (\ w -> f w <+> g w))           -- |(<+>)| on |b <-- a|
-==  F (\ cs -> (\ w -> f w <+> g w) (c:cs))        -- |deriv| on |b <-- a|
-==  F (\ cs -> f (c:cs) <+> g (c:cs))              -- $\beta$ reduction
-==  F (\ cs -> f (c:cs)) <+> F (\ cs -> g (c:cs))  -- |(<+>)| on |b <-- a|
-==  deriv (F f) c <+> deriv (F g) c                -- |deriv| on |b <-- a|
+    deriv (F f <+> F g)
+==  deriv (F (\ w -> f w <+> g w))                        -- |(<+>)| on |b <-- a|
+==  \ c -> F (\ cs -> (\ w -> f w <+> g w) (c:cs))        -- |deriv| on |b <-- a|
+==  \ c -> F (\ cs -> f (c:cs) <+> g (c:cs))              -- $\beta$ reduction
+==  \ c -> F (\ cs -> f (c:cs)) <+> F (\ cs -> g (c:cs))  -- |(<+>)| on |b <-- a|
+==  \ c -> deriv (F f) c <+> deriv (F g) c                -- |deriv| on |b <-- a|
+==  deriv (F f) <+> deriv (F g)                           -- |(<+>)| on |a -> b|
 \end{code}
-\vspace{-3ex}
 \begin{code}
-    deriv (F f <.> F g) c
-==  deriv (bigSum (u,v) u <> v +-> f u <.> g v) c                                                                               -- |(<.>)| on |b <-- a|
-==  deriv (bigSum v (mempty <> v +-> f mempty <.> g v) <+> bigSumQ (c',u',v) ((c':u') <> v +-> f (c':u') <.> g v)) c            -- empty vs nonempty |u|
-==  deriv (bigSum v (mempty <> v +-> f mempty <.> g v)) c <+> deriv (bigSumA (c',u',v) ((c':u') <> v +-> f (c':u') <.> g v)) c  -- additivity of |deriv| (above)
+    deriv (F f <.> F g)
+==  deriv (bigSum (u,v) u <> v +-> f u <.> g v)                                                                             -- |(<.>)| on |b <-- a|
+==  deriv (bigSum v (mempty <> v +-> f mempty <.> g v) <+> bigSumQ (c',u',v) ((c':u') <> v +-> f (c':u') <.> g v))          -- empty vs nonempty |u|
+==  deriv (bigSum v (mempty <> v +-> f mempty <.> g v)) <+> deriv (bigSumA (c',u',v) ((c':u') <> v +-> f (c':u') <.> g v))  -- additivity of |deriv| (above)
 \end{code}
-\vspace{-1ex}
-
-\noindent
 First addend:
 \begin{code}
-    deriv (bigSum v (mempty <> v +-> f mempty <.> g v)) c
-==  deriv (bigSum v (v +-> f mempty <.> g v)) c  -- monoid law
-==  deriv (f mempty .> bigSum v (v +-> g v)) c   -- distributivity (semiring law)
-==  f mempty .> deriv (bigSum v v +-> g v) c     -- linearity of |deriv| \note{(needs lemma)}
-==  f mempty .> deriv (F g) c                    -- \note{needs lemma}
-==  atEps (F f) .> deriv (F g) c                 -- |atEps| on |b <-- a|
+    deriv (bigSum v (mempty <> v +-> f mempty <.> g v))
+==  deriv (bigSum v (v +-> f mempty <.> g v))  -- monoid law
+==  deriv (f mempty .> bigSum v (v +-> g v))   -- distributivity (semiring law)
+==  f mempty .> deriv (bigSum v v +-> g v)     -- linearity of |deriv| \note{(needs lemma)}
+==  f mempty .> deriv (F g)                    -- \lemRef{decomp +->}
+==  atEps (F f) .> deriv (F g)                 -- |atEps| on |b <-- a|
 \end{code}
-\vspace{-3ex}
-
-\noindent
 Second addend:
 \begin{code}
-    deriv (bigSumA (c',u',v) ((c':u') <> v +-> f (c':u') <.> g v)) c
-==  bigSumA (c',u',v) deriv ((c':u') <> v +-> f (c':u') <.> g v) c    -- additivity of |deriv|
-==  bigSumA (c',u',v) deriv (c' : (u' <> v) +-> f (c':u') <.> g v) c  -- |(<>)| on lists
-==  bigSum (u',v) u' <> v +-> f (c:u') <.> g v                        -- \lemRef{deriv +->} below
-==  bigSum (u',v) u' <> v +-> (\ cs -> f (c:cs)) u' <.> g v           -- $\beta$ expansion
-==  F (\ cs -> f (c:cs)) <.> F g                                      -- |(<.>)| on |b <-- a|
-==  deriv (F f) c <.> F g                                             -- |deriv| on |b <-- a|
+    deriv (bigSumA (c',u',v) ((c':u') <> v +-> f (c':u') <.> g v))
+==  bigSumA (c',u',v) deriv ((c':u') <> v +-> f (c':u') <.> g v)    -- additivity of |deriv|
+==  bigSumA (c',u',v) deriv (c' : (u' <> v) +-> f (c':u') <.> g v)  -- |(<>)| on lists
+==  \ c -> bigSum (u',v) u' <> v +-> f (c:u') <.> g v                        -- \lemRef{deriv +->} below
+==  \ c -> bigSum (u',v) u' <> v +-> (\ cs -> f (c:cs)) u' <.> g v           -- $\beta$ expansion
+==  \ c -> F (\ cs -> f (c:cs)) <.> F g                                      -- |(<.>)| on |b <-- a|
+==  \ c -> deriv (F f) c <.> F g                                             -- |deriv| on |b <-- a|
 \end{code}
-
 Combine addends, and let |p = F f| and |q = F g|:
 \begin{code}
     deriv (p <.> q) c
@@ -1289,6 +1268,8 @@ Combine addends, and let |p = F f| and |q = F g|:
 ==  atEps (F f) .> deriv (F g) c <+> deriv (F f) c <.> F g
 ==  atEps p .> deriv q c <+> deriv p c <.> q
 \end{code}    
+
+\noindent
 Finally, closure:
 \begin{code}
     deriv (star p) c
@@ -1320,7 +1301,6 @@ deriv (c' : w +-> b) c == if c' == c then w +-> b else zero
 ==  F (\ cs -> zero)                                             -- |if-then-else| definition
 ==  zero                                                         -- |zero| on |b <-- a|
 \end{code}
-
 \begin{code}
     deriv (c' : w +-> b) c
 ==  deriv (F (\ a -> if a == c':w then b else zero)) c               -- |(+->)| definition
@@ -1345,11 +1325,76 @@ The equation |q == r <+> s .> q| has solution |q = star s .> r|.
 \end{code}
 \end{proof}
 
-%if derivProduct
-\subsection{\lemRef{derivProduct}}\proofLabel{lemma:derivProduct}
+\subsection{\thmRef{semiring decomp b <-- [c]}}\proofLabel{theorem:semiring decomp b <-- [c]}
 
-\note{See 2019-01-10 journal.}
-%endif
+\begin{code}
+    zero
+==  atEps zero <: deriv zero  -- \lemRef{decomp (b <-- [c])}
+==  zero <: (\ c -> zero)     -- \lemRefTwo{atEps b <-- [c]}{deriv b <-- [c]}
+==  zero <: zero              -- |zero| on functions
+\end{code}
+
+\begin{code}
+    one
+==  atEps one <: deriv one  -- \lemRef{decomp (b <-- [c])}
+==  one <: (\ c -> zero)    -- \lemRefTwo{atEps b <-- [c]}{deriv b <-- [c]}
+==  one <: zero             -- |zero| on functions
+\end{code}
+
+\begin{code}
+    (a <: dp) <+> (b <: dp)
+==  atEps ((a <: dp) <+> (b <: dq)) <: deriv ((a <: dp) <+> (b <: dq))  -- \lemRef{decomp (b <-- [c])}
+==  a <+> b <: dp <+> dq                                                -- \lemRef{atEps and deriv via (<:)} below
+\end{code}
+
+%% (a  <:  dp)  <.>  q == a .> q <+> (zero <: (<.> NOP q) . dp)
+
+\begin{code}
+    (a <: dp) <.> (b <: dq)
+==  atEps ((a <: dp) <.> (b <: dq)) <: deriv ((a <: dp) <.> (b <: dq))        -- \lemRef{decomp (b <-- [c])}
+==  a <.> b <: \ c -> a .> dq c <+> dp c <.> (b <: dq)                        -- \lemRef{atEps and deriv via (<:)} below
+==  (a <.> b <+> zero) <: (\ c -> a .> dq c) <+> (\ c -> dp c <.> (b <: dq))  -- additive identity; |(<+>)| on functions
+==  (a <.> b <: \ c -> a .> dq c) <+> (zero <: \ c -> dp c <.> (b <: dq))     -- previous result
+==  a .> (b <: dq) <+> (zero <: \ c -> dp c <.> (b <: dq))                    -- \note{needs lemma}
+\end{code}
+
+%% \lemRef{atEps and deriv via (<:)}
+
+%% star (a <: dp) = q where q = star a .> (one <: (<.> NOP q) .  dp)
+
+\begin{code}
+    star (a <: dp)
+==  atEps (star (a <: dp)) <: deriv (star (a <: dp))                     -- \lemRef{decomp (b <-- [c])}
+==  star a <: \ c -> star a .> dp c * star (a <: dp)                     -- \lemRef{atEps and deriv via (<:)} below
+==  star a .> (one <: \ c -> dp c * star (a <: dp))                      -- \note{needs same lemma as above}
+\end{code}
+
+%% single w = product (map symbol w)
+%%   where
+%%      symbol d = zero <: (\ c -> boolVal (c == d))
+
+\begin{code}
+    |single w|
+==  ...
+\end{code}
+
+\begin{lemma}\lemLabel{atEps and deriv via (<:)}
+The |atEps| and |deriv| functions satisfy the following properties in terms of |(<:)|-decompositions:
+\begin{code}
+atEps ((a <: dp)  <+>  (b <: dq))  == a <+> b
+atEps ((a <: dp)  <.>  (b <: dq))  == a <.> b
+atEps (star (a <: dp)) == star a
+\end{code}
+\begin{code}
+deriv ((a <: dp)  <+>  (b <: dq)) c == dp c <+> dq c
+deriv ((a <: dp)  <.>  (b <: dq)) c == a .> dq c <+> dp c <.> (b <: dq)
+deriv (star (a <: dp)) c == star a .> dp c * star (a <: dp)
+\end{code}
+\end{lemma}
+\begin{proof}
+Substitute into \lemRefTwo{atEps b <-- [c]}{deriv b <-- [c]}, and simplify, using the |Decomposable| laws.
+\notefoot{Have I stated these laws?}
+\end{proof}
 
 \subsection{\thmRef{Trie}}\proofLabel{theorem:Trie}
 
@@ -1371,25 +1416,6 @@ The equation |q == r <+> s .> q| has solution |q = star s .> r|.
 \end{code}
 
 \subsection{\lemRef{deriv (b <-- N)}}\proofLabel{lemma:deriv (b <-- N)}
-
-\begin{lemma}\lemLabel{deriv +-> Nat}
-Differentiation on |b <-- N| satisfies the following properties on singletons:
-\begin{code}
-    deriv (0 +-> b)
-==  deriv (F (\ j -> if j == 0 then b else zero))    -- |(+->)| definition
-==  F (\ j -> if j+1 == 0 then b else zero)          -- |deriv| on |b <-- N|
-==  F (\ j -> zero)                                  -- |j+1 /= 0| (for |N|)
-==  zero                                             -- |zero| on |b <-- a|
-
-    deriv (i+1 +-> b)
-==  deriv (F (\ j -> if j == i+1 then b else zero))  -- |(+->)| definition   
-==  F (\ j -> if j+1 == i+1 then b else zero)        -- |deriv| on |b <-- N| 
-==  F (\ j -> if j == i then b else zero)            -- |(+ NOP 1)| is injective
-==  i +-> b                                          -- |zero| on |b <-- a|  
-\end{code}
-\end{lemma}
-
-Homomorphism proofs:
 
 \begin{code}
     deriv zero
@@ -1429,7 +1455,7 @@ First addend:
 Second addend:
 \begin{code}
     bigSum (u',v)  deriv (1 + u' + v +-> f (1 + u') <.> g v)
-==  bigSum (u',v)  u' + v +-> f (1 + u') <.> g v                -- \lemRef{deriv +-> Nat}
+==  bigSum (u',v)  u' + v +-> f (1 + u') <.> g v                -- \lemRef{deriv +-> Nat} below
 ==  F (f . (1 NOP +)) <.> F g                                   -- |(<.>)| on |b <-- a|
 ==  deriv (F f) <.> F g                                         -- |deriv| on |b <-- a|
 \end{code}
@@ -1444,6 +1470,23 @@ deriv (p <.> q) == atEps p .> deriv q <+> deriv p <.> q
 
 \noindent
 \note{Next, derivations for |closure p| and either |single n| or |n +-> b|.}
+
+\begin{lemma}\lemLabel{deriv +-> Nat}
+Differentiation on |b <-- N| satisfies the following properties on singletons:
+\begin{code}
+    deriv (0 +-> b)
+==  deriv (F (\ j -> if j == 0 then b else zero))    -- |(+->)| definition
+==  F (\ j -> if j+1 == 0 then b else zero)          -- |deriv| on |b <-- N|
+==  F (\ j -> zero)                                  -- |j+1 /= 0| (for |N|)
+==  zero                                             -- |zero| on |b <-- a|
+
+    deriv (i+1 +-> b)
+==  deriv (F (\ j -> if j == i+1 then b else zero))  -- |(+->)| definition   
+==  F (\ j -> if j+1 == i+1 then b else zero)        -- |deriv| on |b <-- N| 
+==  F (\ j -> if j == i then b else zero)            -- |(+ NOP 1)| is injective
+==  i +-> b                                          -- |zero| on |b <-- a|  
+\end{code}
+\end{lemma}
 
 \subsection{\thmRef{standard FunApp}}\proofLabel{theorem:standard FunApp}
 

@@ -45,7 +45,7 @@ instance Semiring s => StarSemiring (s <-- [c])
 
 #ifdef SINGLE
 instance (Semiring b, Eq a) => HasSingle (b <-- a) a where
-  single a = F (\ a' -> fromBool (a' == a))
+  single a = F (equal a)
   -- single a = F (fromBool . (== a))
 #else
 instance (Semiring s, Eq a) => HasSingle (s <-- a) a s where
@@ -315,7 +315,8 @@ instance (Eq c, StarSemiring s) => Decomposable (RegExp c s) ((->) c) s where
   atEps (p :<.> q)  = atEps p <.> atEps q
   atEps (Star p) = star (atEps p)
   
-  deriv (Char c') c   = fromBool (c == c')
+  deriv (Char c') c   = equal c' c
+                        -- fromBool (c == c')
                         -- if c == c' then one else zero
   deriv (Value _) _   = zero
   deriv (p :<+> q) c  = deriv p c <+> deriv q c
@@ -448,7 +449,8 @@ instance (DetectableZero s, Eq c) => HasSingle (Decomp c s) [c] s where
 #if 0
   w +-> s = product (map symbol w) <.> (s :<: zero)
    where
-     symbol c = zero :<: (fromBool . (== c))
+     symbol c = zero :<: equal c
+                -- zero :<: (fromBool . (== c))
      -- symbol c = zero :<: (\ c' -> fromBool (c' == c))
 #else
   -- More streamlined

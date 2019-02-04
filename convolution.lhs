@@ -404,11 +404,10 @@ instance (Semiring b, Monoid a, Eq a) => Semiring (b <-- a) where
 instance (Monoid a, Eq a) => StarSemiring (b <-- a)
 
 instance (Semiring b, Eq a) => HasSingle (b <-- a) a where
-  single a = F (\ a' -> fromBool (a' == a))
+  single a = F (equal a)
 
-fromBool :: Semiring b => Bool -> b
-fromBool False  = zero
-fromBool True   = one
+equal :: (Eq a, Semiring s) => a -> a -> s
+equal a a' = if a == a' then one else zero
 
 instance Semiring s => Scalable (s <-- a) s where
   s .> F f = F (\ a -> s <.> f a) 
@@ -576,7 +575,7 @@ deriv (p  <.>  q) c == atEps p .> deriv q c <+> deriv p c <.> q
 
 deriv (star p) c == star (atEps p) .> deriv p c * star p
 
-deriv (single [d]) c == fromBool (d == c)
+deriv (single [d]) c == equal c d
 \end{code}
 \end{lemma}
 \begin{theorem}[\provedIn{theorem:semiring decomp b <-- [c]}]\thmLabel{semiring decomp b <-- [c]}
@@ -588,7 +587,7 @@ one   == one   <: zero
 (a  <:  dp)  <.>  q == a .> q <+> (zero <: (<.> NOP q) . dp)
 star (a <: dp) = q where q = star a .> (one <: (<.> NOP q) .  dp)
 
-single w = product (map symbol w) where symbol d = zero <: \ c -> fromBool (c == d)
+single w = product (map symbol w) where symbol d = zero <: equal d
 \end{code}
 \end{theorem}
 
@@ -753,7 +752,7 @@ deriv (p  <.>  q) == atEps p .> deriv q <+> deriv p <.> q
 
 deriv (star p) == star (atEps p) .> deriv p <.> star p
 \end{code}
-%% deriv (single [d]) c == fromBool (d == c)
+%% deriv (single [d]) c == equal c d
 \end{lemma}
 \begin{corollary}\corLabel{decomp b <-- N}
 The following properties hold for |b <-- N|:
@@ -768,7 +767,7 @@ star (a <: as) = q where q = star a .> (one <: as <.> q)
 \end{code}
 %% single w = product (map symbol w)
 %%   where
-%%      symbol d = zero <: (\ c -> fromBool (c == d))
+%%      symbol d = zero <: equal d
 \end{corollary}
 
 \note{Remark that |N =~ [()]|, so this decomposition is a special case of  \secref{Decomposing Functions from Lists}. On the other hand, I think I'll move the whole language discussion to \emph{after} this decomposition.}
@@ -963,7 +962,7 @@ instance Semiring b => Applicative ((<--) b) where
 }%
 %endif
 \notefoot{The |Monoid a| requirement for |(:<--) b| and |(<--) b| is due to the corresponding |Semiring| instances, but really just for
-|one| and |(<.>)|, which we're not using. To do: factor |Additive| out of |Semiring|, and drop the |Monoid a| requirements here. I'll have to return to defining my own classes.}
+|one| and |(<.>)|, which we're not using. To do: factor |Additive| out of |Semiring|, and drop the |Monoid a| requirements here. I'll have to return to defining my own classes. If I make this change, then give an |Additive| instance for |Map| and use it for |(:<--)|. Similarly for lists and streams consistently with their denotation as |N -> b|. Wrap for |b <-- N|.}
 Higher-arity liftings can be defined via these three.
 (Exercise.)
 The use of |s <-- t| as an alternative to |t -> s| allows us to give instances for both and to stay within Haskell's type system (and ability to infer types via first-order unification).
@@ -1176,11 +1175,9 @@ Thus, for \emph{all} |w :: [c]|, |f w == (atEps f <: deriv f) w|, from which the
 ==  zero                     -- $\beta$ reduction
 
     atEps one
-==  atEps (F (\ a -> fromBool (a == mempty)))  -- |one| on |b <-- a|
-==  (\ a -> fromBool (a == mempty)) []         -- |atEps| definition            
-==  fromBool ([] == mempty)                    -- $\beta$ reduction                
-==  fromBool True                              -- |fromBool| definition
-==  one
+==  atEps (F (equal mempty))  -- |one| on |b <-- a|
+==  equal mempty mempty       -- |atEps| definition            
+==  one                       -- |equal| definition
 
     atEps (F f <+> F g)
 ==  atEps (F (\ a -> f a <+> g a))      -- |(<+>)| on |b <-- a|
@@ -1217,13 +1214,12 @@ Thus, for \emph{all} |w :: [c]|, |f w == (atEps f <: deriv f) w|, from which the
 \vspace{-3ex}
 \begin{code}
     deriv one
-==  deriv (single mempty)                                       -- |one| on |b <-- a|
-==  deriv (F (\ a' -> fromBool (a' == mempty)))                  -- |single| on |b <-- a|
-==  \ c -> F (\ cs -> (\ a' -> fromBool (a' == mempty)) (c:cs))  -- |deriv| on |b <-- a|
-==  \ c -> F (\ cs -> fromBool (c:cs == mempty))                 -- $\beta$ reduction
-==  \ c -> F (\ cs -> zero)                                     -- |c:cs /= mempty|
-==  \ c -> zero                                                 -- |zero| on |b <-- a|
-==  zero                                                        -- |zero| on |a -> b|
+==  deriv (single mempty)                   -- |one| on |b <-- a|
+==  deriv (F (equal mempty))                -- |single| on |b <-- a|
+==  \ c -> F (\ cs -> equal mempty (c:cs))  -- |deriv| on |b <-- a|
+==  \ c -> F (\ cs -> zero)                 -- |c:cs /= mempty|
+==  \ c -> zero                             -- |zero| on |b <-- a|
+==  zero                                    -- |zero| on |a -> b|
 \end{code}
 \vspace{-3ex}
 \begin{code}
@@ -1371,7 +1367,7 @@ The equation |q == r <+> s .> q| has solution |q = star s .> r|.
 
 %% single w = product (map symbol w)
 %%   where
-%%      symbol d = zero <: (\ c -> fromBool (c == d))
+%%      symbol d = zero <: equal d
 
 \begin{code}
     |single w|

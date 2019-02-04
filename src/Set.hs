@@ -178,7 +178,8 @@ instance StarSemiring (Pred [c])
 
 #ifdef SINGLE
 instance Eq a => HasSingle (Pred a) a where
-  single a = Pred (fromBool . (== a))
+  single a = Pred (equal a)
+             -- Pred (fromBool . (== a))
 #else
 instance Eq a => HasSingle (Pred a) a Bool where
   a +-> s = Pred (a +-> s)

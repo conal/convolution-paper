@@ -89,6 +89,11 @@ fromBool :: Semiring s => Bool -> s
 fromBool False = zero
 fromBool True  = one
 
+equal :: (Eq a, Semiring s) => a -> a -> s
+-- equal a a' = fromBool (a == a')
+
+equal a a' = if a == a' then one else zero
+
 class Indexable p k v | p -> k v where
   (!) :: p -> k -> v
 

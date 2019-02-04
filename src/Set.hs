@@ -178,14 +178,14 @@ instance StarSemiring (Pred [c])
 
 #ifdef SINGLE
 instance Eq a => HasSingle (Pred a) a where
-  single a = Pred (boolVal . (== a))
+  single a = Pred (fromBool . (== a))
 #else
 instance Eq a => HasSingle (Pred a) a Bool where
   a +-> s = Pred (a +-> s)
 #endif
 
 instance Decomposable (Pred [c]) ((->) c) Bool where
-  e <: h = boolVal e <+> Pred (\ w -> or [ unPred (h c) w | c <- allVals ])
+  e <: h = fromBool e <+> Pred (\ w -> or [ unPred (h c) w | c <- allVals ])
   atEps (Pred f) = f []
   -- deriv (Pred f) c = Pred (f . (c :))
   deriv (Pred f) c = Pred (\ cs -> f (c : cs))

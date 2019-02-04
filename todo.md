@@ -75,6 +75,9 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
         *   [*Monads from Comonads, Comonads from Monads*]
         *   [*Should I use a Monad or a Comonad?*]
     *   Other:
+        *   [*Convolution as a Unifying Concept: Applications in Separation Logic, Interval Calculi, and Concurrency*]
+        *   [*Introduction to weighted automata theory*]
+        *   [*Weighted Automata*]
         *   [*Fun with Semirings: A functional pearl on the abuse of linear algebra*]
         *   [*Quantifiers on languages and codensity monads*]
         *   [What is a coalgebra intuitively?](https://mathoverflow.net/questions/76509/what-is-a-coalgebra-intuitively)
@@ -176,3 +179,9 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 [*The Dual of Substitution is Redecoration*]: http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.16.9369 "paper by Tarmo Uustalu and Varmo Vene (2002)"
 
 [*Higher Dimensional Trees, Algebraically*]: https://www.semanticscholar.org/paper/Higher-Dimensional-Trees%2C-Algebraically-Ghani-Kurz/3b650d5ee01ac35c721c5bd51e4859aebe3880e2 "paper by Neil Ghani, Alexander Kurz (2007)"
+
+[*Convolution as a Unifying Concept: Applications in Separation Logic, Interval Calculi, and Concurrency*]: https://dl.acm.org/citation.cfm?id=2874773 "paper by Brijesh Dongol, Ian J. Hayes, and Georg Struth (2016)"
+
+[*Introduction to weighted automata theory*]: https://perso.telecom-paristech.fr/jsaka/CONF/Files/IWAT.pdf "Presentation by Jacques Sakarovitch (year?)"
+
+[*Weighted Automata*]: https://www.semanticscholar.org/paper/Weighted-automata-Droste-Kuske/f8d5980f23814e1d69a737f1f178d4a2565f7c22 "paper by Manfred Droste and Dietrich Kuske (2012)"

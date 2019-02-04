@@ -37,7 +37,7 @@ instance Show (b <-- a) where show = const "<F>"
 
 instance (Splittable a, Semiring s) => Semiring (s <-- a) where
   zero = F (const zero)
-  one = F (boolVal . isEmpty)
+  one = F (fromBool . isEmpty)
   F f <+> F g = F (\ w -> f w <+> g w)
   F f <.> F g = F (\ w -> sum [ f u <.> g v | (u,v) <- splits w ] )
 
@@ -45,8 +45,8 @@ instance Semiring s => StarSemiring (s <-- [c])
 
 #ifdef SINGLE
 instance (Semiring b, Eq a) => HasSingle (b <-- a) a where
-  single a = F (\ a' -> boolVal (a' == a))
-  -- single a = F (boolVal . (== a))
+  single a = F (\ a' -> fromBool (a' == a))
+  -- single a = F (fromBool . (== a))
 #else
 instance (Semiring s, Eq a) => HasSingle (s <-- a) a s where
   a +-> s = F (\ a' -> if a == a' then s else zero)
@@ -315,7 +315,7 @@ instance (Eq c, StarSemiring s) => Decomposable (RegExp c s) ((->) c) s where
   atEps (p :<.> q)  = atEps p <.> atEps q
   atEps (Star p) = star (atEps p)
   
-  deriv (Char c') c   = boolVal (c == c')
+  deriv (Char c') c   = fromBool (c == c')
                         -- if c == c' then one else zero
   deriv (Value _) _   = zero
   deriv (p :<+> q) c  = deriv p c <+> deriv q c
@@ -448,8 +448,8 @@ instance (DetectableZero s, Eq c) => HasSingle (Decomp c s) [c] s where
 #if 0
   w +-> s = product (map symbol w) <.> (s :<: zero)
    where
-     symbol c = zero :<: (boolVal . (== c))
-     -- symbol c = zero :<: (\ c' -> boolVal (c' == c))
+     symbol c = zero :<: (fromBool . (== c))
+     -- symbol c = zero :<: (\ c' -> fromBool (c' == c))
 #else
   -- More streamlined
   w +-> s = foldr cons nil w

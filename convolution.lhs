@@ -49,7 +49,7 @@ Conal Elliott
 
 \nc\proofLabel[1]{\label{proof:#1}}
 %if short
-\nc\proofRef[1]{proof in \citep[Appendix C]{Elliott-2018-convolution-extended}}
+\nc\proofRef[1]{proof in \citep[Appendix C]{Elliott-2019-convolution-extended}}
 %else
 \nc\proofRef[1]{Appendix \ref{proof:#1}}
 %endif
@@ -353,7 +353,7 @@ instance StarSemiring b => StarSemiring (a -> b) where
 The instances for predicates in \figref{pred} involve uses of |False|, |(||||)|, and |(&&)|, as well as an equality test (for |single w|), which yields |False| or |True|.
 We can therefore easily generalize the codomain of ``predicates'' from booleans to \emph{any} semiring.
 It will also be useful to generalize |single a| to |a +-> s|, mapping |a| to |s| (instead of to |one|) and everything else to zero.
-We can build |a +-> s| from |single a| and a new ``scaling'' operation |s .> p|, which multiplies each of codomain values in |p| by |s|:\footnote{
+We can build |a +-> s| from |single a| and a new ``scaling'' operation |s .> p|, which multiplies each codomain value in |p| by |s|:\footnote{
 For sets, lists, and predicates, |s| will be |Bool|, e.g.,
 \begin{code}
 instance Monoid a => Scalable (List a) Bool where
@@ -404,11 +404,11 @@ instance (Semiring b, Monoid a, Eq a) => Semiring (b <-- a) where
 instance (Monoid a, Eq a) => StarSemiring (b <-- a)
 
 instance (Semiring b, Eq a) => HasSingle (b <-- a) a where
-  single a = F (\ a' -> boolVal (a' == a))
+  single a = F (\ a' -> fromBool (a' == a))
 
-boolVal :: Semiring b => Bool -> b
-boolVal False  = zero
-boolVal True   = one
+fromBool :: Semiring b => Bool -> b
+fromBool False  = zero
+fromBool True   = one
 
 instance Semiring s => Scalable (s <-- a) s where
   s .> F f = F (\ a -> s <.> f a) 
@@ -422,8 +422,9 @@ Given the instance definitions in \figref{<--}, |b <-- a| satisfies the laws of 
 \end{theorem}
 \noindent
 When the monoid |a| is a list or other splittable type, we can again express the product operation from \figref{<--} in a more clearly computable form:
+%format bigSumSplits (lim) = "\bigOp\sum{" lim "}{2.5}"
 \begin{code}
-  F f <.> F g  = F (\ w -> sum [ f u <.> g v | (u,v) <- splits w ])
+  F f <.> F g  = F (\ w -> bigSumSplits ((u,v) <# splits w) f u <.> g v)
 \end{code}
 
 %format :<-- = "\leftarrowtriangle"
@@ -461,7 +462,8 @@ The finiteness of finite maps interferes with giving a useful |StarSemiring| ins
 
 \note{Define another wrapper for |[a]| that represents |a <-- Sum Nat|.
 Maybe also multidimensional arrays.
-Probably save for later when I discuss spatial convolution and polynomials.}
+Probably save for later when I discuss spatial convolution and polynomials.
+In any case, introduce streams first since they're simpler than lists; then map lists to streams, and optimize.}
 
 \sectionl{Decomposing Functions from Lists}
 
@@ -574,7 +576,7 @@ deriv (p  <.>  q) c == atEps p .> deriv q c <+> deriv p c <.> q
 
 deriv (star p) c == star (atEps p) .> deriv p c * star p
 
-deriv (single [d]) c == boolVal (d == c)
+deriv (single [d]) c == fromBool (d == c)
 \end{code}
 \end{lemma}
 \begin{theorem}[\provedIn{theorem:semiring decomp b <-- [c]}]\thmLabel{semiring decomp b <-- [c]}
@@ -586,9 +588,7 @@ one   == one   <: zero
 (a  <:  dp)  <.>  q == a .> q <+> (zero <: (<.> NOP q) . dp)
 star (a <: dp) = q where q = star a .> (one <: (<.> NOP q) .  dp)
 
-single w = product (map symbol w)
-  where
-     symbol d = zero <: (\ c -> boolVal (c == d))
+single w = product (map symbol w) where symbol d = zero <: \ c -> fromBool (c == d)
 \end{code}
 \end{theorem}
 
@@ -753,7 +753,7 @@ deriv (p  <.>  q) == atEps p .> deriv q <+> deriv p <.> q
 
 deriv (star p) == star (atEps p) .> deriv p <.> star p
 \end{code}
-%% deriv (single [d]) c == boolVal (d == c)
+%% deriv (single [d]) c == fromBool (d == c)
 \end{lemma}
 \begin{corollary}\corLabel{decomp b <-- N}
 The following properties hold for |b <-- N|:
@@ -768,7 +768,7 @@ star (a <: as) = q where q = star a .> (one <: as <.> q)
 \end{code}
 %% single w = product (map symbol w)
 %%   where
-%%      symbol d = zero <: (\ c -> boolVal (c == d))
+%%      symbol d = zero <: (\ c -> fromBool (c == d))
 \end{corollary}
 
 \note{Remark that |N =~ [()]|, so this decomposition is a special case of  \secref{Decomposing Functions from Lists}. On the other hand, I think I'll move the whole language discussion to \emph{after} this decomposition.}
@@ -820,7 +820,7 @@ Immediate from \corRef{decomp b <-- N}.
 \item Discuss how |Stream b| is much more efficient than |b <-- N|.
 \item Somewhere I think I should be showing and using the |Splittable N| instance. See previous note.
 \item Lists (finite) instead of streams (infinite), with a semantic function that zero-pads.
-\item Non-scalar domains as in notes from 2018-01-\{28,29\}.
+\item Non-scalar domains as in notes from 2019-01-\{28,29\}.
 \end{itemize}
 }
 
@@ -1051,7 +1051,7 @@ The function |poly| is a semiring homomorphism when multiplication on |b| commut
 \begin{itemize}\itemsep0ex
 \item Examples
 \item Finite maps
-\item Non-scalar domains (``multivariate'' polynomials) as in notes from 2018-01-\{28,29\}
+\item Non-scalar domains (``multivariate'' polynomials) as in notes from 2019-01-\{28,29\}
 \item Non-scalar codomains
 \end{itemize}
 }
@@ -1176,10 +1176,10 @@ Thus, for \emph{all} |w :: [c]|, |f w == (atEps f <: deriv f) w|, from which the
 ==  zero                     -- $\beta$ reduction
 
     atEps one
-==  atEps (F (\ a -> boolVal (a == mempty)))  -- |one| on |b <-- a|
-==  (\ a -> boolVal (a == mempty)) []         -- |atEps| definition            
-==  boolVal ([] == mempty)                    -- $\beta$ reduction                
-==  boolVal True                              -- |boolVal| definition
+==  atEps (F (\ a -> fromBool (a == mempty)))  -- |one| on |b <-- a|
+==  (\ a -> fromBool (a == mempty)) []         -- |atEps| definition            
+==  fromBool ([] == mempty)                    -- $\beta$ reduction                
+==  fromBool True                              -- |fromBool| definition
 ==  one
 
     atEps (F f <+> F g)
@@ -1218,9 +1218,9 @@ Thus, for \emph{all} |w :: [c]|, |f w == (atEps f <: deriv f) w|, from which the
 \begin{code}
     deriv one
 ==  deriv (single mempty)                                       -- |one| on |b <-- a|
-==  deriv (F (\ a' -> boolVal (a' == mempty)))                  -- |single| on |b <-- a|
-==  \ c -> F (\ cs -> (\ a' -> boolVal (a' == mempty)) (c:cs))  -- |deriv| on |b <-- a|
-==  \ c -> F (\ cs -> boolVal (c:cs == mempty))                 -- $\beta$ reduction
+==  deriv (F (\ a' -> fromBool (a' == mempty)))                  -- |single| on |b <-- a|
+==  \ c -> F (\ cs -> (\ a' -> fromBool (a' == mempty)) (c:cs))  -- |deriv| on |b <-- a|
+==  \ c -> F (\ cs -> fromBool (c:cs == mempty))                 -- $\beta$ reduction
 ==  \ c -> F (\ cs -> zero)                                     -- |c:cs /= mempty|
 ==  \ c -> zero                                                 -- |zero| on |b <-- a|
 ==  zero                                                        -- |zero| on |a -> b|
@@ -1371,7 +1371,7 @@ The equation |q == r <+> s .> q| has solution |q = star s .> r|.
 
 %% single w = product (map symbol w)
 %%   where
-%%      symbol d = zero <: (\ c -> boolVal (c == d))
+%%      symbol d = zero <: (\ c -> fromBool (c == d))
 
 \begin{code}
     |single w|

@@ -85,9 +85,9 @@ oneBool f a True  = f a
 -- s .> f = (s <.>) . f
 
 -- The unique 'Semiring' homomorphism from 'Bool'.
-boolVal :: Semiring s => Bool -> s
-boolVal False = zero
-boolVal True  = one
+fromBool :: Semiring s => Bool -> s
+fromBool False = zero
+fromBool True  = one
 
 class Indexable p k v | p -> k v where
   (!) :: p -> k -> v
@@ -123,7 +123,7 @@ instance Semiring b => Decomposable ([c] -> b) ((->) c) b where
   deriv f = \ c cs -> f (c : cs)
 
 instance Ord c => Decomposable (Set [c]) (Map c) Bool where
-  e <: d  = boolVal e <+> S.unions [ S.map (c:) css | (c,css) <- M.toList d ]
+  e <: d  = fromBool e <+> S.unions [ S.map (c:) css | (c,css) <- M.toList d ]
   atEps p = [] `S.member` p
   deriv p = M.fromListWith (<+>) [(c, S.singleton cs) | c:cs <- S.toList p]
 

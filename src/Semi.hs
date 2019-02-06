@@ -13,6 +13,9 @@ import Control.Applicative (liftA2)
 import GHC.Natural (Natural)
 import Data.Functor.Identity (Identity(..))
 
+import Data.Set (Set)
+import Data.Map (Map)
+
 import qualified Data.Set as S
 import qualified Data.Map as M
 
@@ -85,6 +88,9 @@ instance Semiring zz => Semiring ((f) zz) where \
   { (<.>) = liftA2 (<.>) ; one = pure one } ; \
 instance Semiring zz => Semimodule zz ((f) zz) 
 
+-- TODO: Maybe rely on Pointed and Zip instead of Applicative here, considering
+-- these definitions.
+
 -- Now the default, but I may want to drop that default.
 -- 
 --    where scale s = fmap (s <.>) ;
@@ -99,21 +105,36 @@ instance Monoid (t) => Additive (t) where { zero = mempty ; (<+>) = (<>) }
 
 -- instance Eq (t) => DetectableZero (t) where isZero = (== mempty)
 
-Mono([c])
-Mono(S.Set a)
+Mono([a])
+Mono(Set a)
 -- etc
+
+-- TODO: Re-add the constrained versions of Functor/Applicative/Monad, and use
+-- them to unify Set a and [a].
 
 instance DetectableZero [c] where isZero = null
 
-instance Ord a => DetectableZero (S.Set a) where isZero = S.null
+instance Ord a => DetectableZero (Set a) where isZero = S.null
 
-instance (Ord a, Additive b) => Additive (M.Map a b) where
+instance Monoid a => Semiring [a] where
+  one = [mempty]
+  (<.>) = liftA2 (<>)
+
+instance (Ord a, Semiring a) => Semimodule a (Set a) where
+  scale a = S.map (a <.>)
+
+instance (Monoid a, Ord a) => Semiring (Set a) where
+  one = S.singleton mempty
+  -- p <.> q = S.fromList [u <> v | u <- S.toList p, v <- S.toList q]
+  p <.> q = S.fromList (liftA2 (<>) (S.toList p) (S.toList q))
+
+instance (Ord a, Additive b) => Additive (Map a b) where
   zero = M.empty
   (<+>) = M.unionWith (<+>)
 
-instance (Ord a, Additive b) => DetectableZero (M.Map a b) where isZero = M.null
+instance (Ord a, Additive b) => DetectableZero (Map a b) where isZero = M.null
 
-instance Semiring b => Semimodule b (M.Map a b) where scale s = fmap (s <.>)
+instance Semiring b => Semimodule b (Map a b) where scale s = fmap (s <.>)
 
 -- deriving instance Additive b       => Additive (Identity b)
 -- deriving instance DetectableZero b => DetectableZero (Identity b)
@@ -133,11 +154,42 @@ class Decomposable s h a | a -> h s where
   atEps = fst . decomp
   deriv = snd . decomp
   decomp a = (atEps a, deriv a)
-  {-# MINIMAL (<:), (decomp | atEps , decomp) #-}
+  {-# MINIMAL (<:), ((deriv , atEps) | decomp) #-}
 
 infix 1 :<:
 pattern (:<:) :: Decomposable s h a => s -> h a -> a
 pattern s :<: as <- (decomp -> (s,as)) where s :<: as = s <: as
+
+instance Semiring b => Decomposable b ((->) c) ([c] -> b) where
+  (b <: _) [] = b
+  (_ <: h) (c:cs) = h c cs
+  decomp f = (f [], \ c cs -> f (c : cs))
+-- {-# COMPLETE (:<:) :: Stream #-}
+
+instance Decomposable b Identity (Stream b) where
+  b <: Identity bs = b :# bs
+  decomp (b :# bs) = (b, Identity bs)
+-- {-# COMPLETE (:<:) :: Stream #-}
+
+-- I probably don't need and can't benefit from these COMPLETE pragmas, since
+-- I'm using the general Convo type. For the same reason, I don't think I'm
+-- benefiting from the polymorphic :<: pattern anyway, since it's only used for
+-- Convo.
+-- 
+-- TODO: specialize the (:<:) pattern's type to Convo. Perhaps wait to see
+-- whether Convo really handles everything.
+
+instance Ord c => Decomposable Bool (Map c) (Set [c]) where
+  e <: d  = fromBool e <+> S.unions [ S.map (c:) css | (c,css) <- M.toList d ]
+  atEps p = [] `S.member` p
+  deriv p = M.fromListWith (<+>) [(c, S.singleton cs) | c:cs <- S.toList p]
+
+-- The unique 'Semiring' homomorphism from 'Bool'.
+fromBool :: Semiring s => Bool -> s
+fromBool False = zero
+fromBool True  = one
+
+-- TODO: Map
 
 {--------------------------------------------------------------------
     Some convolution-style instances
@@ -147,42 +199,18 @@ newtype Stream' b = S (Stream b) deriving Additive
 
 deriving instance Semiring b => Semimodule b (Stream' b)
 
-#if 1
-
-instance Decomposable b Identity (Stream b) where
-  b <: Identity bs = b :# bs
-  decomp (b :# bs) = (b, Identity bs)
-{-# COMPLETE (:<:) :: Stream #-}
-
 instance Decomposable b Identity (Stream' b) where
   b <: Identity (S bs) = S (b :# bs)
   decomp (S (b :# bs)) = (b , Identity (S bs))
 {-# COMPLETE (:<:) :: Stream' #-}
 -- https://ghc.haskell.org/trac/ghc/wiki/PatternSynonyms/CompleteSigs
 
-#else
-
-instance Decomposable b Identity (Stream b) where
-  b <: Identity bs = b :# bs
-  decomp (b :# bs) = (b, Identity bs)
-{-# COMPLETE (:<:) :: Stream #-}
-
-deriving instance Decomposable b Identity (Stream' b)
-{-# COMPLETE (:<:) :: Stream' #-}
--- https://ghc.haskell.org/trac/ghc/wiki/PatternSynonyms/CompleteSigs
-
-#endif
-
--- I don't think I'll use Decomposable on Stream b, so I guess I prefer to skip
--- it. On the other hand, I wonder about giving a general Semiring for wrapped
--- decomposable semirings.
-
 instance (DetectableZero b, Semiring b) => Semiring (Stream' b) where
   one = one <: Identity zero
   (u :<: us') <.> vs = (u .> vs) <+> (zero :<: fmap (<.> vs) us')
 
 
-newtype Map' a b = M (M.Map a b) deriving Additive
+newtype Map' a b = M (Map a b) deriving Additive
 
 deriving instance Semiring b => Semimodule b (Map' a b)
 

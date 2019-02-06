@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ParallelListComp #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
--- {-# OPTIONS_GHC -Wno-orphans #-} -- TEMP
+{-# OPTIONS_GHC -Wno-orphans #-} -- TEMP for Stream
 
 -- | Languages as functions to semirings
 
@@ -632,27 +632,10 @@ instance OD c s => Decomposable (Trie c s) (Map c) s where
     Streams
 --------------------------------------------------------------------}
 
-infixr 1 :#
-data Stream b = b :# Stream b
-
-instance Indexable (Stream b) N b where
-  (b :# bs) ! n = if n == 0 then b else bs ! (n-1)
-
--- instance Indexable (Stream b) N b where
---   (b :# _)  ! 0 = b
---   (_ :# bs) ! n = bs ! (n-1)
-
--- instance Indexable (Stream b) N b where
---   (b :# _)  ! Sum 0 = b
---   (_ :# bs) ! Sum n = bs ! Sum (n-1)
+-- TODO: introduce a newtype wrapper, saving Stream b for behaving like N -> b.
 
 streamF :: Stream b -> (b <-- N)
 streamF bs = F (bs !)
-
-instance DetectableZero b => Decomposable (Stream b) Identity b where
-  b <: Identity bs = b :# bs
-  atEps (b :# _) = b
-  deriv (_ :# bs) = Identity bs
 
 -- TODO: give real instances for b <-- a, in terms of Splittable.
 

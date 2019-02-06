@@ -20,6 +20,7 @@ import qualified Data.Set as S
 import qualified Data.Map as M
 
 import Misc ((:*),Stream(..))
+import Constrained
 
 {--------------------------------------------------------------------
     Classes
@@ -38,6 +39,14 @@ class Additive b => Semiring b where
   infixl 7 <.>
   (<.>) :: b -> b -> b
   one :: b
+
+class Semiring b => StarSemiring b  where
+  star :: b -> b
+  plus :: b -> b
+  star x = one <+> plus x
+  {-# INLINE star #-}
+  plus x = x <.> star x
+  {-# INLINE plus #-}
 
 class Semimodule s b | b -> s where
   scale :: s -> b -> b
@@ -83,9 +92,11 @@ Nums(Double)
 -- Additive, Semimodule, Semimodule from Applicative
 #define Appls(f) \
 instance Additive zz => Additive ((f) zz) where \
-  { (<+>) = liftA2 (<+>) ; zero = pure zero } ; \
+  { (<+>) = liftA2C (<+>) ; zero = pureC zero } ; \
 instance Semiring zz => Semiring ((f) zz) where \
-  { (<.>) = liftA2 (<.>) ; one = pure one } ; \
+  { (<.>) = liftA2C (<.>) ; one = pureC one } ; \
+instance StarSemiring zz => StarSemiring ((f) zz) where \
+  { star = fmap star; plus = fmap plus } ; \
 instance Semiring zz => Semimodule zz ((f) zz) 
 
 -- TODO: Maybe rely on Pointed and Zip instead of Applicative here, considering
@@ -123,10 +134,16 @@ instance Monoid a => Semiring [a] where
 instance (Ord a, Semiring a) => Semimodule a (Set a) where
   scale a = S.map (a <.>)
 
+#if 1
+instance (Monoid a, Ord a) => Semiring (Set a) where
+  one = pureC mempty
+  (<.>) = liftA2C (<>)
+#else
 instance (Monoid a, Ord a) => Semiring (Set a) where
   one = S.singleton mempty
   -- p <.> q = S.fromList [u <> v | u <- S.toList p, v <- S.toList q]
   p <.> q = S.fromList (liftA2 (<>) (S.toList p) (S.toList q))
+#endif
 
 instance (Ord a, Additive b) => Additive (Map a b) where
   zero = M.empty
@@ -136,10 +153,20 @@ instance (Ord a, Additive b) => DetectableZero (Map a b) where isZero = M.null
 
 instance Semiring b => Semimodule b (Map a b) where scale s = fmap (s <.>)
 
--- deriving instance Additive b       => Additive (Identity b)
--- deriving instance DetectableZero b => DetectableZero (Identity b)
--- deriving instance Semimodule s b   => Semimodule s (Identity b)
--- deriving instance Semiring b       => Semiring (Identity b)
+-- Do I want Semiring (Map a b)? If so, should it agree with a -> b.
+-- Maybe build it with Convo, but then I'm restricting the domain.
+
+-- Even for lists, I suspect I should have one version that acts like functions
+-- from N and another like convolution.
+
+#if 0
+
+deriving instance Additive b       => Additive (Identity b)
+deriving instance DetectableZero b => DetectableZero (Identity b)
+deriving instance Semimodule s b   => Semimodule s (Identity b)
+deriving instance Semiring b       => Semiring (Identity b)
+
+#endif
 
 {--------------------------------------------------------------------
     Decomposition (elsewhere?)
@@ -189,7 +216,64 @@ fromBool :: Semiring s => Bool -> s
 fromBool False = zero
 fromBool True  = one
 
--- TODO: Map
+-- TODO: Map, N -> b
+
+{--------------------------------------------------------------------
+    Sum and product monoids
+--------------------------------------------------------------------}
+
+-- semiring-num defines 'add' and 'mul' via foldl', but I think I want foldr
+-- instead.
+
+newtype Sum a = Sum a deriving (Eq,Show)
+
+getSum :: Sum a -> a
+getSum (Sum a) = a
+
+instance Semiring a => Semigroup (Sum a) where
+  Sum a <> Sum b = Sum (a <+> b)
+
+instance Semiring a => Monoid (Sum a) where
+  mempty = Sum zero
+
+sum :: (Foldable f, Semiring a) => f a -> a
+sum = getSum . foldMap Sum
+
+-- Handy for eliding the Sum Natural vs Natural distinction in the paper.
+instance Num a => Num (Sum a) where
+  fromInteger = Sum . fromInteger
+  Sum a + Sum b = Sum (a + b)
+  Sum a - Sum b = Sum (a - b)
+  Sum a * Sum b = Sum (a * b)
+  negate (Sum a) = Sum (negate a)
+  abs    (Sum a) = Sum (abs a)
+  signum (Sum a) = Sum (signum a)
+
+missing :: String -> String -> z
+missing ty op = error ("No " ++ op ++ " method for " ++ ty)
+
+noSum :: String -> z
+noSum = missing "Sum" "(*)"
+
+instance Enum a => Enum (Sum a) where
+  toEnum = Sum . toEnum
+  fromEnum = fromEnum . getSum
+
+newtype Product a = Product a deriving (Eq,Show)
+
+getProduct :: Product a -> a
+getProduct (Product a) = a
+
+instance Semiring a => Semigroup (Product a) where
+  Product a <> Product b = Product (a <.> b)
+
+instance Semiring a => Monoid (Product a) where
+  mempty = Product one
+
+product :: (Foldable f, Semiring a) => f a -> a
+product = getProduct . foldMap Product
+
+type N = Sum Natural
 
 {--------------------------------------------------------------------
     Some convolution-style instances
@@ -254,4 +338,9 @@ instance ( DetectableZero b, Semiring b, Applicative h
          , Additive (f b), Semimodule b (f b), Decomposable b h (f b) )
       => Semiring (Convo f b) where
   one = one <: pure zero
-  (u :<: us') <.> vs = (u .> vs) <+> (zero :<: fmap (<.> vs) us')
+  (a :<: dp) <.> q = (a .> q) <+> (zero :<: fmap (<.> q) dp)
+
+instance ( DetectableZero b, StarSemiring b, Applicative h
+         , Additive (f b), Semimodule b (f b), Decomposable b h (f b)
+         ) => StarSemiring (Convo f b) where
+  star (a :<: dp) = q where q = star a .> (one :<: fmap (<.> q) dp)

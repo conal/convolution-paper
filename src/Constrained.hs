@@ -18,7 +18,7 @@ import qualified Data.MultiSet as MS
 import Data.Semiring
 
 import Misc
-import Set hiding (Trie)
+-- import Set hiding (Trie)
 
 type Ok2 f a b = (Ok f a, Ok f b)
 type Ok3 f a b c = (Ok2 f a b, Ok f c)

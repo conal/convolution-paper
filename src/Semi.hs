@@ -28,7 +28,8 @@ class Additive b where
   (<+>) :: b -> b -> b
   zero :: b
 
-class Additive b => DetectableZero b where isZero :: b -> Bool
+class Additive b => DetectableZero b where
+  isZero :: b -> Bool
 
 class Additive b => Semiring b where
   infixl 7 <.>
@@ -39,10 +40,12 @@ class Semimodule s b | b -> s where
   scale :: s -> b -> b
   -- default scale :: (Semiring b, s ~ b) => s -> b -> b  -- experimental
   -- scale = (<.>)
+  default scale :: (Semiring s, Functor f, b ~ f s) => s -> b -> b  -- experimental
+  scale s = fmap (s <.>)
 
 -- | 'scale' optimized for zero scalar
 (.>) :: (Semiring b, Semimodule s b, DetectableZero s) => s -> b -> b
-s .> b | isZero s = zero
+s .> b | isZero s  = zero
        | otherwise = s `scale` b
 
 {--------------------------------------------------------------------
@@ -80,12 +83,11 @@ instance Additive zz => Additive ((f) zz) where \
   { (<+>) = liftA2 (<+>) ; zero = pure zero } ; \
 instance Semiring zz => Semiring ((f) zz) where \
   { (<.>) = liftA2 (<.>) ; one = pure one } ; \
-instance Semiring zz => Semimodule zz ((f) zz) where \
-  scale s = fmap (s <.>) ;
+instance Semiring zz => Semimodule zz ((f) zz) 
 
-
--- instance Semimodule s b => Semimodule s ((qq) b) where \
---   scale s = fmap (scale s) ;
+-- Now the default, but I may want to drop that default.
+-- 
+--    where scale s = fmap (s <.>) ;
 
 Appls((->) a)
 Appls(Stream)
@@ -95,9 +97,15 @@ Appls(Stream)
 #define Mono(t) \
 instance Monoid (t) => Additive (t) where { zero = mempty ; (<+>) = (<>) }
 
+-- instance Eq (t) => DetectableZero (t) where isZero = (== mempty)
+
 Mono([c])
 Mono(S.Set a)
 -- etc
+
+instance DetectableZero [c] where isZero = null
+
+instance Ord a => DetectableZero (S.Set a) where isZero = S.null
 
 instance (Ord a, Additive b) => Additive (M.Map a b) where
   zero = M.empty
@@ -107,10 +115,10 @@ instance (Ord a, Additive b) => DetectableZero (M.Map a b) where isZero = M.null
 
 instance Semiring b => Semimodule b (M.Map a b) where scale s = fmap (s <.>)
 
-deriving instance Additive b       => Additive (Identity b)
-deriving instance DetectableZero b => DetectableZero (Identity b)
-deriving instance Semimodule s b   => Semimodule s (Identity b)
-deriving instance Semiring b       => Semiring (Identity b)
+-- deriving instance Additive b       => Additive (Identity b)
+-- deriving instance DetectableZero b => DetectableZero (Identity b)
+-- deriving instance Semimodule s b   => Semimodule s (Identity b)
+-- deriving instance Semiring b       => Semiring (Identity b)
 
 {--------------------------------------------------------------------
     Decomposition (elsewhere?)
@@ -170,7 +178,7 @@ deriving instance Decomposable b Identity (Stream' b)
 -- decomposable semirings.
 
 instance (DetectableZero b, Semiring b) => Semiring (Stream' b) where
-  one = one <: zero
+  one = one <: Identity zero
   (u :<: us') <.> vs = (u .> vs) <+> (zero :<: fmap (<.> vs) us')
 
 

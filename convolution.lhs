@@ -525,7 +525,7 @@ Understanding how |atEps| and |deriv| relate to the semiring vocabulary will hel
 %if False
 First, however, we'll need to generalize to representations other than |b <-- a|:
 \begin{code}
-class Semiring a => Decomposable a h s | a -> h s where
+class Decomposable a h s | a -> h s where
   infix 1 <:
   (<:)   :: s -> h a -> a
   atEps  :: a -> s
@@ -1232,8 +1232,13 @@ Thus, for \emph{all} |w :: [c]|, |f w == (atEps f <: deriv f) w|, from which the
 ==  one <+> atEps p <.> star (atEps p)  -- coinduction (?)
 ==  star (atEps p)                      -- defining property of |star|
 
+    atEps (s .> F f)
+==  atEps (F (\ a -> s * f a))
+==  (\ a -> s * f a) []
+==  s * f []
+==  s * atEps (F f)
 \end{code}
-\note{For this last proof, maybe instead show inductively that |atEps (pow p n) == pow (atEps p) n| for all |n >= 0|, and then appeal to the summation definition of |star p|.}
+\note{For the |star p| proof, maybe instead show inductively that |atEps (pow p n) == pow (atEps p) n| for all |n >= 0|, and then appeal to the summation definition of |star p|.}
 
 \subsection{\lemRef{deriv b <-- [c]}}\proofLabel{lemma:deriv b <-- [c]}
 

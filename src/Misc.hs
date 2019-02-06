@@ -33,3 +33,10 @@ instance Applicative Stream where
   pure b = b :# pure b
   liftA2 h (a :# as) (b :# bs) = h a b :# liftA2 h as bs
 #endif
+
+instance Monad Stream where
+  ss >>= f = joinS (fmap f ss)
+  -- (s :# ss') >>= f = let (b :# _) = f s in b :# (ss' >>= f)
+
+joinS :: Stream (Stream a) -> Stream a
+joinS ((a :# _) :# ss') = a :# joinS ss'

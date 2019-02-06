@@ -96,9 +96,24 @@ Conal Elliott
 
 \maketitle
 
-%% \begin{abstract}
-%% ...
-%% \end{abstract}
+\begin{abstract}
+
+A number of useful and interesting tasks can be formulated in the vocabulary of \emph{semirings}, which are types that have addition, multiplication, and their corresponding identities zero and one.
+Multiplication with one must form a monoid, while addition with zero must form commutative monoid.
+As in a ring, multiplication distributes over addition, but unlike rings, there needn't be an additive inverse.
+A somewhat less well-known abstraction is \emph{semimodules}, which are like vector spaces but with the requirement of a \emph{field} of scalars relaxed to a semiring.
+Using the perspective of semirings and free semimodules, this paper explores formal languages and derives algorithms for language recognition (matching) that correspond to a method of Brzozowski, while generalizing this method to a broader setting, including counted and weighted ``languages''.
+
+Although Brzozowski formulated his method in terms of regular expressions, free semimodules appear to be a more natural and general setting.
+Regular expressions become a special case, while \emph{tries} offer a natural alternative that appears to be simpler and more efficient.
+Rather than constructing a grammatical representation that gets successively ``differentiated'' in Brzozowski's method, the standard notion of trie already has derivatives built in, saving much redundant work without the need for explicit memoization.
+Since tries generalize elegantly from sets to functions and from strings to algebraic data types, the essential theory and algorithms extend far beyond languages in the sense of sets of strings.
+In particular, this paper shows how to efficiently and easily perform convolution in one dimension or many.
+Aside from applications in image processing and machine learning, a simple and direct application of convolution is multiplication of polynomials, again in one or many dimensions (i.e., univariate or multivariate).
+All of the algorithms in the paper follow from very simple specifications in the form of semiring homomorphisms that relate different representations.
+Underlying these variations is a notion of generalized convolution, which itself (along with probabilistic computation) generalizes to the free semimodule monad.
+
+\end{abstract}
 
 \sectionl{Introduction}
 
@@ -291,7 +306,7 @@ instance Eq a => HasSingle (Pred a) a where
 \end{code}
 \vspace{-4ex}
 }.
-%format isEmpty = "\Varid{is}_\epsilon"
+%% %format isEmpty = "\Varid{is}_\epsilon"
 %% %format splits = split
 For some monoids, including lists, we can also express the product operation in a more clearly computable form via \emph{splittings}:
 %format bigOrSplits (lim) = "\bigOp\bigvee{" lim "}{2.5}"
@@ -300,17 +315,17 @@ For some monoids, including lists, we can also express the product operation in 
 \end{code}
 where |splits| inverts |(<>)|:
 \notefoot{Maybe generalize from \emph{lists} of pairs to an associated |Foldable|.}
-\notefoot{If I don't end up using |isEmpty|, drop it here. I think it's good for avoiding unnecessary equality tests and hence |Eq| constraints.}
+% \notefoot{If I don't end up using |isEmpty|, drop it here. I think it's good for avoiding unnecessary equality tests and hence |Eq| constraints.}
 \begin{code}
 class Monoid t => Splittable t where
-  isEmpty  :: t -> Bool     -- whether equal to |mempty|
   splits   :: t -> [(t,t)]  -- the inverse of |mappend|
 
 instance Splittable [a] where
-  isEmpty = null
   splits []      = [([],[])]
   splits (a:as)  = ([],a:as) : [((a:l),r) | (l,r) <- splits as]
 \end{code}
+%%   isEmpty  :: t -> Bool     -- whether equal to |mempty|
+%%   isEmpty = null
 Sets and predicates have the same sort of relationship as between sets and lists (\thmRef{list}), though symmetrically:
 \begin{theorem}[\provedIn{theorem:pred}]\thmLabel{pred}
 Given the definitions in \figref{pred}, |setPred| and |predSet| are homomorphisms (and together form an isomorphism) with respect to each instantiated class.

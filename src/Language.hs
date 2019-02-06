@@ -14,6 +14,7 @@ import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Map (Map)
 import qualified Data.Map as M
+import Data.Functor.Identity (Identity(..))
 
 -- import Data.TotalMap (TMap)
 -- import qualified Data.TotalMap as T
@@ -21,6 +22,8 @@ import qualified Data.Map as M
 -- SINGLE controlled by package.yaml
 
 import Data.Semiring
+
+import Misc (Stream(..))
 
 #ifdef SINGLE
 
@@ -100,14 +103,30 @@ class Indexable p k v | p -> k v where
 instance Indexable (k -> v) k v where
   f ! k = f k
 
+instance Indexable (Stream b) N b where
+  (b :# bs) ! n = if n == 0 then b else bs ! (n-1)
+
+-- instance Indexable (Stream b) N b where
+--   (b :# _)  ! 0 = b
+--   (_ :# bs) ! n = bs ! (n-1)
+
+-- instance Indexable (Stream b) N b where
+--   (b :# _)  ! Sum 0 = b
+--   (_ :# bs) ! Sum n = bs ! Sum (n-1)
+
 instance (Ord k, Semiring v) => Indexable (Map k v) k v where
   m ! k = M.findWithDefault zero k m
 
-class Semiring a => Decomposable a h s | a -> h s where
+class Decomposable a h s | a -> h s where
   infix 1 <:
   (<:)  :: s -> h a -> a
   atEps :: a -> s
   deriv :: a -> h a
+
+instance {- DetectableZero b => -} Decomposable (Stream b) Identity b where
+  b <: Identity bs = b :# bs
+  atEps (b :# _) = b
+  deriv (_ :# bs) = Identity bs
 
 -- TODO: Do I really want h to depend on a? Could we have more than one h per a?
 

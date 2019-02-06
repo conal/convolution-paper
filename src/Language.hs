@@ -21,21 +21,24 @@ import Data.Functor.Identity (Identity(..))
 
 -- SINGLE controlled by package.yaml
 
-import Data.Semiring
+-- import Data.Semiring
 
 import Misc (Stream(..))
+import Semi
 
 #ifdef SINGLE
 
 class HasSingle x a | x -> a where
   single :: a -> x
 
+-- I'll probably want to swap arguments in HasSingle.
+
 infix 1 +->
-(+->) :: (Semiring x, Scalable x s, HasSingle x a, DetectableZero s)
+(+->) :: (Semiring x, Semimodule s x, HasSingle x a, DetectableZero s)
       => a -> s -> x
 a +-> s = s .> single a
 
-value :: (Scalable x s, HasSingle x a, DetectableZero s, Monoid a, Semiring x)
+value :: (Semimodule s x, HasSingle x a, DetectableZero s, Monoid a, Semiring x)
       => s -> x
 value b = mempty +-> b
 
@@ -71,7 +74,7 @@ instance HasSingle (Set a) a Bool where
 #endif
 
 #ifdef SINGLE
-type HS x c s = (Scalable x s, DetectableZero s, HasSingle x [c])
+type HS x c s = (Semimodule s x, DetectableZero s, HasSingle x [c])
 #else
 type HS x c s = HasSingle x [c] s
 #endif
@@ -79,18 +82,6 @@ type HS x c s = HasSingle x [c] s
 oneBool :: Semiring x => (a -> x) -> a -> Bool -> x
 oneBool _ _ False = zero
 oneBool f a True  = f a
-
--- instance Eq c => Decomposable [[c]] ((->) c) Bool where
---   atEps p   = [] `elem` p
---   deriv p c = [cs | c' : cs <- p, c' == c]
-
--- (.>) :: Semiring s => s -> (a -> s) -> (a -> s)
--- s .> f = (s <.>) . f
-
--- The unique 'Semiring' homomorphism from 'Bool'.
-fromBool :: Semiring s => Bool -> s
-fromBool False = zero
-fromBool True  = one
 
 equal :: (Eq a, Semiring s) => a -> a -> s
 -- equal a a' = fromBool (a == a')
@@ -117,39 +108,14 @@ instance Indexable (Stream b) N b where
 instance (Ord k, Semiring v) => Indexable (Map k v) k v where
   m ! k = M.findWithDefault zero k m
 
-class Decomposable a h s | a -> h s where
-  infix 1 <:
-  (<:)  :: s -> h a -> a
-  atEps :: a -> s
-  deriv :: a -> h a
-
-instance {- DetectableZero b => -} Decomposable (Stream b) Identity b where
-  b <: Identity bs = b :# bs
-  atEps (b :# _) = b
-  deriv (_ :# bs) = Identity bs
-
--- TODO: Do I really want h to depend on a? Could we have more than one h per a?
-
 -- | Derivative of a language w.r.t a string
-derivs :: (Decomposable a h s, Indexable (h a) c a) => a -> [c] -> a
+derivs :: (Decomposable s h a, Indexable (h a) c a) => a -> [c] -> a
 derivs = foldl ((!) . deriv)
 
-accept :: (Decomposable a h s, Indexable (h a) c a) => a -> [c] -> s
+accept :: (Decomposable s h a, Indexable (h a) c a) => a -> [c] -> s
 accept p s = atEps (derivs p s)
 
 -- type Language a c s = (StarSemiring a, HasSingle a [c], Decomposable a c s)
-
-instance Semiring b => Decomposable ([c] -> b) ((->) c) b where
-  (b <: _) [] = b
-  (_ <: h) (c:cs) = h c cs
-  atEps f = f []
-  -- deriv f c = f . (c :)
-  deriv f = \ c cs -> f (c : cs)
-
-instance Ord c => Decomposable (Set [c]) (Map c) Bool where
-  e <: d  = fromBool e <+> S.unions [ S.map (c:) css | (c,css) <- M.toList d ]
-  atEps p = [] `S.member` p
-  deriv p = M.fromListWith (<+>) [(c, S.singleton cs) | c:cs <- S.toList p]
 
 -- instance (Ord k, Monoid k, Semiring v) => HasSingle (TMap k v) v where
 --   single v = T.insert mempty v zero
@@ -248,22 +214,6 @@ instance Semiring a => Monoid (Product a) where
 
 product :: (Foldable f, Semiring a) => f a -> a
 product = getProduct . foldMap Product
-
-{--------------------------------------------------------------------
-    Experiment
---------------------------------------------------------------------}
-
-class Scalable b s | b -> s where scale :: s -> b -> b
-
-instance Semiring s => Scalable (a -> s) s where
-  scale s f = (s <.>) . f
-
-infixl 7 .>
--- | 'scale' optimized for zero scalar
-(.>) :: (Semiring b, Scalable b s, DetectableZero s) => s -> b -> b
-s .> b | isZero s = zero
-       | otherwise = s `scale` b
-
 
 {--------------------------------------------------------------------
     Temporary hack

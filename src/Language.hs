@@ -22,7 +22,8 @@ import Data.Functor.Identity (Identity(..))
 
 -- import Data.Semiring
 
-import Misc (Stream(..))
+import Misc
+import Stream
 import Semi
 
 class HasSingle a x | x -> a where

@@ -57,7 +57,7 @@ instance Semiring s => Scalable (s <-- a) s where
   -- s `scale` F f = F ((s <.>) . f) 
 
 instance Semiring b => Decomposable (b <-- [c]) ((->) c) b where
-  b <: h = F (b <: unF . h)
+  -- b <: h = F (b <: unF . h)
 
   -- b <: h = F f where  f []      = b
   --                     f (c:cs)  = unF (h c) cs
@@ -67,8 +67,8 @@ instance Semiring b => Decomposable (b <-- [c]) ((->) c) b where
   --     f []   = b
   --     f (c:cs) = unF (h c) cs
 
-  -- b <: h = F (\ case []   -> b
-  --                    c:cs -> unF (h c) cs)
+  b <: h = F (\ case []   -> b
+                     c:cs -> unF (h c) cs)
 
   atEps (F f) = f mempty
   deriv (F f) = \ c -> F (\ cs -> f (c:cs))
@@ -517,11 +517,12 @@ trimT 0 _ = zero
 trimT n (c :< ts) = c :< fmap (trimT (n-1)) ts
 
 instance OD c s => Scalable (Trie c s) s where
+
   scale s = go
    where
      go ~(e :< ts) = (s <.> e) :< fmap go ts
 
-  -- s `scale` (e :< ts) = (s <.> e) :< fmap (scale s) ts
+  -- s `scale` (b :< dq) = (s <.> b) :< fmap (s `scale`) dq
 
   -- s `scale` t = go t
   --  where
@@ -566,7 +567,7 @@ instance OD c s => Semiring (Trie c s) where
      vs = fmap (a .>) dq
 #elif 1
   -- Works even for recursive anbn examples.
-  ~(a :< ps) <.> q = a .> q <+> (zero :< fmap (<.> q) ps)
+  (a :< dp) <.> q = a .> q <+> (zero :< fmap (<.> q) dp)
 #else
   -- Works even for recursive anbn examples.
   (a :< dp) <.> ~q@(b :< dq)
@@ -579,7 +580,7 @@ instance OD c s => Semiring (Trie c s) where
 --   star (_ :< ds) = q where q = one :< fmap (<.> q) ds
 
 instance (Ord c, StarSemiring s, DetectableZero s) => StarSemiring (Trie c s) where
-#if 0
+#if 1
   -- Works
   star (a :< dp) = q where q = star a .> (one :< fmap (<.> q) dp)
 #else
@@ -594,10 +595,11 @@ instance (Ord c, StarSemiring s, DetectableZero s) => StarSemiring (Trie c s) wh
 
 #ifdef SINGLE
 instance OD c s => HasSingle (Trie c s) [c] where
-#if 0
-  single = product . map symbol
-   where
-     symbol c = zero :< singleton c one
+#if 1
+  single w = product (map symbol w) where symbol c = zero <: singleton c one
+  -- single = product . map symbol
+  --  where
+  --    symbol c = zero :< singleton c one
 #else
   -- More streamlined
   single = foldr cons one
@@ -665,7 +667,7 @@ instance (StarSemiring b, DetectableZero b) => StarSemiring (Stream b) where
   star (a :# as) = q where q = star a .> (one :# as <.> q)
 
 instance DetectableZero s => Scalable (Stream s) s where
-  s `scale` (b :# bs) = (s <.> b) :# (s `scale` bs)
+  s `scale` (b :# dq) = (s <.> b) :# (s `scale` dq)
 
 {--------------------------------------------------------------------
     Polynomials

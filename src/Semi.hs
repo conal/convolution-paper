@@ -192,7 +192,7 @@ unC :: Convo f b -> f b
 unC (C z) = z
 
 instance (Functor h, Decomposable b h (f b)) => Decomposable b h (Convo f b) where
-  b <: zs = C (b :<: fmap unC zs)
+  b <: zs = C (b <: fmap unC zs)
   decomp (C (decomp -> (b,zs))) = (b, fmap C zs)
 
   -- decomp (C (b :<: zs)) = (b, fmap C zs)  -- "Pattern match(es) are non-exhaustive"

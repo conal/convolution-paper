@@ -4,11 +4,11 @@
 \documentclass[hidelinks,twoside]{article}  % fleqn, 
 \usepackage[margin=0.9in]{geometry}  % 0.12in, 0.9in, 1in
 
-\usepackage[us,12hr]{datetime}
-\usepackage{setspace}
-
 %% \documentclass{article}
 %% \usepackage{fullpage}
+
+\usepackage[us,12hr]{datetime}
+\usepackage{setspace}
 
 %% Temporary title
 \def\tit{Efficient language recognition and generalized convolution}
@@ -438,7 +438,10 @@ Given the definitions in \figrefdef{:<--}{Finite maps as a language representati
 newtype b :<-- a = M (Map a b) deriving Show
 
 mapTo :: (Ord a, Semiring b) => (b :<-- a) -> (b <-- a)
-mapTo (M m) = F (\ a -> findWithDefault zero a m)
+mapTo (M m) = F (m NOP !)
+
+(!) :: Map a b -> a -> b
+m ! k = findWithDefault zero k m
 
 instance (Monoid a, Ord a, Semiring b) => Semiring (b :<-- a) where
   zero = M empty
@@ -472,46 +475,39 @@ In any case, introduce streams first since they're simpler than lists; then map 
 %format deriv = "\derivOp"
 
 For functions from \emph{lists} specifically, we can decompose in a way that lays the groundwork for more efficient implementations than the ones in previous sections.
-Any function on lists can be expressed in terms of how it handles the empty list |[]| and non-empty lists |c:cs|, as made precise by the following definition:
-\begin{code}
-infix 1 <:
-(<:) :: b -> (c -> [c] -> b) -> [c] -> b
-(b <: h) []      = b
-(b <: h) (c:cs)  = h c cs
-\end{code}
 \begin{lemma}[\provedIn{lemma:decomp (b <-- [c])}]\lemLabel{decomp (b <-- [c])}
-Any function from lists |f :: [c] -> b| can be decomposed as follows:
+Any |f :: b <-- [c]| can be decomposed as follows:\footnote{In terms of |a -> [c]| rather than |[c] <-- a|, the definitions would read more simply:
+\begin{code}
+atEps f = f mempty
+deriv f c cs = f (c:cs)
+b <: h = \ NOP case {NOP [] -> b NOP ; NOP c:cs -> h c cs NOP}
+\end{code}
+%% (b <: h) []      = b
+%% (b <: h) (c:cs)  = h c cs
+\vspace{-3ex}
+}
 \begin{code}
 f == atEps f <: deriv f
 \end{code}
 where
 \begin{code}
-atEps :: ([c] -> b) -> b
-atEps f = f []
+atEps :: (b <-- [c]) -> b
+atEps (F f) = f mempty
 
-deriv :: ([c] -> b) -> c -> ([c] -> b)
-deriv f = \ c cs -> f (c : cs)
+deriv :: (b <-- [c]) -> c -> (b <-- [c])
+deriv (F f) = \ c -> F (\ cs -> f (c:cs))
+
+infix 1 <:
+(<:) :: b -> (c -> (b <-- [c]) -> (b <-- [c])
+b <: h = F (\ NOP case {NOP [] -> b NOP;NOP c:cs  -> unF (h c) cs NOP})
 \end{code}
+\vspace{-3ex}
 \end{lemma}
 \noindent
-This decomposition generalizes a pair of operations used by \citet{Brzozowski64} mapping languages to languages (as sets of strings):\footnote{Brzozowski wrote ``$\derivOp_c\,p$'' instead of ``|deriv p c|'', but the latter will prove more convenient below.}
-\begin{code}
-delta p = if mempty <# p then set mempty else emptyset 
+Considering the isomorphism |Pow [c] =~ Bool <-- [c]|, this decomposition generalizes the |delta| and |deriv| operations used by \citet{Brzozowski64} mapping languages to languages (as sets of strings), the latter of which he referred to as the ``derivative''.\footnote{Brzozowski wrote ``$\derivOp_c\,p$'' instead of ``|deriv p c|'', but the latter will prove more convenient below.}
 
-deriv p c = set (cs | c:cs <# p)
-\end{code}
-To see the relationship between Brzozowski's two operations and the decomposition above, recast |delta| and |deriv| in terms of predicates (functions to booleans):
-\begin{code}
-delta p  = \ NOP case  []   -> p []
-                       _:_  -> False
-         = mempty +-> p mempty
-         = atEps p .> one
-
-deriv p = \ c cs -> p (c : cs)
-\end{code}
-
-\noindent
-Understanding how |atEps| and |deriv| relate to the semiring vocabulary will help us develop an efficient implementation in \secref{Tries} below.
+Understanding how |atEps| and |deriv| relate to the semiring vocabulary will help us develop an efficient implementation in \secref{Tries}.
+%if False
 First, however, we'll need to generalize to representations other than |b <-- a|:
 \begin{code}
 class Semiring a => Decomposable a h s | a -> h s where
@@ -545,14 +541,15 @@ instance Semiring b => Decomposable (b <-- [c]) ((->) c) b where
   atEps  (F f) = f mempty
   deriv  (F f) = \ c -> F (\ cs -> f (c:cs))
 \end{code}
-
 %% \begin{code}
 %%   b <: h = F (\ NOP case  []    -> b
 %%                           c:cs  -> unF (h c) cs)
 %% \end{code}
 
+%endif
+
 \begin{lemma}[\provedIn{lemma:atEps b <-- [c]}]\lemLabel{atEps b <-- [c]}
-On |b <-- a|, the |atEps| function is a star semiring homomorphism, i.e.,
+The |atEps| function is a star semiring homomorphism, i.e.,
 \begin{code}
 atEps zero         == zero
 atEps one          == one
@@ -560,12 +557,13 @@ atEps (p  <+>  q)  == atEps p  <+>  atEps q
 atEps (p  <.>  q)  == atEps p  <.>  atEps q 
 
 atEps (star p)     == star (atEps p)
+
+atEps (s .> p)     == s * atEps p
 \end{code}
 Moreover, |atEps (single [d]) == zero|.
-
 \end{lemma}
 \begin{lemma}[\provedIn{lemma:deriv b <-- [c]}, generalizing Lemma 3.1 of \citet{Brzozowski64}]\lemLabel{deriv b <-- [c]}
-Differentiation on |b <-- [c]|, has the following properties:
+Differentiation has the following properties:
 \notefoot{If I replace application to |c| by indexing by |c| (i.e., |(! NOP c)|), will this lemma hold for all of the representations? I suspect so. Idea: Define $\derivOp_c\,p = \derivOp\,p\:!\:c$.}
 \begin{code}
 deriv zero  c == zero
@@ -575,21 +573,39 @@ deriv (p  <.>  q) c == atEps p .> deriv q c <+> deriv p c <.> q
 
 deriv (star p) c == star (atEps p) .> deriv p c * star p
 
+deriv (s .> p) c == s .> deriv p c
+
 deriv (single [d]) c == equal c d
 \end{code}
 \end{lemma}
 \begin{theorem}[\provedIn{theorem:semiring decomp b <-- [c]}]\thmLabel{semiring decomp b <-- [c]}
 The following properties hold:
+\begin{spacing}{1.2}
 \begin{code}
 zero  == zero  <: zero
 one   == one   <: zero
-(a  <:  dp)  <+>  (b <: dq)  == a  <+>  b <: dp <+> dq
-(a  <:  dp)  <.>  q == a .> q <+> (zero <: (<.> NOP q) . dp)
+(a  <:  dp) <+> (b <: dq)  == a  <+>  b <: dp <+> dq
+(a  <:  dp) <.> q == a .> q <+> (zero <: (<.> NOP q) . dp)
 star (a <: dp) = q where q = star a .> (one <: (<.> NOP q) .  dp)
 
 single w = product (map symbol w) where symbol d = zero <: equal d
+
+s .> (a <: dp) = s <.> a <: (s NOP .>) . dp
 \end{code}
+\vspace{-6ex}
+\end{spacing}
 \end{theorem}
+
+To make use of these insights, it will be convenient to generalize the decomposition to other representations:
+\begin{code}
+class Semiring a => Decomposable a h s | a -> h s where
+  infix 1 <:
+  (<:)   :: s -> h a -> a
+  atEps  :: a -> s
+  deriv  :: a -> h a
+\end{code}
+The definitions given above correspond to an instance |Semiring b => Decomposable (b <-- [c]) ((->) c) b|.
+\notefoot{Use an associated pattern synonym instead.}
 
 %format `scale` = "\mathbin{\hat{" .> "}}"
 %format scale = ( `scale` )
@@ -609,18 +625,22 @@ The |DetectableZero| class \citep{semiring-num}:
 class Semiring a => DetectableZero a where isZero :: a -> Bool
 \end{code}
 
+\sectionl{Regular Expressions}
+
+\note{A sort of ``free'' variant of functions. Easy to derive homomorphically. Corresponds to \citet{Brzozowski64} and other work on recognizing and parsing by derivatives.}
+
 \sectionl{Tries}
 
 %format :< = "\mathrel{\Varid{:\!\!\triangleleft}}"
 
-Since a language is a set of strings, we have considered representations of such sets as lists and as predicates.
+Since a language is a set of strings, we have considered representations of such sets as lists, predicates, and regular expressions.
 Another choice of language representation is the \emph{trie}, as introduced by Thue in 1912, according to Knuth \needcite{}.
 As shown by Hinze \needcite{}, tries can be extended to represent not just sets but partial functions, as well as defined generically for partial functions from types other than strings.
 Putting genericity aside\notefoot{Re-raise later?} and restricting our attention to functions of lists (``strings''), we can formulate a simple trie data type as follows:
 
 > data Trie c s = s :< Map c (Trie c s)
 
-The similarity between the |Trie| type and the function decomposition from \secref{Decomposing Functions from Lists} (motivating the constructor's name) makes the denotation of tries quite simple to express:\footnote{Equivalently, |trieFun (e :< d) = e <: \ c cs -> trieFun (d ! c) cs|.}
+The similarity between the |Trie| type and the function decomposition from \secref{Decomposing Functions from Lists} (motivating the constructor's name) makes the denotation of tries quite simple to express:\footnote{Recall |(!)| from \figref{:<--} as zero-defaulted finite map indexing. Equivalently, |trieFun (e :< d) = e <: \ c cs -> trieFun (d ! c) cs|.}
 %format OD c s = Ord SPC c
 %format OD c s = (Ord SPC c, DetectableZero SPC s)
 \begin{code}
@@ -631,6 +651,7 @@ Likewise, the properties from section \secref{Decomposing Functions from Lists} 
 \begin{theorem}[\provedIn{theorem:Trie}]\thmLabel{Trie}
 Given the definitions in \figrefdef{Trie}{Tries as a language representation}{
 \begin{code}
+infix 1 :<
 data Trie c s = s :< Map c (Trie c s)
 
 instance OD c s => Decomposable (Trie c s) (Map c) s where
@@ -642,27 +663,27 @@ instance OD c s => Semiring (Trie c s) where
   zero = zero :< empty
   one  = one  :< empty
   (a :< dp) <+> (b :< dq) = (a <+> b) :< unionWith (<+>) dp dq
-  (a :< ps) <.> q = a .> q <+> (zero :< fmap (<.> NOP q) ps)
+  (a :< dp) <.> q = a .> q <+> (zero :< fmap (<.> q) dp)
 
 instance OD c s => StarSemiring (Trie c s) where
-  star (a :< dp) = q where q = star a .> (one <: (<.> NOP q) .  dp)
+  star (a :< dp) = q where q = star a .> (one :< fmap (<.> NOP q) dp)
 
 instance OD c s => HasSingle (Trie c s) [c] where
-  single w = product [zero :< singleton c one | c <- w]
+  single w = product (map symbol w) where symbol c = zero <: singleton c one
 
 instance OD c s => Scalable (Trie c s) s where
-  s `scale` (e :< ts) = (s <.> e) :< fmap (s NOP `scale`) ts
+  s `scale` (b :< dq) = (s <.> b) :< fmap (s NOP `scale`) dq
 \end{code}
 \vspace{-4ex}
 }, |trieFun| is a homomorphism with respect to each instantiated class.
-\notefoot{I think we could exploit a |Semiring b => Semiring (Map c b)| instance and so replace |unionWith (<+>)| by |(<+>)| here. Maybe also something for |single w|. I might want to use \emph{total maps} \citep{Elliott-2009-tcm}, especially in \secref{Beyond Convolution}.}
+\notefoot{I think we could exploit a |Semiring b => Semiring (Map c b)| instance and so replace |unionWith (<+>)| by |(<+>)| and |empty| by |zero| here.
+Similarly for |single w|.
+Wait until I factor out an |Additive| superclass.
+% I might want to use \emph{total maps} \citep{Elliott-2009-tcm}, especially in \secref{Beyond Convolution}.
+Going further, I think I can write one body of code that works exactly as is for both |b <-- [c]| and |Trie b c|, by making |(<:)| be an associated pattern synonym and defining a general |atEps| and |deriv| in terms of it. Try it!}
 \end{theorem}
 Note again the important optimization for |zero .> t = zero|, eliminating the entire, possibly infinite trie |t|.
 This optimization applies quite often in practice, since languages tend to be sparse.
-
-\sectionl{Regular Expressions}
-
-\note{A sort of ``free'' variant of functions. Easy to derive homomorphically.}
 
 \sectionl{Convolution}
 
@@ -718,8 +739,6 @@ The Fourier transform is a semiring homomorphism from |b <- a| to |a -> b|.
 \end{theorem}
 
 \note{Maybe give some convolution examples.}
-
-\workingHere
 
 %format Identity = I
 Let's now consider functions from |N| rather than from |Z|.
@@ -1365,12 +1384,19 @@ The equation |q == r <+> s .> q| has solution |q = star s .> r|.
 ==  star a .> (one <: \ c -> dp c * star (a <: dp))                      -- \note{needs same lemma as above}
 \end{code}
 
+\workingHere
+
 %% single w = product (map symbol w)
 %%   where
 %%      symbol d = zero <: equal d
 
 \begin{code}
     |single w|
+==  ...
+\end{code}
+
+\begin{code}
+    s .> p
 ==  ...
 \end{code}
 

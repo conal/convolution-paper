@@ -28,8 +28,6 @@ default-extensions:
 
 ghc-options: -Wall
 
-cpp-options: -DSINGLE
-
 library:
   dependencies:
     - base >= 4.7 && < 5
@@ -50,8 +48,8 @@ library:
     - Semi
     - Constrained
     - Language
-    - Set
-    - Fun
+    # - Set
+    # - Fun
 
 tests:
   test:

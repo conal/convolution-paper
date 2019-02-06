@@ -15,7 +15,7 @@ import qualified Data.Set as S
 import Data.MultiSet (MultiSet)
 import qualified Data.MultiSet as MS
 
-import Misc ((:*))
+import Misc ((:*),Stream)
 
 type Ok2 f a b = (Ok f a, Ok f b)
 type Ok3 f a b c = (Ok2 f a b, Ok f c)
@@ -67,9 +67,18 @@ liftA2ViaCross h as bs = fmapC (uncurry h) (as `crossC` bs)
 crossViaLiftA2 :: (ApplicativeC f, Ok3 f a b (a :* b)) => f a -> f b -> f (a :* b)
 crossViaLiftA2 = liftA2C (,)
 
+instance FunctorC ((->) a)
+instance ApplicativeC ((->) a)
+instance MonadC ((->) a)
+
 instance FunctorC []
 instance ApplicativeC []
 instance MonadC []
+
+instance FunctorC Stream
+instance ApplicativeC Stream
+instance MonadC Stream
+
 -- etc
 
 instance MonoidalC [] where

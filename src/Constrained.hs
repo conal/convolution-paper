@@ -15,7 +15,7 @@ import qualified Data.Set as S
 import Data.MultiSet (MultiSet)
 import qualified Data.MultiSet as MS
 
-import Misc ((:*),Stream)
+import Misc ((:*))
 
 type Ok2 f a b = (Ok f a, Ok f b)
 type Ok3 f a b c = (Ok2 f a b, Ok f c)
@@ -74,10 +74,6 @@ instance MonadC ((->) a)
 instance FunctorC []
 instance ApplicativeC []
 instance MonadC []
-
-instance FunctorC Stream
-instance ApplicativeC Stream
-instance MonadC Stream
 
 -- etc
 

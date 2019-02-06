@@ -1,7 +1,3 @@
-
-{-# OPTIONS_GHC -Wall #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
-
 -- | Streams (infinite lists)
 
 module Stream where
@@ -30,6 +26,6 @@ instance Monad Stream where
    where
      joinS ((a :# _) :# ss') = a :# joinS ss'
 
-instance FunctorC Stream
+instance FunctorC     Stream
 instance ApplicativeC Stream
-instance MonadC Stream
+instance MonadC       Stream

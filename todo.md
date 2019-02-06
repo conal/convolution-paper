@@ -9,6 +9,8 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
     I'll have to return to defining my own classes. Tip my hat to semiring-num.
 *   Maybe drop `HasSingle` and define `single` via `fmap` and `one`.
 *   Derive a semiring for lists based on a homomorphism from `[a]` to `a <-- Nat`.
+*   From recognition to "parsing", i.e., generating rich representations.
+*   Learn about tree grammars, and see how they fit with parsing with derivatives.
 *   Try using `TMap` from [total-map](https://github.com/conal/total-map) in place of `Map` from containers, including the `Applicative` and `Monad` instances.
     I may have to add some operations.
 *   Consider the following intuition.

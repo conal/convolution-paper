@@ -20,6 +20,8 @@ bool :: a -> a -> Bool -> a
 bool t e b = if b then t else e
 
 
+-- TODO: Maybe move Stream to its own module, importing Constrained
+
 infixr 1 :#
 data Stream b = b :# Stream b
 

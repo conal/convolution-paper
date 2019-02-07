@@ -13,42 +13,42 @@ infixl 6 :<+>
 infixl 7 :<.>
 
 -- | Regular expression
-data RegExp c s =
+data RegExp c b =
     Char c
-  | Value s
-  | RegExp c s :<+> RegExp c s
-  | RegExp c s :<.> RegExp c s
-  | Star (RegExp c s)
+  | Value b
+  | RegExp c b :<+> RegExp c b
+  | RegExp c b :<.> RegExp c b
+  | Star (RegExp c b)
  deriving (Show,Eq)
 
-instance Additive s => Additive (RegExp c s) where
+instance Additive b => Additive (RegExp c b) where
   zero  = Value zero
   (<+>) = (:<+>)
 
-instance Semiring s => Semimodule s (RegExp c s) where
-  scale s = go
+instance Semiring b => Semimodule b (RegExp c b) where
+  scale b = go
    where
      go (Char c)   = Char c
-     go (Value s') = Value (s <.> s')
+     go (Value b') = Value (b <.> b')
      go (u :<+> v) = go u <+> go v
      go (u :<.> v) = go u <.> go v
      go (Star u)   = star (go u)
 
-instance Semiring s => Semiring (RegExp c s) where
+instance Semiring b => Semiring (RegExp c b) where
   one   = Value one
   (<.>) = (:<.>)
 
-instance Semiring s => StarSemiring (RegExp c s) where
+instance Semiring b => StarSemiring (RegExp c b) where
   star = Star
 
-instance Semiring s => HasSingle [c] s (RegExp c s) where
+instance Semiring b => HasSingle [c] b (RegExp c b) where
   w +-> b = product (map Char w) <.> Value b
 
-instance (Eq c, StarSemiring s) => Decomposable s ((->) c) (RegExp c s) where
+instance (Eq c, StarSemiring b) => Decomposable b ((->) c) (RegExp c b) where
   e <: d = Value e <+> sum [ single [c] <.> d c | c <- allVals ]
 
   atEps (Char _)   = zero
-  atEps (Value s)  = s
+  atEps (Value b)  = b
   atEps (p :<+> q) = atEps p <+> atEps q
   atEps (p :<.> q) = atEps p <.> atEps q
   atEps (Star p)   = star (atEps p)
@@ -71,16 +71,16 @@ instance (Eq c, StarSemiring s) => Decomposable s ((->) c) (RegExp c s) where
 -- just once. Do a bit of inlining and simplification.
 
 -- | Interpret a regular expression
-regexp :: (Semiring s, Semimodule s x, StarSemiring x, HasSingle [c] s x, DetectableZero s)
-       => RegExp c s -> x
+regexp :: (Semiring b, Semimodule b x, StarSemiring x, HasSingle [c] b x, DetectableZero b)
+       => RegExp c b -> x
 regexp (Char c)     = single [c]
-regexp (Value s)    = value s
+regexp (Value b)    = value b
 regexp (u  :<+>  v) = regexp u <+> regexp v
 regexp (u  :<.>  v) = regexp u <.> regexp v
 regexp (Star u)     = star (regexp u)
 
-instance (StarSemiring s, Eq c, DetectableZero s)
-      => Indexable (RegExp c s) [c] s where
+instance (StarSemiring b, Eq c, DetectableZero b)
+      => Indexable (RegExp c b) [c] b where
   (!) = regexp
 
 -- Alternatively, use regexp to convert to LTrie, and then use (!).

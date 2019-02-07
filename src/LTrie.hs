@@ -38,12 +38,12 @@ instance (Ord c, Additive b) => Additive (LTrie c b) where
 
 FunctorSemimodule(LTrie c)
 
-instance (Ord c, Additive s) => HasSingle [c] s (LTrie c s) where
-  w +-> s = foldr cons nil w
+instance (Ord c, Additive b) => HasSingle [c] b (LTrie c b) where
+  w +-> b = foldr cons nil w
    where
-     nil :: LTrie c s
-     nil = s :< zero
-     cons :: c -> LTrie c s -> LTrie c s
+     nil :: LTrie c b
+     nil = b :< zero
+     cons :: c -> LTrie c b -> LTrie c b
      cons c x = zero :< (c +-> x)
 
 -- Is HasSingle even useful on LTrie?

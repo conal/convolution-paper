@@ -11,17 +11,15 @@ import qualified Data.Map as M
 
 import Semi
 
--- TODO: rename s to b throughout (carefully)
-
 infix 1 +->
-class HasSingle a s x | x -> s a where
-  (+->) :: a -> s -> x
+class HasSingle a b x | x -> a b where
+  (+->) :: a -> b -> x
 
-single :: Semiring s => HasSingle a s x => a -> x
+single :: Semiring b => HasSingle a b x => a -> x
 single a = a +-> one
 
-value :: (HasSingle a s x, Monoid a)
-      => s -> x
+value :: (HasSingle a b x, Monoid a)
+      => b -> x
 value b = mempty +-> b
 
 -- Suitable?
@@ -29,10 +27,10 @@ instance (Eq a, Additive b) => HasSingle a b (a -> b) where
   (+->) = equal1
 
 instance HasSingle a Bool [a] where
-  a +-> s = if s then [a] else []
+  a +-> b = if b then [a] else []
 
 instance HasSingle a Bool (Set a) where
-  a +-> s = if s then S.singleton a else S.empty
+  a +-> b = if b then S.singleton a else S.empty
 
 instance HasSingle a b (Map a b) where (+->) = M.singleton
 
@@ -40,10 +38,10 @@ oneBool :: Additive x => (a -> x) -> a -> Bool -> x
 oneBool _ _ False = zero
 oneBool f a True  = f a
 
-equal1 :: (Eq a, Additive s) => a -> s -> a -> s
-equal1 a s a' = if a == a' then s else zero
+equal1 :: (Eq a, Additive b) => a -> b -> a -> b
+equal1 a b a' = if a == a' then b else zero
 
-equal :: (Eq a, Semiring s) => a -> a -> s
+equal :: (Eq a, Semiring b) => a -> a -> b
 equal a = equal1 a one
 
 class Indexable p k v | p -> k v where
@@ -55,12 +53,14 @@ instance Indexable (k -> v) k v where
 instance (Ord k, Additive v) => Indexable (Map k v) k v where
   m ! k = M.findWithDefault zero k m
 
+-- TODO: rename "a" to "x" for Decomposable and maybe some other classes.
+
 -- | Derivative of a language w.r.t a string
-derivs :: (Decomposable s h a, Indexable (h a) c a) => a -> [c] -> a
+derivs :: (Decomposable b h a, Indexable (h a) c a) => a -> [c] -> a
 derivs = foldl ((!) . deriv)
 
-accept :: (Decomposable s h a, Indexable (h a) c a) => a -> [c] -> s
-accept p s = atEps (derivs p s)
+accept :: (Decomposable b h a, Indexable (h a) c a) => a -> [c] -> b
+accept p w = atEps (derivs p w)
 
 {--------------------------------------------------------------------
     Invertible monoids

@@ -196,7 +196,7 @@ instance Decomposable b ((->) c) ([c] -> b) where
   (b <: _) [] = b
   (_ <: h) (c:cs) = h c cs
   decomp f = (f [], \ c cs -> f (c : cs))
--- {-# COMPLETE (:<:) :: [c] -> b #-} -- won't parse
+ -- {-# COMPLETE (:<:) :: [c] -> b #-} -- won't parse
 
 -- I probably don't need and can't benefit from these COMPLETE pragmas, since
 -- I'm using the general Convo type. For the same reason, I don't think I'm

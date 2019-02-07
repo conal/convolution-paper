@@ -170,56 +170,6 @@ deriving instance Semiring b       => Semiring (Identity b)
 #endif
 
 {--------------------------------------------------------------------
-    Decomposition (elsewhere?)
---------------------------------------------------------------------}
-
-class Decomposable s h a | a -> h s where
-  infix 1 <:
-  (<:)  :: s -> h a -> a
-  decomp  :: a -> s :* h a
-  atEps :: a -> s
-  deriv :: a -> h a
-  atEps = fst . decomp
-  deriv = snd . decomp
-  decomp a = (atEps a, deriv a)
-  {-# MINIMAL (<:), ((deriv , atEps) | decomp) #-}
-
-infix 1 :<:
-pattern (:<:) :: Decomposable s h a => s -> h a -> a
-pattern s :<: as <- (decomp -> (s,as)) where s :<: as = s <: as
-
-instance Semiring b => Decomposable b ((->) c) ([c] -> b) where
-  (b <: _) [] = b
-  (_ <: h) (c:cs) = h c cs
-  decomp f = (f [], \ c cs -> f (c : cs))
--- {-# COMPLETE (:<:) :: Stream #-}
-
-instance Decomposable b Identity (Stream b) where
-  b <: Identity bs = b :# bs
-  decomp (b :# bs) = (b, Identity bs)
--- {-# COMPLETE (:<:) :: Stream #-}
-
--- I probably don't need and can't benefit from these COMPLETE pragmas, since
--- I'm using the general Convo type. For the same reason, I don't think I'm
--- benefiting from the polymorphic :<: pattern anyway, since it's only used for
--- Convo.
--- 
--- TODO: specialize the (:<:) pattern's type to Convo. Perhaps wait to see
--- whether Convo really handles everything.
-
-instance Ord c => Decomposable Bool (Map c) (Set [c]) where
-  e <: d  = fromBool e <+> S.unions [ S.map (c:) css | (c,css) <- M.toList d ]
-  atEps p = [] `S.member` p
-  deriv p = M.fromListWith (<+>) [(c, S.singleton cs) | c:cs <- S.toList p]
-
--- The unique 'Semiring' homomorphism from 'Bool'.
-fromBool :: Semiring s => Bool -> s
-fromBool False = zero
-fromBool True  = one
-
--- TODO: Map, N -> b
-
-{--------------------------------------------------------------------
     Sum and product monoids
 --------------------------------------------------------------------}
 
@@ -277,8 +227,65 @@ product = getProduct . foldMap Product
 type N = Sum Natural
 
 {--------------------------------------------------------------------
+    Decomposition (move elsewhere?)
+--------------------------------------------------------------------}
+
+class Decomposable s h a | a -> h s where
+  infix 1 <:
+  (<:)  :: s -> h a -> a
+  decomp  :: a -> s :* h a
+  atEps :: a -> s
+  deriv :: a -> h a
+  atEps = fst . decomp
+  deriv = snd . decomp
+  decomp a = (atEps a, deriv a)
+  {-# MINIMAL (<:), ((deriv , atEps) | decomp) #-}
+
+infix 1 :<:
+pattern (:<:) :: Decomposable s h a => s -> h a -> a
+pattern s :<: as <- (decomp -> (s,as)) where s :<: as = s <: as
+
+instance Semiring b => Decomposable b Identity (N -> b) where
+  b <: Identity f = \ i -> if i == 0 then b else f (i - 1)
+  atEps f = f 0
+  deriv f = Identity (f . (1 +))
+
+instance Semiring b => Decomposable b ((->) c) ([c] -> b) where
+  (b <: _) [] = b
+  (_ <: h) (c:cs) = h c cs
+  decomp f = (f [], \ c cs -> f (c : cs))
+-- {-# COMPLETE (:<:) :: [c] -> b #-} -- won't parse
+
+instance Decomposable b Identity (Stream b) where
+  b <: Identity bs = b :# bs
+  decomp (b :# bs) = (b, Identity bs)
+-- {-# COMPLETE (:<:) :: Stream b #-} -- won't parse
+
+-- I probably don't need and can't benefit from these COMPLETE pragmas, since
+-- I'm using the general Convo type. For the same reason, I don't think I'm
+-- benefiting from the polymorphic :<: pattern anyway, since it's only used for
+-- Convo.
+-- 
+-- TODO: specialize the (:<:) pattern's type to Convo. Perhaps wait to see
+-- whether Convo really handles everything.
+
+instance Ord c => Decomposable Bool (Map c) (Set [c]) where
+  e <: d  = fromBool e <+> S.unions [ S.map (c:) css | (c,css) <- M.toList d ]
+  atEps p = [] `S.member` p
+  deriv p = M.fromListWith (<+>) [(c, S.singleton cs) | c:cs <- S.toList p]
+
+-- The unique 'Semiring' homomorphism from 'Bool'.
+fromBool :: Semiring s => Bool -> s
+fromBool False = zero
+fromBool True  = one
+
+-- TODO: Map, N -> b
+
+{--------------------------------------------------------------------
     Some convolution-style instances
 --------------------------------------------------------------------}
+
+#if 0
 
 newtype Stream' b = S (Stream b) deriving Additive
 
@@ -306,6 +313,8 @@ deriving instance Semiring b => Semimodule b (Map' a b)
 -- instance (DetectableZero b, Semiring b) => Semiring (Stream' b) where
 --   one = one <: zero
 --   (u :<: us') <.> vs = (u .> vs) <+> (zero :<: fmap (<.> vs) us')
+
+#endif
 
 newtype Convo f b = C (f b) deriving (Show, Additive, DetectableZero)
 
@@ -345,3 +354,39 @@ instance ( DetectableZero b, StarSemiring b, Applicative h
          , Additive (f b), Semimodule b (f b), Decomposable b h (f b)
          ) => StarSemiring (Convo f b) where
   star (a :<: dp) = q where q = star a .> (one :<: fmap (<.> q) dp)
+
+
+#if 1
+
+infixl 1 <--
+type b <-- a = Convo ((->) a) b
+
+-- Hm. I can't give Functor, Applicative, Monad instances for Convo ((->) a) b,
+-- since I need a to be the parameter.
+-- I guess I could wrap another newtype:
+
+#else
+
+infixl 1 <--
+newtype b <-- a = F { unF :: Convo ((->) a) b } deriving (Additive)
+
+deriving instance Semiring b => Semimodule b (b <-- a)
+
+deriving instance
+  (DetectableZero b, Semiring b, Decomposable b h (a -> b), Applicative h)
+  => Semiring (b <-- a)
+
+deriving instance
+  (DetectableZero b, StarSemiring b, Decomposable b h (a -> b), Applicative h)
+  => StarSemiring (b <-- a)
+
+instance (Decomposable b h (a -> b), Functor h) => Decomposable b h (b <-- a) where
+  s <: dp = F (s :<: fmap unF dp)
+  -- decomp (F (s :<: dp)) = (s, fmap F dp)
+  decomp (F (s :<: (fmap F -> dp))) = (s, dp)
+
+-- See how it goes
+
+#endif
+
+-- type M' b a = Convo ()

@@ -54,7 +54,7 @@ class Semimodule s b | b -> s where
   {-# INLINE scale #-}
 
 -- | 'scale' optimized for zero scalar
-(.>) :: (Semiring b, Semimodule s b, DetectableZero s) => s -> b -> b
+(.>) :: (Additive b, Semimodule s b, DetectableZero s) => s -> b -> b
 s .> b | isZero s  = zero
        | otherwise = s `scale` b
 {-# INLINE (.>) #-}

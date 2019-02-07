@@ -71,11 +71,12 @@ instance (Eq c, StarSemiring s) => Decomposable s ((->) c) (RegExp c s) where
 -- just once. Do a bit of inlining and simplification.
 
 -- | Interpret a regular expression
-regexp :: (StarSemiring x, Semiring s, HS x c s) => RegExp c s -> x
-regexp (Char c)      = single [c]
-regexp (Value s)     = value s
-regexp (u  :<+>  v)  = regexp u <+> regexp v
-regexp (u  :<.>  v)  = regexp u <.> regexp v
-regexp (Star u)   = star (regexp u)
+regexp :: (Semimodule s x, StarSemiring x, HasSingle [c] x, DetectableZero s)
+       => RegExp c s -> x
+regexp (Char c)     = single [c]
+regexp (Value s)    = value s
+regexp (u  :<+>  v) = regexp u <+> regexp v
+regexp (u  :<.>  v) = regexp u <.> regexp v
+regexp (Star u)     = star (regexp u)
 
-instance Indexable (RegExp c s) [c] s where (!) = regexp
+-- instance Indexable (RegExp c s) [c] s where (!) = regexp

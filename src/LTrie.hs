@@ -1,12 +1,13 @@
-
-{-# OPTIONS_GHC -Wall #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
+-- {-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
 
 -- | List tries
 
 module LTrie where
 
+import Prelude hiding (sum,product)
+
 import Data.Map (Map)
+import qualified Data.Map as M
 
 import Constrained
 import Semi
@@ -32,6 +33,23 @@ instance (Ord c, Additive b) => Additive (LTrie c b) where
 
 FunctorSemimodule(LTrie c)
 
+instance (Ord c, Semiring s) => HasSingle [c] (LTrie c s) where
+#if 0
+  -- Oops. We don't have Semiring (LTrie c s) for product.
+  single w = product (map symbol w) where symbol c = zero <: singleton c one
+  -- single = product . map symbol
+  --  where
+  --    symbol c = zero :< singleton c one
+#else
+  -- More streamlined
+  single = foldr cons nil
+   where
+     nil = one :< zero  -- Semiring s needed here
+     cons c x = zero :< M.singleton c x
+#endif
+
+-- Is HasSingle even useful on LTrie?
+
 -- No Semiring instance, because one would have to map all possible keys to one.
 -- Finite maps have the same problem, which we inherit here.
 
@@ -44,4 +62,6 @@ instance Decomposable b (Map c) (LTrie c b) where
   (<:) = (:<)
   decomp (b :< dp) = (b, dp)
 
-type Trie' b c = Convo (LTrie c b)
+type LTrie' b c = Convo (LTrie c b)
+
+deriving instance (Ord c, Semiring b) => HasSingle [c] (LTrie' b c)

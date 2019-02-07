@@ -1,10 +1,5 @@
-{-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+-- {-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
 
-{-# OPTIONS_GHC -Wall #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
 -- | Commutative monoids, semirings, and semimodules
 
 module Semi where

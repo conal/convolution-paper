@@ -1,5 +1,3 @@
-{-# LANGUAGE CPP #-}
-
 -- {-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
 
 -- | Miscellany

@@ -1,6 +1,4 @@
-
-{-# OPTIONS_GHC -Wall #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
+-- {-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
 
 -- | Some constrained classes
 
@@ -8,7 +6,6 @@ module Constrained where
 
 import Control.Applicative (liftA2)
 import Control.Monad (join)
-import GHC.Generics
 import GHC.Types (Constraint)
 import Data.Set (Set)
 import qualified Data.Set as S

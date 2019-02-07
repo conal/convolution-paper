@@ -1,9 +1,4 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE ConstraintKinds #-}
-
-{-# OPTIONS_GHC -Wall #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
+-- {-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
 
 -- | Generalized "languages", which is mostly Semiring & friends
 
@@ -13,16 +8,7 @@ import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Map (Map)
 import qualified Data.Map as M
-import Data.Functor.Identity (Identity(..))
 
--- import Data.TotalMap (TMap)
--- import qualified Data.TotalMap as T
-
--- SINGLE controlled by package.yaml
-
--- import Data.Semiring
-
-import Misc
 import Semi
 
 class HasSingle a x | x -> a where

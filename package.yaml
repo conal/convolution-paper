@@ -12,19 +12,22 @@ category:            language, math
 description:         Please see the README on GitHub at <https://github.com/conal/convolution-paper#readme>
 
 default-extensions:
-  - FlexibleContexts
-  - DeriveFoldable
-  - DeriveFunctor
-  - UndecidableInstances
-  - TypeFamilies
-  - TypeOperators
   - CPP
-  - FlexibleInstances
-  - MultiParamTypeClasses
-  - StandaloneDeriving
-  - FunctionalDependencies
   - ConstraintKinds
   - DefaultSignatures
+  - DeriveFoldable
+  - DeriveFunctor
+  - FlexibleContexts
+  - FlexibleInstances
+  - FunctionalDependencies
+  - GeneralizedNewtypeDeriving
+  - MultiParamTypeClasses
+  - PatternSynonyms
+  - StandaloneDeriving
+  - TypeFamilies
+  - TypeOperators
+  - UndecidableInstances
+  - ViewPatterns
 
 ghc-options: -Wall
 
@@ -52,6 +55,7 @@ library:
     - Language
     - Stream
     - LTrie
+    - RegExp
     # - Set
     # - Fun
 

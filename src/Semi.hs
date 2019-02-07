@@ -47,8 +47,8 @@ class Semiring b => StarSemiring b  where
   star :: b -> b
   plus :: b -> b
   star x = one <+> plus x
-  {-# INLINE star #-}
   plus x = x <.> star x
+  {-# INLINE star #-}
   {-# INLINE plus #-}
 
 class Semimodule s b | b -> s where
@@ -57,11 +57,13 @@ class Semimodule s b | b -> s where
   -- scale = (<.>)
   default scale :: (Semiring s, Functor f, b ~ f s) => s -> b -> b  -- experimental
   scale s = fmap (s <.>)
+  {-# INLINE scale #-}
 
 -- | 'scale' optimized for zero scalar
 (.>) :: (Semiring b, Semimodule s b, DetectableZero s) => s -> b -> b
 s .> b | isZero s  = zero
        | otherwise = s `scale` b
+{-# INLINE (.>) #-}
 
 {--------------------------------------------------------------------
     Instances
@@ -84,23 +86,9 @@ Nums(Float)
 Nums(Double)
 -- etc
 
--- instance StarSemiring zz => StarSemiring ((f) zz) where \
---   { star = fmapC star; plus = fmapC plus }
-
--- TODO: Maybe rely on Pointed and Zip instead of Applicative here, considering
--- these definitions.
-
--- Now the default, but I may want to drop that default.
--- 
---    where scale s = fmap (s <.>) ;
-
 ApplSemi((->) a)
 ApplSemi(Stream)
 -- etc
-
--- instance Eq (t) => DetectableZero (t) where isZero = (== mempty)
-
--- TODO: Why does "isZero = null" work for Set?? Oh! null is now in Foldable.
 
 ApplMono([])
 ApplMono(Set)
@@ -110,12 +98,9 @@ instance (Ord a, Additive b) => Additive (Map a b) where
   zero = M.empty
   (<+>) = M.unionWith (<+>)
 
-FoldableZero(Map a)
--- instance (Ord a, Additive b) => DetectableZero (Map a b) where isZero = null
+NullZero(Map a)
 
 FunctorSemimodule(Map a)
-
--- instance Semiring b => Semimodule b (Map a b) -- where scale s = fmap (s <.>)
 
 -- Do I want Semiring (Map a b)? If so, should it agree with a -> b.
 -- Maybe build it with Convo, but then I'm restricting the domain.

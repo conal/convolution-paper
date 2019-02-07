@@ -76,6 +76,8 @@ instance Semiring Bool where
   (<.>) = (&&)
   one = True
 
+instance StarSemiring Bool where star = const True
+
 Nums(Integer)
 Nums(Natural)
 Nums(Int)
@@ -169,23 +171,36 @@ product = getProduct . foldMap Product
 type N = Sum Natural
 
 {--------------------------------------------------------------------
+    Indexing with zero default
+--------------------------------------------------------------------}
+
+class Indexable k v p | p -> k v where
+  (!) :: p -> k -> v
+
+instance Indexable k v (k -> v) where
+  f ! k = f k
+
+instance (Ord k, Additive v) => Indexable k v (Map k v) where
+  m ! k = M.findWithDefault zero k m
+
+{--------------------------------------------------------------------
     Decomposition (move elsewhere?)
 --------------------------------------------------------------------}
 
-class Decomposable s h a | a -> h s where
+class Decomposable b h x | x -> h b where
   infix 1 <:
-  (<:)  :: s -> h a -> a
-  decomp  :: a -> s :* h a
-  atEps :: a -> s
-  deriv :: a -> h a
+  (<:)  :: b -> h x -> x
+  decomp  :: x -> b :* h x
+  atEps :: x -> b
+  deriv :: x -> h x
   atEps = fst . decomp
   deriv = snd . decomp
-  decomp a = (atEps a, deriv a)
+  decomp x = (atEps x, deriv x)
   {-# MINIMAL (<:), ((deriv , atEps) | decomp) #-}
 
 infix 1 :<:
-pattern (:<:) :: Decomposable s h a => s -> h a -> a
-pattern s :<: as <- (decomp -> (s,as)) where s :<: as = s <: as
+pattern (:<:) :: Decomposable b h x => b -> h x -> x
+pattern b :<: as <- (decomp -> (b,as)) where b :<: as = b <: as
 
 instance Semiring b => Decomposable b Identity (N -> b) where
   b <: Identity f = \ i -> if i == 0 then b else f (i - 1)
@@ -235,16 +250,18 @@ instance (Functor h, Decomposable b h z) => Decomposable b h (Convo z) where
 
 deriving instance Semimodule b z => Semimodule b (Convo z)
 
-instance ( DetectableZero b, Semiring b, Applicative h
+instance ( DetectableZero b, Semiring b, Functor h, Additive (h (Convo z))
          , Additive z, Semimodule b z, Decomposable b h z )
       => Semiring (Convo z) where
-  one = one <: pure zero
+  one = one <: zero
   (a :<: dp) <.> q = (a .> q) <+> (zero :<: fmap (<.> q) dp)
 
-instance ( DetectableZero b, StarSemiring b, Applicative h
+instance ( DetectableZero b, StarSemiring b, Functor h, Additive (h (Convo z))
          , Additive z, Semimodule b z, Decomposable b h z
          ) => StarSemiring (Convo z) where
   star (a :<: dp) = q where q = star a .> (one :<: fmap (<.> q) dp)
+
+deriving instance Indexable k v z => Indexable k v (Convo z)
 
 #if 1
 

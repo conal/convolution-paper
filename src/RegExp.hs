@@ -80,7 +80,7 @@ regexp (u  :<.>  v) = regexp u <.> regexp v
 regexp (Star u)     = star (regexp u)
 
 instance (StarSemiring b, Eq c, DetectableZero b)
-      => Indexable (RegExp c b) [c] b where
+      => Indexable [c] b (RegExp c b) where
   (!) = regexp
 
 -- Alternatively, use regexp to convert to LTrie, and then use (!).

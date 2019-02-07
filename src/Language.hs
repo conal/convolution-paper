@@ -15,7 +15,7 @@ infix 1 +->
 class HasSingle a b x | x -> a b where
   (+->) :: a -> b -> x
 
-single :: Semiring b => HasSingle a b x => a -> x
+single :: (HasSingle a b x, Semiring b) => a -> x
 single a = a +-> one
 
 value :: (HasSingle a b x, Monoid a)
@@ -34,6 +34,8 @@ instance HasSingle a Bool (Set a) where
 
 instance HasSingle a b (Map a b) where (+->) = M.singleton
 
+deriving instance HasSingle a b z => HasSingle a b (Convo z)
+
 oneBool :: Additive x => (a -> x) -> a -> Bool -> x
 oneBool _ _ False = zero
 oneBool f a True  = f a
@@ -44,20 +46,11 @@ equal1 a b a' = if a == a' then b else zero
 equal :: (Eq a, Semiring b) => a -> a -> b
 equal a = equal1 a one
 
-class Indexable p k v | p -> k v where
-  (!) :: p -> k -> v
-
-instance Indexable (k -> v) k v where
-  f ! k = f k
-
-instance (Ord k, Additive v) => Indexable (Map k v) k v where
-  m ! k = M.findWithDefault zero k m
-
 -- | Derivative of a language w.r.t a string
-derivs :: (Decomposable b h x, Indexable (h x) c x) => x -> [c] -> x
+derivs :: (Decomposable b h x, Indexable c x (h x)) => x -> [c] -> x
 derivs = foldl ((!) . deriv)
 
-accept :: (Decomposable b h x, Indexable (h x) c x) => x -> [c] -> b
+accept :: (Decomposable b h x, Indexable c x (h x)) => x -> [c] -> b
 accept p w = atEps (derivs p w)
 
 {--------------------------------------------------------------------

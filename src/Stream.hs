@@ -2,12 +2,11 @@
 
 module Stream where
 
-import Control.Applicative (liftA2)
+import Control.Applicative (Applicative(..))
 import Data.Functor.Identity (Identity(..))
 
 import Constrained
 import Semi
-import Language
 
 #include "GenInstances.inc"
 
@@ -42,14 +41,14 @@ instance Decomposable b Identity (Stream b) where
 
 ApplSemi(Stream)
 
-instance Indexable (Stream b) N b where
+instance Indexable N b (Stream b) where
   (b :# bs) ! n = if n == 0 then b else bs ! (n-1)
 
--- instance Indexable (Stream b) N b where
+-- instance Indexable N b (Stream b) where
 --   (b :# _)  ! 0 = b
 --   (_ :# bs) ! n = bs ! (n-1)
 
--- instance Indexable (Stream b) N b where
+-- instance Indexable N b (Stream b) where
 --   (b :# _)  ! Sum 0 = b
 --   (_ :# bs) ! Sum n = bs ! Sum (n-1)
 

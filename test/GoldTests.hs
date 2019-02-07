@@ -15,12 +15,15 @@ import Data.ByteString.Lazy.Char8 (pack)
 import Data.Semigroup ((<>))
 import Test.Tasty (defaultMain, TestTree, testGroup)
 import Test.Tasty.Golden
-import Data.Semiring
 
-import qualified Set as S
-import qualified Fun as F
+-- import qualified Set as S
+-- import qualified Fun as F
 
+import Semi
 import Language
+import Decomp
+import RegExp
+import LTrie
 
 main :: IO ()
 main = do
@@ -29,56 +32,60 @@ main = do
 basicTests :: TestTree
 basicTests = testGroup "Various representations"
   [ testGroup "" []
-  , tests @(S.Pred String      ) "Pred"
-  , tests @(S.Decomp  Char     ) "SetDecomp"
-  , tests @(S.RegExp  Char     ) "SetRegExp"
-  , tests @(S.Trie    Char     ) "SetTrie"
-  , tests @(Bool F.<-- String  ) "F"
-  , tests @(F.Decomp  Char Bool) "FunDecomp"
-  , tests @(F.RegExp  Char Bool) "FunRegExp"
-  , tests @(F.Trie    Char Bool) "FunTrie"
+  -- , tests @(S.Pred String      ) "Pred"
+  -- , tests @(S.Decomp  Char     ) "SetDecomp"
+  -- , tests @(S.RegExp  Char     ) "SetRegExp"
+  -- , tests @(S.Trie    Char     ) "SetTrie"
+  -- , tests @(Bool F.<-- String  ) "F"
+  -- , tests @(Convo (Decomp  Char Bool)) "FunDecomp"
+  -- , tests @(Convo (RegExp  Char Bool)) "FunRegExp"
+  , tests @(Convo (LTrie    Char Bool)) "FunTrie"
   ]
 
 -- TODO: some tests with s other than Bool.
 
-tests :: forall x h s.
-  ( StarSemiring x, HS x Char s, Decomposable x h s
-  , Indexable (h x) Char x, Show x, Semiring s, Show s )
+-- tests' :: forall x. Semiring x => String -> TestTree
+-- tests' = undefined
+
+tests :: forall x b.
+  ( HasSingle String b x, Indexable String b x
+  , StarSemiring x, Show x, Semiring b, Show b )
   => String -> TestTree
 tests group = testGroup group
   [ testGroup "" []
 
-  , gold "as-eps"                $ accept as ""
-  , gold "as-a"                  $ accept as "a"
-  , gold "ass-eps"               $ accept ass ""
+  , gold "as-eps"                $ as ! ""
+  , gold "as-a"                  $ as ! "a"
+  , gold "ass-eps"               $ ass ! ""
   , groupNot ["Pred","F"] $
-    gold "ass-a"                 $ accept ass "a"
+    gold "ass-a"                 $ ass ! "a"
 
-  , gold "pp-pi"                 $ app "pi"
-  , gold "pp-pig"                $ app "pig"
-  , gold "pp-pig"                $ app "pig"
-  , gold "pp-pink"               $ app "pink"
-  , gold "pp-ping"               $ app "ping"
+  , gold "pp-pi"                 $ pp ! "pi"
+  , gold "pp-pig"                $ pp ! "pig"
+  , gold "pp-pig"                $ pp ! "pig"
+  , gold "pp-pink"               $ pp ! "pink"
+  , gold "pp-ping"               $ pp ! "ping"
 
-  , gold "pps-q"                 $ apps "q"
-  , gold "pps-pig"               $ apps "pig"
-  , gold "pps-pigpig"            $ apps "pigpig"
-  , gold "pps-pigping"           $ apps "pigping"
-  , gold "pps-pinkpigpinkpigpig" $ apps "pinkpigpinkpigpig"
+  , gold "pps-q"                 $ pps ! "q"
+  , gold "pps-pig"               $ pps ! "pig"
+  , gold "pps-pigpig"            $ pps ! "pigpig"
+  , gold "pps-pigping"           $ pps ! "pigping"
+  , gold "pps-pinkpigpinkpigpig" $ pps ! "pinkpigpinkpigpig"
 
   -- These recursive examples are challenging.
   -- OptimizeRegexp in Set.hs causes these recursive examples to diverge.
-  , gold "anbn-eps"              $ ranbn ""
-  , gold "anbn-ab"               $ ranbn "ab"
-  , gold "anbn-ba"               $ ranbn "ba"
-  , gold "anbn-aabb"             $ ranbn "aabb"
-  , gold "anbn-aacbb"            $ ranbn "aacbb"
-  , gold "anbn-aaabbb"           $ ranbn "aaabbb"
-  , gold "anbn-aaabbbb"          $ ranbn "aaabbbb"
+  , gold "anbn-eps"              $ anbn ! ""
+  , gold "anbn-ab"               $ anbn ! "ab"
+  , gold "anbn-ba"               $ anbn ! "ba"
+  , gold "anbn-aabb"             $ anbn ! "aabb"
+  , gold "anbn-aacbb"            $ anbn ! "aacbb"
+  , gold "anbn-aaabbb"           $ anbn ! "aaabbb"
+  , gold "anbn-aaabbbb"          $ anbn ! "aaabbbb"
 
   ]
  where
-   sing = single @x
+   sing :: String -> x
+   sing = single
    a = sing "a"
    b = sing "b"
    as = star a
@@ -87,13 +94,11 @@ tests group = testGroup group
    pig = sing "pig"
    pp = pink <+> pig
    pps   = star pp
-   app   = accept pp
-   apps  = accept pps
    anbn  = one <+> (a <.> anbn <.> b)
-   ranbn = accept anbn
+   groupNot :: [String] -> TestTree -> TestTree
    groupNot gs | group `elem` gs = const (testGroup "" [])
                | otherwise       = id
-   gold :: Show a => String -> a -> TestTree
+   gold :: Show z => String -> z -> TestTree
    gold nm = -- TODO: make directory if missing 
              goldenVsString nm
                 ("test/gold/" <> group <> "/" <> nm <> ".txt")

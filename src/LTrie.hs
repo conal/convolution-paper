@@ -26,7 +26,7 @@ instance FunctorC (LTrie c)
 -- trieFun :: (Ord c, Additive b) => LTrie c b -> ([c] -> b)
 -- trieFun (a :< dp) = a <: trieFun . (dp !)
 
-instance (Ord c, Additive b) => Indexable (LTrie c b) [c] b where
+instance (Ord c, Additive b) => Indexable [c] b (LTrie c b) where
   -- (!) = trieFun
   (!) (a :< dp) = a <: (!) . (dp !)
   -- (a :< _ ) ! [] = a
@@ -61,5 +61,3 @@ instance Decomposable b (Map c) (LTrie c b) where
   decomp (b :< dp) = (b, dp)
 
 type LTrie' b c = Convo (LTrie c b)
-
-deriving instance (Ord c, Semiring b) => HasSingle [c] b (LTrie' b c)

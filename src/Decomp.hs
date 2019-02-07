@@ -27,7 +27,7 @@ instance FunctorC (Decomp c)
 -- trieFun :: (Ord c, Additive b) => Decomp c b -> ([c] -> b)
 -- trieFun (a :< dp) = a <: trieFun . (dp !)
 
-instance (Ord c, Additive b) => Indexable (Decomp c b) [c] b where
+instance (Ord c, Additive b) => Indexable [c] b (Decomp c b) where
   (!) (a :< dp) = a <: (!) . (dp !)
 
   -- (a :< _ ) ! [] = a
@@ -44,10 +44,15 @@ instance (Ord c, Additive b) => Additive (Decomp c b) where
 
 FunctorSemimodule(Decomp c)
 
-instance (Ord c, Additive s) => HasSingle [c] s (Decomp c s) where
-  w +-> s = foldr cons nil w
+instance (Ord c, Additive b) => HasSingle [c] b (Decomp c b) where
+  w +-> b = foldr cons nil w
    where
-     nil = s :< zero
+     nil = b :< zero
      cons c x = zero :< (c +-> x)
 
 -- Is HasSingle even useful on Decomp?
+
+instance (DetectableZero b, Eq c) => Decomposable b ((->) c) (Decomp c b) where
+  (<:) = (:<:)
+  atEps (a :< _) = a
+  deriv (_ :< d) = d

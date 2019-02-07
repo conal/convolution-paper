@@ -53,13 +53,11 @@ instance Indexable (k -> v) k v where
 instance (Ord k, Additive v) => Indexable (Map k v) k v where
   m ! k = M.findWithDefault zero k m
 
--- TODO: rename "a" to "x" for Decomposable and maybe some other classes.
-
 -- | Derivative of a language w.r.t a string
-derivs :: (Decomposable b h a, Indexable (h a) c a) => a -> [c] -> a
+derivs :: (Decomposable b h x, Indexable (h x) c x) => x -> [c] -> x
 derivs = foldl ((!) . deriv)
 
-accept :: (Decomposable b h a, Indexable (h a) c a) => a -> [c] -> b
+accept :: (Decomposable b h x, Indexable (h x) c x) => x -> [c] -> b
 accept p w = atEps (derivs p w)
 
 {--------------------------------------------------------------------

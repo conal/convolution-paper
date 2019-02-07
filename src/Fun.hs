@@ -23,7 +23,6 @@ import Data.Functor.Identity (Identity(..))
 import Misc
 import Language
 import Constrained
-import Semi
 
 {--------------------------------------------------------------------
     Flipped functions / generalized predicates

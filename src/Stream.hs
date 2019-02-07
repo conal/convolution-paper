@@ -52,3 +52,5 @@ instance Indexable (Stream b) N b where
 -- instance Indexable (Stream b) N b where
 --   (b :# _)  ! Sum 0 = b
 --   (_ :# bs) ! Sum n = bs ! Sum (n-1)
+
+type Stream' b = Convo (Stream b)

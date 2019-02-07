@@ -100,11 +100,9 @@ NullZero(Map a)
 
 FunctorSemimodule(Map a)
 
--- Do I want Semiring (Map a b)? If so, should it agree with a -> b.
--- Maybe build it with Convo, but then I'm restricting the domain.
-
--- Even for lists, I suspect I should have one version that acts like functions
--- from N and another like convolution.
+-- Do I want Semiring (Map a b)? If so, should it agree with a -> b. Oops! We'd
+-- need one to map all domain values to one. I could do it with a total map, but
+-- I think things then get complicated with different defaults.
 
 #if 0
 
@@ -196,7 +194,7 @@ instance Semiring b => Decomposable b Identity (N -> b) where
   atEps f = f 0
   deriv f = Identity (f . (1 +))
 
-instance Semiring b => Decomposable b ((->) c) ([c] -> b) where
+instance Decomposable b ((->) c) ([c] -> b) where
   (b <: _) [] = b
   (_ <: h) (c:cs) = h c cs
   decomp f = (f [], \ c cs -> f (c : cs))
@@ -223,41 +221,8 @@ fromBool True  = one
 -- TODO: Map, N -> b
 
 {--------------------------------------------------------------------
-    Some convolution-style instances
+    Convolution-style semiring
 --------------------------------------------------------------------}
-
-#if 0
-
-newtype Stream' b = S (Stream b) deriving Additive
-
-FunctorSemimodule(Stream')
--- deriving instance Semiring b => Semimodule b (Stream' b)
-
-instance Decomposable b Identity (Stream' b) where
-  b <: Identity (S bs) = S (b :# bs)
-  decomp (S (b :# bs)) = (b , Identity (S bs))
-{-# COMPLETE (:<:) :: Stream' #-}
--- https://ghc.haskell.org/trac/ghc/wiki/PatternSynonyms/CompleteSigs
-
-instance (DetectableZero b, Semiring b) => Semiring (Stream' b) where
-  one = one <: Identity zero
-  (u :<: us') <.> vs = (u .> vs) <+> (zero :<: fmap (<.> vs) us')
-
-
-newtype Map' a b = M (Map a b) deriving Additive
-
-FunctorSemimodule(Map' a)
--- deriving instance Semiring b => Semimodule b (Map' a b)
-
--- deriving instance Decomposable b Identity (Map' a b)
-
--- {-# COMPLETE (:<:) :: Map' a b #-}
-
--- instance (DetectableZero b, Semiring b) => Semiring (Stream' b) where
---   one = one <: zero
---   (u :<: us') <.> vs = (u .> vs) <+> (zero :<: fmap (<.> vs) us')
-
-#endif
 
 newtype Convo z = C z deriving (Show, Additive, DetectableZero)
 
@@ -283,8 +248,9 @@ instance ( DetectableZero b, StarSemiring b, Applicative h
          ) => StarSemiring (Convo z) where
   star (a :<: dp) = q where q = star a .> (one :<: fmap (<.> q) dp)
 
-#if 0
+#if 1
 
+-- | Convolvable functions
 infixl 1 <--
 type b <-- a = Convo (a -> b)
 
@@ -316,5 +282,8 @@ instance (Decomposable b h (a -> b), Functor h) => Decomposable b h (b <-- a) wh
 
 #endif
 
+-- | Convolvable finite maps
 type M' b a = Convo (Map a b)
 
+-- | Convolvable finite sets
+type S' a = Convo (Set a)

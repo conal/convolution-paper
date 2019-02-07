@@ -62,7 +62,7 @@ class Indexable p k v | p -> k v where
 instance Indexable (k -> v) k v where
   f ! k = f k
 
-instance (Ord k, Semiring v) => Indexable (Map k v) k v where
+instance (Ord k, Additive v) => Indexable (Map k v) k v where
   m ! k = M.findWithDefault zero k m
 
 -- | Derivative of a language w.r.t a string

@@ -48,9 +48,10 @@ library:
   exposed-modules:
     - Misc
     - Constrained
-    - Stream
     - Semi
     - Language
+    - Stream
+    - LTrie
     # - Set
     # - Fun
 
@@ -67,3 +68,4 @@ tests:
     - tasty-golden
     - semiring-num
     - paper
+

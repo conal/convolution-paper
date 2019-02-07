@@ -316,50 +316,34 @@ deriving instance Semiring b => Semimodule b (Map' a b)
 
 #endif
 
-newtype Convo f b = C (f b) deriving (Show, Additive, DetectableZero)
+newtype Convo z = C z deriving (Show, Additive, DetectableZero)
 
-unC :: Convo f b -> f b
+unC :: Convo z -> z
 unC (C z) = z
 
-instance (Functor h, Decomposable b h (f b)) => Decomposable b h (Convo f b) where
+instance (Functor h, Decomposable b h z) => Decomposable b h (Convo z) where
   b <: zs = C (b <: fmap unC zs)
   decomp (C (decomp -> (b,zs))) = (b, fmap C zs)
 
-  -- decomp (C (b :<: zs)) = (b, fmap C zs)  -- "Pattern match(es) are non-exhaustive"
-
--- deriving instance Decomposable b h (f b) => Decomposable b h (Convo f b)
-
--- --     • Couldn't match representation of type ‘h (f b)’
--- --                                with that of ‘h (Convo f b)’
--- --         arising from a use of ‘GHC.Prim.coerce’
--- --       NB: We cannot know what roles the parameters to ‘h’ have;
--- --         we must assume that the role is nominal
-
 {-# COMPLETE (:<:) :: Convo #-}
--- https://ghc.haskell.org/trac/ghc/wiki/PatternSynonyms/CompleteSigs
 
--- Semiring, Semimodule
-
--- deriving instance Additive (f b) => Additive (Convo f b) -- or in type decl
-
-deriving instance Semimodule b (f b) => Semimodule b (Convo f b)
+deriving instance Semimodule b z => Semimodule b (Convo z)
 
 instance ( DetectableZero b, Semiring b, Applicative h
-         , Additive (f b), Semimodule b (f b), Decomposable b h (f b) )
-      => Semiring (Convo f b) where
+         , Additive z, Semimodule b z, Decomposable b h z )
+      => Semiring (Convo z) where
   one = one <: pure zero
   (a :<: dp) <.> q = (a .> q) <+> (zero :<: fmap (<.> q) dp)
 
 instance ( DetectableZero b, StarSemiring b, Applicative h
-         , Additive (f b), Semimodule b (f b), Decomposable b h (f b)
-         ) => StarSemiring (Convo f b) where
+         , Additive z, Semimodule b z, Decomposable b h z
+         ) => StarSemiring (Convo z) where
   star (a :<: dp) = q where q = star a .> (one :<: fmap (<.> q) dp)
 
-
-#if 1
+#if 0
 
 infixl 1 <--
-type b <-- a = Convo ((->) a) b
+type b <-- a = Convo (a -> b)
 
 -- Hm. I can't give Functor, Applicative, Monad instances for Convo ((->) a) b,
 -- since I need a to be the parameter.
@@ -368,7 +352,7 @@ type b <-- a = Convo ((->) a) b
 #else
 
 infixl 1 <--
-newtype b <-- a = F { unF :: Convo ((->) a) b } deriving (Additive)
+newtype b <-- a = F { unF :: Convo (a -> b) } deriving (Additive)
 
 deriving instance Semiring b => Semimodule b (b <-- a)
 
@@ -390,3 +374,4 @@ instance (Decomposable b h (a -> b), Functor h) => Decomposable b h (b <-- a) wh
 #endif
 
 -- type M' b a = Convo ()
+

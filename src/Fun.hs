@@ -41,7 +41,7 @@ instance (Splittable a, Semiring s) => Semiring (s <-- a) where
 
 instance Semiring s => StarSemiring (s <-- [c])
 
-instance (Semiring b, Eq a) => HasSingle (b <-- a) a where
+instance (Semiring b, Eq a) => HasSingle a b (b <-- a) where
   single a = F (equal a)
 
 instance Semiring s => Semimodule s (s <-- a) where
@@ -115,7 +115,7 @@ instance (Monoid a, Ord a, SRM b) => Semiring (b :<-- a) where
 
   M p <.> M q = sum [u <> v +-> s <.> t | (u,s) <- toList p, (v,t) <- toList q]
 
-instance Semiring s => HasSingle (s :<-- a) a where
+instance Semiring s => HasSingle a s (s :<-- a) where
   single a = M (singleton a one)
 
 instance (Ord c, SRM s) => Decomposable (s :<-- [c]) (Map c) s where
@@ -197,7 +197,7 @@ instance Semiring s => Semiring (Resid c s) where
 
 instance StarSemiring (Resid s)
 
-instance Eq s => HasSingle (Resid s) [s] where
+instance Eq s => HasSingle [s] (Resid s) where
   single x = Resid (maybeToList . stripPrefix x)
 
 instance Decomposable (Resid s) s Bool where
@@ -247,7 +247,7 @@ instance Semiring s => Semiring (RegExp c s) where
 instance Semiring s => StarSemiring (RegExp c s) where
   star = Star
 
-instance Semiring s => HasSingle (RegExp c s) [c] where
+instance Semiring s => HasSingle [c] s (RegExp c s) where
   single = product . map Char
 
 #if 0
@@ -421,7 +421,7 @@ instance (StarSemiring s, DetectableZero s, Eq c) => StarSemiring (Decomp c s) w
       h d = as .> d <.> q
 #endif
 
-instance (DetectableZero s, Eq c) => HasSingle (Decomp c s) [c] where
+instance (DetectableZero s, Eq c) => HasSingle [c] s (Decomp c s) where
   single = foldr cons one
    where
      cons c x = zero :<: (\ c' -> if c' == c then x else zero)
@@ -558,7 +558,7 @@ instance (Ord c, StarSemiring s, DetectableZero s) => StarSemiring (Trie c s) wh
       h d = as .> d <.> q
 #endif
 
-instance OD c s => HasSingle (Trie c s) [c] where
+instance OD c s => HasSingle [c] s (Trie c s) where
 #if 1
   single w = product (map symbol w) where symbol c = zero <: singleton c one
   -- single = product . map symbol
@@ -619,11 +619,11 @@ pow b (Sum n) = product [b | _i <- [0 .. n-1]]
 -- pow _ 0 = one
 -- pow x n = x <.> pow x (n-1)
 
-assocsPoly :: (Semiring p, Semimodule s p, HasSingle p N, DetectableZero s)
+assocsPoly :: (Semiring p, Semimodule s p, HasSingle N s p, DetectableZero s)
            => [(Natural,s)] -> p
 assocsPoly l = sum [Sum i +-> s | (i,s) <- l]
 
-coeffsPoly :: (Semiring p, Semimodule s p, HasSingle p N, DetectableZero s)
+coeffsPoly :: (Semiring p, Semimodule s p, HasSingle N s p, DetectableZero s)
            => [s] -> p
 coeffsPoly bs = assocsPoly ([0 ..] `zip` bs)
 

@@ -6,7 +6,7 @@ module LTrie where
 
 import Prelude hiding (sum,product)
 
-import Data.Map (Map,singleton)
+import Data.Map (Map)
 
 import Constrained
 import Semi
@@ -38,11 +38,13 @@ instance (Ord c, Additive b) => Additive (LTrie c b) where
 
 FunctorSemimodule(LTrie c)
 
-instance (Ord c, Semiring s) => HasSingle [c] (LTrie c s) where
-  single = foldr cons nil
+instance (Ord c, Additive s) => HasSingle [c] s (LTrie c s) where
+  w +-> s = foldr cons nil w
    where
-     nil = one :< zero  -- Semiring s needed here
-     cons c x = zero :< singleton c x  -- (c +-> x)
+     nil :: LTrie c s
+     nil = s :< zero
+     cons :: c -> LTrie c s -> LTrie c s
+     cons c x = zero :< (c +-> x)
 
 -- Is HasSingle even useful on LTrie?
 
@@ -60,4 +62,4 @@ instance Decomposable b (Map c) (LTrie c b) where
 
 type LTrie' b c = Convo (LTrie c b)
 
-deriving instance (Ord c, Semiring b) => HasSingle [c] (LTrie' b c)
+deriving instance (Ord c, Semiring b) => HasSingle [c] b (LTrie' b c)

@@ -44,19 +44,10 @@ instance (Ord c, Additive b) => Additive (Decomp c b) where
 
 FunctorSemimodule(Decomp c)
 
-instance (Ord c, Semiring s) => HasSingle [c] (Decomp c s) where
-#if 0
-  -- Oops. We don't have Semiring (Decomp c s) for product.
-  single w = product (map symbol w) where symbol c = zero <: singleton c one
-  -- single = product . map symbol
-  --  where
-  --    symbol c = zero :< singleton c one
-#else
-  -- More streamlined
-  single = foldr cons nil
+instance (Ord c, Additive s) => HasSingle [c] s (Decomp c s) where
+  w +-> s = foldr cons nil w
    where
-     nil = one :< zero  -- Semiring s needed here
-     cons c x = zero :< (\ d -> if d == c then x else zero) -- (c +-> x)
-#endif
+     nil = s :< zero
+     cons c x = zero :< (c +-> x)
 
 -- Is HasSingle even useful on Decomp?

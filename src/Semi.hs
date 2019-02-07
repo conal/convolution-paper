@@ -45,13 +45,16 @@ class Semiring b => StarSemiring b  where
   {-# INLINE star #-}
   {-# INLINE plus #-}
 
-class Semimodule s b | b -> s where
+class {- Semiring s => -} Semimodule s b | b -> s where
   scale :: s -> b -> b
   -- default scale :: (Semiring b, s ~ b) => s -> b -> b  -- experimental
   -- scale = (<.>)
   default scale :: (Semiring s, Functor f, b ~ f s) => s -> b -> b  -- experimental
   scale s = fmap (s <.>)
   {-# INLINE scale #-}
+
+-- TODO: Add the Semiring superclass, and remove redundant constraints
+-- elsewhere. Search for occurrences of Semimodule.
 
 -- | 'scale' optimized for zero scalar
 (.>) :: (Additive b, Semimodule s b, DetectableZero s) => s -> b -> b

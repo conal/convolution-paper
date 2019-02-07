@@ -11,38 +11,40 @@ import qualified Data.Map as M
 
 import Semi
 
-class HasSingle a x | x -> a where
-  single :: a -> x
+-- TODO: rename s to b throughout (carefully)
 
 infix 1 +->
-(+->) :: (Additive x, Semimodule s x, HasSingle a x, DetectableZero s)
-      => a -> s -> x
-a +-> s = s .> single a
+class HasSingle a s x | x -> s a where
+  (+->) :: a -> s -> x
 
-value :: (Semimodule s x, HasSingle a x, DetectableZero s, Monoid a, Semiring x)
+single :: Semiring s => HasSingle a s x => a -> x
+single a = a +-> one
+
+value :: (HasSingle a s x, Monoid a)
       => s -> x
 value b = mempty +-> b
 
 -- Suitable?
-instance (Eq a, Semiring b) => HasSingle a (a -> b) where
-  single = equal
+instance (Eq a, Additive b) => HasSingle a b (a -> b) where
+  (+->) = equal1
 
-instance HasSingle a [a] where single a = [a]
+instance HasSingle a Bool [a] where
+  a +-> s = if s then [a] else []
 
-instance HasSingle a (Set a) where single a = S.singleton a
+instance HasSingle a Bool (Set a) where
+  a +-> s = if s then S.singleton a else S.empty
 
-instance Semiring b => HasSingle a (Map a b) where single a = M.singleton a one
+instance HasSingle a b (Map a b) where (+->) = M.singleton
 
--- type HS x c s = (Semimodule s x, DetectableZero s, HasSingle [c] x)
-
-oneBool :: Semiring x => (a -> x) -> a -> Bool -> x
+oneBool :: Additive x => (a -> x) -> a -> Bool -> x
 oneBool _ _ False = zero
 oneBool f a True  = f a
 
-equal :: (Eq a, Semiring s) => a -> a -> s
--- equal a a' = fromBool (a == a')
+equal1 :: (Eq a, Additive s) => a -> s -> a -> s
+equal1 a s a' = if a == a' then s else zero
 
-equal a a' = if a == a' then one else zero
+equal :: (Eq a, Semiring s) => a -> a -> s
+equal a = equal1 a one
 
 class Indexable p k v | p -> k v where
   (!) :: p -> k -> v
@@ -59,14 +61,6 @@ derivs = foldl ((!) . deriv)
 
 accept :: (Decomposable s h a, Indexable (h a) c a) => a -> [c] -> s
 accept p s = atEps (derivs p s)
-
--- type Language a c s = (StarSemiring a, HasSingle [c] a, Decomposable a c s)
-
--- instance (Ord k, Monoid k, Semiring v) => HasSingle v (TMap k v) where
---   single v = T.insert mempty v zero
-
--- instance Decomposable (TMap k v) (Map k v) v where
---   e <: d  = 
 
 {--------------------------------------------------------------------
     Invertible monoids

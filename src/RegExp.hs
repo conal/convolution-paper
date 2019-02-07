@@ -41,8 +41,8 @@ instance Semiring s => Semiring (RegExp c s) where
 instance Semiring s => StarSemiring (RegExp c s) where
   star = Star
 
-instance Semiring s => HasSingle [c] (RegExp c s) where
-  single = product . map Char
+instance Semiring s => HasSingle [c] s (RegExp c s) where
+  w +-> b = product (map Char w) <.> Value b
 
 instance (Eq c, StarSemiring s) => Decomposable s ((->) c) (RegExp c s) where
   e <: d = Value e <+> sum [ single [c] <.> d c | c <- allVals ]
@@ -71,7 +71,7 @@ instance (Eq c, StarSemiring s) => Decomposable s ((->) c) (RegExp c s) where
 -- just once. Do a bit of inlining and simplification.
 
 -- | Interpret a regular expression
-regexp :: (Semimodule s x, StarSemiring x, HasSingle [c] x, DetectableZero s)
+regexp :: (Semiring s, Semimodule s x, StarSemiring x, HasSingle [c] s x, DetectableZero s)
        => RegExp c s -> x
 regexp (Char c)     = single [c]
 regexp (Value s)    = value s

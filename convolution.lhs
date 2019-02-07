@@ -2,7 +2,9 @@
 
 %% While editing/previewing, use 12pt and tiny margin.
 \documentclass[hidelinks,twoside]{article}  % fleqn, 
-\usepackage[margin=0.9in]{geometry}  % 0.12in, 0.9in, 1in
+
+% \usepackage[margin=1in]{geometry}  % 0.12in, 0.9in, 1in
+\usepackage[paperwidth=6.75in,margin=0.12in]{geometry}  % Handy for previewing
 
 %% \documentclass{article}
 %% \usepackage{fullpage}
@@ -313,7 +315,7 @@ For some monoids, including lists, we can also express the product operation in 
 \begin{code}
   Pred f <.> Pred g = Pred (\ w -> bigOrSplits ((u,v) <# splits w) f u && g v)
 \end{code}
-where |splits| inverts |(<>)|:
+where |splits w| yields all pairs |(u,v)| such that |u <> v == w|:
 \notefoot{Maybe generalize from \emph{lists} of pairs to an associated |Foldable|.}
 % \notefoot{If I don't end up using |isEmpty|, drop it here. I think it's good for avoiding unnecessary equality tests and hence |Eq| constraints.}
 \begin{code}

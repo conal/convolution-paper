@@ -103,6 +103,8 @@ infixr 5 +#+
 
 instance Monoid a => StarSemiring (List a)
 
+#define SINGLE
+
 #ifdef SINGLE
 instance HasSingle (List a) a where
   single a = L [a]

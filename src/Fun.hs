@@ -20,11 +20,10 @@ import qualified Data.Map as M
 import qualified Data.Set as S
 import Data.Functor.Identity (Identity(..))
 
-import Data.Semiring
-
 import Misc
 import Language
 import Constrained
+import Semi
 
 {--------------------------------------------------------------------
     Flipped functions / generalized predicates
@@ -43,16 +42,10 @@ instance (Splittable a, Semiring s) => Semiring (s <-- a) where
 
 instance Semiring s => StarSemiring (s <-- [c])
 
-#ifdef SINGLE
 instance (Semiring b, Eq a) => HasSingle (b <-- a) a where
   single a = F (equal a)
-  -- single a = F (fromBool . (== a))
-#else
-instance (Semiring s, Eq a) => HasSingle (s <-- a) a s where
-  a +-> s = F (\ a' -> if a == a' then s else zero)
-#endif
 
-instance Semiring s => Scalable (s <-- a) s where
+instance Semiring s => Semimodule s (s <-- a) where
   s `scale` F f = F (\ a -> s <.> f a) 
   -- s `scale` F f = F ((s <.>) . f) 
 
@@ -107,7 +100,7 @@ newtype b :<-- a = M (Map a b) deriving Show
 mapTo :: (Ord a, Semiring b) => (b :<-- a) -> (b <-- a)
 mapTo (M m) = F (\ a -> M.findWithDefault zero a m)
 
-instance Semiring s => Scalable (s :<-- a) s where
+instance Semiring s => Semimodule s (s :<-- a) where
   s `scale` M m = M (fmap (s <.>) m)
 
 type SRM b = DetectableZero b
@@ -123,13 +116,8 @@ instance (Monoid a, Ord a, SRM b) => Semiring (b :<-- a) where
 
   M p <.> M q = sum [u <> v +-> s <.> t | (u,s) <- toList p, (v,t) <- toList q]
 
-#ifdef SINGLE
 instance Semiring s => HasSingle (s :<-- a) a where
   single a = M (singleton a one)
-#else
-instance Semiring s => HasSingle (s :<-- a) a s where
-  a +-> s = M (singleton a s)
-#endif
 
 instance (Ord c, SRM s) => Decomposable (s :<-- [c]) (Map c) s where
   b <: d = M (insert [] b (unionsWith (<+>)
@@ -183,7 +171,7 @@ newtype Resid c s = Resid ([c] -> [([c], s)])
 residF :: Semiring s => Resid c s -> (s <-- [c])
 residF (Resid f) = F (\ w -> sum [ s | (w',s) <- f w, null w' ])
 
-instance Semiring s => Scalable (Resid c s) s where
+instance Semiring s => Semimodule s (Resid c s) where
   s `scale` Resid f = Resid (map (second (s <.>)) . f)
 
 #if 0
@@ -242,7 +230,7 @@ data RegExp c s =
   | Star (RegExp c s)
  deriving (Show,Eq)
 
-instance Semiring s => Scalable (RegExp c s) s where
+instance Semiring s => Semimodule s (RegExp c s) where
   scale s = go
    where
      go (Char c) = Char c
@@ -260,13 +248,8 @@ instance Semiring s => Semiring (RegExp c s) where
 instance Semiring s => StarSemiring (RegExp c s) where
   star = Star
 
-#ifdef SINGLE
 instance Semiring s => HasSingle (RegExp c s) [c] where
   single = product . map Char
-#else
-instance Semiring s => HasSingle (RegExp c s) [c] s where
-  w +-> s = product (map Char w) <.> Value s
-#endif
 
 #if 0
 
@@ -361,10 +344,10 @@ scaleD s = go
  where
    go (e :<: ts) = (s <.> e) :<: (go . ts)
 
-instance (DetectableZero s, Eq c) => Scalable (Decomp c s) s where
+instance (DetectableZero s, Eq c) => Semimodule s (Decomp c s) where
   scale = scaleD
 
--- instance Semiring s => Scalable (Decomp c s) s where
+-- instance Semiring s => Semimodule s (Decomp c s) where
 --   scale s = go
 --    where
 --      go (s' :<: f) = (s <.> s') :<: go . f
@@ -439,27 +422,10 @@ instance (StarSemiring s, DetectableZero s, Eq c) => StarSemiring (Decomp c s) w
       h d = as .> d <.> q
 #endif
 
-#ifdef SINGLE
 instance (DetectableZero s, Eq c) => HasSingle (Decomp c s) [c] where
   single = foldr cons one
    where
      cons c x = zero :<: (\ c' -> if c' == c then x else zero)
-#else
-instance (DetectableZero s, Eq c) => HasSingle (Decomp c s) [c] s where
-#if 0
-  w +-> s = product (map symbol w) <.> (s :<: zero)
-   where
-     symbol c = zero :<: equal c
-                -- zero :<: (fromBool . (== c))
-     -- symbol c = zero :<: (\ c' -> fromBool (c' == c))
-#else
-  -- More streamlined
-  w +-> s = foldr cons nil w
-   where
-     cons c x = zero :<: (\ c' -> if c' == c then x else zero)
-     nil = s :<: zero
-#endif
-#endif
 
 instance (DetectableZero s, Eq c) => Decomposable (Decomp c s) ((->) c) s where
   (<:) = (:<:)
@@ -516,7 +482,7 @@ trimT :: OD c s => Int -> Trie c s -> Trie c s
 trimT 0 _ = zero
 trimT n (c :< ts) = c :< fmap (trimT (n-1)) ts
 
-instance OD c s => Scalable (Trie c s) s where
+instance OD c s => Semimodule s (Trie c s) where
 
   scale s = go
    where
@@ -593,7 +559,6 @@ instance (Ord c, StarSemiring s, DetectableZero s) => StarSemiring (Trie c s) wh
       h d = as .> d <.> q
 #endif
 
-#ifdef SINGLE
 instance OD c s => HasSingle (Trie c s) [c] where
 #if 1
   single w = product (map symbol w) where symbol c = zero <: singleton c one
@@ -606,22 +571,7 @@ instance OD c s => HasSingle (Trie c s) [c] where
    where
      cons c x = zero :< singleton c x
 #endif
-#else
 
-instance OD c s => HasSingle (Trie c s) [c] s where
-#if 0
-  w +-> s = product (map symbol w) <.> (s :< empty)
-   where
-     symbol c = zero :< singleton c one
-#else
-  -- More streamlined
-  w +-> s = foldr cons nil w
-   where
-     cons c x = zero :< singleton c x
-     nil = s :< empty
-#endif
-
-#endif
 
 instance OD c s => Decomposable (Trie c s) (Map c) s where
   (<:) = (:<)
@@ -649,7 +599,7 @@ instance DetectableZero b => Semiring (Stream b) where
 instance (StarSemiring b, DetectableZero b) => StarSemiring (Stream b) where
   star (a :# as) = q where q = star a .> (one :# as <.> q)
 
-instance DetectableZero s => Scalable (Stream s) s where
+instance DetectableZero s => Semimodule s (Stream s) where
   s `scale` (b :# dq) = (s <.> b) :# (s `scale` dq)
 
 {--------------------------------------------------------------------
@@ -670,11 +620,11 @@ pow b (Sum n) = product [b | _i <- [0 .. n-1]]
 -- pow _ 0 = one
 -- pow x n = x <.> pow x (n-1)
 
-assocsPoly :: (Semiring p, Scalable p s, HasSingle p N, DetectableZero s)
+assocsPoly :: (Semiring p, Semimodule s p, HasSingle p N, DetectableZero s)
            => [(Natural,s)] -> p
 assocsPoly l = sum [Sum i +-> s | (i,s) <- l]
 
-coeffsPoly :: (Semiring p, Scalable p s, HasSingle p N, DetectableZero s)
+coeffsPoly :: (Semiring p, Semimodule s p, HasSingle p N, DetectableZero s)
            => [s] -> p
 coeffsPoly bs = assocsPoly ([0 ..] `zip` bs)
 

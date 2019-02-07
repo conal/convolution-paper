@@ -42,6 +42,8 @@ library:
     - semiring-num
     # - newtype-generics
   other-modules: []
+  include-dirs: src
+  install-includes: GenInstances.inc
   source-dirs: src
   exposed-modules:
     - Misc

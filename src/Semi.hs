@@ -4,12 +4,12 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 {-# OPTIONS_GHC -Wall #-}
-
+{-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
 -- | Commutative monoids, semirings, and semimodules
 
 module Semi where
 
-import Control.Applicative (liftA2)
+-- import Control.Applicative (liftA2)
 import GHC.Natural (Natural)
 import Data.Functor.Identity (Identity(..))
 
@@ -79,9 +79,6 @@ instance Semiring Bool where
 instance Additive (t) where { (<+>) = (+) ; zero = 0 } ; \
 instance DetectableZero (t) where { isZero = (== 0)} ; \
 instance Semiring (t) where { (<.>) = (*) ; one  = 1 } ; \
--- instance Semimodule (t) (t)
-
--- Do I really want these Semimodule instances?
 
 Nums(Integer)
 Nums(Natural)
@@ -90,15 +87,24 @@ Nums(Float)
 Nums(Double)
 -- etc
 
--- Additive, Semimodule, Semimodule from Applicative
-#define Appls(f) \
+#define FunctorSemimodule(f) \
+instance Semiring zz => Semimodule zz ((f) zz)
+
+#define FunctorStar(f) \
+instance (Semiring ((f) qq), Ok (f) qq, StarSemiring qq) => StarSemiring ((f) qq) where \
+  { star = fmapC star; plus = fmapC plus }
+
+-- Additive, Semimodule, Semiring from Applicative
+#define ApplSemi(f) \
 instance Additive zz => Additive ((f) zz) where \
   { (<+>) = liftA2C (<+>) ; zero = pureC zero } ; \
+FunctorSemimodule(f) ; \
 instance Semiring zz => Semiring ((f) zz) where \
   { (<.>) = liftA2C (<.>) ; one = pureC one } ; \
-instance StarSemiring zz => StarSemiring ((f) zz) where \
-  { star = fmap star; plus = fmap plus } ; \
-instance Semiring zz => Semimodule zz ((f) zz) 
+FunctorStar(f)
+
+-- instance StarSemiring zz => StarSemiring ((f) zz) where \
+--   { star = fmapC star; plus = fmapC plus }
 
 -- TODO: Maybe rely on Pointed and Zip instead of Applicative here, considering
 -- these definitions.
@@ -107,52 +113,41 @@ instance Semiring zz => Semimodule zz ((f) zz)
 -- 
 --    where scale s = fmap (s <.>) ;
 
-Appls((->) a)
-Appls(Stream)
+ApplSemi((->) a)
+ApplSemi(Stream)
 -- etc
 
+#define FoldableZero(f) \
+instance Additive ((f) qq) => DetectableZero ((f) qq) where \
+  { isZero = null } ; \
+
 -- Additive from Monoid
-#define Mono(t) \
-instance Monoid (t) => Additive (t) where { zero = mempty ; (<+>) = (<>) }
+#define ApplMono(f) \
+instance Monoid ((f) qq) => Additive ((f) qq) where \
+  { zero = mempty ; (<+>) = (<>) } ; \
+FoldableZero(f) ; \
+instance (ApplicativeC f, Ok f qq, Monoid qq) => Semiring ((f) qq) where \
+  { one = pureC mempty ; (<.>) = liftA2C (<>) } ; \
+FunctorStar(f)
 
 -- instance Eq (t) => DetectableZero (t) where isZero = (== mempty)
 
-Mono([a])
-Mono(Set a)
+-- TODO: Why does "isZero = null" work for Set?? Oh! null is now in Foldable.
+
+ApplMono([])
+ApplMono(Set)
 -- etc
-
--- TODO: Re-add the constrained versions of Functor/Applicative/Monad, and use
--- them to unify Set a and [a].
-
-instance DetectableZero [c] where isZero = null
-
-instance Ord a => DetectableZero (Set a) where isZero = S.null
-
-instance Monoid a => Semiring [a] where
-  one = [mempty]
-  (<.>) = liftA2 (<>)
-
-instance (Ord a, Semiring a) => Semimodule a (Set a) where
-  scale a = S.map (a <.>)
-
-#if 1
-instance (Monoid a, Ord a) => Semiring (Set a) where
-  one = pureC mempty
-  (<.>) = liftA2C (<>)
-#else
-instance (Monoid a, Ord a) => Semiring (Set a) where
-  one = S.singleton mempty
-  -- p <.> q = S.fromList [u <> v | u <- S.toList p, v <- S.toList q]
-  p <.> q = S.fromList (liftA2 (<>) (S.toList p) (S.toList q))
-#endif
 
 instance (Ord a, Additive b) => Additive (Map a b) where
   zero = M.empty
   (<+>) = M.unionWith (<+>)
 
-instance (Ord a, Additive b) => DetectableZero (Map a b) where isZero = M.null
+FoldableZero(Map a)
+-- instance (Ord a, Additive b) => DetectableZero (Map a b) where isZero = null
 
-instance Semiring b => Semimodule b (Map a b) where scale s = fmap (s <.>)
+FunctorSemimodule(Map a)
+
+-- instance Semiring b => Semimodule b (Map a b) -- where scale s = fmap (s <.>)
 
 -- Do I want Semiring (Map a b)? If so, should it agree with a -> b.
 -- Maybe build it with Convo, but then I'm restricting the domain.
@@ -289,7 +284,8 @@ fromBool True  = one
 
 newtype Stream' b = S (Stream b) deriving Additive
 
-deriving instance Semiring b => Semimodule b (Stream' b)
+FunctorSemimodule(Stream')
+-- deriving instance Semiring b => Semimodule b (Stream' b)
 
 instance Decomposable b Identity (Stream' b) where
   b <: Identity (S bs) = S (b :# bs)
@@ -304,7 +300,8 @@ instance (DetectableZero b, Semiring b) => Semiring (Stream' b) where
 
 newtype Map' a b = M (Map a b) deriving Additive
 
-deriving instance Semiring b => Semimodule b (Map' a b)
+FunctorSemimodule(Map' a)
+-- deriving instance Semiring b => Semimodule b (Map' a b)
 
 -- deriving instance Decomposable b Identity (Map' a b)
 
@@ -345,7 +342,7 @@ instance ( DetectableZero b, StarSemiring b, Applicative h
 infixl 1 <--
 type b <-- a = Convo (a -> b)
 
--- Hm. I can't give Functor, Applicative, Monad instances for Convo ((->) a) b,
+-- Hm. I can't give Functor, Applicative, Monad instances for Convo (a -> b)
 -- since I need a to be the parameter.
 -- I guess I could wrap another newtype:
 
@@ -373,5 +370,5 @@ instance (Decomposable b h (a -> b), Functor h) => Decomposable b h (b <-- a) wh
 
 #endif
 
--- type M' b a = Convo ()
+type M' b a = Convo (Map a b)
 

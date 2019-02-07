@@ -13,5 +13,3 @@ type Unop a = a -> a
 
 bool :: a -> a -> Bool -> a
 bool t e b = if b then t else e
-
-

@@ -23,7 +23,6 @@ import Data.Functor.Identity (Identity(..))
 -- import Data.Semiring
 
 import Misc
-import Stream
 import Semi
 
 class HasSingle a x | x -> a where
@@ -62,17 +61,6 @@ class Indexable p k v | p -> k v where
 
 instance Indexable (k -> v) k v where
   f ! k = f k
-
-instance Indexable (Stream b) N b where
-  (b :# bs) ! n = if n == 0 then b else bs ! (n-1)
-
--- instance Indexable (Stream b) N b where
---   (b :# _)  ! 0 = b
---   (_ :# bs) ! n = bs ! (n-1)
-
--- instance Indexable (Stream b) N b where
---   (b :# _)  ! Sum 0 = b
---   (_ :# bs) ! Sum n = bs ! Sum (n-1)
 
 instance (Ord k, Semiring v) => Indexable (Map k v) k v where
   m ! k = M.findWithDefault zero k m

@@ -3,8 +3,13 @@
 module Stream where
 
 import Control.Applicative (liftA2)
+import Data.Functor.Identity (Identity(..))
 
 import Constrained
+import Semi
+import Language
+
+#include "GenInstances.inc"
 
 infixr 1 :#
 data Stream b = b :# Stream b
@@ -29,3 +34,21 @@ instance Monad Stream where
 instance FunctorC     Stream
 instance ApplicativeC Stream
 instance MonadC       Stream
+
+instance Decomposable b Identity (Stream b) where
+  b <: Identity bs = b :# bs
+  decomp (b :# bs) = (b, Identity bs)
+-- {-# COMPLETE (:<:) :: Stream b #-} -- won't parse
+
+ApplSemi(Stream)
+
+instance Indexable (Stream b) N b where
+  (b :# bs) ! n = if n == 0 then b else bs ! (n-1)
+
+-- instance Indexable (Stream b) N b where
+--   (b :# _)  ! 0 = b
+--   (_ :# bs) ! n = bs ! (n-1)
+
+-- instance Indexable (Stream b) N b where
+--   (b :# _)  ! Sum 0 = b
+--   (_ :# bs) ! Sum n = bs ! Sum (n-1)

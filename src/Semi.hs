@@ -21,7 +21,6 @@ import qualified Data.Map as M
 
 import Misc ((:*))
 import Constrained
-import Stream
 
 #include "GenInstances.inc"
 
@@ -87,7 +86,6 @@ Nums(Double)
 -- etc
 
 ApplSemi((->) a)
-ApplSemi(Stream)
 -- etc
 
 ApplMono([])
@@ -203,11 +201,6 @@ instance Semiring b => Decomposable b ((->) c) ([c] -> b) where
   (_ <: h) (c:cs) = h c cs
   decomp f = (f [], \ c cs -> f (c : cs))
 -- {-# COMPLETE (:<:) :: [c] -> b #-} -- won't parse
-
-instance Decomposable b Identity (Stream b) where
-  b <: Identity bs = b :# bs
-  decomp (b :# bs) = (b, Identity bs)
--- {-# COMPLETE (:<:) :: Stream b #-} -- won't parse
 
 -- I probably don't need and can't benefit from these COMPLETE pragmas, since
 -- I'm using the general Convo type. For the same reason, I don't think I'm

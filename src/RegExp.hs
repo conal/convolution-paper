@@ -77,3 +77,5 @@ regexp (Value s)     = value s
 regexp (u  :<+>  v)  = regexp u <+> regexp v
 regexp (u  :<.>  v)  = regexp u <.> regexp v
 regexp (Star u)   = star (regexp u)
+
+instance Indexable (RegExp c s) [c] s where (!) = regexp

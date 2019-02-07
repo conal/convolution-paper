@@ -24,8 +24,14 @@ instance Functor (LTrie c) where
 
 instance FunctorC (LTrie c)
 
-trieFun :: (Ord c, Additive b) => LTrie c b -> ([c] -> b)
-trieFun (a :< dp) = a <: trieFun . (dp !)
+-- trieFun :: (Ord c, Additive b) => LTrie c b -> ([c] -> b)
+-- trieFun (a :< dp) = a <: trieFun . (dp !)
+
+instance (Ord c, Additive b) => Indexable (LTrie c b) [c] b where
+  -- (!) = trieFun
+  (!) (a :< dp) = a <: (!) . (dp !)
+  -- (a :< _ ) ! [] = a
+  -- (_ :< dp) ! (c:cs) = (dp ! c) ! cs
 
 instance (Ord c, Additive b) => Additive (LTrie c b) where
   zero = zero :< zero

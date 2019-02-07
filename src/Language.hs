@@ -15,7 +15,7 @@ class HasSingle a x | x -> a where
   single :: a -> x
 
 infix 1 +->
-(+->) :: (Semiring x, Semimodule s x, HasSingle a x, DetectableZero s)
+(+->) :: (Additive x, Semimodule s x, HasSingle a x, DetectableZero s)
       => a -> s -> x
 a +-> s = s .> single a
 
@@ -31,7 +31,9 @@ instance HasSingle a [a] where single a = [a]
 
 instance HasSingle a (Set a) where single a = S.singleton a
 
-type HS x c s = (Semimodule s x, DetectableZero s, HasSingle [c] x)
+instance Semiring b => HasSingle a (Map a b) where single a = M.singleton a one
+
+-- type HS x c s = (Semimodule s x, DetectableZero s, HasSingle [c] x)
 
 oneBool :: Semiring x => (a -> x) -> a -> Bool -> x
 oneBool _ _ False = zero

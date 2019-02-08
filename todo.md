@@ -67,6 +67,10 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
         *   [*Testing Extended Regular Language Membership Incrementally by Rewriting*]
         *   [*Yacc is dead*]
         *   [*Yacc is dead: An update*]
+    *   Semirings:
+        *   [*Some Recent Applications of Semiring Theory*]
+        *   [*Fun with Semirings: A functional pearl on the abuse of linear algebra*]
+        *   [*Linear Algebra Over Semirings*]
     *   On semirings and parsing:
         *   [*Parsing Inside-Out*]
         *   [*Semiring Parsing*]
@@ -80,7 +84,6 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
         *   [*Convolution as a Unifying Concept: Applications in Separation Logic, Interval Calculi, and Concurrency*]
         *   [*Introduction to weighted automata theory*]
         *   [*Weighted Automata*]
-        *   [*Fun with Semirings: A functional pearl on the abuse of linear algebra*]
         *   [*Quantifiers on languages and codensity monads*]
         *   [What is a coalgebra intuitively?](https://mathoverflow.net/questions/76509/what-is-a-coalgebra-intuitively)
         *   [*Bases as coalgebras*](https://arxiv.org/pdf/1309.0844.pdf)
@@ -187,3 +190,7 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 [*Introduction to weighted automata theory*]: https://perso.telecom-paristech.fr/jsaka/CONF/Files/IWAT.pdf "Presentation by Jacques Sakarovitch (year?)"
 
 [*Weighted Automata*]: https://www.semanticscholar.org/paper/Weighted-automata-Droste-Kuske/f8d5980f23814e1d69a737f1f178d4a2565f7c22 "paper by Manfred Droste and Dietrich Kuske (2012)"
+
+[*Some Recent Applications of Semiring Theory*]: http://moonstone.math.ncku.edu.tw/Conferences/BeidarConference/golantalk.pdf "Paper by Jonathan S. Golan (2005)"
+
+[*Linear Algebra Over Semirings*]: https://www.research.manchester.ac.uk/portal/files/54562608/FULL_TEXT.PDF "PhD thesis by David Wilding (2014)"

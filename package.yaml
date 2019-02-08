@@ -32,6 +32,8 @@ default-extensions:
 
 ghc-options: -Wall
 
+cpp-options: -DEXAMPLES
+
 library:
   dependencies:
     - base >= 4.7 && < 5
@@ -60,6 +62,7 @@ library:
     - RegExp
     # - Set
     # - Fun
+    - Examples
 
 tests:
   test:

@@ -4,6 +4,7 @@
 #define Nums(t) \
 instance Additive (t) where { (<+>) = (+) ; zero = 0 } ; \
 instance DetectableZero (t) where { isZero = (== 0)} ; \
+instance DetectableOne  (t) where { isOne  = (== 1)} ; \
 instance Semiring (t) where { (<.>) = (*) ; one  = 1 }
 
 #define FunctorSemimodule(f) \

@@ -53,6 +53,30 @@ instance (Ord c, Additive b) => HasSingle [c] b (Decomp c b) where
 -- Is HasSingle even useful on Decomp?
 
 instance (DetectableZero b, Eq c) => Decomposable b ((->) c) (Decomp c b) where
-  (<:) = (:<:)
+  (<:) = (:<)
   atEps (a :< _) = a
   deriv (_ :< d) = d
+
+type Decomp' c b = Convo (Decomp c b)
+
+-- >>> let a = single "a" :: Decomp Char Bool
+-- >>> a
+-- False :< <function>
+-- >>> deriv a ! 'a'
+-- True :< <function>
+-- >>> a ! ""
+-- False
+-- >>> a ! "a"
+-- True
+-- >>> a ! "b"
+-- False
+-- >>> a ! "ab"
+-- False
+--
+-- >>> let a' = C a
+-- >>> a'
+-- C (False :< <function>)
+-- >>> a' <+> a'
+-- C (False :< <function>)
+-- >>> one :: Decomp' Char Bool
+

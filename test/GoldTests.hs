@@ -36,11 +36,17 @@ basicTests = testGroup "Various representations"
   -- , tests @(S.Decomp  Char     ) "SetDecomp"
   -- , tests @(S.RegExp  Char     ) "SetRegExp"
   -- , tests @(S.Trie    Char     ) "SetTrie"
-  -- , tests @(Bool F.<-- String  ) "F"
-  -- , tests @(Convo (Decomp  Char Bool)) "FunDecomp"
-  -- , tests @(Convo (RegExp  Char Bool)) "FunRegExp"
-  , tests @(Convo (LTrie    Char Bool)) "FunTrie"
+
+  , tests @(Convo (String -> Bool)) "F"  -- works
+  , tests @(Convo (Decomp  Char Bool)) "FunDecomp" -- works
+  , tests @(RegExp  Char Bool) "FunRegExp"
+  -- , tests @(Convo (RegExp  Char Bool)) "FunRegExp" -- hangs on as-a
+  , tests @(Convo (LTrie    Char Bool)) "FunTrie" -- works
+
   ]
+
+-- Idea: use a single output directory instead of many, for comparison across
+-- representations.
 
 -- TODO: some tests with s other than Bool.
 
@@ -73,14 +79,16 @@ tests group = testGroup group
   , gold "pps-pinkpigpinkpigpig" $ pps ! "pinkpigpinkpigpig"
 
   -- These recursive examples are challenging.
-  -- OptimizeRegexp in Set.hs causes these recursive examples to diverge.
-  , gold "anbn-eps"              $ anbn ! ""
-  , gold "anbn-ab"               $ anbn ! "ab"
-  , gold "anbn-ba"               $ anbn ! "ba"
-  , gold "anbn-aabb"             $ anbn ! "aabb"
-  , gold "anbn-aacbb"            $ anbn ! "aacbb"
-  , gold "anbn-aaabbb"           $ anbn ! "aaabbb"
-  , gold "anbn-aaabbbb"          $ anbn ! "aaabbbb"
+  , groupNot ["FunRegExp"] $
+    testGroup "anbn"
+    [ gold "anbn-eps"              $ anbn ! ""
+    , gold "anbn-ab"               $ anbn ! "ab"
+    , gold "anbn-ba"               $ anbn ! "ba"
+    , gold "anbn-aabb"             $ anbn ! "aabb"
+    , gold "anbn-aacbb"            $ anbn ! "aacbb"
+    , gold "anbn-aaabbb"           $ anbn ! "aaabbb"
+    , gold "anbn-aaabbbb"          $ anbn ! "aaabbbb"
+    ]
 
   ]
  where
@@ -103,3 +111,5 @@ tests group = testGroup group
              goldenVsString nm
                 ("test/gold/" <> group <> "/" <> nm <> ".txt")
              . pure . pack . show
+
+-- I'd like to use definitions from Examples. How to establish the types?

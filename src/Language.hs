@@ -88,5 +88,5 @@ instance Splittable N where
     Temporary hack
 --------------------------------------------------------------------}
 
-allVals :: [c]
-allVals = error "allVals not defined"
+-- allVals :: [c]
+-- allVals = error "allVals not defined"

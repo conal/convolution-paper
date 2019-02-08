@@ -37,6 +37,9 @@ class Additive b => Semiring b where
   (<.>) :: b -> b -> b
   one :: b
 
+class Semiring b => DetectableOne b where
+  isOne :: b -> Bool
+
 class Semiring b => StarSemiring b  where
   star :: b -> b
   plus :: b -> b
@@ -71,6 +74,8 @@ instance Additive Bool where
   zero = False
 
 instance DetectableZero Bool where isZero = not
+
+instance DetectableOne Bool where isOne = id
 
 instance Semiring Bool where
   (<.>) = (&&)
@@ -108,6 +113,7 @@ FunctorSemimodule(Map a)
 
 deriving instance Additive b       => Additive (Identity b)
 deriving instance DetectableZero b => DetectableZero (Identity b)
+deriving instance DetectableOne b  => DetectableOne (Identity b)
 deriving instance Semimodule s b   => Semimodule s (Identity b)
 deriving instance Semiring b       => Semiring (Identity b)
 
@@ -242,9 +248,14 @@ newtype Convo z = C z deriving (Show, Additive, DetectableZero)
 unC :: Convo z -> z
 unC (C z) = z
 
+instance ( Decomposable b h z, Semimodule b z, Functor h, Additive z
+         , DetectableZero b, DetectableOne b, DetectableZero (h (Convo z)) )
+      => DetectableOne (Convo z) where
+  isOne (a :<: dp) = isOne a && isZero dp
+
 instance (Functor h, Decomposable b h z) => Decomposable b h (Convo z) where
-  b <: zs = C (b <: fmap unC zs)
-  decomp (C (decomp -> (b,zs))) = (b, fmap C zs)
+  a <: dp = C (a <: fmap unC dp)
+  decomp (C (decomp -> (a,dp))) = (a, fmap C dp)
 
 {-# COMPLETE (:<:) :: Convo #-}
 
@@ -290,8 +301,8 @@ deriving instance
 
 instance (Decomposable b h (a -> b), Functor h) => Decomposable b h (b <-- a) where
   s <: dp = F (s :<: fmap unF dp)
-  -- decomp (F (s :<: dp)) = (s, fmap F dp)
-  decomp (F (s :<: (fmap F -> dp))) = (s, dp)
+  decomp (F (s :<: dp)) = (s, fmap F dp)
+  -- decomp (F (s :<: (fmap F -> dp))) = (s, dp)
 
 -- See how it goes
 

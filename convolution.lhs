@@ -3,8 +3,8 @@
 %% While editing/previewing, use 12pt and tiny margin.
 \documentclass[hidelinks,twoside]{article}  % fleqn, 
 
-% \usepackage[margin=1in]{geometry}  % 0.12in, 0.9in, 1in
-\usepackage[paperwidth=6.75in,margin=0.12in]{geometry}  % Handy for previewing
+\usepackage[margin=0.75in]{geometry}  % 0.12in, 0.9in, 1in
+%% \usepackage[paperwidth=6.75in,margin=0.12in]{geometry}  % Handy for previewing
 
 %% \documentclass{article}
 %% \usepackage{fullpage}
@@ -100,9 +100,9 @@ Conal Elliott
 
 \begin{abstract}
 
-A number of useful and interesting tasks can be formulated in the vocabulary of \emph{semirings}, which are types that have addition, multiplication, and their corresponding identities zero and one.
+A number of useful and interesting tasks can be formulated in the vocabulary of \emph{semirings}\out{, which are types that have addition, multiplication, and their corresponding identities zero and one.
 Multiplication with one must form a monoid, while addition with zero must form commutative monoid.
-As in a ring, multiplication distributes over addition, but unlike rings, there needn't be an additive inverse.
+As in a ring, multiplication distributes over addition, but unlike rings, there needn't be an additive inverse}.
 A somewhat less well-known abstraction is \emph{semimodules}, which are like vector spaces but with the requirement of a \emph{field} of scalars relaxed to a semiring.
 Using the perspective of semirings and free semimodules, this paper explores formal languages and derives algorithms for language recognition (matching) that correspond to a method of Brzozowski, while generalizing this method to a broader setting, including counted and weighted ``languages''.
 
@@ -110,10 +110,10 @@ Although Brzozowski formulated his method in terms of regular expressions, free 
 Regular expressions become a special case, while \emph{tries} offer a natural alternative that appears to be simpler and more efficient.
 Rather than constructing a grammatical representation that gets successively ``differentiated'' in Brzozowski's method, the standard notion of trie already has derivatives built in, saving much redundant work without the need for explicit memoization.
 Since tries generalize elegantly from sets to functions and from strings to algebraic data types, the essential theory and algorithms extend far beyond languages in the sense of sets of strings.
-In particular, this paper shows how to efficiently and easily perform convolution in one dimension or many.
+Underlying these variations is a notion of generalized convolution, which itself (along with probabilistic computation) generalizes to the free semimodule monad.
+This paper shows how to perform (generalized) convolution efficiently and easily, in one dimension or many, on time or space and on languages.
 Aside from applications in image processing and machine learning, a simple and direct application of convolution is multiplication of polynomials, again in one or many dimensions (i.e., univariate or multivariate).
 All of the algorithms in the paper follow from very simple specifications in the form of semiring homomorphisms that relate different representations.
-Underlying these variations is a notion of generalized convolution, which itself (along with probabilistic computation) generalizes to the free semimodule monad.
 
 \end{abstract}
 
@@ -567,6 +567,7 @@ instance Semiring b => Decomposable (b <-- [c]) ((->) c) b where
 
 \begin{lemma}[\provedIn{lemma:atEps b <-- [c]}]\lemLabel{atEps b <-- [c]}
 The |atEps| function is a star semiring homomorphism, i.e.,
+\notefoot{Also a semimodule homomorphism, i.e., ``linear''. I may want to say so here if I reorganize the paper so as to introduce semimodules sooner.}
 \begin{code}
 atEps zero         == zero
 atEps one          == one
@@ -1056,7 +1057,7 @@ liftA2 h p q  = p >>= \ u -> fmap (h u) q
 
 \sectionl{More applications}
 
-\sectionl{Polynomials}
+\subsectionl{Polynomials}
 
 %format N = "\mathbb{N}"
 %format (Sum a) = a
@@ -1084,6 +1085,7 @@ The function |poly| is a semiring homomorphism when multiplication on |b| commut
 \noindent
 \note{Next:
 \begin{itemize}\itemsep0ex
+\item Generalize via monoidal scan
 \item Examples
 \item Finite maps
 \item Non-scalar domains (``multivariate'' polynomials) as in notes from 2019-01-\{28,29\}
@@ -1292,10 +1294,10 @@ Second addend:
     deriv (bigSumA (c',u',v) ((c':u') <> v +-> f (c':u') <.> g v))
 ==  bigSumA (c',u',v) deriv ((c':u') <> v +-> f (c':u') <.> g v)    -- additivity of |deriv|
 ==  bigSumA (c',u',v) deriv (c' : (u' <> v) +-> f (c':u') <.> g v)  -- |(<>)| on lists
-==  \ c -> bigSum (u',v) u' <> v +-> f (c:u') <.> g v                        -- \lemRef{deriv +->} below
-==  \ c -> bigSum (u',v) u' <> v +-> (\ cs -> f (c:cs)) u' <.> g v           -- $\beta$ expansion
-==  \ c -> F (\ cs -> f (c:cs)) <.> F g                                      -- |(<.>)| on |b <-- a|
-==  \ c -> deriv (F f) c <.> F g                                             -- |deriv| on |b <-- a|
+==  \ c -> bigSum (u',v) u' <> v +-> f (c:u') <.> g v               -- \lemRef{deriv +->} below
+==  \ c -> bigSum (u',v) u' <> v +-> (\ cs -> f (c:cs)) u' <.> g v  -- $\beta$ expansion
+==  \ c -> F (\ cs -> f (c:cs)) <.> F g                             -- |(<.>)| on |b <-- a|
+==  \ c -> deriv (F f) c <.> F g                                    -- |deriv| on |b <-- a|
 \end{code}
 Combine addends, and let |p = F f| and |q = F g|:
 \begin{code}

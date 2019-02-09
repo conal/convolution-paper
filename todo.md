@@ -18,6 +18,7 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
     Similarly for `liftA2`.
     Graphics has a similar issue!
     Spatial transformations may be one-to-many, especially if non-projective.
+*   [Free semirings](http://hackage.haskell.org/package/semiring-num-1.6.0.1/docs/Data-Semiring-Free.html)
 *   Convolution commutes with currying and with uncurrying.
     So do addition, zero, and one, but `single` is different.
     See 2019-01-28 notes.

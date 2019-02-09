@@ -142,6 +142,7 @@ All of the algorithms in the paper follow from very simple specifications in the
 %format bigunion (lim) (body) = "\bigunion_{" lim "}{" body "}"
 %format pow a (b) = a "^{" b "}"
 %format `union` = "\cup"
+%format union = (`union`)
 %format star p = "\closure{"p"}"
 
 %format bigUnion (lim) = "\bigOp\bigcup{" lim "}{0}"
@@ -160,8 +161,8 @@ The simplest abstraction we'll use is the monoid, expressed in Haskell as follow
 \begin{code}
 class Monoid a where
   mempty  :: a
-  infixr 6 <>
   (<>)    :: a -> a -> a
+  infixr 6 <>
 \end{code}
 The monoid laws require that |(<>)| (sometimes pronounced ``mappend'') be associative and that |mempty| is its left and right identity, i.e.,
 \begin{code}
@@ -170,12 +171,10 @@ mempty <> v == v
 u <> mempty == u
 \end{code}
 One monoid especially familiar to functional programmers is lists:
-\notefoot{Maybe just say ``|(<>) = (++)|'' instead.}
 \begin{code}
 instance Monoid [a] where
-  mempty = []
-  [] <> bs = bs
-  (a:as) <> bs = a : (as <> bs)
+  mempty  = []
+  (<>)    = (++)
 \end{code}
 Natural numbers form a monoid under addition and zero.
 
@@ -243,8 +242,8 @@ For clarity and familiarity, it will be convenient to use the name ``|(+)|'' ins
 \begin{code}
 class Additive b where
   zero  :: b
-  infixl 6 +
   (+)   :: b -> b -> b
+  infixl 6 +
 \end{code}
 The |Additive| laws as the same as for |Monoid| (translating |mempty| and |(<>)| to |zero| and |(+)|), together with commutativity:
 \begin{code}
@@ -254,11 +253,17 @@ u + zero == u
 
 u + v == v + u
 \end{code}
-Examples of additive monoids include natural numbers with addition and sets with union (but not lists with append).
+While lists with append form a non-additive monoid, natural numbers with addition do.
+Another example is sets with union:
+\begin{code}
+instance Additive (Pow a) where
+  zero  = emptyset
+  (+)   = union
+\end{code}
 Another example is functions with pointwise addition, with any domain and with any \emph{additive} codomain:
 \begin{code}
 instance Additive b => Additive (a -> b) where
-  zero   = \ a -> zero
+  zero = \ a -> zero
   f + g  = \ a -> f a + g a
 \end{code}
 Curried functions of \emph{any number} of arguments (and additive result type) are additive, thanks to repeated application of this instance.
@@ -304,9 +309,9 @@ In both examples, addition commutes; but natural number multiplication commutes,
 The vocabulary and laws these examples share is called a \emph{semiring} (distinguished from a ring by dropping the requirement of additive inverses):
 \begin{code}
 class Additive b => Semiring b where
-  infixl 7 <.>
-  (<.>)  :: b -> b -> b
   one    :: b
+  (<.>)  :: b -> b -> b
+  infixl 7 <.>
 \end{code}
 The laws, in addition to those for |Additive| above, include multiplicative monoid, distribution, and annihilation:
 \begin{code}
@@ -324,18 +329,18 @@ As mentioned, numbers and various linear endofunction representations form semir
 A much simpler example is the semiring of booleans, with disjunction as addition and conjunction as multiplication (though we could reverse roles):
 \begin{code}
 instance Additive Bool where
-  (<+>) = (||)
-  zero = False
+  zero   = False
+  (<+>)  = (||)
 
 instance Semiring Bool where
-  (<.>) = (&&)
-  one = True
+  one    = True
+  (<.>)  = (&&)
 \end{code}
 Another example is functions, building on the |Additive (a -> b)| instance above:
 \begin{code}
 instance Semiring b => Semiring (a -> b) where
-  f * g  = \ a -> f a * g a
   one = \ a -> one
+  f * g  = \ a -> f a * g a
 \end{code}
 As with |Additive|, this |Semiring| instance implies that curried functions (of any number of arguments and with semiring result type) are semirings, with |curry| and |uncurry| being semiring homomorphisms.
 
@@ -355,8 +360,8 @@ star p == one + p * star p
 which we will take as a law for a new abstraction, as well as a default recursive implementation:
 \begin{code}
 class Semiring b => StarSemiring b  where
-  star    :: b -> b
-  star p  = one <+> p * star p
+  star :: b -> b
+  star p = one <+> p * star p
 \end{code}
 %format (inverse x) = x "^{-1}"
 Sometimes there are more appealing alternative implementations.

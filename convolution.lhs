@@ -131,6 +131,8 @@ All of the algorithms in the paper follow from very simple specifications in the
 %format <# = "\mathop{\in}"
 %format # = "\mid"
 
+%format (wrap (a)) = a
+
 %format (paren (e)) = "\left(" e "\right)"
 
 %format Pow = "\Pow"
@@ -141,6 +143,10 @@ All of the algorithms in the paper follow from very simple specifications in the
 %format pow a (b) = a "^{" b "}"
 %format `union` = "\cup"
 %format star p = "\closure{"p"}"
+
+%format bigUnion (lim) = "\bigOp\bigcup{" lim "}{0}"
+%format bigSum (lim) = "\bigOp\sum{" lim "}{0}"
+%format bigSumQ (lim) = "\bigOp\sum{" lim "}{1.5}"
 
 %% \sectionl{Introduction}
 
@@ -214,26 +220,25 @@ fromEndo :: Monoid a => Endo a -> a
 fromEndo (Endo f) = f mempty
 \end{code}
 The embedding of |a| into |Endo a| provides another example of a monoid homomorphism:
-\notefoot{Annotate.}
 \begin{code}
     toEndo mempty
-==  Endo (\ z -> mempty <> z)
-==  Endo (\ z -> z)
-==  mempty
+==  Endo (\ z -> mempty <> z)                     -- |toEndo| definition
+==  Endo (\ z -> z)                               -- monoid law
+==  mempty                                        -- |id| on |Endo a|
 
     toEndo (a <> b)
-==  Endo (\ z -> (a <> b) <> z)
-==  Endo (\ z -> a <> (b <> z))
-==  Endo ((\ z -> a <> z) . (\ z -> b <> z))
-==  Endo (\ z -> a <> z) <> Endo (\ z -> b <> z)
-==  toEndo a <> toEndo b
+==  Endo (\ z -> (a <> b) <> z)                   -- |toEndo| definition
+==  Endo (\ z -> a <> (b <> z))                   -- monoid law
+==  Endo ((\ z -> a <> z) . (\ z -> b <> z))      -- |(.)| definition
+==  Endo (\ z -> a <> z) <> Endo (\ z -> b <> z)  -- |(<>)| on |Endo a|
+==  toEndo a <> toEndo b                          -- |toEndo| definition (twice)
 \end{code}
 This embedding is useful for turning quadratic-time algorithms linear \needcite{}.
 
-\sectionl{Additive monoids}
+\subsectionl{Additive monoids}
 
 While |(<>)| must be associative, it needn't be commutative.
-However, commutative monoids will play an important role in this paper as well.
+Commutative monoids, however, will play an important role in this paper as well.
 For clarity and familiarity, it will be convenient to use the name ``|(+)|'' instead of ``|(<>)|'' and refer to such monoids as ``additive'':
 \begin{code}
 class Additive b where
@@ -256,40 +261,113 @@ instance Additive b => Additive (a -> b) where
   zero   = \ a -> zero
   f + g  = \ a -> f a + g a
 \end{code}
-Curried functions of \emph{any number} of arguments (with an additive result) thanks to repeated application of this instance.
+Curried functions of \emph{any number} of arguments (and additive result type) are additive, thanks to repeated application of this instance.
 In fact, currying itself is an \emph{additive monoid homomorphism}:
+\notefoot{Move these proofs to the appendix.}
 \begin{code}
     curry zero
-==  curry (\ (x,y) -> zero)
-==  \ x -> \ y -> zero
-==  \ x -> zero
-==  zero
+==  curry (\ (x,y) -> zero)                  -- |zero| on functions
+==  \ x -> \ y -> zero                       -- |curry| definition
+==  \ x -> zero                              -- |zero| on functions
+==  zero                                     -- |zero| on functions
 
     curry (f + g)
-==  curry (\ (x,y) -> f (x,y) + g (x,y))
-==  \ x -> \ y -> f (x,y) + g (x,y)
-==  \ x -> \ y -> curry f x y + curry g x y
-==  \ x -> curry f x + curry g x
-==  curry f + curry g
+==  curry (\ (x,y) -> f (x,y) + g (x,y))     -- |(+)| on functions
+==  \ x -> \ y -> f (x,y) + g (x,y)          -- |curry| definition
+==  \ x -> \ y -> curry f x y + curry g x y  -- |curry| definition (twice)
+==  \ x -> curry f x + curry g x             -- |(+)| on functions
+==  curry f + curry g                        -- |(+)| on functions
 \end{code}
 Likewise for uncurrying:
 \notefoot{Probably suggest as an exercise.}
-\notefoot{Annotate.}
-\notefoot{If there's room after annotation, use two columns to save vertical space.}
 \begin{code}
     uncurry zero
-==  uncurry (\ x -> zero)
-==  uncurry (\ x -> \ y -> zero)
-==  \ (x,y) -> zero
-==  zero
+==  uncurry (\ x -> zero)                         -- |zero| on functions
+==  uncurry (\ x -> \ y -> zero)                  -- |zero| on functions
+==  \ (x,y) -> zero                               -- |uncurry| definition
+==  zero                                          -- |zero| on functions
     
     uncurry (f + g)
-==  uncurry (\ x -> f x + g x)
-==  uncurry (\ x -> \ y -> f x y + g x y)
-==  \ (x,y) -> f x y + g x y
-==  \ (x,y) -> uncurry f (x,y) + uncurry g (x,y)
-==  uncurry f + uncurry y
+==  uncurry (\ x -> f x + g x)                    -- |(+)| on functions
+==  uncurry (\ x -> \ y -> f x y + g x y)         -- |(+)| on functions
+==  \ (x,y) -> f x y + g x y                      -- |uncurry| definition
+==  \ (x,y) -> uncurry f (x,y) + uncurry g (x,y)  -- |uncurry| definition (twice)
+==  uncurry f + uncurry g                         -- |(+)| on functions
 \end{code}
+
+\subsectionl{Semirings}
+
+The natural numbers form a monoid in two familiar ways: addition and zero, and multiplication and one.
+Moreover, these monoids interact usefully in two ways: multiplication distributes over addition, and multiplication by zero (the additive identity) yields zero (i.e., ``annihilates'').
+Similarly, \emph{linear} endofunctions and their various representations (e.g., square matrices) forms a monoid in via addition and via composition, with composition distributing over addition, and composition with zero yielding zero.
+In both examples, addition commutes; but natural number multiplication commutes, while composition does not.
+The vocabulary and laws these examples share is called a \emph{semiring} (distinguished from a ring by dropping the requirement of additive inverses):
+\begin{code}
+class Additive b => Semiring b where
+  infixl 7 <.>
+  (<.>)  :: b -> b -> b
+  one    :: b
+\end{code}
+The laws, in addition to those for |Additive| above, include multiplicative monoid, distribution, and annihilation:
+\begin{code}
+(u * v) * w == u * (v * w)
+one * v == v
+u * one == u
+
+p * (q + r) == p * q + p * r
+(p + q) * r == p * r + q * r
+
+u * zero == zero
+zero * v == zero
+\end{code}
+As mentioned, numbers and various linear endofunction representations form semirings.
+A much simpler example is the semiring of booleans, with disjunction as addition and conjunction as multiplication (though we could reverse roles):
+\begin{code}
+instance Additive Bool where
+  (<+>) = (||)
+  zero = False
+
+instance Semiring Bool where
+  (<.>) = (&&)
+  one = True
+\end{code}
+Another example is functions, building on the |Additive (a -> b)| instance above:
+\begin{code}
+instance Semiring b => Semiring (a -> b) where
+  f * g  = \ a -> f a * g a
+  one = \ a -> one
+\end{code}
+As with |Additive|, this |Semiring| instance implies that curried functions (of any number of arguments and with semiring result type) are semirings, with |curry| and |uncurry| being semiring homomorphisms.
+
+\subsectionl{Star semirings}
+
+The semiring operations allow all \emph{finite} combinations of addition, zero, multiplication, and one.
+It's often useful, however, to form infinite combinations, particularly in the form of Stephen Kleene's ``star'' (or ``closure'') operation:
+% I can't get pow i working in context here
+%format ptoi = "p^i"
+\begin{code}
+star p = bigSum (i>=0) (wrap (pow p i)) -- where |pow p 0 = one|, and |pow p (n+1) = p * pow p n|.
+\end{code}
+Another characterization is as a solution to the following semiring equation:
+\begin{code}
+star p == one + p * star p
+\end{code}
+which we will take as a law for a new abstraction, as well as a default recursive implementation:
+\begin{code}
+class Semiring b => StarSemiring b  where
+  star    :: b -> b
+  star p  = one <+> p * star p
+\end{code}
+%format (inverse x) = x "^{-1}"
+Sometimes there are more appealing alternative implementations.
+For instance, when subtraction and division are available, we can instead define |star p = inverse (1 - p)|.
+
+%% *   Semirings:
+%%     *   Numbers
+%%     *   Booleans
+%%     *   Functions
+%%     *   Square matrices (linear endomorphisms)
+%% *   Star semirings: sets, booleans, functions; affine fixed points
 
 \bibliography{bib}
 

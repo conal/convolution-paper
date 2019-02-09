@@ -146,8 +146,11 @@ All of the algorithms in the paper follow from very simple specifications in the
 
 \sectionl{Monoids, Semirings and Semimodules}
 
-The ideas in this paper revolve around a small collection of closely related algebraic abstractions.
-The simplest is the monoid, expressed in Haskell as follows:
+The ideas in this paper revolve around a small collection of closely related algebraic abstractions, so let's begin by introducing these abstractions along with examples.
+
+\subsectionl{Monoids}
+
+The simplest abstraction we'll use is the monoid, expressed in Haskell as follows:
 \begin{code}
 class Monoid a where
   mempty  :: a
@@ -168,7 +171,30 @@ instance Monoid [a] where
   [] <> bs = bs
   (a:as) <> bs = a : (as <> bs)
 \end{code}
-A fancier example is functions from a type to itself, also known as \emph{endofunctions}, for which |mempty| is the identity function, and |(<>)| is composition:
+Natural numbers form a monoid under addition and zero.
+
+These two monoids are related via the function |length :: [a] -> N|, which not only maps lists to natural numbers, but does so in a way that preserves monoid structure:
+\begin{code}
+    length mempty
+==  length []
+==  0
+==  mempty
+
+    length (u <> v)
+==  length (u ++ v)
+==  length u + length v
+==  length u <> length v
+\end{code}
+This pattern is common and useful enough to have a name:
+\begin{definition}
+A function |h| from one monoid to another is called a \emph{monoid homomorphism} when it satisfies the following properties:
+\begin{code}
+h mempty == mempty
+h (u <> v) == h u <> h v
+\end{code}
+\end{definition}
+
+A fancier monoid example is functions from a type to itself, also known as \emph{endofunctions}, for which |mempty| is the identity function, and |(<>)| is composition:
 \begin{code}
 newtype Endo a = Endo (a -> a)
 
@@ -177,6 +203,34 @@ instance Monoid (Endo a) where
   Endo g <> Endo f = Endo (g . f)
 \end{code}
 The identity and associativity monoid laws follow from the identity and associativity category laws, so we can generalize to endomorphisms, i.e., morphisms from an object to itself in any category.
+
+A modest generalization of Cayley's theorem states that every monoid is isomorphic to a monoid of endofunctions \needcite{}.
+(The Yoneda embedding generalizes this theorem to categories and endomorphisms \needcite{}.)
+\begin{code}
+toEndo :: Monoid a => a -> Endo a
+toEndo a = Endo (\ z -> a <> z)
+
+fromEndo :: Monoid a => Endo a -> a
+fromEndo (Endo f) = f mempty
+\end{code}
+The embedding of |a| into |Endo a| provides another example of a monoid homomorphism:
+\notefoot{Annotate.}
+\begin{code}
+    toEndo mempty
+==  Endo (\ z -> mempty <> z)
+==  Endo (\ z -> z)
+==  mempty
+
+    toEndo (a <> b)
+==  Endo (\ z -> (a <> b) <> z)
+==  Endo (\ z -> a <> (b <> z))
+==  Endo ((\ z -> a <> z) . (\ z -> b <> z))
+==  Endo (\ z -> a <> z) <> Endo (\ z -> b <> z)
+==  toEndo a <> toEndo b
+\end{code}
+This embedding is useful for turning quadratic-time algorithms linear \needcite{}.
+
+\sectionl{Additive monoids}
 
 While |(<>)| must be associative, it needn't be commutative.
 However, commutative monoids will play an important role in this paper as well.
@@ -187,7 +241,7 @@ class Additive b where
   infixl 6 +
   (+)   :: b -> b -> b
 \end{code}
-The |Additive| laws as the same as for |Monoid| (translating to |zero| and |(+)|), together with commutativity:
+The |Additive| laws as the same as for |Monoid| (translating |mempty| and |(<>)| to |zero| and |(+)|), together with commutativity:
 \begin{code}
 (u + v) + w == u + (v + w)
 zero + v == v
@@ -195,7 +249,7 @@ u + zero == u
 
 u + v == v + u
 \end{code}
-Examples of additive monoids include natural numbers with addition and sets with union.
+Examples of additive monoids include natural numbers with addition and sets with union (but not lists with append).
 Another example is functions with pointwise addition, with any domain and with any \emph{additive} codomain:
 \begin{code}
 instance Additive b => Additive (a -> b) where
@@ -203,17 +257,39 @@ instance Additive b => Additive (a -> b) where
   f + g  = \ a -> f a + g a
 \end{code}
 Curried functions of \emph{any number} of arguments (with an additive result) thanks to repeated application of this instance.
-
-%if False
-We can downgrade any additive type to a monoid in a regular way, by introducing a type wrapper:
+In fact, currying itself is an \emph{additive monoid homomorphism}:
 \begin{code}
-newtype Sum a = Sum a
+    curry zero
+==  curry (\ (x,y) -> zero)
+==  \ x -> \ y -> zero
+==  \ x -> zero
+==  zero
 
-instance Additive a => Monoid (Sum a) where
-  mempty = Sum zero
-  Sum a <> Sum b = Sum (a + b)
+    curry (f + g)
+==  curry (\ (x,y) -> f (x,y) + g (x,y))
+==  \ x -> \ y -> f (x,y) + g (x,y)
+==  \ x -> \ y -> curry f x y + curry g x y
+==  \ x -> curry f x + curry g x
+==  curry f + curry g
 \end{code}
-%endif
+Likewise for uncurrying:
+\notefoot{Probably suggest as an exercise.}
+\notefoot{Annotate.}
+\notefoot{If there's room after annotation, use two columns to save vertical space.}
+\begin{code}
+    uncurry zero
+==  uncurry (\ x -> zero)
+==  uncurry (\ x -> \ y -> zero)
+==  \ (x,y) -> zero
+==  zero
+    
+    uncurry (f + g)
+==  uncurry (\ x -> f x + g x)
+==  uncurry (\ x -> \ y -> f x y + g x y)
+==  \ (x,y) -> f x y + g x y
+==  \ (x,y) -> uncurry f (x,y) + uncurry g (x,y)
+==  uncurry f + uncurry y
+\end{code}
 
 \bibliography{bib}
 

@@ -3,8 +3,8 @@
 %% While editing/previewing, use 12pt and tiny margin.
 \documentclass[hidelinks,twoside]{article}  % fleqn, 
 
-\usepackage[margin=0.75in]{geometry}  % 0.12in, 0.9in, 1in
-%% \usepackage[paperwidth=6.75in,margin=0.12in]{geometry}  % Handy for previewing
+\usepackage[margin=0.12in]{geometry}  % 0.12in, 0.9in, 1in
+% \geometry{paperwidth=6.75in}  % Handy for previewing in portrait
 
 %% \documentclass{article}
 %% \usepackage{fullpage}

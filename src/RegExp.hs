@@ -62,7 +62,7 @@ instance (D b, Additive b) => Additive (RegExp c b) where
   (<+>) = (:<+>)
 #endif
 
-instance (D b, Semiring b) => Semimodule b (RegExp c b) where
+instance (D b, Semiring b) => LeftSemimodule b (RegExp c b) where
   scale b = go
    where
      go (Char c)   = Char c
@@ -104,7 +104,7 @@ instance (D b, Ord c, StarSemiring b, DetectableZero b)
   deriv (Star p)   = fmap (\ d -> star (atEps p) .> d <.> Star p) (deriv p)
 
 -- | Interpret a regular expression
-regexp :: (Semiring b, Semimodule b x, StarSemiring x, HasSingle [c] b x, DetectableZero b)
+regexp :: (Semiring b, LeftSemimodule b x, StarSemiring x, HasSingle [c] b x, DetectableZero b)
        => RegExp c b -> x
 regexp (Char c)     = single [c]
 regexp (Value b)    = value b

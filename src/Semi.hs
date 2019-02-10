@@ -48,7 +48,7 @@ class Semiring b => StarSemiring b  where
   {-# INLINE star #-}
   {-# INLINE plus #-}
 
-class (Semiring s, Additive b) => Semimodule s b | b -> s where
+class (Semiring s, Additive b) => LeftSemimodule s b | b -> s where
   scale :: s -> b -> b
   -- default scale :: (Semiring b, s ~ b) => s -> b -> b  -- experimental
   -- scale = (<.>)
@@ -57,10 +57,10 @@ class (Semiring s, Additive b) => Semimodule s b | b -> s where
   {-# INLINE scale #-}
 
 -- TODO: Add the Semiring superclass, and remove redundant constraints
--- elsewhere. Search for occurrences of Semimodule.
+-- elsewhere. Search for occurrences of LeftSemimodule.
 
 -- | 'scale' optimized for zero scalar
-(.>) :: (Additive b, Semimodule s b, DetectableZero s) => s -> b -> b
+(.>) :: (Additive b, LeftSemimodule s b, DetectableZero s) => s -> b -> b
 s .> b | isZero s  = zero
        | otherwise = s `scale` b
 {-# INLINE (.>) #-}
@@ -114,7 +114,7 @@ FunctorSemimodule(Map a)
 deriving instance Additive b       => Additive (Identity b)
 deriving instance DetectableZero b => DetectableZero (Identity b)
 deriving instance DetectableOne b  => DetectableOne (Identity b)
-deriving instance Semimodule s b   => Semimodule s (Identity b)
+deriving instance LeftSemimodule s b   => LeftSemimodule s (Identity b)
 deriving instance Semiring b       => Semiring (Identity b)
 
 #endif
@@ -248,7 +248,7 @@ newtype Convo z = C z deriving (Show, Additive, DetectableZero)
 unC :: Convo z -> z
 unC (C z) = z
 
-instance ( Decomposable b h z, Semimodule b z, Functor h, Additive z
+instance ( Decomposable b h z, LeftSemimodule b z, Functor h, Additive z
          , DetectableZero b, DetectableOne b, DetectableZero (h (Convo z)) )
       => DetectableOne (Convo z) where
   isOne (a :<: dp) = isOne a && isZero dp
@@ -259,16 +259,16 @@ instance (Functor h, Decomposable b h z) => Decomposable b h (Convo z) where
 
 {-# COMPLETE (:<:) :: Convo #-}
 
-deriving instance Semimodule b z => Semimodule b (Convo z)
+deriving instance LeftSemimodule b z => LeftSemimodule b (Convo z)
 
 instance ( DetectableZero b, Semiring b, Functor h, Additive (h (Convo z))
-         , Additive z, Semimodule b z, Decomposable b h z )
+         , Additive z, LeftSemimodule b z, Decomposable b h z )
       => Semiring (Convo z) where
   one = one <: zero
   (a :<: dp) <.> q = (a .> q) <+> (zero :<: fmap (<.> q) dp)
 
 instance ( DetectableZero b, StarSemiring b, Functor h, Additive (h (Convo z))
-         , Additive z, Semimodule b z, Decomposable b h z
+         , Additive z, LeftSemimodule b z, Decomposable b h z
          ) => StarSemiring (Convo z) where
   star (a :<: dp) = q where q = star a .> (one :<: fmap (<.> q) dp)
 
@@ -289,7 +289,7 @@ type b <-- a = Convo (a -> b)
 infixl 1 <--
 newtype b <-- a = F { unF :: Convo (a -> b) } deriving (Additive)
 
-deriving instance Semiring b => Semimodule b (b <-- a)
+deriving instance Semiring b => LeftSemimodule b (b <-- a)
 
 deriving instance
   (DetectableZero b, Semiring b, Decomposable b h (a -> b), Applicative h)

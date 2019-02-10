@@ -44,7 +44,7 @@ instance Semiring s => StarSemiring (s <-- [c])
 instance (Semiring b, Eq a) => HasSingle a b (b <-- a) where
   single a = F (equal a)
 
-instance Semiring s => Semimodule s (s <-- a) where
+instance Semiring s => LeftSemimodule s (s <-- a) where
   s `scale` F f = F (\ a -> s <.> f a) 
   -- s `scale` F f = F ((s <.>) . f) 
 
@@ -99,7 +99,7 @@ newtype b :<-- a = M (Map a b) deriving Show
 mapTo :: (Ord a, Semiring b) => (b :<-- a) -> (b <-- a)
 mapTo (M m) = F (\ a -> M.findWithDefault zero a m)
 
-instance Semiring s => Semimodule s (s :<-- a) where
+instance Semiring s => LeftSemimodule s (s :<-- a) where
   s `scale` M m = M (fmap (s <.>) m)
 
 type SRM b = DetectableZero b
@@ -170,7 +170,7 @@ newtype Resid c s = Resid ([c] -> [([c], s)])
 residF :: Semiring s => Resid c s -> (s <-- [c])
 residF (Resid f) = F (\ w -> sum [ s | (w',s) <- f w, null w' ])
 
-instance Semiring s => Semimodule s (Resid c s) where
+instance Semiring s => LeftSemimodule s (Resid c s) where
   s `scale` Resid f = Resid (map (second (s <.>)) . f)
 
 #if 0
@@ -229,7 +229,7 @@ data RegExp c s =
   | Star (RegExp c s)
  deriving (Show,Eq)
 
-instance Semiring s => Semimodule s (RegExp c s) where
+instance Semiring s => LeftSemimodule s (RegExp c s) where
   scale s = go
    where
      go (Char c) = Char c
@@ -343,10 +343,10 @@ scaleD s = go
  where
    go (e :<: ts) = (s <.> e) :<: (go . ts)
 
-instance (DetectableZero s, Eq c) => Semimodule s (Decomp c s) where
+instance (DetectableZero s, Eq c) => LeftSemimodule s (Decomp c s) where
   scale = scaleD
 
--- instance Semiring s => Semimodule s (Decomp c s) where
+-- instance Semiring s => LeftSemimodule s (Decomp c s) where
 --   scale s = go
 --    where
 --      go (s' :<: f) = (s <.> s') :<: go . f
@@ -481,7 +481,7 @@ trimT :: OD c s => Int -> Trie c s -> Trie c s
 trimT 0 _ = zero
 trimT n (c :< ts) = c :< fmap (trimT (n-1)) ts
 
-instance OD c s => Semimodule s (Trie c s) where
+instance OD c s => LeftSemimodule s (Trie c s) where
 
   scale s = go
    where
@@ -598,7 +598,7 @@ instance DetectableZero b => Semiring (Stream b) where
 instance (StarSemiring b, DetectableZero b) => StarSemiring (Stream b) where
   star (a :# as) = q where q = star a .> (one :# as <.> q)
 
-instance DetectableZero s => Semimodule s (Stream s) where
+instance DetectableZero s => LeftSemimodule s (Stream s) where
   s `scale` (b :# dq) = (s <.> b) :# (s `scale` dq)
 
 {--------------------------------------------------------------------
@@ -619,11 +619,11 @@ pow b (Sum n) = product [b | _i <- [0 .. n-1]]
 -- pow _ 0 = one
 -- pow x n = x <.> pow x (n-1)
 
-assocsPoly :: (Semiring p, Semimodule s p, HasSingle N s p, DetectableZero s)
+assocsPoly :: (Semiring p, LeftSemimodule s p, HasSingle N s p, DetectableZero s)
            => [(Natural,s)] -> p
 assocsPoly l = sum [Sum i +-> s | (i,s) <- l]
 
-coeffsPoly :: (Semiring p, Semimodule s p, HasSingle N s p, DetectableZero s)
+coeffsPoly :: (Semiring p, LeftSemimodule s p, HasSingle N s p, DetectableZero s)
            => [s] -> p
 coeffsPoly bs = assocsPoly ([0 ..] `zip` bs)
 

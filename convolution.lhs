@@ -441,12 +441,12 @@ Specifically, |p = b + m * p| has solution |p = star m * b| \citep{Dolan2013FunS
 %% %format scale = (`scale`)
 
 As fields are to vector spaces, rings are to modules, and semirings are to \emph{semimodules}.
-A semimodule |b| is a additive monoid whose values can be multiplied by a corresponding type |s| of ``scalars'', which must be a semiring:\footnote{More precisely, we are really defining a ``left |s|-semimodule'', in which scaling happens from the left.}
+For any semiring |s|, a \emph{left |s|-semimodule} is a additive monoid whose values can be multiplied on the left by |s| values, which play the role of ``scalars''.
 \begin{code}
-class (Semiring s, Additive b) => Semimodule s b | b -> s where
+class (Semiring s, Additive b) => LeftSemimodule s b | b -> s where
   (.>) :: s -> b -> b
 \end{code}
-In addition to the laws for the additive monoid |b| and the semiring |s|, we have the following laws specific to semimodules \citep{Golan2005RecentSemi}:
+In addition to the laws for the additive monoid |b| and the semiring |s|, we have the following laws specific to left semimodules: \citep{Golan2005RecentSemi}:
 \begin{code}
 (s * t) .> b == s .> (t .> b)
 (s + t) .> b == s .> b + t .> b
@@ -455,31 +455,34 @@ s .> (b + c) == s .> b + s .> c
 one   .> b == b
 zero  .> b == zero
 \end{code}
+There is also a corresponding notion of \emph{right} |s|-semimodule with multiplication on the right by |s| values, which we will not need in this paper.
+(Rings also have left- and right-modules, and in \emph{commutative} rings and semirings (including vector spaces), the left and right variant coincide.)
+
 Familiar |s|-semimodule examples include various containers of |s| values, including single- or multi-dimensional arrays, infinite streams, sets, and multisets.
 Another, of particular interest in this paper, is functions from any type to any semiring:
 For instance,
 \begin{code}
-instance Semimodule s (a -> s) where
+instance LeftSemimodule s (a -> s) where
   s .> f = \ a -> s * f a
 \end{code}
 
 %format <# = "\mathop{\in}"
 %format # = "\mid"
 \noindent
-Next consider sets of values from some semiring.
+Next consider sets of values taken from a semiring.
 We might be tempted to define |s .> p| to multiply |s| by each value in |p|, i.e.,
 \begin{code}
-instance Semimodule s (Pow s) where s .> p = set (s * t | t <# p)    -- Wrong!
+instance LeftSemimodule s (Pow s) where s .> p = set (s * t | t <# p)    -- Wrong!
 \end{code}
 This definition, however, would violate the semimodule law that |zero .> p == zero|, since |zero .> p| would be |set zero|, but |zero| for sets is |emptyset|.
 Both semimodule distributive fail as well.
 There is an alternative, which though seemingly obscure at first, will prove useful later on.
 If we ``scale'' by a boolean, the semimodule laws require |True| (|one|) to preserve sets and |False| (|zero|) to annihilate them:
 \begin{code}
-instance Semimodule Bool (Pow a) where
+instance LeftSemimodule Bool (Pow a) where
   s .> p = if s then p else emptyset
 \end{code}
-so that |forall a. (a <# s .> p) <=> (s && a <# p)|, which resembles the |Semimodule (a -> b)| instance given above.
+so that |forall a. (a <# s .> p) <=> (s && a <# p)|, which resembles the |LeftSemimodule (a -> b)| instance given above.
 This resemblance can be explained by noting the bijection between |Pow a| and |a -> Bool|:
 \begin{code}
 setTest :: Pow a -> (a -> Bool)

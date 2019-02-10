@@ -339,13 +339,23 @@ instance Semiring Bool where
   one    = True
   (<.>)  = (&&)
 \end{code}
-Another example is functions, building on the |Additive (a -> b)| instance above:
+An example of a semiring homomorphism is a positivity test for natural numbers, which is to say
+\begin{spacing}{1.2}
+\begin{code}
+positive zero  ==  False  == zero
+positive one   ==  True   == one
+positive (p  +  q) == positive p  ||  positive q == positive p  +  positive q
+positive (p  *  q) == positive p  &&  positive q == positive p  *  positive q
+\end{code}
+\end{spacing}
+
+Another example semiring is functions, building on the |Additive (a -> b)| instance above:
 \begin{code}
 instance Semiring b => Semiring (a -> b) where
   one = \ a -> one
   f * g  = \ a -> f a * g a
 \end{code}
-As with |Additive|, this |Semiring| instance implies that curried functions (of any number of arguments and with semiring result type) are semirings, with |curry| and |uncurry| being semiring homomorphisms.
+As with |Additive|, this |Semiring| instance implies that curried functions (of any number and type of arguments and with semiring result type) are semirings, with |curry| and |uncurry| being semiring homomorphisms.
 
 \subsectionl{Star semirings}
 
@@ -378,7 +388,7 @@ instance StarSemiring Bool where
           = True || (b && star b)
           = True
 \end{code}
-Another example is functions:
+Another example is functions to any semiring:
 \begin{code}
 instance StarSemiring b => StarSemiring (a -> b) where
   star f = \ a -> star (f a)
@@ -392,7 +402,16 @@ To see that the law holds:
 ==  star f                         -- |star| on functions
 \end{code}
 
-In any star semirings, the affine equations |p = b + m * p| has solution |p = star m * b| \citep{Dolan2013:FunSemi}:
+\noindent
+An example star semiring homomorphism applies a given function to |mempty| (though any other domain value would serve):
+%format atEps = "\Varid{at}_\epsilon"
+\begin{code}
+atEps :: ([a] -> Bool) -> Bool
+atEps f = f mempty
+\end{code}
+
+A useful property of star semirings is that recursive affine equations have solutions.
+Specifically, |p = b + m * p| has solution |p = star m * b| \citep{Dolan2013:FunSemi}:
 \begin{code}
     b + m * (star m * b)
 ==  b + (m * star m) * b      -- associativity of |(+)|
@@ -401,13 +420,66 @@ In any star semirings, the affine equations |p = b + m * p| has solution |p = st
 ==  star m * b                -- star semiring law
 \end{code}
 
+\subsectionl{Semimodules}
 
-%% *   Semirings:
-%%     *   Numbers
-%%     *   Booleans
-%%     *   Functions
-%%     *   Square matrices (linear endomorphisms)
-%% *   Star semirings: sets, booleans, functions; affine fixed points
+%format .> = "\cdot"
+
+%% Temporary deception. Later change scale's formatting back to the usual,
+%% and introduce (.>).
+
+%% %format `scale` = .>
+%% %format scale = (`scale`)
+
+As fields are to vector spaces, rings are to modules, and semirings are to \emph{semimodules}.
+A semimodule |b| is a additive monoid whose values can be multiplied by a corresponding type |s| of ``scalars'', which must be a semiring:\footnote{More precisely, we are really defining a ``left |s|-semimodule'', in which scaling happens from the left.}
+\begin{code}
+class (Semiring s, Additive b) => Semimodule s b | b -> s where
+  (.>) :: s -> b -> b
+\end{code}
+In addition to the laws for the additive monoid |b| and the semiring |s|, we have the following laws specific to semimodules \citep{Golan2005:RecentSemi}:
+\begin{code}
+(s * t) .> b == s .> (t .> b)
+(s + t) .> b == s .> b + t .> b
+s .> (b + c) == s .> b + s .> c
+
+one   .> b == b
+zero  .> b == zero
+\end{code}
+Familiar |s|-semimodule examples include various containers of |s| values, including single- or multi-dimensional arrays, infinite streams, sets, and multisets.
+Another, of particular interest in this paper, is functions from any type to any semiring:
+For instance,
+\begin{code}
+instance Semimodule s (a -> s) where
+  s .> f = \ a -> s * f a
+\end{code}
+%format <# = "\mathop{\in}"
+%format # = "\mid"
+
+Next consider sets of values from some semiring.
+We might be tempted to define |s .> p| to multiply |s| by each value in |p|, i.e., |s .> p = set (s * t # t <# p)|.
+This definition, however, would violate the semimodule law that |zero .> p == zero|, since |zero .> p| would be |set zero|, but |zero| for sets is |emptyset|.
+Both semimodule distributive fail as well.
+There is an alternative, which though seemingly obscure at first, will prove useful later on.
+We can ``scale'' by a boolean, such that |True| preserves a given set, and |False| annihilates it:
+\begin{code}
+instance Semimodule Bool (Pow a) where
+  s .> p = if s then p else emptyset
+\end{code}
+so that |(a <# s .> p) <=> (s && a <# p)|, which resembles the |Semimodule (a -> b)| instance given above.
+This resemblance can be explained by pointing out that the isomorphism |Pow a =~ a -> Bool|.
+
+\begin{code}
+instance Semimodule s (Pow s) where   -- Wrong!
+  s .> p = set (s * t | t <# p)
+\end{code}
+
+\subsectionl{Semimodules as semirings}
+
+
+
+%% *   Languages
+%% *   Regular expressions
+%% *   Monoid semirings and convolution
 
 \bibliography{bib}
 

@@ -127,6 +127,9 @@ All of the algorithms in the paper follow from very simple specifications in the
 %format zero = "\mathbf{0}"
 %format one = "\mathbf{1}"
 
+%% experiment
+%format * = "\times"
+
 %format `elem` = "\mathbin{`\Varid{elem}`}"
 %format <# = "\mathop{\in}"
 %format # = "\mid"
@@ -170,7 +173,7 @@ The monoid laws require that |(<>)| (sometimes pronounced ``mappend'') be associ
 mempty <> v == v
 u <> mempty == u
 \end{code}
-One monoid especially familiar to functional programmers is lists:
+One monoid especially familiar to functional programmers is lists with append:
 \begin{code}
 instance Monoid [a] where
   mempty  = []
@@ -353,11 +356,12 @@ It's often useful, however, to form infinite combinations, particularly in the f
 \begin{code}
 star p = bigSum (i>=0) (wrap (pow p i)) -- where |pow p 0 = one|, and |pow p (n+1) = p * pow p n|.
 \end{code}
-Another characterization is as a solution to the following semiring equation:
+Another characterization is as a solution to either of the following semiring equations:
 \begin{code}
 star p == one + p * star p
+star p == one + star p * p
 \end{code}
-which we will take as a law for a new abstraction, as well as a default recursive implementation:
+which we will take as a laws for a new abstraction, as well as a default recursive implementation:
 \begin{code}
 class Semiring b => StarSemiring b  where
   star :: b -> b
@@ -365,7 +369,38 @@ class Semiring b => StarSemiring b  where
 \end{code}
 %format (inverse x) = x "^{-1}"
 Sometimes there are more appealing alternative implementations.
-For instance, when subtraction and division are available, we can instead define |star p = inverse (1 - p)|.
+For instance, when subtraction and division are available, we can instead define |star p = inverse (one - p)|.
+
+One simple example of a star semiring (also known as a ``closed semiring'' \citet{Lehmann77}) is booleans:
+\begin{code}
+instance StarSemiring Bool where
+  star b  = one + b * star b
+          = True || (b && star b)
+          = True
+\end{code}
+Another example is functions:
+\begin{code}
+instance StarSemiring b => StarSemiring (a -> b) where
+  star f = \ a -> star (f a)
+\end{code}
+To see that the law holds:
+\begin{code}
+    one + f * star f
+==  \ a -> one + f a * star f a    -- |one|, |(+)|, and |(*)| on functions
+==  \ a -> one + f a * star (f a)  -- |star| on functions
+==  \ a -> star (f a)              -- star semiring law
+==  star f                         -- |star| on functions
+\end{code}
+
+In any star semirings, the affine equations |p = b + m * p| has solution |p = star m * b| \citep{Dolan2013:FunSemi}:
+\begin{code}
+    b + m * (star m * b)
+==  b + (m * star m) * b      -- associativity of |(+)|
+==  one * b + m * star m * b  -- identity for |(*)|
+==  (one + m * star m) * b    -- distributivity
+==  star m * b                -- star semiring law
+\end{code}
+
 
 %% *   Semirings:
 %%     *   Numbers

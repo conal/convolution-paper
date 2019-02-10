@@ -106,7 +106,7 @@ Conal Elliott
 
 \sectionl{Languages}
 
-\mynote{Summarize/review languages as sets, including singleton, union, concatenation, and star/closure.}
+\note{Summarize/review languages as sets, including singleton, union, concatenation, and star/closure.}
 
 A \emph{language} is a set of strings, where a string is a sequence of values of some given type (``symbols'' from an ``alphabet'').
 Languages are commonly built up via a few simple operations:\notefoot{I may want to parametrize by a monoid instead of an alphabet.}
@@ -193,7 +193,7 @@ instance HasSingle (Set s) s where single s = set s
 %%  closure p = bigunion (n >= 0) (pow p n)
 }, which generalizes from strings to any monoid.\footnote{The |Monoid| class defines $\mappend$ and $\mempty$.}
 
-\mynote{On second thought, postpone generalization from lists to monoids later.}
+\note{On second thought, postpone generalization from lists to monoids later.}
 
 \sectionl{Matching}
 
@@ -238,7 +238,7 @@ splits (a:as')  = ([],a:as') : [((a:l),r) | (l,r) <- splits as']
 }, |setPred| and |predSet| are homomorphisms with respect to each instantiated class.
 \end{theorem}
 
-\mynote{Try some examples, including |star| and even the classic non-regular language $a^n b^n$ or \href{https://en.wikipedia.org/wiki/Dyck_language}{the Dyck language}.}
+\note{Try some examples, including |star| and even the classic non-regular language $a^n b^n$ or \href{https://en.wikipedia.org/wiki/Dyck_language}{the Dyck language}.}
 
 \sectionl{List of Successes}
 
@@ -350,7 +350,7 @@ The language matching algorithms embodied in the |Pred| and |Resid| types (defin
 We can do much better.
 A classic solution is to add token lookahead, as in LR, LL, and LALR parsers \needcite{}.
 While such parser generators typically have relatively complex implementations and look a fixed number of tokens ahead, Janusz Brzozowski discovered a simple and efficient technique that looks arbitrarily far ahead and eliminates all backtracking.
-He applied this technique only to regular languages and expressed it as a transformation that he termed ``derivatives of regular expressions'' \citep{Brzozowski64} \mynote{additional references}.
+He applied this technique only to regular languages and expressed it as a transformation that he termed ``derivatives of regular expressions'' \citep{Brzozowski64} \note{additional references}.
 Much more recently \citet{Might2010YaccID} extended the technique from regular to \emph{context-free} languages as a transformation on context-free grammars.
 
 %format deriv (c) = "\derivOp_{"c"}"
@@ -479,7 +479,7 @@ Taken together, \lemRefs{derivs-member}{hasEps} give us an effective test for ``
 accept :: HasDecomp a c => a -> [c] -> Bool
 accept p s = hasEps (derivs s p)
 \end{code}
-\mynote{Show some examples.}
+\note{Show some examples.}
 
 \sectionl{Tries}
 
@@ -570,7 +570,7 @@ instance Ord c => HasDecomp (Trie c) c where
 \notefoot{Briefly describe the operations used from |Data.Map|: |empty|, |unionWith|, |singleton|, and |findWithDefault|.}
 \end{theorem}
 
-\mynote{Examples, and maybe timing comparisons. Motivate the lazy pattern. Mention sharing work by memoizing the functions of characters.}
+\note{Examples, and maybe timing comparisons. Motivate the lazy pattern. Mention sharing work by memoizing the functions of characters.}
 
 \sectionl{Beyond Booleans}
 
@@ -728,7 +728,7 @@ instance (Ord c, DetectableZero s) => HasDecomp (Trie c s) c s where
 \end{code}
 \vspace{-4ex}
 }, where |scaleT s t| multiplies all of the semiring values in the trie |t| by the value |s|, with |scaleT zero t == zero|.
-\citet{Hinze2000:GGT} generalize tries from denoting sets to functions in this same way.\notefoot{To do: explore generalizing to tries over other key types.}
+\citet{Hinze2000GGT} generalize tries from denoting sets to functions in this same way.\notefoot{To do: explore generalizing to tries over other key types.}
 \begin{theorem}\thmLabel{TrieFun}
 Given the definitions in \figref{TrieFun}, |trieFunTo| is a homomorphism with respect to each instantiated class.
 \end{theorem}
@@ -739,15 +739,15 @@ The proof is a straightforward adaptation of \proofRef{theorem:Trie}.\notefoot{O
 
 \sectionl{Convolution}
 
-\mynote{Show that |(*)| corresponds to generalized convolution.}
+\note{Show that |(*)| corresponds to generalized convolution.}
 
 \sectionl{Beyond Convolution}
 
-\mynote{The free semimodule monad.}
+\note{The free semimodule monad.}
 
 \sectionl{More Variations}
 
-\mynote{Variations: counting, probability distributions, temporal/spatial convolution.}
+\note{Variations: counting, probability distributions, temporal/spatial convolution.}
 
 \sectionl{What else?}
 

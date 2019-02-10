@@ -411,7 +411,7 @@ atEps f = f mempty
 \end{code}
 
 A useful property of star semirings is that recursive affine equations have solutions.
-Specifically, |p = b + m * p| has solution |p = star m * b| \citep{Dolan2013:FunSemi}:
+Specifically, |p = b + m * p| has solution |p = star m * b| \citep{Dolan2013FunSemi}:
 \begin{code}
     b + m * (star m * b)
 ==  b + (m * star m) * b      -- associativity of |(+)|
@@ -419,6 +419,8 @@ Specifically, |p = b + m * p| has solution |p = star m * b| \citep{Dolan2013:Fun
 ==  (one + m * star m) * b    -- distributivity
 ==  star m * b                -- star semiring law
 \end{code}
+
+\note{Mention tropical semirings, optimization algebra, schedule algebra (max-plus), and optimization algebra \citep{Golan2005RecentSemi}. Maybe also polynomials.}
 
 \subsectionl{Semimodules}
 
@@ -436,7 +438,7 @@ A semimodule |b| is a additive monoid whose values can be multiplied by a corres
 class (Semiring s, Additive b) => Semimodule s b | b -> s where
   (.>) :: s -> b -> b
 \end{code}
-In addition to the laws for the additive monoid |b| and the semiring |s|, we have the following laws specific to semimodules \citep{Golan2005:RecentSemi}:
+In addition to the laws for the additive monoid |b| and the semiring |s|, we have the following laws specific to semimodules \citep{Golan2005RecentSemi}:
 \begin{code}
 (s * t) .> b == s .> (t .> b)
 (s + t) .> b == s .> b + t .> b

@@ -761,7 +761,7 @@ The Fourier transform is a semiring homomorphism from |b <- a| to |a -> b|.
 %format Identity = I
 Let's now consider functions from |N| rather than from |Z|.
 As in \secref{Decomposing Functions from Lists}, we can define a decomposition on functions from |N|:
-\notefoot{I suspect that the |Decomposable| interface isn't quite the right generalization. Try some additional monoids, and examine via more generic constructions for underlying monoids, including general sums and products. Relate to generalized tries \citep{Hinze2000:GGT}.}
+\notefoot{I suspect that the |Decomposable| interface isn't quite the right generalization. Try some additional monoids, and examine via more generic constructions for underlying monoids, including general sums and products. Relate to generalized tries \citep{Hinze2000GGT}.}
 \begin{code}
 newtype Identity a = Identity a  -- identity functor
 
@@ -1113,7 +1113,7 @@ The function |poly| is a semiring homomorphism when multiplication on |b| commut
 \item \emph{Polynomial Functors Constrained by Regular Expressions}
 \item \href{https://doisinkidney.com/}{Donnacha Oisín Kidney's blog}
 \item Dan Piponi's blog
-\item \citet{Uustalu2002:DSR}, since tries appear to be cotrees, and the function comonad relates closely to Brzozowski-style ``derivatives''.
+\item \citet{Uustalu2002DSR}, since tries appear to be cotrees, and the function comonad relates closely to Brzozowski-style ``derivatives''.
 \item Many more references in \verb|todo.md|.
 \end{itemize}
 

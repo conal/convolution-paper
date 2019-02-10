@@ -8,7 +8,7 @@ instance DetectableOne  (t) where { isOne  = (== 1)} ; \
 instance Semiring (t) where { (<.>) = (*) ; one  = 1 }
 
 #define FunctorSemimodule(f) \
-instance Semiring zz => Semimodule zz ((f) zz)
+instance (Semiring zz, Additive ((f) zz)) => Semimodule zz ((f) zz)
 
 #define FunctorStar(f) \
 instance (Semiring ((f) qq), Ok (f) qq, StarSemiring qq) => StarSemiring ((f) qq) where \

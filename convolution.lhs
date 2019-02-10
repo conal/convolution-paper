@@ -73,8 +73,6 @@ Conal Elliott
 %% \nc\derivs[1]{\mathop{\derivsOp_{#1}}}
 %% \nc\conv{\ast}
 \nc\conv{*}
-\nc\zero{\mathbf{0}}
-\nc\one{\mathbf{1}}
 \nc\hasEps{\mathop{\Varid{has}_{\mempty}}}
 \nc\id{\mathop{\Varid{id}}}
 \nc\ite[3]{\text{if}\ #1\ \text{then}\ #2\ \text{else}\ #3}
@@ -122,10 +120,10 @@ All of the algorithms in the paper follow from very simple specifications in the
 
 %format <+> = +
 %format <.> = *
-%% %format zero = 0
-%% %format one = 1
-%format zero = "\mathbf{0}"
-%format one = "\mathbf{1}"
+%format zero = 0
+%format one = 1
+%% %format zero = "\mathbf{0}"
+%% %format one = "\mathbf{1}"
 
 %% experiment
 %format * = "\times"
@@ -466,6 +464,77 @@ instance LeftSemimodule s (a -> s) where
   s .> f = \ a -> s * f a
 \end{code}
 
+\sectionl{Calculating instances from homomorphisms}
+
+In \secref{Monoids, Semirings and Semimodules}, we met the |Additive| instance for sets, along with the |Additive|, |Semiring|, and |LeftSemimodule| instances for functions.
+Do sets also have (law-abiding) |Semiring| and |LeftSemimodule| instances?
+Is there more than one choice, and if so, how might we choose?
+Let's start investigating these questions by reviewing the |Additive| instances for functions and sets from \secref{Additive monoids}:
+\\
+\begin{minipage}[b]{0.41\textwidth}
+\begin{code}
+instance Additive b => Additive (a -> b) where
+  zero = \ a -> zero
+  f + g  = \ a -> f a + g a
+\end{code}
+\end{minipage}
+\begin{minipage}[b]{0ex}{\rule[2ex]{0.5pt}{0.5in}}\end{minipage}
+\begin{minipage}[b]{0.3\textwidth} % \mathindent1em
+\begin{code}
+instance Additive (Pow a) where
+  zero = emptyset
+  p + q = p `union` q
+\end{code}
+\end{minipage}
+\\
+Sets and functions too booleans are closely related via set membership:
+\begin{code}
+setPred :: Pow a -> (a -> Bool)
+setPred as = \ a -> a <# as
+
+predSet :: (a -> Bool) -> Pow a
+predSet f = set (a | f a)
+\end{code}
+This relationship is not only a bijection, but a \emph{bijective additive monoid homomorphism}:
+\\
+\begin{minipage}[b]{0.35\textwidth}
+\begin{code}
+    setPred zero
+==  \ a -> a <# zero      -- |setPred| definition
+==  \ a -> a <# emptyset  -- |zero| on |P a|
+==  \ a -> False          -- property of sets
+==  \ a -> zero           -- |zero| on |Bool|
+==  zero                  -- |zero| on functions
+NOP
+\end{code}
+\end{minipage}
+\begin{minipage}[b]{0ex}{\rule[2ex]{0.5pt}{1.17in}}\end{minipage}
+\begin{minipage}[b]{0.3\textwidth}  \mathindent3em
+\begin{code}
+    setPred (p + q)
+==  \ a -> a <# (p + q)               -- |setPred| definition
+==  \ a -> a <# (p `union` q)         -- |(+)| on |P a| 
+==  \ a -> (a <# p) || (a <# q)       -- property of sets
+==  \ a -> (a <# p) + (a <# q)        -- |(+)| on |Bool|
+==  \ a -> setPred p a + setPred q a  -- |setPred| definition
+==  setPred p + setPred q             -- |(+)| on functions
+\end{code}
+\end{minipage}
+\\
+Likewise for |predSet|:
+\begin{code}
+    predSet zero
+==  predSet (setPred zero)  -- above
+==  zero                    -- |predSet . setPred == id|
+
+    predSet (f + g)
+==  predSet (setPred (predSet f) + setPred (predSet g))  -- |setPred . predSet == id|
+==  predSet (setPred (predSet f + predSet g))            -- above
+==  predSet f + predSet g                                -- |setPred . predSet == id|
+\end{code}
+
+\workingHere
+
 %format <# = "\mathop{\in}"
 %format # = "\mid"
 \noindent
@@ -485,11 +554,11 @@ instance LeftSemimodule Bool (Pow a) where
 so that |forall a. (a <# s .> p) <=> (s && a <# p)|, which resembles the |LeftSemimodule (a -> b)| instance given above.
 This resemblance can be explained by noting the bijection between |Pow a| and |a -> Bool|:
 \begin{code}
-setTest :: Pow a -> (a -> Bool)
-setTest as = \ a -> a <# as
+setPred :: Pow a -> (a -> Bool)
+setPred as = \ a -> a <# as
 
-testSet :: (a -> Bool) -> Pow a
-testSet f = set (a | f a)
+predSet :: (a -> Bool) -> Pow a
+predSet f = set (a | f a)
 \end{code}
 This relationship is not only a bijection, but a \emph{semimodule isomorphism} (i.e., a bijective semimodule homomorphism).
 

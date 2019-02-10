@@ -70,3 +70,6 @@
 
 %format ... = "\ldots"
 %format cdots = "\cdots"
+
+%% Add a thin space after lambda
+%format \ = "\lambda\, "

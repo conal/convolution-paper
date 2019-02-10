@@ -25,17 +25,17 @@ import Constrained
 
 -- | Commutative monoid
 class Additive b where
-  infixl 6 <+>
-  (<+>) :: b -> b -> b
   zero :: b
+  (<+>) :: b -> b -> b
+  infixl 6 <+>
 
 class Additive b => DetectableZero b where
   isZero :: b -> Bool
 
 class Additive b => Semiring b where
-  infixl 7 <.>
-  (<.>) :: b -> b -> b
   one :: b
+  (<.>) :: b -> b -> b
+  infixl 7 <.>
 
 class Semiring b => DetectableOne b where
   isOne :: b -> Bool
@@ -48,7 +48,7 @@ class Semiring b => StarSemiring b  where
   {-# INLINE star #-}
   {-# INLINE plus #-}
 
-class {- Semiring s => -} Semimodule s b | b -> s where
+class (Semiring s, Additive b) => Semimodule s b | b -> s where
   scale :: s -> b -> b
   -- default scale :: (Semiring b, s ~ b) => s -> b -> b  -- experimental
   -- scale = (<.>)
@@ -70,16 +70,16 @@ s .> b | isZero s  = zero
 --------------------------------------------------------------------}
 
 instance Additive Bool where
-  (<+>) = (||)
   zero = False
+  (<+>) = (||)
 
 instance DetectableZero Bool where isZero = not
 
-instance DetectableOne Bool where isOne = id
-
 instance Semiring Bool where
-  (<.>) = (&&)
   one = True
+  (<.>) = (&&)
+
+instance DetectableOne Bool where isOne = id
 
 instance StarSemiring Bool where star = const True
 

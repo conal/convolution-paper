@@ -1,7 +1,7 @@
 % -*- latex -*-
 
 %% While editing/previewing, use 12pt and tiny margin.
-\documentclass[hidelinks,twoside]{article}  % fleqn, 
+\documentclass[hidelinks,twoside]{article}  % fleqn,
 
 \usepackage[margin=0.12in]{geometry}  % 0.12in, 0.9in, 1in
 % \geometry{paperwidth=6.75in}  % Handy for previewing in portrait
@@ -145,6 +145,8 @@ All of the algorithms in the paper follow from very simple specifications in the
 %format pow a (b) = a "^{" b "}"
 %format `union` = "\cup"
 %format union = (`union`)
+%format `intersection` = "\cup"
+%format intersection = (`intersection`)
 %format star p = "\closure{"p"}"
 
 %format bigUnion (lim) = "\bigOp\bigcup{" lim "}{0}"
@@ -293,7 +295,7 @@ Likewise for uncurrying:
 ==  uncurry (\ x -> \ y -> zero)                  -- |zero| on functions
 ==  \ (x,y) -> zero                               -- |uncurry| definition
 ==  zero                                          -- |zero| on functions
-    
+
     uncurry (f + g)
 ==  uncurry (\ x -> f x + g x)                    -- |(+)| on functions
 ==  uncurry (\ x -> \ y -> f x y + g x y)         -- |(+)| on functions
@@ -469,6 +471,7 @@ instance LeftSemimodule s (a -> s) where
 In \secref{Monoids, Semirings and Semimodules}, we met the |Additive| instance for sets, along with the |Additive|, |Semiring|, and |LeftSemimodule| instances for functions.
 Do sets also have (law-abiding) |Semiring| and |LeftSemimodule| instances?
 Is there more than one choice, and if so, how might we choose?
+
 Let's start investigating these questions by reviewing the |Additive| instances for functions and sets from \secref{Additive monoids}:
 \\
 \begin{minipage}[b]{0.41\textwidth}
@@ -496,8 +499,6 @@ predSet :: (a -> Bool) -> Pow a
 predSet f = set (a | f a)
 \end{code}
 This relationship is not only a bijection, but a \emph{bijective additive monoid homomorphism}:
-\\
-\begin{minipage}[b]{0.35\textwidth}
 \begin{code}
     setPred zero
 ==  \ a -> a <# zero      -- |setPred| definition
@@ -505,23 +506,20 @@ This relationship is not only a bijection, but a \emph{bijective additive monoid
 ==  \ a -> False          -- property of sets
 ==  \ a -> zero           -- |zero| on |Bool|
 ==  zero                  -- |zero| on functions
-NOP
-\end{code}
-\end{minipage}
-\begin{minipage}[b]{0ex}{\rule[2ex]{0.5pt}{1.17in}}\end{minipage}
-\begin{minipage}[b]{0.3\textwidth}  \mathindent3em
-\begin{code}
+
     setPred (p + q)
 ==  \ a -> a <# (p + q)               -- |setPred| definition
-==  \ a -> a <# (p `union` q)         -- |(+)| on |P a| 
+==  \ a -> a <# (p `union` q)         -- |(+)| on |P a|
 ==  \ a -> (a <# p) || (a <# q)       -- property of sets
 ==  \ a -> (a <# p) + (a <# q)        -- |(+)| on |Bool|
 ==  \ a -> setPred p a + setPred q a  -- |setPred| definition
 ==  setPred p + setPred q             -- |(+)| on functions
 \end{code}
-\end{minipage}
-\\
-Likewise for |predSet|:
+Likewise for |predSet|%
+%if True
+\ (following from bijectivity).
+%else
+:
 \begin{code}
     predSet zero
 ==  predSet (setPred zero)  -- above
@@ -532,11 +530,55 @@ Likewise for |predSet|:
 ==  predSet (setPred (predSet f + predSet g))            -- above
 ==  predSet f + predSet g                                -- |setPred . predSet == id|
 \end{code}
+%endif
 
-\workingHere
+So far, we've started with instance definitions and then proved such homomorphisms.
+We can instead invert the process, taking homomorphisms as specifications and \emph{calculating} instance definitions that satisfy them.
+This process of calculating instances from homomorphisms is the central guiding principle throughout the rest of this paper, so let's see how it works.
 
-%format <# = "\mathop{\in}"
-%format # = "\mid"
+We have a |Semiring| instance for functions to any semiring---and hence to |Bool| in particular---and we have a function |setPred| from sets to membership functions (predicates).
+We've see that |setPred| is an additive monoid homomorphism, based on a known |Additive| instance for sets.
+Now let's also require |setPred| to be a \emph{semiring homomorphism} and deduce a sufficient |Semiring| instance for sets.
+The needed homomorphism properties:
+\begin{spacing}{1.2}
+\begin{code}
+setPred one == one
+setPred (p * q) == setPred p * setPred q
+\end{code}
+\end{spacing}
+We already know definitions of |setPred| as well as the function versions of |one| and |(*)| (on the RHS).
+We do not know the set versions of |one| and |(*)| (on the LHS).
+We thus have two algebra problems in two unknowns.
+Since only one unknown appears in each homomorphism equation, we can solve them independently.
+The |setPred|/|predSet| isomorphism makes it easy to solve these equations, and removes all semantic choice (allowing only varying implementations of the same meaning).
+\begin{code}
+
+     setPred one == one
+<=>  predSet (setPred one) == predSet one  -- |predSet| is injective
+<=>  one == predSet one                    -- |predSet . setPred == id|
+<=>  one == predSet (\ a -> one)           -- |one| on functions
+<=>  one == predSet (\ a -> True)          -- |one| on |Bool|
+<=>  one == set (a # True)                 -- |predSet| definition
+
+     setPred (p * q) == setPred p * setPred q
+<=>  predSet (setPred (p * q)) == predSet (setPred p * setPred q)  -- |predSet| is injective
+<=>  p * q == predSet (setPred p * setPred q)                      -- |predSet . setPred == id|
+<=>  p * q == predSet ((\ a -> a <# p) * (\ a -> a <# q))          -- |setPred| definition
+<=>  p * q == predSet (\ a -> (a <# p) * (a <# q))                 -- |(*)| on functions
+<=>  p * q == predSet (\ a -> a <# p && a <# q)                    -- |(*)| on |Bool|
+<=>  p * q == set (a # a <# p && a <# q)                           -- |predSet| definition
+<=>  p * q == p `intersection` q                                   -- |intersect| definition
+
+\end{code}
+We thus have a sufficient (and in this case semantically necessary) instance definition:
+\begin{code}
+instance Semiring (P a) where
+  one = set (a # True)
+  p * q = p `intersection` q
+\end{code}
+
+\note{Rework this calculation. First use injectivity to get correct definitions, and then simplify to make them more direct.}
+
 \noindent
 Next consider sets of values taken from a semiring.
 We might be tempted to define |s .> p| to multiply |s| by each value in |p|, i.e.,

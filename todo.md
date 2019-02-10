@@ -5,8 +5,7 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 
 ## To-do items for the paper and code
 
-*   Factor `Additive` out of `Semiring`, and drop the `Monoid` requirement for `Additive (b :<-- a)` and `Applicative ((:<--) a)`.
-    I'll have to return to defining my own classes. Tip my hat to semiring-num.
+*   Explore Brzozowski derivatives as actual derivatives of residual functions, as in my journal notes from 2019-02-08.
 *   Maybe drop `HasSingle` and define `single` via `fmap` and `one`.
 *   Derive a semiring for lists based on a homomorphism from `[a]` to `a <-- Nat`.
 *   From recognition to "parsing", i.e., generating rich representations.
@@ -95,6 +94,8 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 
 ## Did
 
+*   Factor `Additive` out of `Semiring`, and drop the `Monoid` requirement for `Additive (b :<-- a)` and `Applicative ((:<--) a)`.
+    I'll have to return to defining my own classes. Tip my hat to semiring-num.
 *   Remove a bunch of unused code, first moving to `Other`.
 *   Summation (etc) notation style:
     *   Consider moving the condition to the body where it becomes multiplication:

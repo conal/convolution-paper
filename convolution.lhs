@@ -452,30 +452,38 @@ For instance,
 instance Semimodule s (a -> s) where
   s .> f = \ a -> s * f a
 \end{code}
+
 %format <# = "\mathop{\in}"
 %format # = "\mid"
-
+\noindent
 Next consider sets of values from some semiring.
-We might be tempted to define |s .> p| to multiply |s| by each value in |p|, i.e., |s .> p = set (s * t # t <# p)|.
+We might be tempted to define |s .> p| to multiply |s| by each value in |p|, i.e.,
+\begin{code}
+instance Semimodule s (Pow s) where s .> p = set (s * t | t <# p)    -- Wrong!
+\end{code}
 This definition, however, would violate the semimodule law that |zero .> p == zero|, since |zero .> p| would be |set zero|, but |zero| for sets is |emptyset|.
 Both semimodule distributive fail as well.
 There is an alternative, which though seemingly obscure at first, will prove useful later on.
-We can ``scale'' by a boolean, such that |True| preserves a given set, and |False| annihilates it:
+If we ``scale'' by a boolean, the semimodule laws require |True| (|one|) to preserve a given set and |False| (|zero|) to annihilate it:
 \begin{code}
 instance Semimodule Bool (Pow a) where
   s .> p = if s then p else emptyset
 \end{code}
-so that |(a <# s .> p) <=> (s && a <# p)|, which resembles the |Semimodule (a -> b)| instance given above.
-This resemblance can be explained by pointing out that the isomorphism |Pow a =~ a -> Bool|.
-
+so that |forall a. (a <# s .> p) <=> (s && a <# p)|, which resembles the |Semimodule (a -> b)| instance given above.
+This resemblance can be explained by pointing out that the bijection between |Pow a| and |a -> Bool|:
 \begin{code}
-instance Semimodule s (Pow s) where   -- Wrong!
-  s .> p = set (s * t | t <# p)
+setTest :: Pow a -> (a -> Bool)
+setTest as = \ a -> a <# as
+
+testSet :: (a -> Bool) -> Pow a
+testSet f = set (a | f a)
 \end{code}
+This relationship is not only a bijection, but a \emph{semimodule isomorphism} (i.e., a bijective semimodule homomorphism).
 
 \subsectionl{Semimodules as semirings}
 
-
+\note{I might next consider possibilities for sets as a semiring. One tempting possibility is to use ``nondeterministic'' addition and multiplication, but distributivity fails.
+For instance, |(set 3 + set 5) * {0,...,10}| vs |set 3 * {0,...,10} + set 5 * {0,...,10}|, as the latter has many more values than the former.}
 
 %% *   Languages
 %% *   Regular expressions

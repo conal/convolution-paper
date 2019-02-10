@@ -138,6 +138,7 @@ All of the algorithms in the paper follow from very simple specifications in the
 
 %format (paren (e)) = "\left(" e "\right)"
 
+%format N = "\mathbb{N}"
 %format Pow = "\Pow"
 %format emptyset = "\emptyset"
 %format (single (s)) = "\single{"s"}"
@@ -339,16 +340,23 @@ instance Semiring Bool where
   one    = True
   (<.>)  = (&&)
 \end{code}
-An example of a semiring homomorphism is a positivity test for natural numbers, which is to say
-\begin{spacing}{1.2}
+An example of a semiring homomorphism is a positivity test for natural numbers:
+\begin{code}
+positive :: N -> Bool
+positive n = n > 0
+\end{code}
+Then |positive| is a semiring homomorphism, i.e., the following properties hold for |m,n :: N|:%
+\footnote{\emph{Exercise:} What goes wrong if we replace natural numbers by integers?}
+\begin{spacing}{1.5}
 \begin{code}
 positive zero  ==  False  == zero
 positive one   ==  True   == one
-positive (p  +  q) == positive p  ||  positive q == positive p  +  positive q
-positive (p  *  q) == positive p  &&  positive q == positive p  *  positive q
+positive (m  +  n) == positive m  ||  positive n == positive m  +  positive n
+positive (m  *  n) == positive m  &&  positive n == positive m  *  positive n
 \end{code}
 \end{spacing}
 
+\noindent
 Another example semiring is functions, building on the |Additive (a -> b)| instance above:
 \begin{code}
 instance Semiring b => Semiring (a -> b) where
@@ -466,13 +474,13 @@ instance Semimodule s (Pow s) where s .> p = set (s * t | t <# p)    -- Wrong!
 This definition, however, would violate the semimodule law that |zero .> p == zero|, since |zero .> p| would be |set zero|, but |zero| for sets is |emptyset|.
 Both semimodule distributive fail as well.
 There is an alternative, which though seemingly obscure at first, will prove useful later on.
-If we ``scale'' by a boolean, the semimodule laws require |True| (|one|) to preserve a given set and |False| (|zero|) to annihilate it:
+If we ``scale'' by a boolean, the semimodule laws require |True| (|one|) to preserve sets and |False| (|zero|) to annihilate them:
 \begin{code}
 instance Semimodule Bool (Pow a) where
   s .> p = if s then p else emptyset
 \end{code}
 so that |forall a. (a <# s .> p) <=> (s && a <# p)|, which resembles the |Semimodule (a -> b)| instance given above.
-This resemblance can be explained by pointing out that the bijection between |Pow a| and |a -> Bool|:
+This resemblance can be explained by noting the bijection between |Pow a| and |a -> Bool|:
 \begin{code}
 setTest :: Pow a -> (a -> Bool)
 setTest as = \ a -> a <# as
@@ -521,4 +529,22 @@ For instance, |(set 3 + set 5) * {0,...,10}| vs |set 3 * {0,...,10} + set 5 * {0
         *   Regular expressions to sets
         *   Contains `mempty` (`hasEps`)
     *   Homomorphisms as specifications
-
+*   Language "derivatives":
+    *   I'm unsure whether to place this section here.
+        If so, how can I make it flow well?
+    *   Briefly present Brzozowski's method (for recognizing regular languages).
+    *   Context-free languages
+*   Unsorted:
+    *   Relate Brzozowski derivatives to the derivatives of residual functions, as in the notes below.
+    *   Currying and convolution.
+        Is currying a (star) semiring homomorphism?
+    *   I think I want to say and demonstrate that Brzozowski's derivatives are not about regular expressions, grammars, or languages, so much as functions from lists and types that can be interpreted as functions from lists and a decomposition principle for such functions.
+        Application of this principle to tries than to regular expressions is more natural and yields a more efficient implementation.
+    *   The trie perspective naturally leads to generalizing from lists to arbitrary (regular?) algebraic data types.
+        I'm less confident about this generalization claim, since I think we need a suitable monoid.
+        I think there's an underlying generic monad that specializes to lists and other algebraic data types, with monadic bind specializing to `mappend`.
+        On the other hand, with multiple substitution sites, inverting `mappend` seems tricky.
+        Does it give a useful form of constrained or context-sensitive grammars?
+    *   Convolution is a special case of the free semimodule applicative/monad.
+    *   Since `[()] =~ N`, the technique specializes to 1D discrete convolution.
+        We can increase the dimension for the general and special case via currying, which also corresponds to tries over higher-D indices.

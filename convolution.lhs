@@ -154,7 +154,7 @@ All of the algorithms in the paper follow from very simple specifications in the
 
 %format bigUnion (lim) = "\bigOp\bigcup{" lim "}{0}"
 %format bigSum (lim) = "\bigOp\sum{" lim "}{0}"
-%format bigSumQ (lim) = "\bigOp\sum{" lim "}{1.5}"
+%format bigSumQ (lim) = "\bigOp\sum{" lim "}{1}"
 
 %format bigOr (lim) = "\bigOp\bigvee{" lim "}{0}"
 %format bigOrQ (lim) = "\bigOp\bigvee{" lim "}{1.5}"
@@ -759,7 +759,37 @@ langRecog :: Language a -> (Bool <-- a)
 langRecog (L p) = F (setPred p)
 \end{code}
 To cement our analogy, let's require that |recogLang| (and hence |langRecog|) be a homomorphism for all of the classes defined in \secref{Monoids, Semirings and Semimodules}.
-There are three parts to this requirement (\defreftwo{star semiring homomorphism}{left semimodule homomorphism}):
+If we apply the same sort of reasoning as in \secref{Calculating Instances from Homomorphisms} and then generalize from |Bool| to an arbitrary semiring, we get the following definitions:
+\begin{code}
+instance (Semiring b, Monoid a) => Semiring (b <-- a) where
+  one = F (equal mempty)
+  F f * F g = F (\ w -> bigSumQ (u,v BR u <> v == w) f u <.> g v)
+
+equal :: (Eq a, Semiring s) => a -> a -> s
+equal a a' = if a == a' then one else zero
+
+instance (Semiring b, Monoid a)  => StarSemiring (b <-- a)  -- default |star|
+\end{code}
+\begin{theorem}[\provedIn{theorem:Semiring (b <-- a)}]\thmlabel{Semiring (b <-- a)}
+Given the derived and explicitly defined instance for |b <-- a| above, |recogLang| is a homomorphism with respect to each instantiated class.
+\end{theorem}
+
+\workingHere
+
+\note{I might next consider possibilities for sets as a semiring. One tempting possibility is to use ``nondeterministic'' addition and multiplication, but distributivity fails.
+For instance, |(set 3 + set 5) * {0,...,10}| vs |set 3 * {0,...,10} + set 5 * {0,...,10}|, as the latter has many more values than the former.}
+
+%% *   Languages
+%% *   Regular expressions
+%% *   Monoid semirings and convolution
+
+\appendix
+
+\sectionl{Proofs}
+
+\subsection{\thmref{Semiring (b <-- a)}}\proofLabel{theorem:Semiring (b <-- a)}
+
+There are three parts to the homomorphism requirements (\defreftwo{star semiring homomorphism}{left semimodule homomorphism}):
 \begin{enumerate}
 
 \item From |Additive| and |LeftSemimodule|:
@@ -811,18 +841,16 @@ Simplifying,
 
 \end{enumerate}
 
-\note{Move these derivations to the appendix.}
+Next, we'll need to generalize from |Bool <-- a| to |b <-- a| for an arbitrary semiring |b|.
+For |one|, generalize the boolean expression |w == mempty| by mapping |False| to |zero| and |True| to |one|, resulting in |equal w mempty|, where
+\notefoot{Maybe change to the more modular definition via |boolVal| if I have other uses for |boolVal|.}
+\begin{code}
+equal :: (Eq a, Semiring s) => a -> a -> s
+equal a a' = if a == a' then one else zero
+\end{code}
+For |(*)|, generalize disjunction to addition and conjunction to multiplication:
 
-\note{Generalize from |Bool|}
-
-\workingHere
-
-\note{I might next consider possibilities for sets as a semiring. One tempting possibility is to use ``nondeterministic'' addition and multiplication, but distributivity fails.
-For instance, |(set 3 + set 5) * {0,...,10}| vs |set 3 * {0,...,10} + set 5 * {0,...,10}|, as the latter has many more values than the former.}
-
-%% *   Languages
-%% *   Regular expressions
-%% *   Monoid semirings and convolution
+>   F (\ w -> bigSumQ (u,v BR u <> v == w) f u * g v)
 
 \bibliography{bib}
 

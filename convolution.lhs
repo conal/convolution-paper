@@ -153,6 +153,8 @@ All of the algorithms in the paper follow from very simple specifications in the
 %format bigSum (lim) = "\bigOp\sum{" lim "}{0}"
 %format bigSumQ (lim) = "\bigOp\sum{" lim "}{1.5}"
 
+%format (inverse x) = x "^{-1}"
+
 %% \sectionl{Introduction}
 
 \sectionl{Monoids, Semirings and Semimodules}
@@ -195,7 +197,7 @@ These two monoids are related via the function |length :: [a] -> N|, which not o
 ==  length u <> length v
 \end{code}
 This pattern is common and useful enough to have a name:
-\begin{definition}
+\begin{definition} \defLabel{monoid homomorphism}
 A function |h| from one monoid to another is called a \emph{monoid homomorphism} when it satisfies the following properties:
 \begin{code}
 h mempty == mempty
@@ -270,6 +272,16 @@ instance Additive b => Additive (a -> b) where
   zero = \ a -> zero
   f + g  = \ a -> f a + g a
 \end{code}
+
+\noindent
+Additive monoids have their form of homomorphism:
+\begin{definition} \defLabel{additive monoid homomorphism}
+A function |h| from one additive monoid to another is an \emph{additive monoid homomorphism} if it satisfies the following properties:
+\begin{code}
+h zero == zero
+h (u + v) == h u + h v
+\end{code}
+\end{definition}
 Curried functions of \emph{any number} of arguments (and additive result type) are additive, thanks to repeated application of this instance.
 In fact, currying itself is an \emph{additive monoid homomorphism}:
 \notefoot{Move these proofs to the appendix.}
@@ -329,6 +341,17 @@ p * (q + r) == p * q + p * r
 u * zero == zero
 zero * v == zero
 \end{code}
+
+\noindent
+\begin{definition} \defLabel{semiring homomorphism}
+A function |h| from one semiring to another is a \emph{semiring homomorphism} if it is an additive monoid homomorphism (\defRef{additive monoid homomorphism}) and satisfies the following additional properties:
+\begin{code}
+h one == one
+h (u * v) == h u * h v
+\end{code}
+\end{definition}
+
+\noindent
 As mentioned, numbers and various linear endofunction representations form semirings.
 A much simpler example is the semiring of booleans, with disjunction as addition and conjunction as multiplication (though we could reverse roles):
 \begin{code}
@@ -385,10 +408,18 @@ class Semiring b => StarSemiring b  where
   star :: b -> b
   star p = one <+> p * star p
 \end{code}
-%format (inverse x) = x "^{-1}"
 Sometimes there are more appealing alternative implementations.
 For instance, when subtraction and division are available, we can instead define |star p = inverse (one - p)|.
 
+Predictably,
+\begin{definition} \defLabel{star semiring homomorphism}
+A function |h| from one star semiring to another is a \emph{star semiring homomorphism} if it is a semiring homomorphism (\defRef{semiring homomorphism}) and satisfies the following additional property:
+\begin{code}
+h (star p) = star (h p)
+\end{code}
+\end{definition}
+
+\noindent
 One simple example of a star semiring (also known as a ``closed semiring'' \citet{Lehmann77}) is booleans:
 \begin{code}
 instance StarSemiring Bool where
@@ -458,6 +489,14 @@ zero  .> b == zero
 There is also a corresponding notion of \emph{right} |s|-semimodule with multiplication on the right by |s| values, which we will not need in this paper.
 (Rings also have left- and right-modules, and in \emph{commutative} rings and semirings (including vector spaces), the left and right variant coincide.)
 
+As usual, we have a corresponding notion of homomorphism, which is more commonly referred to as ``linearity'':
+\begin{definition} \defLabel{left semimodule homomorphism}
+A function |h| from one left |s|-semimodule to another is an \emph{left |s|-semimodule homomorphism} if it is an additive monoid homomorphism (\defRef{additive monoid homomorphism}) and satisfies the following additional properties:
+\begin{code}
+h (s .> b) == s .> h b
+\end{code}
+\end{definition}
+
 Familiar |s|-semimodule examples include various containers of |s| values, including single- or multi-dimensional arrays, infinite streams, sets, and multisets.
 Another, of particular interest in this paper, is functions from any type to any semiring:
 For instance,
@@ -465,6 +504,7 @@ For instance,
 instance LeftSemimodule s (a -> s) where
   s .> f = \ a -> s * f a
 \end{code}
+If we think of |a -> s| as a ``vector'' of |s| values, indexed by |a|, then |s .> f| scales each component of the vector |f| by |s|.
 
 \sectionl{Calculating instances from homomorphisms}
 
@@ -490,7 +530,11 @@ instance Additive (Pow a) where
 \end{code}
 \end{minipage}
 \\
-Sets and functions too booleans are closely related via set membership:
+Sets and functions-to-booleans (``predicates'') are closely related via set membership:
+%format setPred = pred
+%% doesn't work
+%format predSet = inverse setPred
+%format predSet = setPred "^{-1}"
 \begin{code}
 setPred :: Pow a -> (a -> Bool)
 setPred as = \ a -> a <# as
@@ -501,11 +545,11 @@ predSet f = set (a | f a)
 This relationship is not only a bijection, but a \emph{bijective additive monoid homomorphism}:
 \begin{code}
     setPred zero
-==  \ a -> a <# zero      -- |setPred| definition
-==  \ a -> a <# emptyset  -- |zero| on |P a|
-==  \ a -> False          -- property of sets
-==  \ a -> zero           -- |zero| on |Bool|
-==  zero                  -- |zero| on functions
+==  \ a -> a <# zero                  -- |setPred| definition
+==  \ a -> a <# emptyset              -- |zero| on |P a|
+==  \ a -> False                      -- property of sets
+==  \ a -> zero                       -- |zero| on |Bool|
+==  zero                              -- |zero| on functions
 
     setPred (p + q)
 ==  \ a -> a <# (p + q)               -- |setPred| definition
@@ -515,15 +559,15 @@ This relationship is not only a bijection, but a \emph{bijective additive monoid
 ==  \ a -> setPred p a + setPred q a  -- |setPred| definition
 ==  setPred p + setPred q             -- |(+)| on functions
 \end{code}
-Likewise for |predSet|%
-%if True
-\ (following from bijectivity).
+Likewise for |predSet|, following from similar reasoning or more immediately from bijectivity%
+%if False
+.
 %else
 :
 \begin{code}
     predSet zero
-==  predSet (setPred zero)  -- above
-==  zero                    -- |predSet . setPred == id|
+==  predSet (setPred zero)                               -- above
+==  zero                                                 -- |predSet . setPred == id|
 
     predSet (f + g)
 ==  predSet (setPred (predSet f) + setPred (predSet g))  -- |setPred . predSet == id|
@@ -546,65 +590,78 @@ setPred one == one
 setPred (p * q) == setPred p * setPred q
 \end{code}
 \end{spacing}
-We already know definitions of |setPred| as well as the function versions of |one| and |(*)| (on the RHS).
-We do not know the set versions of |one| and |(*)| (on the LHS).
+We already know definitions of |setPred| as well as the function versions of |one| and |(*)| (on the RHS) but not yet the set versions of |one| and |(*)| (on the LHS).
 We thus have two algebra problems in two unknowns.
 Since only one unknown appears in each homomorphism equation, we can solve them independently.
 The |setPred|/|predSet| isomorphism makes it easy to solve these equations, and removes all semantic choice (allowing only varying implementations of the same meaning).
 \begin{code}
-
      setPred one == one
-<=>  predSet (setPred one) == predSet one  -- |predSet| is injective
-<=>  one == predSet one                    -- |predSet . setPred == id|
-<=>  one == predSet (\ a -> one)           -- |one| on functions
-<=>  one == predSet (\ a -> True)          -- |one| on |Bool|
-<=>  one == set (a # True)                 -- |predSet| definition
+<=>  predSet (setPred one) == predSet one                          -- |predSet| injectivity
+<=>  one == predSet one                                            -- |predSet . setPred == id|
 
      setPred (p * q) == setPred p * setPred q
-<=>  predSet (setPred (p * q)) == predSet (setPred p * setPred q)  -- |predSet| is injective
+<=>  predSet (setPred (p * q)) == predSet (setPred p * setPred q)  -- |predSet| injectivity
 <=>  p * q == predSet (setPred p * setPred q)                      -- |predSet . setPred == id|
-<=>  p * q == predSet ((\ a -> a <# p) * (\ a -> a <# q))          -- |setPred| definition
-<=>  p * q == predSet (\ a -> (a <# p) * (a <# q))                 -- |(*)| on functions
-<=>  p * q == predSet (\ a -> a <# p && a <# q)                    -- |(*)| on |Bool|
-<=>  p * q == set (a # a <# p && a <# q)                           -- |predSet| definition
-<=>  p * q == p `intersection` q                                   -- |intersect| definition
-
 \end{code}
-We thus have a sufficient (and in this case semantically necessary) instance definition:
+We thus have a sufficient (and in this case semantically necessary) definitions for |one| and |(*)| on sets.
+Now let's simplify to get more direct definitions:
+\begin{code}
+    predSet one
+==  predSet (\ a -> one)                         -- |one| on functions
+==  predSet (\ a -> True)                        -- |one| on |Bool|
+==  set (a # True)                               -- |predSet| definition
+
+    predSet (setPred p * setPred q)
+==  predSet ((\ a -> a <# p) * (\ a -> a <# q))  -- |setPred| definition (twice)
+==  predSet (\ a -> (a <# p) * (a <# q))         -- |(*)| on functions
+==  predSet (\ a -> a <# p && a <# q)            -- |(*)| on |Bool|
+==  set (a # a <# p && a <# q)                   -- |predSet| definition
+==  p `intersection` q                           -- |intersect| definition
+\end{code}
+Without applying any real creativity, we have deduced the desired |Semiring| instance for sets, which has a pleasing duality with the |Additive| instance:
 \begin{code}
 instance Semiring (P a) where
   one = set (a # True)
   p * q = p `intersection` q
 \end{code}
 
-\note{Rework this calculation. First use injectivity to get correct definitions, and then simplify to make them more direct.}
-
-\noindent
-Next consider sets of values taken from a semiring.
+Next consider a |LeftSemimodule| instance for sets.
 We might be tempted to define |s .> p| to multiply |s| by each value in |p|, i.e.,
 \begin{code}
 instance LeftSemimodule s (Pow s) where s .> p = set (s * t | t <# p)    -- Wrong!
 \end{code}
 This definition, however, would violate the semimodule law that |zero .> p == zero|, since |zero .> p| would be |set zero|, but |zero| for sets is |emptyset|.
-Both semimodule distributive fail as well.
-There is an alternative, which though seemingly obscure at first, will prove useful later on.
-If we ``scale'' by a boolean, the semimodule laws require |True| (|one|) to preserve sets and |False| (|zero|) to annihilate them:
+Both semimodule distributive laws fail as well.
+There is an alternative choice, necessitated by requiring that |predSet| be a (left) |Bool|-semimodule homomorphism.
+The choice of |Bool| is inevitable from the type of |predSet| and the fact that |a -> b| is a |b|-semimodule for all semirings |b|, so |a -> Bool| is a |Bool|-semimodule.
+The necessary homomorphism property:
+\begin{code}
+setPred (s .> p) == s .> setPred p
+\end{code}
+Equivalently,
+\begin{code}
+    s .> p
+==  predSet (s .> setPred p)                                    -- |predSet| injectivity
+==  predSet (s .> (\ a -> a <# p))                              -- |setPred| definition
+==  predSet (\ a -> s * (a <# p))                               -- |(.>)| on functions
+==  predSet (\ a -> s && a <# p)                                -- |(*)| on |Bool|
+==  set (a # s && a <# p)                                       -- |predSet| definition
+==  if s then set (a # s && a <# p) else set (a # s && a <# p)  -- property of |if|
+==  if s then set (a # a <# p) else emptyset                    -- simplify conditional branches
+==  if s then p else emptyset                                   -- |predSet . setPred == id|
+==  if s then p else zero                                       -- |zero| for sets
+\end{code}
+Summarizing,
 \begin{code}
 instance LeftSemimodule Bool (Pow a) where
-  s .> p = if s then p else emptyset
+  s .> p = if s then p else zero
 \end{code}
-so that |forall a. (a <# s .> p) <=> (s && a <# p)|, which resembles the |LeftSemimodule (a -> b)| instance given above.
-This resemblance can be explained by noting the bijection between |Pow a| and |a -> Bool|:
-\begin{code}
-setPred :: Pow a -> (a -> Bool)
-setPred as = \ a -> a <# as
+While perhaps obscure at first, this alternative will prove useful later on.
 
-predSet :: (a -> Bool) -> Pow a
-predSet f = set (a | f a)
-\end{code}
-This relationship is not only a bijection, but a \emph{semimodule isomorphism} (i.e., a bijective semimodule homomorphism).
+Note that the left |s|-semimodule laws specialized to |s=Bool| require |True| (|one|) to preserve and |False| (|zero|) to annihilate the second |(.>)| argument, so \emph{every} left |Bool|-semimodule instance must agree with this definition.
+\out{Also note that |forall a. (a <# s .> p) <=> (s && a <# p)|, which resembles the |LeftSemimodule (a -> b)| instance given above.}
 
-\subsectionl{Semimodules as semirings}
+\sectionl{Languages}
 
 \note{I might next consider possibilities for sets as a semiring. One tempting possibility is to use ``nondeterministic'' addition and multiplication, but distributivity fails.
 For instance, |(set 3 + set 5) * {0,...,10}| vs |set 3 * {0,...,10} + set 5 * {0,...,10}|, as the latter has many more values than the former.}

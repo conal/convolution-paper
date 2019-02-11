@@ -820,13 +820,14 @@ Equivalently, applying |langRecog| to both sides and replacing |p| and |q| by |F
 one == langRecog one
 F f * F g == langRecog (recogLang (F f) * recogLang (F g))
 \end{code}
-Simplifying,
+Simplify, and generalize the domain |b| from |Bool| to an arbitrary semiring:
 \begin{code}
     langRecog one
 ==  langRecog (L (set mempty))                                       -- |one| on |Language a|
 ==  F (setPred (set mempty))                                         -- |langRecog| definition
 ==  F (\ w -> w <# set mempty)                                       -- |pred| definition
 ==  F (\ w -> w == mempty)                                           -- property of sets
+==  F (equal mempty)                                                 -- generalize |False|/|True| to |zero|/|one|
     
     langRecog (recogLang (F f) * recogLang (F g))
 ==  langRecog (L (predSet f) * L (predSet g))                        -- |recogLang| definition (twice)
@@ -835,22 +836,12 @@ Simplifying,
 ==  F (setPred (set (u <> v # f u && g v)))                          -- |langRecog| definition
 ==  F (\ w -> w <# set (u <> v # f u && g v))                        -- |setPred| definition
 ==  F (\ w -> bigOrQ (u,v BR u <> v == w) f u && g v)                -- property of sets
+==  F (\ w -> bigSumQ (u,v BR u <> v == w) f u * g v)                -- generalize |(||||)|/|(&&)| to |(+)|/|(*)|
 \end{code}
 
 \item For |StarSemiring| we can use the default recursive definition.
 
 \end{enumerate}
-
-Next, we'll need to generalize from |Bool <-- a| to |b <-- a| for an arbitrary semiring |b|.
-For |one|, generalize the boolean expression |w == mempty| by mapping |False| to |zero| and |True| to |one|, resulting in |equal w mempty|, where
-\notefoot{Maybe change to the more modular definition via |boolVal| if I have other uses for |boolVal|.}
-\begin{code}
-equal :: (Eq a, Semiring s) => a -> a -> s
-equal a a' = if a == a' then one else zero
-\end{code}
-For |(*)|, generalize disjunction to addition and conjunction to multiplication:
-
->   F (\ w -> bigSumQ (u,v BR u <> v == w) f u * g v)
 
 \bibliography{bib}
 

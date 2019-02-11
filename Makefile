@@ -50,7 +50,7 @@ SHELL = bash
 clean:
 	rm -f ${outdir}/*
 
-TAGS: *.lhs *.bib src/*.hs
+TAGS: *.tex *.lhs *.bib src/*.hs
 	etags $^
 
 web: web-token

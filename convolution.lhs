@@ -717,7 +717,7 @@ We could decide that we have the wrong |Semiring| instance for sets, which would
 The existing |Semiring| instance for sets is useful, however, and is compelling in its relationship to functions and |Bool|.
 Moreover, the concatenation-based semiring only applies to sets of values from a monoid, while the existing instance applies to sets of all types.
 Instead of replacing our |Semiring (P a)| instance, let's add a new one.
-Doing so requires a new type that shares essentially the same |Additive| and |LeftSemimodule| instances:\footnote{The ``|deriving (Additive, LeftSemimodule)|'' clause \needcite{}, of which we'll make similar use later in the paper, means that the |L| constructor/isomorphism is a homomorphism for the derived classes (|Additive| and |LeftSemimodule|) and so is equivalent to the following instance definitions:
+Doing so requires a new type that shares essentially the same |Additive| and |LeftSemimodule| instances:\footnote{The ``|deriving (Additive, LeftSemimodule)|'' clause \needcite{}, of which we'll make similar use later in the paper, means that the |newtype| constructor/isomorphism is a homomorphism for the derived classes (|Additive| and |LeftSemimodule|) and so is equivalent to the following instance definitions:
 \begin{code}
 instance Additive (Language a) where
   zero = L zero

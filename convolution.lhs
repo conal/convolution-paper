@@ -757,7 +757,7 @@ There are three parts to this requirement (\defref{star semiring homomorphism}):
 \item The first is from |Additive|:
 \begin{code}
 recogLang zero == zero
-recogRang (R f + R g) == recogRang (R f) + recogRang (R g)
+recogLang (R f + R g) == recogRang (R f) + recogRang (R g)
 \end{code}
 These two equations hold due to the |deriving Additive| clause in the |Language| definition above.
 \item The second part is from |Semiring|:
@@ -791,6 +791,9 @@ Simplifying,
 \item \note{Continue here, but I think I should move all of these derivations to the appendix.}
 
 \end{itemize}
+
+%format <-- = "\leftarrow"
+\note{After deducing the |R| instances, generalize from |Bool| to an arbitrary semiring |b|, naming the new type ``|b <-- a|'', so that |R a = Bool <-- a|. In these instances, |a| must be a monoid. This type is known as ``the monoid semiring'' \citep{Golan2005RecentSemi}, and its |(*)| is generalized convolution. On second thought, start with the general version, since it's more directly analogous to |a -> b|.}
 
 \workingHere
 

@@ -150,10 +150,16 @@ All of the algorithms in the paper follow from very simple specifications in the
 %format `intersection` = "\cup"
 %format intersection = (`intersection`)
 %format star p = "\closure{"p"}"
+%format exists = "\exists"
 
 %format bigUnion (lim) = "\bigOp\bigcup{" lim "}{0}"
 %format bigSum (lim) = "\bigOp\sum{" lim "}{0}"
 %format bigSumQ (lim) = "\bigOp\sum{" lim "}{1.5}"
+
+%format bigOr (lim) = "\bigOp\bigvee{" lim "}{0}"
+%format bigOrQ (lim) = "\bigOp\bigvee{" lim "}{1.5}"
+%format BR = "\!\!\\\!\!"
+%% %format BR = "\hspace{-5mu}\\\hspace{-5mu}"
 
 %format (inverse x) = x "^{-1}"
 
@@ -199,7 +205,7 @@ These two monoids are related via the function |length :: [a] -> N|, which not o
 ==  length u <> length v
 \end{code}
 This pattern is common and useful enough to have a name:
-\begin{definition} \defLabel{monoid homomorphism}
+\begin{definition} \deflabel{monoid homomorphism}
 A function |h| from one monoid to another is called a \emph{monoid homomorphism} when it satisfies the following properties:
 \begin{code}
 h mempty == mempty
@@ -277,7 +283,7 @@ instance Additive b => Additive (a -> b) where
 
 \noindent
 Additive monoids have their form of homomorphism:
-\begin{definition} \defLabel{additive monoid homomorphism}
+\begin{definition} \deflabel{additive monoid homomorphism}
 A function |h| from one additive monoid to another is an \emph{additive monoid homomorphism} if it satisfies the following properties:
 \begin{code}
 h zero == zero
@@ -346,8 +352,8 @@ zero * v == zero
 \end{code}
 
 \noindent
-\begin{definition} \defLabel{semiring homomorphism}
-A function |h| from one semiring to another is a \emph{semiring homomorphism} if it is an additive monoid homomorphism (\defRef{additive monoid homomorphism}) and satisfies the following additional properties:
+\begin{definition} \deflabel{semiring homomorphism}
+A function |h| from one semiring to another is a \emph{semiring homomorphism} if it is an additive monoid homomorphism (\defref{additive monoid homomorphism}) and satisfies the following additional properties:
 \begin{code}
 h one == one
 h (u * v) == h u * h v
@@ -415,8 +421,8 @@ Sometimes there are more appealing alternative implementations.
 For instance, when subtraction and division are available, we can instead define |star p = inverse (one - p)|.
 
 Predictably,
-\begin{definition} \defLabel{star semiring homomorphism}
-A function |h| from one star semiring to another is a \emph{star semiring homomorphism} if it is a semiring homomorphism (\defRef{semiring homomorphism}) and satisfies the following additional property:
+\begin{definition} \deflabel{star semiring homomorphism}
+A function |h| from one star semiring to another is a \emph{star semiring homomorphism} if it is a semiring homomorphism (\defref{semiring homomorphism}) and satisfies the following additional property:
 \begin{code}
 h (star p) = star (h p)
 \end{code}
@@ -502,8 +508,8 @@ There is also a corresponding notion of \emph{right} |s|-semimodule with multipl
 (Rings also have left- and right-modules, and in \emph{commutative} rings and semirings (including vector spaces), the left and right variant coincide.)
 
 As usual, we have a corresponding notion of homomorphism, which is more commonly referred to as ``linearity'':
-\begin{definition} \defLabel{left semimodule homomorphism}
-A function |h| from one left |s|-semimodule to another is an \emph{left |s|-semimodule homomorphism} if it is an additive monoid homomorphism (\defRef{additive monoid homomorphism}) and satisfies the following additional properties:
+\begin{definition} \deflabel{left semimodule homomorphism}
+A function |h| from one left |s|-semimodule to another is an \emph{left |s|-semimodule homomorphism} if it is an additive monoid homomorphism (\defref{additive monoid homomorphism}) and satisfies the following additional properties:
 \begin{code}
 h (s .> b) == s .> h b
 \end{code}
@@ -543,10 +549,10 @@ instance Additive (Pow a) where
 \end{minipage}
 \\
 Sets and functions-to-booleans (``predicates'') are closely related via set membership:
-%% %format setPred = pred
-%% %% doesn't work
-%% %format predSet = inverse setPred
-%% %format predSet = setPred "^{-1}"
+%format setPred = pred
+%% doesn't work
+%format predSet = inverse setPred
+%format predSet = setPred "^{-1}"
 \begin{code}
 setPred :: Pow a -> (a -> Bool)
 setPred as = \ a -> a <# as
@@ -721,8 +727,8 @@ instance Additive (Language a) where
 type Language a = L (P a) deriving Additive
 
 instance Semiring (Language a) where
-  one = set mempty
-  L p * L q = L (set (u <> v | u <# p && v <# q))
+  one = L (set mempty)
+  L p * L q = L (set (u <> v # u <# p && v <# q))
 
 instance StarSemiring (Language a) -- use default |star| definition (\secref{Star Semirings}).
 \end{code}
@@ -735,6 +741,9 @@ Perhaps there's a variation of |a -> Bool| that bears the same relationship to |
 newtype Recog a = R (a -> Bool)  -- language recognizer
 \end{code}
 The least imaginative thing we can try is to exactly mirror the |setPred|/|predSet| isomorphism:
+%format langRecog = recog
+%format recogLang = inverse langRecog
+%format recogLang = langRecog "^{-1}"
 \begin{code}
 langRecog :: Language a -> Recog a
 langRecog (L p) = R (setPred p)
@@ -742,12 +751,44 @@ langRecog (L p) = R (setPred p)
 recogLang :: Recog a -> Set a
 recogLang (R f) = L (predSet f)
 \end{code}
-To cement our analogy, let's require that |langRecog| and |recogLang| be star semiring homomorphisms.
-There are three parts to this requirement (\defRef{star semiring homomorphism}).
+To cement our analogy, let's require that |recogLang| (and hence |langRecog|) be a star semiring homomorphisms.
+There are three parts to this requirement (\defref{star semiring homomorphism}):
+\begin{itemize}
+\item The first is from |Additive|:
 \begin{code}
-langRecog zero == zero
-langRecog (p + q) == langRecog p + langRecog q
+recogLang zero == zero
+recogRang (R f + R g) == recogRang (R f) + recogRang (R g)
 \end{code}
+These two equations hold due to the |deriving Additive| clause in the |Language| definition above.
+\item The second part is from |Semiring|:
+\begin{code}
+recogLang one == one
+recogLang (R f * R g) = recogLang (R f) * recogLang (R g)
+\end{code}
+Equivalently,
+\begin{code}
+one == langRecog one
+R f * R g == langRecog (recogLang (R f) * recogLang (R g))
+\end{code}
+Simplifying,
+\begin{code}
+    langRecog one
+==  langRecog (L (set mempty))
+==  R (setPred (set mempty))
+==  R (\ w -> w <# set mempty)
+==  R (\ w -> w == mempty)
+
+    langRecog (recogLang (R f) * recogLang (R g))
+==  langRecog (L (predSet f) * L (predSet g))
+==  langRecog (L (set (u <> v # u <# predSet f && v <# predSet g)))
+==  langRecog (L (set (u <> v # f u && g v)))
+==  R (setPred (set (u <> v # f u && g v)))
+==  R (\ w -> w <# set (u <> v # f u && g v))
+==  R (\ w -> bigOrQ (u,v BR u <> v == w) f u && g v)
+
+\end{code}
+
+\end{itemize}
 
 \workingHere
 

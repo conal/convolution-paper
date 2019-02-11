@@ -147,7 +147,7 @@ All of the algorithms in the paper follow from very simple specifications in the
 %format pow a (b) = a "^{" b "}"
 %format `union` = "\cup"
 %format union = (`union`)
-%format `intersection` = "\cup"
+%format `intersection` = "\cap"
 %format intersection = (`intersection`)
 %format star p = "\closure{"p"}"
 %format exists = "\exists"
@@ -704,8 +704,8 @@ U V = set (u <> v | u <# U && v <# V)
 
 star U = bigUnion (i >= 0) @@ pow U i -- where |pow U 0 = one|, and |pow U (n+1) = U @@ pow U n|.
 \end{code}
-This |star U| definition satisfies the |StarSemiring| laws, if |(*)| were language concatenation.
-A bit of reasoning shows that all of the semiring laws hold:
+Intriguingly, this |star U| definition would satisfy the |StarSemiring| laws if |(*)| were language concatenation.
+A bit of reasoning shows that all of the semiring laws would hold as well:
 \begin{itemize}
 \item Concatenation is associative and has as identity the language |set mempty|.
 \item Concatenation distributes over union, both from the left and from the right.
@@ -713,20 +713,24 @@ A bit of reasoning shows that all of the semiring laws hold:
 \end{itemize}
 Moreover, all we needed from strings is that they form a monoid.
 
-We could decide that we have the wrong |Semiring| instance for sets, which would imply that the |predSet| homomorphisms in \secref{Calculating Instances from Homomorphisms} are the wrong specifications to use.
+We could decide that we have the wrong |Semiring| instance for sets, which would imply that the |setPred| homomorphisms in \secref{Calculating Instances from Homomorphisms} are the wrong specifications to use.
 The existing |Semiring| instance for sets is useful, however, and is compelling in its relationship to functions and |Bool|.
 Moreover, the concatenation-based semiring only applies to sets of values from a monoid, while the existing instance applies to sets of all types.
 Instead of replacing our |Semiring (P a)| instance, let's add a new one.
-Doing so requires a new type that shares essentially the same |Additive| instance:\footnote{The ``|deriving Additive|'' clause \needcite{}, of which we'll make similar use later in the paper, is equivalent to the following instance definition:
+Doing so requires a new type that shares essentially the same |Additive| and |LeftSemimodule| instances:\footnote{The ``|deriving (Additive, LeftSemimodule)|'' clause \needcite{}, of which we'll make similar use later in the paper, means that the |L| constructor/isomorphism is a homomorphism for the derived classes (|Additive| and |LeftSemimodule|) and so is equivalent to the following instance definitions:
 \begin{code}
 instance Additive (Language a) where
   zero = L zero
   L p + L q = L (p + q)
-\end{code}}
-\begin{code}
-type Language a = L (P a) deriving Additive
 
-instance Semiring (Language a) where
+instance LeftSemimodule Bool (Language a) where
+  s .> L p = L (s .> p)
+\end{code}
+}
+\begin{code}
+type Language a = L (P a) deriving (Additive, LeftSemimodule)
+
+instance Monoid a => Semiring (Language a) where
   one = L (set mempty)
   L p * L q = L (set (u <> v # u <# p && v <# q))
 
@@ -734,66 +738,82 @@ instance StarSemiring (Language a) -- use default |star| definition (\secref{Sta
 \end{code}
 
 \noindent
-These new instances indeed satisfy the laws for additive monoids, semirings, and star semirings, but they seem to spring from nothing, which is a bit disappointing compared with the way the set instances follow inevitably from the requirement that |setPred| be a star semiring homomorphism (\secref{Calculating Instances from Homomorphisms}).
+%format <-- = "\leftarrow"
+These new instances indeed satisfy the laws for additive monoids, semimodules, semirings, and star semirings.
+They seem to spring from nothing, however, which is a bit disappointing compared with the way the set instances follow inevitably from the requirement that |setPred| be a star semiring homomorphism (\secref{Calculating Instances from Homomorphisms}).
 Let's not give up yet, however.
-Perhaps there's a variation of |a -> Bool| that bears the same relationship to |Language a| as |a -> Bool| bears to |P a|.
+Perhaps there's a variation of the |a -> b| semiring that specializes with |b = Bool| to bear the same relationship to |Language a| that |a -> Bool| bears to |P a|.
+For reasons to become clear later, let's call this |a -> b| variation ``|b <-- a|'':
 \begin{code}
-newtype Recog a = R (a -> Bool)  -- language recognizer
+newtype b <-- a = F (a -> b) deriving (Additive, LeftSemimodule)
 \end{code}
 The least imaginative thing we can try is to exactly mirror the |setPred|/|predSet| isomorphism:
-%format langRecog = recog
-%format recogLang = inverse langRecog
-%format recogLang = langRecog "^{-1}"
+%format recogLang = lang
+%format langRecog = inverse recogLang
+%format langRecog = recogLang "^{-1}"
 \begin{code}
-langRecog :: Language a -> Recog a
-langRecog (L p) = R (setPred p)
+recogLang :: (Bool <-- a) -> Set a
+recogLang (F f) = L (predSet f)
 
-recogLang :: Recog a -> Set a
-recogLang (R f) = L (predSet f)
+langRecog :: Language a -> (Bool <-- a)
+langRecog (L p) = F (setPred p)
 \end{code}
-To cement our analogy, let's require that |recogLang| (and hence |langRecog|) be a star semiring homomorphisms.
-There are three parts to this requirement (\defref{star semiring homomorphism}):
-\begin{itemize}
-\item The first is from |Additive|:
+To cement our analogy, let's require that |recogLang| (and hence |langRecog|) be a homomorphism for all of the classes defined in \secref{Monoids, Semirings and Semimodules}.
+There are three parts to this requirement (\defreftwo{star semiring homomorphism}{left semimodule homomorphism}):
+\begin{enumerate}
+
+\item From |Additive| and |LeftSemimodule|:
 \begin{code}
 recogLang zero == zero
-recogLang (R f + R g) == recogRang (R f) + recogRang (R g)
+recogLang (p + q) == recogLang p + recogLang q
+
+recogLang (s .> p) == s .> recogLang p
 \end{code}
-These two equations hold due to the |deriving Additive| clause in the |Language| definition above.
-\item The second part is from |Semiring|:
+These three equations hold due to the |deriving (Additive, LeftSemimodule)| clause in the |Language| definition above.
+For instance,
+\begin{code}
+    recogLang (F f + F g)
+==  recogLang (F (f + g))              -- |(+)| on |b <-- a| (derived)
+==  L (predSet (f + g))                -- |recogLang| definition
+==  L (predSet f + predSet g)          -- |predSet| is an |Additive| homomorphism
+==  L (predSet f) + L (predSet g)      -- |(+)| on |Language a| (derived)
+==  recogLang (F f) + recogLang (F g)  -- |recogLang| definition
+\end{code}
+
+\item From |Semiring|:
 \begin{code}
 recogLang one == one
-recogLang (R f * R g) = recogLang (R f) * recogLang (R g)
+recogLang (p * q) = recogLang p * recogLang q
 \end{code}
-Equivalently,
+Equivalently, applying |langRecog| to both sides and replacing |p| and |q| by |F f| and |F g|,
 \begin{code}
 one == langRecog one
-R f * R g == langRecog (recogLang (R f) * recogLang (R g))
+F f * F g == langRecog (recogLang (F f) * recogLang (F g))
 \end{code}
 Simplifying,
 \begin{code}
     langRecog one
-==  langRecog (L (set mempty))
-==  R (setPred (set mempty))
-==  R (\ w -> w <# set mempty)
-==  R (\ w -> w == mempty)
-
-    langRecog (recogLang (R f) * recogLang (R g))
-==  langRecog (L (predSet f) * L (predSet g))
-==  langRecog (L (set (u <> v # u <# predSet f && v <# predSet g)))
-==  langRecog (L (set (u <> v # f u && g v)))
-==  R (setPred (set (u <> v # f u && g v)))
-==  R (\ w -> w <# set (u <> v # f u && g v))
-==  R (\ w -> bigOrQ (u,v BR u <> v == w) f u && g v)
-
+==  langRecog (L (set mempty))                                       -- |one| on |Language a|
+==  F (setPred (set mempty))                                         -- |langRecog| definition
+==  F (\ w -> w <# set mempty)                                       -- |pred| definition
+==  F (\ w -> w == mempty)                                           -- property of sets
+    
+    langRecog (recogLang (F f) * recogLang (F g))
+==  langRecog (L (predSet f) * L (predSet g))                        -- |recogLang| definition (twice)
+==  langRecog (L (set (u <> v # u <# predSet f && v <# predSet g)))  -- |(*)| on |Language a|
+==  langRecog (L (set (u <> v # f u && g v)))                        -- |predSet| definition (twice)
+==  F (setPred (set (u <> v # f u && g v)))                          -- |langRecog| definition
+==  F (\ w -> w <# set (u <> v # f u && g v))                        -- |setPred| definition
+==  F (\ w -> bigOrQ (u,v BR u <> v == w) f u && g v)                -- property of sets
 \end{code}
 
-\item \note{Continue here, but I think I should move all of these derivations to the appendix.}
+\item For |StarSemiring| we can use the default recursive definition.
 
-\end{itemize}
+\end{enumerate}
 
-%format <-- = "\leftarrow"
-\note{After deducing the |R| instances, generalize from |Bool| to an arbitrary semiring |b|, naming the new type ``|b <-- a|'', so that |R a = Bool <-- a|. In these instances, |a| must be a monoid. This type is known as ``the monoid semiring'' \citep{Golan2005RecentSemi}, and its |(*)| is generalized convolution. On second thought, start with the general version, since it's more directly analogous to |a -> b|.}
+\note{Move these derivations to the appendix.}
+
+\note{Generalize from |Bool|}
 
 \workingHere
 

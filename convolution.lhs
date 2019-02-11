@@ -788,6 +788,8 @@ Simplifying,
 
 \end{code}
 
+\item \note{Continue here, but I think I should move all of these derivations to the appendix.}
+
 \end{itemize}
 
 \workingHere

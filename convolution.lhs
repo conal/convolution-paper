@@ -132,6 +132,8 @@ All of the algorithms in the paper follow from very simple specifications in the
 %format <# = "\mathop{\in}"
 %format # = "\mid"
 
+%% Sometimes formatting breaks without an infix separator.
+%format @@ = "{\,}"
 %format (wrap (a)) = a
 
 %format (paren (e)) = "\left(" e "\right)"
@@ -240,7 +242,7 @@ The embedding of |a| into |Endo a| provides another example of a monoid homomorp
 \end{code}
 This embedding is useful for turning quadratic-time algorithms linear \needcite{}.
 
-\subsectionl{Additive monoids}
+\subsectionl{Additive Monoids}
 
 While |(<>)| must be associative, it needn't be commutative.
 Commutative monoids, however, will play an important role in this paper as well.
@@ -389,14 +391,14 @@ instance Semiring b => Semiring (a -> b) where
 \end{code}
 As with |Additive|, this |Semiring| instance implies that curried functions (of any number and type of arguments and with semiring result type) are semirings, with |curry| and |uncurry| being semiring homomorphisms.
 
-\subsectionl{Star semirings}
+\subsectionl{Star Semirings}
 
 The semiring operations allow all \emph{finite} combinations of addition, zero, multiplication, and one.
 It's often useful, however, to form infinite combinations, particularly in the form of Stephen Kleene's ``star'' (or ``closure'') operation:
 % I can't get pow i working in context here
 %format ptoi = "p^i"
 \begin{code}
-star p = bigSum (i>=0) (wrap (pow p i)) -- where |pow p 0 = one|, and |pow p (n+1) = p * pow p n|.
+star p = bigSum (i>=0) @@ pow p i -- where |pow p 0 = one|, and |pow p (n+1) = p * pow p n|.
 \end{code}
 Another characterization is as a solution to either of the following semiring equations:
 \begin{code}
@@ -516,13 +518,13 @@ instance LeftSemimodule s (a -> s) where
 \end{code}
 If we think of |a -> s| as a ``vector'' of |s| values, indexed by |a|, then |s .> f| scales each component of the vector |f| by |s|.
 
-\sectionl{Calculating instances from homomorphisms}
+\sectionl{Calculating Instances from Homomorphisms}
 
 In \secref{Monoids, Semirings and Semimodules}, we met the |Additive| instance for sets, along with the |Additive|, |Semiring|, and |LeftSemimodule| instances for functions.
 Do sets also have (law-abiding) |Semiring| and |LeftSemimodule| instances?
 Is there more than one choice, and if so, how might we choose?
 
-Let's start investigating these questions by reviewing the |Additive| instances for functions and sets from \secref{Additive monoids}:
+Let's start investigating these questions by reviewing the |Additive| instances for functions and sets from \secref{Additive Monoids}:
 \\
 \begin{minipage}[b]{0.41\textwidth}
 \begin{code}
@@ -541,10 +543,10 @@ instance Additive (Pow a) where
 \end{minipage}
 \\
 Sets and functions-to-booleans (``predicates'') are closely related via set membership:
-%format setPred = pred
-%% doesn't work
-%format predSet = inverse setPred
-%format predSet = setPred "^{-1}"
+%% %format setPred = pred
+%% %% doesn't work
+%% %format predSet = inverse setPred
+%% %format predSet = setPred "^{-1}"
 \begin{code}
 setPred :: Pow a -> (a -> Bool)
 setPred as = \ a -> a <# as
@@ -644,7 +646,7 @@ Equivalently,
 \begin{code}
     star p
 ==  predSet (star (setPred p))  -- |predSet| injectivity
-==  predSet one                 -- from \secref{Star semirings}
+==  predSet one                 -- from \secref{Star Semirings}
 ==  one                         -- |predSet| is a semiring homomorphism
 \end{code}
 
@@ -689,6 +691,63 @@ Note that the left |s|-semimodule laws specialized to |s=Bool| require |True| (|
 \sectionl{Languages}
 
 A ``language'' is a set of strings over some alphabet, so the |Additive|, |Semiring|, and |LeftSemimodule| instances for sets given above apply directly to languages.
+Other than |(.>)| and |star|, all of the operations provided by these instances correspond to common and useful building blocks of languages.
+Conspicuously missing, however, are the usual notions of language concatenation and closure (Kleene star), defined as follows for languages |U| and |V|:
+\begin{code}
+U V = set (u <> v | u <# U && v <# V)
+
+star U = bigUnion (i >= 0) @@ pow U i -- where |pow U 0 = one|, and |pow U (n+1) = U @@ pow U n|.
+\end{code}
+This |star U| definition satisfies the |StarSemiring| laws, if |(*)| were language concatenation.
+A bit of reasoning shows that all of the semiring laws hold:
+\begin{itemize}
+\item Concatenation is associative and has as identity the language |set mempty|.
+\item Concatenation distributes over union, both from the left and from the right.
+\item The |zero| (empty) language annihilates (yields |zero|) under concatenation, both from the left and from the right.
+\end{itemize}
+Moreover, all we needed from strings is that they form a monoid.
+
+We could decide that we have the wrong |Semiring| instance for sets, which would imply that the |predSet| homomorphisms in \secref{Calculating Instances from Homomorphisms} are the wrong specifications to use.
+The existing |Semiring| instance for sets is useful, however, and is compelling in its relationship to functions and |Bool|.
+Moreover, the concatenation-based semiring only applies to sets of values from a monoid, while the existing instance applies to sets of all types.
+Instead of replacing our |Semiring (P a)| instance, let's add a new one.
+Doing so requires a new type that shares essentially the same |Additive| instance:\footnote{The ``|deriving Additive|'' clause \needcite{}, of which we'll make similar use later in the paper, is equivalent to the following instance definition:
+\begin{code}
+instance Additive (Language a) where
+  zero = L zero
+  L p + L q = L (p + q)
+\end{code}}
+\begin{code}
+type Language a = L (P a) deriving Additive
+
+instance Semiring (Language a) where
+  one = set mempty
+  L p * L q = L (set (u <> v | u <# p && v <# q))
+
+instance StarSemiring (Language a) -- use default |star| definition (\secref{Star Semirings}).
+\end{code}
+
+\noindent
+These new instances indeed satisfy the laws for additive monoids, semirings, and star semirings, but they seem to spring from nothing, which is a bit disappointing compared with the way the set instances follow inevitably from the requirement that |setPred| be a star semiring homomorphism (\secref{Calculating Instances from Homomorphisms}).
+Let's not give up yet, however.
+Perhaps there's a variation of |a -> Bool| that bears the same relationship to |Language a| as |a -> Bool| bears to |P a|.
+\begin{code}
+newtype Recog a = R (a -> Bool)  -- language recognizer
+\end{code}
+The least imaginative thing we can try is to exactly mirror the |setPred|/|predSet| isomorphism:
+\begin{code}
+langRecog :: Language a -> Recog a
+langRecog (L p) = R (setPred p)
+
+recogLang :: Recog a -> Set a
+recogLang (R f) = L (predSet f)
+\end{code}
+To cement our analogy, let's require that |langRecog| and |recogLang| be star semiring homomorphisms.
+There are three parts to this requirement (\defRef{star semiring homomorphism}).
+\begin{code}
+langRecog zero == zero
+langRecog (p + q) == langRecog p + langRecog q
+\end{code}
 
 \workingHere
 

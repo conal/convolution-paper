@@ -215,7 +215,7 @@ It's easy to show that |setPred . predSet == id| and |predSet . setPred == id|.
 
 This isomorphism suggests a simple specification for effective matching, namely the requirement that |setPred| (or |predSet|) is a \emph{homomorphism} with respect to the vocabulary of \figref{classes}.
 (This style of specification has proved useful for a range of problems \cite{Elliott-2009-tcm, Elliott-2018-ad-icfp}.)
-\begin{theorem}[\provedIn{theorem:Pred}]\thmLabel{Pred}
+\begin{theorem}[\provedIn{theorem:Pred}]\thmlabel{Pred}
 Given the definitions in \figrefdef{Pred}{Predicates as a language (specified by homomorphicity of |predSet|/|setPred|)}{
 \begin{code}
 instance Semiring (Pred [c]) where
@@ -252,7 +252,7 @@ newtype Resid c = Resid ([c] -> [[c]])
 residPred :: Resid c -> Pred [c]
 residPred (Resid f) = Pred (any null . f)
 \end{code}
-\begin{theorem}[\provedIn{theorem:Resid}]\thmLabel{Resid}
+\begin{theorem}[\provedIn{theorem:Resid}]\thmlabel{Resid}
 Given the definitions in \figrefdef{Resid}{List-of-successes as a language (specified by homomorphicity of |residPred|)}{
 \begin{code}
 instance Semiring (Resid c) where
@@ -312,7 +312,7 @@ regexp (u  :<.>  v)  = regexp u  <.>  regexp v
 regexp (Closure u)   = closure (regexp u)
 \end{code}
 
-\begin{theorem}[\provedIn{theorem:RegExp}]\thmLabel{RegExp}
+\begin{theorem}[\provedIn{theorem:RegExp}]\thmlabel{RegExp}
 Given the definitions in \figrefdef{RegExp}{Regular expressions as a language (specified by homomorphicity of |regexp|)}{
 \begin{code}
 instance Eq c => Semiring (RegExp c) where
@@ -359,17 +359,17 @@ Much more recently \citet{Might2010YaccID} extended the technique from regular t
 %% %format deriv (c) = "\deriv{"c"}"
 %% %format derivs (s) = "\derivs{"s"}"
 
-\begin{definition} \defLabel{derivs}
+\begin{definition} deflabel{derivs}
 The \emph{derivative} $\derivs u p$ of a language $p$ with respect to a string $u$ is the set of $u$-suffixes of strings in $p$, i.e.,
 $$ \derivs u p = \set{ v \mid u \mappend v \in p } $$
 \end{definition}
-\begin{lemma}\lemLabel{derivs-member}
+\begin{lemma}\lemlabel{derivs-member}
 For a string $s$ and language $p$,
 $$ s \in p \iff \mempty \in \derivs s p .$$
-Proof: immediate from \defRef{derivs}.
+Proof: immediate from efref{derivs}.
 \end{lemma}
-The practical value of \lemRef{derivs-member} is that |derivs s p| and |mempty|-containment can be computed easily and efficiently, thanks to \lemRefs{derivs-monoid}{hasEps} below.
-\begin{lemma}[\provedIn{lemma:derivs-monoid}]\lemLabel{derivs-monoid}
+The practical value of \lemref{derivs-member} is that |derivs s p| and |mempty|-containment can be computed easily and efficiently, thanks to \lemrefs{derivs-monoid}{hasEps} below.
+\begin{lemma}[\provedIn{lemma:derivs-monoid}]\lemlabel{derivs-monoid}
 |derivs| satisfies the following properties:
 \begin{align*}
 \derivs\mempty p &= p \\
@@ -390,7 +390,7 @@ where $\id$ is the identity function.\footnote{In other words, |derivs| is a con
 The derivative $\deriv c p$ of a language $p$ with respect to a single value (``symbol'') $c$ is the derivative of $p$ with respect to the singleton sequence $[c]$, i.e. $$\deriv c p = \derivs{[c]} p.$$
 Equivalently, $\deriv c p = \set{v \mid c:v \in p}$, where ``$c:v$'' is the result of prepending $c$ to the sequence $v$ (so that $c:v = [c] \mappend v$).
 \end{definition}
-\begin{lemma}[\citet{Brzozowski64}, Theorem 3.1]\lemLabel{deriv}
+\begin{lemma}[\citet{Brzozowski64}, Theorem 3.1]\lemlabel{deriv}
 The $\derivOp$ operation has the following properties:\footnote{The fourth property can be written more directly as follows:
 $$\deriv c (p \conv q) = (\ite{\mempty \in p}{\deriv c q}0) + \deriv c p \conv q $$
 or even
@@ -406,8 +406,8 @@ where $\delta\,p$ is the set containing just the empty string $\mempty$ if $\mem
 $$ \delta\,p = \iteB{\mempty \in p}{\one}{\zero} . $$
 \end{lemma}
 All that remains now is to see how to test whether $\mempty \in p$ for a language $p$.
-\begin{lemma}[\provedIn{lemma:hasEps}]\lemLabel{hasEps}
-The following properties hold:\notefoot{Move this definition to after \defRef{derivs} and \lemRef{derivs-member}, which motivate |hasEps|.}
+\begin{lemma}[\provedIn{lemma:hasEps}]\lemlabel{hasEps}
+The following properties hold:\notefoot{Move this definition to after efref{derivs} and \lemref{derivs-member}, which motivate |hasEps|.}
 $$ \mempty \not\in \zero $$
 $$ \mempty \in \one $$
 $$ \mempty \in p + q \iff \mempty \in p \lor \mempty \in q $$
@@ -424,9 +424,9 @@ Recalling the nature of the closed-semiring of booleans from \figref{classes}, a
 \end{lemma}
 
 %% \noindent
-%% With this new vocabulary, \lemRefThree{derivs-member}{derivs-monoid}{deriv} can be interpreted much more broadly than languages as sets of sequences.
+%% With this new vocabulary, \lemrefthree{derivs-member}{derivs-monoid}{deriv} can be interpreted much more broadly than languages as sets of sequences.
 
-Let's now package up these new operations as another abstract interface for language representations to implement. \lemRefs{derivs-member}{hasEps} can then be interpreted much more broadly than languages as sets of sequences.
+Let's now package up these new operations as another abstract interface for language representations to implement. \lemrefs{derivs-member}{hasEps} can then be interpreted much more broadly than languages as sets of sequences.
 \begin{code}
 class HasDecomp a c | a -> c where
   hasEps :: a -> Bool
@@ -440,7 +440,7 @@ derivs :: HasDecomp a c => [c] -> a -> a
 derivs s p = foldl (flip deriv) p s
 \end{code}
 As with |Semiring|, |ClosedSemiring|, and |HasSingle|, we can calculate instances of |HasDecomp|, as shown in \figref{HasDecomp}.
-\begin{theorem}[\provedIn{theorem:HasDecomp}]\thmLabel{HasDecomp}
+\begin{theorem}[\provedIn{theorem:HasDecomp}]\thmlabel{HasDecomp}
 Given the definitions in \figrefdef{HasDecomp}{Decomposition of language representations (specified by homomorphicity)}{
 \begin{code}
 instance HasDecomp (Pred [c]) c where
@@ -474,7 +474,7 @@ instance Eq c => HasDecomp (RegExp c) c where
 }, |predSet|, |residPred|, and |regexp| are |HasDecomp| homomorphisms.
 \end{theorem}
 
-Taken together, \lemRefs{derivs-member}{hasEps} give us an effective test for ``language'' membership, assuming that the language is expressed via |Semiring|, |ClosedSemiring|, and |HasSingle| and assuming that the language representation supports |HasDecomp|:
+Taken together, \lemrefs{derivs-member}{hasEps} give us an effective test for ``language'' membership, assuming that the language is expressed via |Semiring|, |ClosedSemiring|, and |HasSingle| and assuming that the language representation supports |HasDecomp|:
 \begin{code}
 accept :: HasDecomp a c => a -> [c] -> Bool
 accept p s = hasEps (derivs s p)
@@ -485,7 +485,7 @@ accept p s = hasEps (derivs s p)
 
 The definition of |accept| works for every language representation that implements the |HasDecomp| methods.
 A natural alternative representation is thus an implementation of those two methods, as shown in \figref{Decomp}.
-\begin{theorem}[\provedIn{theorem:Decomp}]\thmLabel{Decomp}
+\begin{theorem}[\provedIn{theorem:Decomp}]\thmlabel{Decomp}
 Given the definitions in \figrefdef{Decomp}{Language representation as |Decomp| methods}{
 %format :<: = "\mathrel{\Varid{:\!\blacktriangleleft}}"
 %format LazyPat = "\mathit{\sim}\!\!"
@@ -530,7 +530,7 @@ To further improve performance, we can \emph{memoize} these functions, e.g., wit
 Given the sparseness of typical languages, the latter choice seems preferable as a naturally sparse representation, interpreting missing entries as $\zero$ (the empty language).
 The resulting representation is exactly a trie \needcite{}, and |accept| for |Trie| is the usual membership test for tries.
 Another route to ``derivative''-based language recognition was hiding in the standard notion of tries all along!
-\begin{theorem}[\provedIn{theorem:Trie}]\thmLabel{Trie}
+\begin{theorem}[\provedIn{theorem:Trie}]\thmlabel{Trie}
 Given the definitions in \figrefdef{Trie}{Tries as language representation}{
 \begin{code}
 data Trie c = Bool :| Map c (Trie c)
@@ -681,7 +681,7 @@ regexp (Closure u)    = closure (regexp u)
 } generalizes regular expressions from \figref{RegExp}.
 The only representation change is to replace the |Zero| and |One| constructors by a single general |Value| constructor taking a semiring value.
 Note for |deriv c (p :<.> q)| that |Value (atEps p)| replaces |delta p| and denotes (via |accept|) the function that maps |mempty| to |atEps p| and all other sequences to |zero|.
-\begin{theorem}\thmLabel{RegExpFun}
+\begin{theorem}\thmlabel{RegExpFun}
 Given the definitions in \figref{RegExpFun}, |regexp| is a homomorphism with respect to each instantiated class.
 \end{theorem}
 \noindent
@@ -729,11 +729,11 @@ instance (Ord c, DetectableZero s) => HasDecomp (Trie c s) c s where
 \vspace{-4ex}
 }, where |scaleT s t| multiplies all of the semiring values in the trie |t| by the value |s|, with |scaleT zero t == zero|.
 \citet{Hinze2000GGT} generalize tries from denoting sets to functions in this same way.\notefoot{To do: explore generalizing to tries over other key types.}
-\begin{theorem}\thmLabel{TrieFun}
+\begin{theorem}\thmlabel{TrieFun}
 Given the definitions in \figref{TrieFun}, |trieFunTo| is a homomorphism with respect to each instantiated class.
 \end{theorem}
 \noindent
-The proof is a straightforward adaptation of \proofRef{theorem:Trie}.\notefoot{On second thought, work out the proofs for this generalized versions, and then specialize for \thmRef{Trie}.}
+The proof is a straightforward adaptation of \proofRef{theorem:Trie}.\notefoot{On second thought, work out the proofs for this generalized versions, and then specialize for \thmref{Trie}.}
 
 \workingHere
 
@@ -767,13 +767,13 @@ The proof is a straightforward adaptation of \proofRef{theorem:Trie}.\notefoot{O
 
 \sectionl{Proofs}
 
-\subsection{\thmRef{Pred}}\proofLabel{theorem:Pred}
+\subsection{\thmref{Pred}}\proofLabel{theorem:Pred}
 
-\subsection{\thmRef{Resid}}\proofLabel{theorem:Resid}
+\subsection{\thmref{Resid}}\proofLabel{theorem:Resid}
 
-\subsection{\thmRef{RegExp}}\proofLabel{theorem:RegExp}
+\subsection{\thmref{RegExp}}\proofLabel{theorem:RegExp}
 
-\subsection{\lemRef{derivs-monoid}}\proofLabel{lemma:derivs-monoid}
+\subsection{\lemref{derivs-monoid}}\proofLabel{lemma:derivs-monoid}
 
 \begin{code}
     derivs mempty p
@@ -791,13 +791,13 @@ The proof is a straightforward adaptation of \proofRef{theorem:Trie}.\notefoot{O
 ==  derivs v (derivs u p)
 \end{code}
 
-\subsection{\lemRef{hasEps}}\proofLabel{lemma:hasEps}
+\subsection{\lemref{hasEps}}\proofLabel{lemma:hasEps}
 
-\subsection{\thmRef{HasDecomp}}\proofLabel{theorem:HasDecomp}
+\subsection{\thmref{HasDecomp}}\proofLabel{theorem:HasDecomp}
 
-\subsection{\thmRef{Decomp}}\proofLabel{theorem:Decomp}
+\subsection{\thmref{Decomp}}\proofLabel{theorem:Decomp}
 
-\subsection{\thmRef{Trie}}\proofLabel{theorem:Trie}
+\subsection{\thmref{Trie}}\proofLabel{theorem:Trie}
 
 \bibliography{bib}
 

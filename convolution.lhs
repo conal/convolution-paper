@@ -282,6 +282,7 @@ h zero == zero
 h (u + v) == h u + h v
 \end{code}
 \end{definition}
+\noindent
 Curried functions of \emph{any number} of arguments (and additive result type) are additive, thanks to repeated application of this instance.
 In fact, currying itself is an \emph{additive monoid homomorphism}:
 \notefoot{Move these proofs to the appendix.}
@@ -426,6 +427,7 @@ instance StarSemiring Bool where
   star b  = one + b * star b
           = True || (b && star b)
           = True
+          = one
 \end{code}
 Another example is functions to any semiring:
 \begin{code}
@@ -439,6 +441,14 @@ To see that the law holds:
 ==  \ a -> one + f a * star (f a)  -- |star| on functions
 ==  \ a -> star (f a)              -- star semiring law
 ==  star f                         -- |star| on functions
+\end{code}
+\noindent
+Combining these two instances, consider |star f| for |f :: a -> Bool| (a ``predicate''):
+\begin{code}
+    star f
+==  \ a -> star (f a)  -- |star| on functions
+==  \ a -> one         -- |star| on |Bool|
+==  one                -- |one| on functions
 \end{code}
 
 \noindent
@@ -625,6 +635,19 @@ instance Semiring (P a) where
   p * q = p `intersection` q
 \end{code}
 
+We can similarly calculate a |StarSemiring| instance for sets from a requirement that |predSet| be a star semiring homomorphism.
+That homomorphism equation:
+\begin{code}
+setPred (star p) == star (setPred p)
+\end{code}
+Equivalently,
+\begin{code}
+    star p
+==  predSet (star (setPred p))  -- |predSet| injectivity
+==  predSet one                 -- from \secref{Star semirings}
+==  one                         -- |predSet| is a semiring homomorphism
+\end{code}
+
 Next consider a |LeftSemimodule| instance for sets.
 We might be tempted to define |s .> p| to multiply |s| by each value in |p|, i.e.,
 \begin{code}
@@ -661,7 +684,13 @@ While perhaps obscure at first, this alternative will prove useful later on.
 Note that the left |s|-semimodule laws specialized to |s=Bool| require |True| (|one|) to preserve and |False| (|zero|) to annihilate the second |(.>)| argument, so \emph{every} left |Bool|-semimodule instance must agree with this definition.
 \out{Also note that |forall a. (a <# s .> p) <=> (s && a <# p)|, which resembles the |LeftSemimodule (a -> b)| instance given above.}
 
+\note{Demonstrate that homomorphic specifications also guarantee that laws hold, assuming that equality is consistent with homomorphism.}
+
 \sectionl{Languages}
+
+A ``language'' is a set of strings over some alphabet, so the |Additive|, |Semiring|, and |LeftSemimodule| instances for sets given above apply directly to languages.
+
+\workingHere
 
 \note{I might next consider possibilities for sets as a semiring. One tempting possibility is to use ``nondeterministic'' addition and multiplication, but distributivity fails.
 For instance, |(set 3 + set 5) * {0,...,10}| vs |set 3 * {0,...,10} + set 5 * {0,...,10}|, as the latter has many more values than the former.}

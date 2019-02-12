@@ -730,7 +730,7 @@ Note that the left |s|-semimodule laws specialized to |s=Bool| require |True| (|
 
 \note{Demonstrate that homomorphic specifications also guarantee that laws hold, assuming that equality is consistent with homomorphism.}
 
-\sectionl{Languages}
+\sectionl{Languages and the monoid semiring}
 
 A ``language'' is a set of strings over some alphabet, so the |Additive|, |Semiring|, and |LeftSemimodule| instances for sets given above apply directly to languages.
 Other than |(.>)| and |star|, all of the operations provided by these instances correspond to common and useful building blocks of languages.
@@ -802,8 +802,8 @@ If we apply the same sort of reasoning as in \secref{Calculating Instances from 
 \begin{code}
 instance (Semiring b, Monoid a) => Semiring (b <-- a) where
   one = F (mempty +-> one)
-  F f * F g  = F (\ w -> bigSumQ (u,v BR u <> v == w) f u <.> g v)
-             = bigSum (u,v) u <> v +-> f u <.> g v
+  F f * F g  = bigSum (u,v) u <> v +-> f u <.> g v
+             = F (\ w -> bigSumQ (u,v BR u <> v == w) f u <.> g v)
 
 instance (Semiring b, Monoid a)  => StarSemiring (b <-- a)  -- default |star|
 \end{code}
@@ -844,8 +844,16 @@ instance Splittable [a] where
 \sectionl{What's to come}
 
 \begin{itemize}
+\item Decomposing list functions
+\end{itemize}
+
+Other:
+\begin{itemize}
+\item Say just ``semimodule'', and add a remark that I really mean ``left semimodule'' throughout.
+  Or start out with ``left'', then make the remark, and then perhaps add an occasional ``(left)''.
 \item Finite maps, either as a running example or in its own section.
 One version like |a -> b| and another like |b <-- a|.
+\item |single| as a monoid homomorphism (targeting the product monoid).
 \end{itemize}
 
 
@@ -920,6 +928,9 @@ Simplify, and generalize the domain |b| from |Bool| to an arbitrary semiring:
 ==  bigSum (u,v) F (u <> v +-> f u * g v)                            -- |(+)| on |b <-- a| (derived)
 ==  bigSum (u,v) u <> v +-> f u * g v                                -- |(+->)| on |b <-- a| (derived)
 \end{code}
+
+\note{Redo this proof, aiming at the |(+->)| form first, which more closely resembles the set version.
+Then simplify to the lambda/sum form.}
 
 \item For |StarSemiring| the default recursive definition embodies the star semiring law.
 \note{Hm. Assuming not bottom?}

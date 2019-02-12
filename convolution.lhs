@@ -551,6 +551,15 @@ instance (Eq a, Additive b) => HasSingle a b (a -> b) where
   a +-> b = \ a' -> if a == a' then b else zero
 \end{code}
 
+\noindent
+The |(+->)| operation gives a way to decompose arbitrary functions:
+\begin{lemma}[\provedIn{lemma:decomp +->}]\lemlabel{decomp +->}
+For all |f :: a -> b| where |b| is a semiring,
+\begin{code}
+F f == bigSum a a +-> f a
+\end{code}
+\end{lemma}
+
 \sectionl{Calculating Instances from Homomorphisms}
 
 In \secref{Monoids, Semirings and Semimodules}, we met the |Additive| instance for sets, along with the |Additive|, |Semiring|, and |LeftSemimodule| instances for functions.
@@ -833,6 +842,16 @@ instance Splittable [a] where
 \appendix
 
 \sectionl{Proofs}
+
+\subsection{\lemref{decomp +->}}\proofLabel{lemma:decomp +->}
+
+\begin{code}
+    bigSum a a +-> f a
+==  bigSum a F (\ a' -> if a' == a then f a else zero)  -- |(+->)| on |a -> b|
+==  F (\ a' -> bigSum a if a' == a then f a else zero)  -- |(<+>)| on |a -> b|
+==  F (\ a' -> f a')                                    -- summation property
+==  F f                                                 -- $\eta$ reduction
+\end{code}
 
 \subsection{\thmref{Semiring (b <-- a)}}\proofLabel{theorem:Semiring (b <-- a)}
 

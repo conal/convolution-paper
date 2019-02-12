@@ -18,13 +18,13 @@ class HasSingle a b x | x -> a b where
 single :: (HasSingle a b x, Semiring b) => a -> x
 single a = a +-> one
 
-value :: (HasSingle a b x, Monoid a)
-      => b -> x
+value :: (HasSingle a b x, Monoid a) => b -> x
 value b = mempty +-> b
 
 -- Suitable?
 instance (Eq a, Additive b) => HasSingle a b (a -> b) where
-  (+->) = equal1
+  -- (+->) = equal'
+  a +-> b = \ a' -> if a == a' then b else zero
 
 instance HasSingle a Bool [a] where
   a +-> b = if b then [a] else []
@@ -40,11 +40,11 @@ oneBool :: Additive x => (a -> x) -> a -> Bool -> x
 oneBool _ _ False = zero
 oneBool f a True  = f a
 
-equal1 :: (Eq a, Additive b) => a -> b -> a -> b
-equal1 a b a' = if a == a' then b else zero
+equal' :: (Eq a, Additive b) => a -> b -> a -> b
+equal' a b a' = if a == a' then b else zero
 
 equal :: (Eq a, Semiring b) => a -> a -> b
-equal a = equal1 a one
+equal a = equal' a one
 
 -- | Derivative of a language w.r.t a string
 derivs :: (Decomposable b h x, Indexable c x (h x)) => x -> [c] -> x

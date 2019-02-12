@@ -5,7 +5,10 @@ targ = convolution
 
 otarg = $(outdir)/$(targ)
 
-.PRECIOUS: $(outdir)/%.tex
+# # Doesn't work
+# .PRECIOUS: $(outdir)/%.tex $(outdir)/%.pdf
+
+.PRECIOUS: out/convolution.tex out/convolution.pdf out/was2.tex out/was2.pdf
 
 default: $(otarg).pdf
 
@@ -50,7 +53,7 @@ SHELL = bash
 clean:
 	rm -f ${outdir}/*
 
-TAGS: *.tex *.lhs *.bib src/*.hs
+TAGS: *.tex *.lhs *.inc *.bib src/*.hs
 	etags $^
 
 web: web-token

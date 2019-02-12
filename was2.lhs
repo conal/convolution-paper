@@ -151,7 +151,7 @@ Languages are commonly built up via a few simple operations:
 \item For a string |s|, the \emph{singleton} language |single s = set s|.
 \item For two languages |p| and |q|, the \emph{union} |p <+> q = set (u # u <# p || u <# q)|.
 \item For two languages |p| and |q|, the element-wise \emph{concatenation} |p <.> q = set (u <> v # u <# p && v <# q)|, where ``|<>|'' denotes string concatenation.
-\item For a language |p|, the \emph{closure} |star p = bigunion (n > 0) (pow p n)|, where |pow p n| is |p| concatenated with itself |n| times.
+\item For a language |p|, the \emph{closure} |star p = bigunion (n >= 0) (pow p n)|, where |pow p n| is |p| concatenated with itself |n| times.
 \end{itemize}
 These operations suffice to describe all \emph{regular} languages.
 The language specifications (language-denoting \emph{expressions} rather than languages themselves) finitely constructed from these operations are called \emph{regular expressions}.

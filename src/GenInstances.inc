@@ -8,7 +8,7 @@ instance DetectableOne  (t) where { isOne  = (== 1)} ; \
 instance Semiring (t) where { (<.>) = (*) ; one  = 1 }
 
 #define FunctorSemimodule(f) \
-instance (Semiring zz, Additive ((f) zz)) => Semimodule zz ((f) zz)
+instance (Semiring zz, Additive ((f) zz)) => LeftSemimodule zz ((f) zz)
 
 #define FunctorStar(f) \
 instance (Semiring ((f) qq), Ok (f) qq, StarSemiring qq) => StarSemiring ((f) qq) where \
@@ -18,7 +18,7 @@ instance (Semiring ((f) qq), Ok (f) qq, StarSemiring qq) => StarSemiring ((f) qq
 instance Additive ((f) qq) => DetectableZero ((f) qq) where \
   { isZero = null } ; \
 
--- Additive, Semimodule, Semiring from Applicative
+-- Additive, LeftSemimodule, Semiring from Applicative
 #define ApplSemi(f) \
 instance Additive zz => Additive ((f) zz) where \
   { (<+>) = liftA2C (<+>) ; zero = pureC zero } ; \

@@ -556,7 +556,7 @@ The |(+->)| operation gives a way to decompose arbitrary functions:
 \begin{lemma}[\provedIn{lemma:decomp +->}]\lemlabel{decomp +->}
 For all |f :: a -> b| where |b| is a semiring,
 \begin{code}
-F f == bigSum a a +-> f a
+f == bigSum a a +-> f a
 \end{code}
 \end{lemma}
 
@@ -695,11 +695,11 @@ Equivalently,
 Next consider a |LeftSemimodule| instance for sets.
 We might be tempted to define |s .> p| to multiply |s| by each value in |p|, i.e.,
 \begin{code}
-instance LeftSemimodule s (Pow s) where s .> p = set (s * t | t <# p)    -- Wrong!
+instance LeftSemimodule s (Pow s) where s .> p = set (s * t | t <# p)    -- \emph{wrong}
 \end{code}
 This definition, however, would violate the semimodule law that |zero .> p == zero|, since |zero .> p| would be |set zero|, but |zero| for sets is |emptyset|.
 Both semimodule distributive laws fail as well.
-There is an alternative choice, necessitated by requiring that |predSet| be a (left) |Bool|-semimodule homomorphism.
+There is an alternative choice, necessitated by requiring that |predSet| be a left |Bool|-semimodule homomorphism.
 The choice of |Bool| is inevitable from the type of |predSet| and the fact that |a -> b| is a |b|-semimodule for all semirings |b|, so |a -> Bool| is a |Bool|-semimodule.
 The necessary homomorphism property:
 \begin{code}
@@ -802,20 +802,22 @@ If we apply the same sort of reasoning as in \secref{Calculating Instances from 
 \begin{code}
 instance (Semiring b, Monoid a) => Semiring (b <-- a) where
   one = F (mempty +-> one)
-  F f * F g = F (\ w -> bigSumQ (u,v BR u <> v == w) f u <.> g v)
+  F f * F g  = F (\ w -> bigSumQ (u,v BR u <> v == w) f u <.> g v)
+             = bigSum (u,v) u <> v +-> f u <.> g v
 
 instance (Semiring b, Monoid a)  => StarSemiring (b <-- a)  -- default |star|
 \end{code}
+The |b <-- a| type is known as ``the monoid semiring'', and its |(*)| operation as ``convolution'' \citep{golan2013semirings,wilding2015linear}.
+
 \begin{theorem}[\provedIn{theorem:Semiring (b <-- a)}]\thmlabel{Semiring (b <-- a)}
 Given the derived and explicitly defined instances for |b <-- a| above, |recogLang| is a homomorphism with respect to each instantiated class.
 \end{theorem}
-This instance is known as ``the monoid semiring'', and its |(*)| operation as ``convolution'' \citep{golan2013semirings,wilding2015linear}.
 
 %% %format splits = split
 For some monoids, we can also express the product operation in a more clearly computable form via \emph{splittings}:
-%format bigOrSplits (lim) = "\bigOp\bigvee{" lim "}{2.5}"
+%format bigSumSplits (lim) = "\bigOp\sum{" lim "}{2.5}"
 \begin{code}
-  Pred f <.> Pred g = Pred (\ w -> bigOrSplits ((u,v) <# splits w) f u && g v)
+  F f <.> F g = F (\ w -> bigSumSplits ((u,v) <# splits w) f u * g v)
 \end{code}
 where |splits w| yields all pairs |(u,v)| such that |u <> v == w|:
 % \notefoot{Maybe generalize from \emph{lists} of pairs to an associated |Foldable|.}
@@ -839,6 +841,14 @@ instance Splittable [a] where
 %% *   Regular expressions
 %% *   Monoid semirings and convolution
 
+\sectionl{What's to come}
+
+\begin{itemize}
+\item Finite maps, either as a running example or in its own section.
+One version like |a -> b| and another like |b <-- a|.
+\end{itemize}
+
+
 \appendix
 
 \sectionl{Proofs}
@@ -847,10 +857,10 @@ instance Splittable [a] where
 
 \begin{code}
     bigSum a a +-> f a
-==  bigSum a F (\ a' -> if a' == a then f a else zero)  -- |(+->)| on |a -> b|
-==  F (\ a' -> bigSum a if a' == a then f a else zero)  -- |(<+>)| on |a -> b|
-==  F (\ a' -> f a')                                    -- summation property
-==  F f                                                 -- $\eta$ reduction
+==  bigSum a (\ a' -> if a' == a then f a else zero)  -- |(+->)| on |a -> b|
+==  \ a' -> bigSum a if a' == a then f a else zero    -- |(<+>)| on |a -> b|
+==  \ a' -> f a'                                      -- other addends vanish
+==  f                                                 -- $\eta$ reduction
 \end{code}
 
 \subsection{\thmref{Semiring (b <-- a)}}\proofLabel{theorem:Semiring (b <-- a)}
@@ -905,6 +915,10 @@ Simplify, and generalize the domain |b| from |Bool| to an arbitrary semiring:
 ==  F (\ w -> w <# set (u <> v # f u && g v))                        -- |setPred| definition
 ==  F (\ w -> bigOrQ (u,v BR u <> v == w) f u && g v)                -- property of sets
 ==  F (\ w -> bigSumQ (u,v BR u <> v == w) f u * g v)                -- generalize |(||||)|/|(&&)| to |(+)|/|(*)|
+==  F (\ w -> bigSum (u,v) if u <> v == w then f u * g v else zero)  -- summation property
+==  F (bigSum (u,v) u <> v +-> f u * g v)                            -- |(+->)| on |a -> b|
+==  bigSum (u,v) F (u <> v +-> f u * g v)                            -- |(+)| on |b <-- a| (derived)
+==  bigSum (u,v) u <> v +-> f u * g v                                -- |(+->)| on |b <-- a| (derived)
 \end{code}
 
 \item For |StarSemiring| the default recursive definition embodies the star semiring law.
@@ -918,6 +932,7 @@ Simplify, and generalize the domain |b| from |Bool| to an arbitrary semiring:
 
 Misc notes:
 
+*   Finite maps, either as a running example or in its own section..
 *   Homomorphisms:
     *   Definitions
     *   Examples:

@@ -792,14 +792,8 @@ To cement our analogy, let's require that |recogLang| (and hence |langRecog|) be
 If we apply the same sort of reasoning as in \secref{Calculating Instances from Homomorphisms} and then generalize from |Bool| to an arbitrary semiring, we get the following definitions:
 \begin{code}
 instance (Semiring b, Monoid a) => Semiring (b <-- a) where
-  one = F (equal mempty)
+  one = F (mempty +-> one)
   F f * F g = F (\ w -> bigSumQ (u,v BR u <> v == w) f u <.> g v)
-
-equal :: (Eq a, Semiring b) => a -> a -> b
-equal a = equal' a one
-
-equal' :: (Eq a, Additive b) => a -> b -> a -> b
-equal' a b a' = if a == a' then b else zero
 
 instance (Semiring b, Monoid a)  => StarSemiring (b <-- a)  -- default |star|
 \end{code}
@@ -861,7 +855,7 @@ Simplify, and generalize the domain |b| from |Bool| to an arbitrary semiring:
 ==  F (setPred (set mempty))                                         -- |langRecog| definition
 ==  F (\ w -> w <# set mempty)                                       -- |pred| definition
 ==  F (\ w -> w == mempty)                                           -- property of sets
-==  F (equal mempty)                                                 -- generalize |False|/|True| to |zero|/|one|
+==  F (mempty +-> one)                                               -- generalize |False|/|True| to |zero|/|one|
     
     langRecog (recogLang (F f) * recogLang (F g))
 ==  langRecog (L (predSet f) * L (predSet g))                        -- |recogLang| definition (twice)

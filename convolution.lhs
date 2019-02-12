@@ -524,6 +524,33 @@ instance LeftSemimodule s (a -> s) where
 \end{code}
 If we think of |a -> s| as a ``vector'' of |s| values, indexed by |a|, then |s .> f| scales each component of the vector |f| by |s|.
 
+\subsectionl{Singletons}
+
+We now have a fair amount of vocabulary for combining values.
+We'll also want an operation that takes constructs a function that is non-zero at only one domain value:
+%format +-> = "\mapsto"
+\begin{code}
+infix 1 +->
+class HasSingle a b x | x -> a b where
+  (+->) :: a -> b -> x
+\end{code}
+Two specializations of |a +-> b| will come in handy: one for |a = mempty|, and one for |b = one|.
+\begin{code}
+single :: (HasSingle a b x, Semiring b) => a -> x
+single a = a +-> one
+
+value :: (HasSingle a b x, Monoid a) => b -> x
+value b = mempty +-> b
+\end{code}
+As first examples, we have sets and functions:
+\begin{code}
+instance HasSingle a Bool (P a) where
+  a +-> b = if b then set a else emptyset
+
+instance (Eq a, Additive b) => HasSingle a b (a -> b) where
+  a +-> b = \ a' -> if a == a' then b else zero
+\end{code}
+
 \sectionl{Calculating Instances from Homomorphisms}
 
 In \secref{Monoids, Semirings and Semimodules}, we met the |Additive| instance for sets, along with the |Additive|, |Semiring|, and |LeftSemimodule| instances for functions.
@@ -717,7 +744,7 @@ We could decide that we have the wrong |Semiring| instance for sets, which would
 The existing |Semiring| instance for sets is useful, however, and is compelling in its relationship to functions and |Bool|.
 Moreover, the concatenation-based semiring only applies to sets of values from a monoid, while the existing instance applies to sets of all types.
 Instead of replacing our |Semiring (P a)| instance, let's add a new one.
-Doing so requires a new type that shares essentially the same |Additive| and |LeftSemimodule| instances:\footnote{The ``|deriving (Additive, LeftSemimodule)|'' clause \needcite{}, of which we'll make similar use later in the paper, means that the |newtype| constructor/isomorphism is a homomorphism for the derived classes (|Additive| and |LeftSemimodule|) and so is equivalent to the following instance definitions:
+Doing so requires a new type that shares essentially the same |Additive| and |LeftSemimodule| instances:\footnote{The ``|deriving|'' clause \needcite{}, of which we'll make similar use later in the paper, means that the |newtype| constructor/isomorphism is a homomorphism for the derived classes (|Additive|, |LeftSemimodule|, and |HasSingle|) and so is equivalent to the following instance definitions:
 \begin{code}
 instance Additive (Language a) where
   zero = L zero
@@ -725,10 +752,13 @@ instance Additive (Language a) where
 
 instance LeftSemimodule Bool (Language a) where
   s .> L p = L (s .> p)
+
+instance HasSingle Bool (Language a) where
+  a +-> b = L (a +-> b)
 \end{code}
 }
 \begin{code}
-type Language a = L (P a) deriving (Additive, LeftSemimodule)
+type Language a = L (P a) deriving (Additive, LeftSemimodule, HasSingle)
 
 instance Monoid a => Semiring (Language a) where
   one = L (set mempty)
@@ -745,7 +775,7 @@ Let's not give up yet, however.
 Perhaps there's a variation of the |a -> b| semiring that specializes with |b = Bool| to bear the same relationship to |Language a| that |a -> Bool| bears to |P a|.
 For reasons to become clear later, let's call this |a -> b| variation ``|b <-- a|'':
 \begin{code}
-newtype b <-- a = F (a -> b) deriving (Additive, LeftSemimodule)
+newtype b <-- a = F (a -> b) deriving (Additive, LeftSemimodule, HasSingle)
 \end{code}
 The least imaginative thing we can try is to exactly mirror the |setPred|/|predSet| isomorphism:
 %format recogLang = lang
@@ -765,19 +795,21 @@ instance (Semiring b, Monoid a) => Semiring (b <-- a) where
   one = F (equal mempty)
   F f * F g = F (\ w -> bigSumQ (u,v BR u <> v == w) f u <.> g v)
 
-equal :: (Eq a, Semiring s) => a -> a -> s
-equal a a' = if a == a' then one else zero
+equal :: (Eq a, Semiring b) => a -> a -> b
+equal a = equal' a one
+
+equal' :: (Eq a, Additive b) => a -> b -> a -> b
+equal' a b a' = if a == a' then b else zero
 
 instance (Semiring b, Monoid a)  => StarSemiring (b <-- a)  -- default |star|
 \end{code}
 \begin{theorem}[\provedIn{theorem:Semiring (b <-- a)}]\thmlabel{Semiring (b <-- a)}
-Given the derived and explicitly defined instance for |b <-- a| above, |recogLang| is a homomorphism with respect to each instantiated class.
+Given the derived and explicitly defined instances for |b <-- a| above, |recogLang| is a homomorphism with respect to each instantiated class.
 \end{theorem}
+This instance is known as ``the monoid semiring'', and its |(*)| operation as ``convolution'' \citep{golan2013semirings,wilding2015linear}.
+
 
 \workingHere
-
-\note{I might next consider possibilities for sets as a semiring. One tempting possibility is to use ``nondeterministic'' addition and multiplication, but distributivity fails.
-For instance, |(set 3 + set 5) * {0,...,10}| vs |set 3 * {0,...,10} + set 5 * {0,...,10}|, as the latter has many more values than the former.}
 
 %% *   Languages
 %% *   Regular expressions
@@ -792,14 +824,16 @@ For instance, |(set 3 + set 5) * {0,...,10}| vs |set 3 * {0,...,10} + set 5 * {0
 There are three parts to the homomorphism requirements (\defreftwo{star semiring homomorphism}{left semimodule homomorphism}):
 \begin{enumerate}
 
-\item From |Additive| and |LeftSemimodule|:
+\item From |Additive|, |LeftSemimodule|, and |HasSingle|:
 \begin{code}
 recogLang zero == zero
 recogLang (p + q) == recogLang p + recogLang q
 
 recogLang (s .> p) == s .> recogLang p
+
+recogLang (a +-> b) == a +-> b
 \end{code}
-These three equations hold due to the |deriving (Additive, LeftSemimodule)| clause in the |Language| definition above.
+These three equations hold due to the |deriving| clause in the |Language| definition above.
 For instance,
 \begin{code}
     recogLang (F f + F g)
@@ -839,7 +873,8 @@ Simplify, and generalize the domain |b| from |Bool| to an arbitrary semiring:
 ==  F (\ w -> bigSumQ (u,v BR u <> v == w) f u * g v)                -- generalize |(||||)|/|(&&)| to |(+)|/|(*)|
 \end{code}
 
-\item For |StarSemiring| we can use the default recursive definition.
+\item For |StarSemiring| the default recursive definition embodies the star semiring law.
+\note{Hm. Assuming not bottom?}
 
 \end{enumerate}
 
@@ -847,23 +882,8 @@ Simplify, and generalize the domain |b| from |Bool| to an arbitrary semiring:
 
 \end{document}
 
-*   Monoids, semirings and semimodules (with examples, interface, and laws):
-    *   Monoids: lists, endomorphisms (Cayley)
-    *   Commutative ("additive") monoids: natural numbers with addition (no negation), sets, functions.
-    *   Semirings:
-        *   Numbers
-        *   Booleans
-        *   Functions
-        *   Square matrices (linear endomorphisms)
-    *   Star semirings: sets, booleans, functions; affine fixed points
-    *   Semimodules:
-        *   Generalization/relaxation of vector spaces.
-        *   Sets, multisets, fuzzy sets
-        *   Free semimodules: isomorphic to functions from any type to any semiring
-    *   Semimodules as semirings:
-        *   Languages
-        *   Regular expressions
-        *   Monoid semirings and convolution
+Misc notes:
+
 *   Homomorphisms:
     *   Definitions
     *   Examples:
@@ -892,3 +912,7 @@ Simplify, and generalize the domain |b| from |Bool| to an arbitrary semiring:
     *   Convolution is a special case of the free semimodule applicative/monad.
     *   Since `[()] =~ N`, the technique specializes to 1D discrete convolution.
         We can increase the dimension for the general and special case via currying, which also corresponds to tries over higher-D indices.
+
+
+\note{I might next consider possibilities for sets as a semiring. One tempting possibility is to use ``nondeterministic'' addition and multiplication, but distributivity fails.
+For instance, |(set 3 + set 5) * {0,...,10}| vs |set 3 * {0,...,10} + set 5 * {0,...,10}|, as the latter has many more values than the former.}

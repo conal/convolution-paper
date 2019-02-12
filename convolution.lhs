@@ -126,7 +126,7 @@ All of the algorithms in the paper follow from very simple specifications in the
 %% %format one = "\mathbf{1}"
 
 %% experiment
-%format * = "\times"
+%% %format * = "\times"
 
 %format `elem` = "\mathbin{`\Varid{elem}`}"
 %format <# = "\mathop{\in}"
@@ -802,6 +802,27 @@ Given the derived and explicitly defined instances for |b <-- a| above, |recogLa
 \end{theorem}
 This instance is known as ``the monoid semiring'', and its |(*)| operation as ``convolution'' \citep{golan2013semirings,wilding2015linear}.
 
+%% %format splits = split
+For some monoids, we can also express the product operation in a more clearly computable form via \emph{splittings}:
+%format bigOrSplits (lim) = "\bigOp\bigvee{" lim "}{2.5}"
+\begin{code}
+  Pred f <.> Pred g = Pred (\ w -> bigOrSplits ((u,v) <# splits w) f u && g v)
+\end{code}
+where |splits w| yields all pairs |(u,v)| such that |u <> v == w|:
+% \notefoot{Maybe generalize from \emph{lists} of pairs to an associated |Foldable|.}
+\begin{code}
+class Monoid t => Splittable t where
+  splits   :: t -> [(t,t)]  -- multi-valued inverse of |mappend|
+\end{code}
+Examples of splittable monoids include natural numbers and lists:
+\begin{code}
+instance Splittable N where
+  splits n = [(i, n-i) | i <- [0 .. n]]
+
+instance Splittable [a] where
+  splits []      = [([],[])]
+  splits (a:as)  = ([],a:as) : [((a:l),r) | (l,r) <- splits as]
+\end{code}
 
 \workingHere
 

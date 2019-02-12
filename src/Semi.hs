@@ -176,6 +176,8 @@ product = getProduct . foldMap Product
 
 type N = Sum Natural
 
+type Z = Sum Integer
+
 {--------------------------------------------------------------------
     Indexing with zero default
 --------------------------------------------------------------------}

@@ -532,6 +532,7 @@ We'll also want an operation that takes constructs a function that is non-zero a
 \begin{code}
 infix 1 +->
 class HasSingle a b x | x -> a b where
+  infixr 1 +->
   (+->) :: a -> b -> x
 \end{code}
 Two specializations of |a +-> b| will come in handy: one for |a = mempty|, and one for |b = one|.
@@ -835,9 +836,22 @@ instance Splittable [a] where
   splits (a:as)  = ([],a:as) : [((a:l),r) | (l,r) <- splits as]
 \end{code}
 
+\sectionl{Finite maps}
+
+\note{
+\begin{itemize}
+\item One version homomorphic to |a -> b|, and one to |b <-- a|.
+      Use analogous notation with oppositely pointing arrows of some sort.
+      I might want yet another pair for generalized tries.
+\item Introduce and use |Indexable|.
+\end{itemize}
+}
+
 \sectionl{Tries}
 
-We now implementations of language recognition and its generalization to the monoid semiring |b <-- a|, packaged as instances of a few common algebraic abstractions (|Additive| etc).
+\note{Rewrite the next paragraph after introducing finite maps.}
+
+We now have implementations of language recognition and its generalization to the monoid semiring |b <-- a|, packaged as instances of a few common algebraic abstractions (|Additive| etc).
 While simple and correct, these implementations are quite inefficient, primarily due to naive backtracking.
 As a simple example, consider the language |single "pickles" + single "pickled"|, and suppose we want to test the word ``pickling'' for membership.
 The simple implementations above will first try ``pickles'', fail near the end, and then backtrack all the way to the beginning to try ``pickled''.
@@ -852,17 +866,7 @@ Restricting our attention to functions of lists (``strings'' over some alphabet)
 infix 1 :<
 data LTrie c b = b :< Map c (LTrie c b)
 \end{code}
-A (list) trie denotes a function as follows:
-\notefoot{Define |mapAt| earlier in a section on finite maps as a representation of functions. Alternatively, use |Indexable|.}
-\begin{code}
-trieAt :: (Ord c, Additive b) => LTrie c b -> ([c] -> b)
-trieAt (b :< dp) w = case w of { [] -> b ; c:cs -> trieAt (dp ! c) cs }
-\end{code}
-%% trieAt (b  :< _   ) []      = b
-%% trieAt (_  :< dp  ) (c:cs)  = trieAt (dp `mapAt` c) cs
-%%
-%% trieAt (b :< dp) = \ case {NOP [] -> b NOP ; NOP c:cs -> trieAt (mapAt dp c) cs NOP}
-This denotation prescribes several |LTrie| instances:
+As with finite maps, tries will denote functions via an |Indexable| instance, thus prescribing several |LTrie| instances:
 \begin{theorem}[\provedIn{theorem:Trie}]\thmlabel{Trie}
 Given the definitions in \figrefdef{Trie}{Tries as a language representation}{
 %format OD c s = (Ord SPC c, DetectableZero SPC s)
@@ -884,38 +888,16 @@ instance (Ord c, Additive b) => Additive (LTrie c b) where
 instance (Ord c, Semiring b) => LeftSemimodule b (LTrie c b) where scale s = fmap (s <.>)
 
 instance (Ord c, Additive b) => HasSingle [c] b (LTrie c b) where
-  w +-> b = foldr cons nil w
-   where
-     nil = b :< zero
-     cons c x = zero :< (c +-> x)
+  w +-> b = foldr (\ c t -> zero :< (c +-> t)) (b :< zero) w
 \end{code}
 \vspace{-4ex}
-}, |trieFun| is a homomorphism with respect to each instantiated class.
+}, |(!)| is a homomorphism with respect to each instantiated class.
 \notefoot{I think we could exploit a |Semiring b => Semiring (Map c b)| instance and so replace |unionWith (<+>)| by |(<+>)| and |empty| by |zero| here.
 Similarly for |single w|.
 Wait until I factor out an |Additive| superclass.
 % I might want to use \emph{total maps} \citep{Elliott-2009-tcm}, especially in \secref{Beyond Convolution}.
 Going further, I think I can write one body of code that works exactly as is for both |b <-- [c]| and |Trie b c|, by making |(<:)| be an associated pattern synonym and defining a general |atEps| and |deriv| in terms of it. Try it!}
 \end{theorem}
-
-\begin{code}
-
-    trieAt (a :< dp) + trieAt (b :< dq)
-==  \ w -> trieAt (a :< dp) w + trieAt (b :< dq) w
-==  ...
-==  \ w -> case { [] -> a + b ; c:cs -> trieAt (dp ! c) cs + trieAt (dq ! c) cs }
-
-    trieAt (dp ! c) cs + trieAt (dq ! c) cs
-==  (trieAt (dp ! c) + trieAt (dq ! c)) cs
-==  (trieAt ((dp ! c) + (dq ! c))) cs
-==  trieAt ((dp + dq) ! c) cs
-
-    ...
-==  \ w -> case { [] -> a + b ; c:cs -> trieAt (dp ! c) cs + trieAt (dq ! c) cs }
-==  \ w -> case { [] -> a + b ; c:cs -> trieAt ((dp + dq) ! c) cs }
-==  trieAt (a + b  :<  dp + dq)
-
-\end{code}
 
 \note{Coinduction?}
 
@@ -946,18 +928,79 @@ Going further, I think I can write one body of code that works exactly as is for
 \sectionl{What's to come}
 
 \begin{itemize}
-\item Decomposing list functions
-\end{itemize}
-
-Other:
-\begin{itemize}
 \item Say just ``semimodule'', and add a remark that I really mean ``left semimodule'' throughout.
   Or start out with ``left'', then make the remark, and then perhaps add an occasional ``(left)''.
 \item Finite maps, either as a running example or in its own section.
 One version like |a -> b| and another like |b <-- a|.
-\item |single| as a monoid homomorphism (targeting the product monoid).
+\item Decomposing list functions
 \end{itemize}
 
+\sectionl{Miscellaneous notes}
+
+\begin{itemize}
+\item |single| as a monoid homomorphism (targeting the product monoid).
+\item
+  Finite maps, either as a running example or in its own section..
+\item
+  Homomorphisms:
+  \begin{itemize}
+  \item
+    Definitions
+  \item
+    Examples:
+    \begin{itemize}
+    \item
+      Natural numbers to booleans
+    \item
+      Lists to sets or to multisets
+    \item
+      Multisets to sets (cf natural numbers to booleans)
+    \item
+      Regular expressions to sets
+    \item
+      Contains \textbar{}mempty\textbar{} (\textbar{}hasEps\textbar{})
+    \end{itemize}
+  \item
+    Homomorphisms as specifications
+  \end{itemize}
+\item
+  Language ``derivatives'':
+  \begin{itemize}
+  \item
+    I'm unsure whether to place this section here.
+    If so, how can I make it flow well?
+  \item
+    Briefly present Brzozowski's method (for recognizing regular languages).
+  \item
+    Context-free languages
+  \end{itemize}
+\item
+  Unsorted:
+  \begin{itemize}
+  \item
+    Relate Brzozowski derivatives to the derivatives of residual functions, as in the notes below.
+  \item
+    Currying and convolution.
+    Is currying a (star) semiring homomorphism?
+  \item
+    I think I want to say and demonstrate that Brzozowski's derivatives are not about regular expressions, grammars, or languages, so much as functions from lists and types that can be interpreted as functions from lists and a decomposition principle for such functions.
+    Application of this principle to tries than to regular expressions is more natural and yields a more efficient implementation.
+  \item
+    The trie perspective naturally leads to generalizing from lists to arbitrary (regular?) algebraic data types.
+    I'm less confident about this generalization claim, since I think we need a suitable monoid.
+    I think there's an underlying generic monad that specializes to lists and other algebraic data types, with monadic bind specializing to \textbar{}mappend\textbar{}.
+    On the other hand, with multiple substitution sites, inverting \textbar{}mappend\textbar{} seems tricky.
+    Does it give a useful form of constrained or context-sensitive grammars?
+  \item
+    Convolution is a special case of the free semimodule applicative/monad.
+  \item
+    Since |N =~ [()]|, the technique specializes to 1D discrete convolution.
+    We can increase the dimension for the general and special case via currying, which also corresponds to tries over higher-D indices.
+  \end{itemize}
+\end{itemize}
+
+\note{I might next consider possibilities for sets as a semiring. One tempting possibility is to use ``nondeterministic'' addition and multiplication, but distributivity fails.
+For instance, |(set 3 + set 5) * {0,...,10}| vs |set 3 * {0,...,10} + set 5 * {0,...,10}|, as the latter has many more values than the former.}
 
 \appendix
 
@@ -1041,42 +1084,25 @@ Then simplify to the lambda/sum form.}
 
 \subsection{\thmref{Trie}}\proofLabel{theorem:Trie}
 
+\begin{code}
+
+    trieAt (a :< dp) + trieAt (b :< dq)
+==  \ w -> trieAt (a :< dp) w + trieAt (b :< dq) w
+==  ...
+==  \ w -> case { [] -> a + b ; c:cs -> trieAt (dp ! c) cs + trieAt (dq ! c) cs }
+
+    trieAt (dp ! c) cs + trieAt (dq ! c) cs
+==  (trieAt (dp ! c) + trieAt (dq ! c)) cs
+==  (trieAt ((dp ! c) + (dq ! c))) cs
+==  trieAt ((dp + dq) ! c) cs
+
+    ...
+==  \ w -> case { [] -> a + b ; c:cs -> trieAt (dp ! c) cs + trieAt (dq ! c) cs }
+==  \ w -> case { [] -> a + b ; c:cs -> trieAt ((dp + dq) ! c) cs }
+==  trieAt (a + b  :<  dp + dq)
+
+\end{code}
+
 \bibliography{bib}
 
 \end{document}
-
-Misc notes:
-
-*   Finite maps, either as a running example or in its own section..
-*   Homomorphisms:
-    *   Definitions
-    *   Examples:
-        *   Natural numbers to booleans
-        *   Lists to sets or to multisets
-        *   Multisets to sets (cf natural numbers to booleans)
-        *   Regular expressions to sets
-        *   Contains `mempty` (`hasEps`)
-    *   Homomorphisms as specifications
-*   Language "derivatives":
-    *   I'm unsure whether to place this section here.
-        If so, how can I make it flow well?
-    *   Briefly present Brzozowski's method (for recognizing regular languages).
-    *   Context-free languages
-*   Unsorted:
-    *   Relate Brzozowski derivatives to the derivatives of residual functions, as in the notes below.
-    *   Currying and convolution.
-        Is currying a (star) semiring homomorphism?
-    *   I think I want to say and demonstrate that Brzozowski's derivatives are not about regular expressions, grammars, or languages, so much as functions from lists and types that can be interpreted as functions from lists and a decomposition principle for such functions.
-        Application of this principle to tries than to regular expressions is more natural and yields a more efficient implementation.
-    *   The trie perspective naturally leads to generalizing from lists to arbitrary (regular?) algebraic data types.
-        I'm less confident about this generalization claim, since I think we need a suitable monoid.
-        I think there's an underlying generic monad that specializes to lists and other algebraic data types, with monadic bind specializing to `mappend`.
-        On the other hand, with multiple substitution sites, inverting `mappend` seems tricky.
-        Does it give a useful form of constrained or context-sensitive grammars?
-    *   Convolution is a special case of the free semimodule applicative/monad.
-    *   Since `[()] =~ N`, the technique specializes to 1D discrete convolution.
-        We can increase the dimension for the general and special case via currying, which also corresponds to tries over higher-D indices.
-
-
-\note{I might next consider possibilities for sets as a semiring. One tempting possibility is to use ``nondeterministic'' addition and multiplication, but distributivity fails.
-For instance, |(set 3 + set 5) * {0,...,10}| vs |set 3 * {0,...,10} + set 5 * {0,...,10}|, as the latter has many more values than the former.}

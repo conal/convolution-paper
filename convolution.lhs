@@ -785,6 +785,7 @@ Let's not give up yet, however.
 Perhaps there's a variation of the |a -> b| semiring that specializes with |b = Bool| to bear the same relationship to |Language a| that |a -> Bool| bears to |P a|.
 For reasons to become clear later, let's call this |a -> b| variation ``|b <-- a|'':
 \begin{code}
+infixl 0 <--
 newtype b <-- a = F (a -> b) deriving (Additive, LeftSemimodule, HasSingle)
 \end{code}
 The least imaginative thing we can try is to exactly mirror the |setPred|/|predSet| isomorphism:
@@ -838,6 +839,11 @@ instance Splittable [a] where
 
 \sectionl{Finite maps}
 
+\nc\mapSym{{}_{\scriptscriptstyle\mathit{m}}}
+
+%format ->* = "\overset{\mapSym\:}{"->"}"
+%format *<- = "\overset{\:\mapSym}{"<--"}"
+
 One representation of \emph{partial} functions is the type of finite maps, |Map a b| from keys of type |a| to values of type |b|, represented is a key-ordered balanced tree \needcite{}.
 To model \emph{total} functions instead, we can treat unassigned keys as denoting zero.
 Conversely, merging two finite maps can yield a key collision, which can be resolved by addition.
@@ -848,19 +854,22 @@ Because we will encounter more representations of functions, let's use a common 
 class Indexable k v p | p -> k v where
   (!) :: p -> k -> v
 \end{code}
-Given the definitions in \figrefdef{Map}{Finite maps}{
+Given the definitions in \figrefdef{Map}{Finite maps as |a -> b|}{
 \begin{code}
-instance (Ord a, Additive b) => Indexable a b (Map a b) where
+infixr 0 ->*
+type a ->* b = Map a b
+
+instance (Ord a, Additive b) => Indexable a b (a ->* b) where
   m ! k = M.findWithDefault zero k m
 
-instance (Ord a, Additive b) => Additive (Map a b) where
+instance (Ord a, Additive b) => Additive (a ->* b) where
   zero = M.empty
   (<+>) = M.unionWith (<+>)
 
-instance Ord a => LeftSemimodule (Map a b) where
+instance Ord a => LeftSemimodule (a ->* b) where
   s `scale` m = fmap (s NOP <.>) m
 
-instance HasSingle a b (Map a b) where
+instance HasSingle a b (a ->* b) where
   (+->) = M.singleton
 \end{code}
 \vspace{-4ex}
@@ -870,18 +879,22 @@ instance HasSingle a b (Map a b) where
 
 A semantically suitable |p <.> q| could be defined by assigning key |k| to |(p ! k) <.> (q ! k)| for keys defined in \emph{both} |p| and |q| and discarding the rest, which would otherwise multiply to zero.
 On the other hand, a valid |one| for finite maps would have to assign |one| to \emph{every} key, of which there may well be infinitely many.
-We can, however, wrap |Map a b| into a new type that has a |Semiring| instance homomorphic to that of |b <-- a|:
+We can, however, wrap |a ->* b| into a new type that has a |Semiring| instance homomorphic to (and very closely resembling) that of |b <-- a| from \secref{Languages and the monoid semiring}, as shown in \figrefdef{Map'}{Finite maps as |b <-- a|}{
+%format bigSumKeys (lim) = "\bigOp\sum{" lim "}{2}"
 \begin{code}
-newtype Map' a b = M (Map a b) deriving (Additive, HasSingle a b, LeftSemimodule b)
+infixl 0 *<-
+newtype b *<- a = M (a ->* b) deriving (Show, Additive, HasSingle a b, LeftSemimodule b)
 
 -- Homomorphic denotation
 mapFun' :: (Ord a, Additive b) => Map' a b -> (b <-- a)
 mapFun' (M m) = F (m NOP !)
 
-instance (Ord a, Monoid a, Semiring b) => Semiring (Map' a b) where
-  one = M (mempty +-> one)
-  M m <.> M m' = M (M.fromListWith (<+>) [(k <> k', v <.> v') | (k,v) <- M.toList m, (k',v') <- M.toList m'])
+instance (Ord a, Monoid a, Semiring b) => Semiring (b *<- a) where
+  one = single mempty
+  M p <.> M q = bigSumKeys (u <# M.keys p BR v <# M.keys q) u <> v +-> (p!u) <.> (q!v)
 \end{code}
+\vspace{-4ex}
+}
 The finiteness of finite maps also interferes with giving a useful |StarSemiring| instance.
 
 \note{Use analogous notation with oppositely pointing arrows of some sort.

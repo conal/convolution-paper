@@ -61,6 +61,7 @@ library:
     - Stream
     - LTrie
     - RegExp
+    - Map
     # - Set
     # - Fun
     - Examples

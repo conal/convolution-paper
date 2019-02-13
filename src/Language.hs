@@ -4,37 +4,7 @@
 
 module Language where
 
-import Data.Set (Set)
-import qualified Data.Set as S
-import Data.Map (Map)
-import qualified Data.Map as M
-
 import Semi
-
-class HasSingle a b x | x -> a b where
-  infixr 1 +->
-  (+->) :: a -> b -> x
-
-single :: (HasSingle a b x, Semiring b) => a -> x
-single a = a +-> one
-
-value :: (HasSingle a b x, Monoid a) => b -> x
-value b = mempty +-> b
-
--- Suitable?
-instance (Eq a, Additive b) => HasSingle a b (a -> b) where
-  -- (+->) = equal'
-  a +-> b = \ a' -> if a == a' then b else zero
-
-instance HasSingle a Bool [a] where
-  a +-> b = if b then [a] else []
-
-instance HasSingle a Bool (Set a) where
-  a +-> b = if b then S.singleton a else S.empty
-
-instance HasSingle a b (Map a b) where (+->) = M.singleton
-
-deriving instance HasSingle a b z => HasSingle a b (Convo z)
 
 oneBool :: Additive x => (a -> x) -> a -> Bool -> x
 oneBool _ _ False = zero

@@ -48,7 +48,7 @@ class Semiring b => StarSemiring b  where
   {-# INLINE star #-}
   {-# INLINE plus #-}
 
-class (Semiring s, Additive b) => LeftSemimodule s b | b -> s where
+class {- (Semiring s, Additive b) => -} LeftSemimodule s b | b -> s where
   scale :: s -> b -> b
   -- default scale :: (Semiring b, s ~ b) => s -> b -> b  -- experimental
   -- scale = (<.>)
@@ -64,6 +64,33 @@ class (Semiring s, Additive b) => LeftSemimodule s b | b -> s where
 s .> b | isZero s  = zero
        | otherwise = s `scale` b
 {-# INLINE (.>) #-}
+
+{--------------------------------------------------------------------
+    Singletons
+--------------------------------------------------------------------}
+
+class HasSingle a b x | x -> a b where
+  infixr 1 +->
+  (+->) :: a -> b -> x
+
+single :: (HasSingle a b x, Semiring b) => a -> x
+single a = a +-> one
+
+value :: (HasSingle a b x, Monoid a) => b -> x
+value b = mempty +-> b
+
+-- Suitable?
+instance (Eq a, Additive b) => HasSingle a b (a -> b) where
+  -- (+->) = equal'
+  a +-> b = \ a' -> if a == a' then b else zero
+
+instance HasSingle a Bool [a] where
+  a +-> b = if b then [a] else []
+
+instance HasSingle a Bool (Set a) where
+  a +-> b = if b then S.singleton a else S.empty
+
+instance HasSingle a b (Map a b) where (+->) = M.singleton
 
 {--------------------------------------------------------------------
     Instances
@@ -245,7 +272,8 @@ fromBool True  = one
     Convolution-style semiring
 --------------------------------------------------------------------}
 
-newtype Convo z = C z deriving (Show, Additive, DetectableZero)
+newtype Convo z = C z
+  deriving (Show, Additive, DetectableZero, LeftSemimodule b, HasSingle a b)
 
 unC :: Convo z -> z
 unC (C z) = z
@@ -261,7 +289,7 @@ instance (Functor h, Decomposable b h z) => Decomposable b h (Convo z) where
 
 {-# COMPLETE (:<:) :: Convo #-}
 
-deriving instance LeftSemimodule b z => LeftSemimodule b (Convo z)
+-- deriving instance LeftSemimodule b z => LeftSemimodule b (Convo z)
 
 instance ( DetectableZero b, Semiring b, Functor h, Additive (h (Convo z))
          , Additive z, LeftSemimodule b z, Decomposable b h z )

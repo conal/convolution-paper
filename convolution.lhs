@@ -486,8 +486,8 @@ Specifically, |p = b + m * p| has solution |p = star m * b| \citep{Dolan2013FunS
 %% Temporary deception. Later change scale's formatting back to the usual,
 %% and introduce (.>).
 
-%% %format `scale` = .>
-%% %format scale = (`scale`)
+%format `scale` = .>
+%format scale = (`scale`)
 
 As fields are to vector spaces, rings are to modules, and semirings are to \emph{semimodules}.
 For any semiring |s|, a \emph{left |s|-semimodule} is a additive monoid whose values can be multiplied on the left by |s| values, which play the role of ``scalars''.
@@ -835,6 +835,108 @@ instance Splittable [a] where
   splits (a:as)  = ([],a:as) : [((a:l),r) | (l,r) <- splits as]
 \end{code}
 
+\sectionl{Tries}
+
+We now implementations of language recognition and its generalization to the monoid semiring |b <-- a|, packaged as instances of a few common algebraic abstractions (|Additive| etc).
+While simple and correct, these implementations are quite inefficient, primarily due to naive backtracking.
+As a simple example, consider the language |single "pickles" + single "pickled"|, and suppose we want to test the word ``pickling'' for membership.
+The simple implementations above will first try ``pickles'', fail near the end, and then backtrack all the way to the beginning to try ``pickled''.
+The second attempt redundantly discovers that the prefix ``pickl'' is also a prefix of the candidate word.
+
+This problem of redundant comparison is solved elegantly by the classic trie (``prefix tree'') data structure \needcite{}.
+This data structure was later generalized to arbitrary (regular) algebraic data types \needcite{} and then from sets to functions \needcite{}.
+We'll explore the data type generalization later.\notefoot{Add a forward pointer or remove the promise.}
+Restricting our attention to functions of lists (``strings'' over some alphabet), we can formulate a simple trie data type as follows:
+%format :< = "\mathrel{\Varid{:\!\!\triangleleft}}"
+\begin{code}
+infix 1 :<
+data LTrie c b = b :< Map c (LTrie c b)
+\end{code}
+A (list) trie denotes a function as follows:
+\notefoot{Define |mapAt| earlier in a section on finite maps as a representation of functions. Alternatively, use |Indexable|.}
+\begin{code}
+trieAt :: (Ord c, Additive b) => LTrie c b -> ([c] -> b)
+trieAt (b :< dp) w = case w of { [] -> b ; c:cs -> trieAt (dp ! c) cs }
+\end{code}
+%% trieAt (b  :< _   ) []      = b
+%% trieAt (_  :< dp  ) (c:cs)  = trieAt (dp `mapAt` c) cs
+%%
+%% trieAt (b :< dp) = \ case {NOP [] -> b NOP ; NOP c:cs -> trieAt (mapAt dp c) cs NOP}
+This denotation prescribes several |LTrie| instances:
+\begin{theorem}[\provedIn{theorem:Trie}]\thmlabel{Trie}
+Given the definitions in \figrefdef{Trie}{Tries as a language representation}{
+%format OD c s = (Ord SPC c, DetectableZero SPC s)
+%format OD c s = Ord SPC c
+\begin{code}
+infix 1 :<
+data LTrie c b = b :< Map c (LTrie c b)
+
+instance (Ord c, Additive b) => Indexable [c] b (LTrie c b) where
+  (b :< dp) ! w = case w of {NOP [] -> b NOP;NOP c:cs -> dp ! c ! cs NOP}
+
+instance Functor (LTrie c) where
+  fmap f (a :< dp) = f a :< (fmap.fmap) f dp
+
+instance (Ord c, Additive b) => Additive (LTrie c b) where
+  zero = zero :< zero
+  (a :< dp) <+> (b :< dq) = a <+> b  :<  dp <+> dq
+
+instance (Ord c, Semiring b) => LeftSemimodule b (LTrie c b) where scale s = fmap (s <.>)
+
+instance (Ord c, Additive b) => HasSingle [c] b (LTrie c b) where
+  w +-> b = foldr cons nil w
+   where
+     nil = b :< zero
+     cons c x = zero :< (c +-> x)
+\end{code}
+\vspace{-4ex}
+}, |trieFun| is a homomorphism with respect to each instantiated class.
+\notefoot{I think we could exploit a |Semiring b => Semiring (Map c b)| instance and so replace |unionWith (<+>)| by |(<+>)| and |empty| by |zero| here.
+Similarly for |single w|.
+Wait until I factor out an |Additive| superclass.
+% I might want to use \emph{total maps} \citep{Elliott-2009-tcm}, especially in \secref{Beyond Convolution}.
+Going further, I think I can write one body of code that works exactly as is for both |b <-- [c]| and |Trie b c|, by making |(<:)| be an associated pattern synonym and defining a general |atEps| and |deriv| in terms of it. Try it!}
+\end{theorem}
+
+\begin{code}
+
+    trieAt (a :< dp) + trieAt (b :< dq)
+==  \ w -> trieAt (a :< dp) w + trieAt (b :< dq) w
+==  ...
+==  \ w -> case { [] -> a + b ; c:cs -> trieAt (dp ! c) cs + trieAt (dq ! c) cs }
+
+    trieAt (dp ! c) cs + trieAt (dq ! c) cs
+==  (trieAt (dp ! c) + trieAt (dq ! c)) cs
+==  (trieAt ((dp ! c) + (dq ! c))) cs
+==  trieAt ((dp + dq) ! c) cs
+
+    ...
+==  \ w -> case { [] -> a + b ; c:cs -> trieAt (dp ! c) cs + trieAt (dq ! c) cs }
+==  \ w -> case { [] -> a + b ; c:cs -> trieAt ((dp + dq) ! c) cs }
+==  trieAt (a + b  :<  dp + dq)
+
+\end{code}
+
+\note{Coinduction?}
+
+%if False
+
+*   I could first do regular functions with *Additive*, *HasSingle*, and *LeftSemimodule*.
+    The calculations are much simpler than for *Semiring* and *StarSemiring*.
+*   Motivate decomposition by examining inefficiency in the simple implementation of addition and singletons for predicates and general functions.
+    *   Example: `single "pink" + single "pig"` or `single "pickles" + single "pickled"`.
+        Given the word "pickled", the simple implementation first tries "pickles", fails near the end, and starts over on "pickled" before succeeding.
+        Similarly for "picket", which fails both branches.
+    *   The problem here is the backtracking search understands nothing of the similarities of the words in the language.
+        This problem is solved elegantly by the classic trie (aka "prefix tree") data structure.
+        Define the trie type and the isomorphism between tries and functions.
+        Then calculate as usual.
+        Similarly for the *Semiring* and *Semimodules*.
+        (Work with functions, since the specialization to sets is mechanical.)
+    *   Then do the monoid semiring, which is trickier but quite useful.
+
+%endif
+
 \workingHere
 
 %% *   Languages
@@ -936,6 +1038,8 @@ Then simplify to the lambda/sum form.}
 \note{Hm. Assuming not bottom?}
 
 \end{enumerate}
+
+\subsection{\thmref{Trie}}\proofLabel{theorem:Trie}
 
 \bibliography{bib}
 

@@ -839,10 +839,16 @@ instance Splittable [a] where
 
 \sectionl{Finite maps}
 
+%% I'd like to 
+%if False
+\nc\mapSym{{}^{\scriptscriptstyle m}}
+%format ->* = "\underset{\mapSym\:}{"->"}"
+%format *<- = "\underset{\:\mapSym}{"<--"}"
+%else
 \nc\mapSym{{}_{\scriptscriptstyle\mathit{m}}}
-
 %format ->* = "\overset{\mapSym\:}{"->"}"
 %format *<- = "\overset{\:\mapSym}{"<--"}"
+%endif
 
 One representation of \emph{partial} functions is the type of finite maps, |a ->* b| from keys of type |a| to values of type |b|, represented is a key-ordered balanced tree \needcite{}.
 To model \emph{total} functions instead, we can treat unassigned keys as denoting zero.
@@ -919,7 +925,7 @@ data LTrie c b = b :< (c ->* LTrie c b)
 \end{code}
 As with finite maps, tries will denote functions via an |Indexable| instance, thus prescribing several |LTrie| instances:
 \begin{theorem}[\provedIn{theorem:Trie}]\thmlabel{Trie}
-Given the definitions in \figrefdef{Trie}{Tries as a language representation}{
+Given the definitions in \figrefdef{Trie}{Tries as |[c] -> b|}{
 %format OD c s = (Ord SPC c, DetectableZero SPC s)
 %format OD c s = Ord SPC c
 \begin{code}
@@ -936,7 +942,8 @@ instance (Ord c, Additive b) => Additive (LTrie c b) where
   zero = zero :< zero
   (a :< dp) <+> (b :< dq) = a <+> b  :<  dp <+> dq
 
-instance (Ord c, Semiring b) => LeftSemimodule b (LTrie c b) where scale s = fmap (s <.>)
+instance (Ord c, Semiring b) => LeftSemimodule b (LTrie c b) where
+  s `scale` t = fmap (s NOP <.>) t
 
 instance (Ord c, Additive b) => HasSingle [c] b (LTrie c b) where
   w +-> b = foldr (\ c t -> zero :< (c +-> t)) (b :< zero) w

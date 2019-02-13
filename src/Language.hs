@@ -11,8 +11,8 @@ import qualified Data.Map as M
 
 import Semi
 
-infix 1 +->
 class HasSingle a b x | x -> a b where
+  infixr 1 +->
   (+->) :: a -> b -> x
 
 single :: (HasSingle a b x, Semiring b) => a -> x

@@ -844,7 +844,7 @@ instance Splittable [a] where
 %format ->* = "\overset{\mapSym\:}{"->"}"
 %format *<- = "\overset{\:\mapSym}{"<--"}"
 
-One representation of \emph{partial} functions is the type of finite maps, |Map a b| from keys of type |a| to values of type |b|, represented is a key-ordered balanced tree \needcite{}.
+One representation of \emph{partial} functions is the type of finite maps, |a ->* b| from keys of type |a| to values of type |b|, represented is a key-ordered balanced tree \needcite{}.
 To model \emph{total} functions instead, we can treat unassigned keys as denoting zero.
 Conversely, merging two finite maps can yield a key collision, which can be resolved by addition.
 Both interpretations require |b| to be a semiring.
@@ -852,6 +852,7 @@ Both interpretations require |b| to be a semiring.
 Because we will encounter more representations of functions, let's use a common operation name for ``indexing'', or equivalently for interpreting as a function:
 \begin{code}
 class Indexable k v p | p -> k v where
+  infixl 9 !
   (!) :: p -> k -> v
 \end{code}
 Given the definitions in \figrefdef{Map}{Finite maps as |a -> b|}{
@@ -869,29 +870,28 @@ instance (Ord a, Additive b) => Additive (a ->* b) where
 instance Ord a => LeftSemimodule (a ->* b) where
   s `scale` m = fmap (s NOP <.>) m
 
-instance HasSingle a b (a ->* b) where
-  (+->) = M.singleton
+instance HasSingle a b (a ->* b) where (+->) = M.singleton
 \end{code}
 \vspace{-4ex}
 }, |(!)| is a homomorphism with respect to each instantiated class.%
 \footnote{The ``|M|'' module qualifier indicates names coming from the finite map library.}
 \notefoot{Do I want a theorem and proof here?}
 
-A semantically suitable |p <.> q| could be defined by assigning key |k| to |(p ! k) <.> (q ! k)| for keys defined in \emph{both} |p| and |q| and discarding the rest, which would otherwise multiply to zero.
+A semantically suitable |p <.> q| could be defined by assigning key |k| to |p ! k <.> q ! k| for keys defined in \emph{both} |p| and |q| and discarding the rest, which would otherwise multiply to zero.
 On the other hand, a valid |one| for finite maps would have to assign |one| to \emph{every} key, of which there may well be infinitely many.
-We can, however, wrap |a ->* b| into a new type that has a |Semiring| instance homomorphic to (and very closely resembling) that of |b <-- a| from \secref{Languages and the monoid semiring}, as shown in \figrefdef{Map'}{Finite maps as |b <-- a|}{
+We can, however, wrap |a ->* b| into a new type that has a |Semiring| instance homomorphic to (and very closely resembling) that of |b <-- a| from \secref{Languages and the monoid semiring}, as shown in \figrefdef{*<-}{Finite maps as |b <-- a|}{
 %format bigSumKeys (lim) = "\bigOp\sum{" lim "}{2}"
 \begin{code}
 infixl 0 *<-
 newtype b *<- a = M (a ->* b) deriving (Show, Additive, HasSingle a b, LeftSemimodule b)
 
 -- Homomorphic denotation
-mapFun' :: (Ord a, Additive b) => Map' a b -> (b <-- a)
+mapFun' :: (Ord a, Additive b) => (b *<- a) -> (b <-- a)
 mapFun' (M m) = F (m NOP !)
 
 instance (Ord a, Monoid a, Semiring b) => Semiring (b *<- a) where
   one = single mempty
-  M p <.> M q = bigSumKeys (u <# M.keys p BR v <# M.keys q) u <> v +-> (p!u) <.> (q!v)
+  M p <.> M q = bigSumKeys (u <# M.keys p BR v <# M.keys q) u <> v +-> p!u <.> q!v
 \end{code}
 \vspace{-4ex}
 }
@@ -915,7 +915,7 @@ Restricting our attention to functions of lists (``strings'' over some alphabet)
 %format :< = "\mathrel{\Varid{:\!\!\triangleleft}}"
 \begin{code}
 infix 1 :<
-data LTrie c b = b :< Map c (LTrie c b)
+data LTrie c b = b :< (c ->* LTrie c b)
 \end{code}
 As with finite maps, tries will denote functions via an |Indexable| instance, thus prescribing several |LTrie| instances:
 \begin{theorem}[\provedIn{theorem:Trie}]\thmlabel{Trie}
@@ -924,7 +924,7 @@ Given the definitions in \figrefdef{Trie}{Tries as a language representation}{
 %format OD c s = Ord SPC c
 \begin{code}
 infix 1 :<
-data LTrie c b = b :< Map c (LTrie c b)
+data LTrie c b = b :< (c ->* LTrie c b)
 
 instance (Ord c, Additive b) => Indexable [c] b (LTrie c b) where
   (b :< dp) ! w = case w of {NOP [] -> b NOP;NOP c:cs -> dp ! c ! cs NOP}
@@ -943,11 +943,6 @@ instance (Ord c, Additive b) => HasSingle [c] b (LTrie c b) where
 \end{code}
 \vspace{-4ex}
 }, |(!)| is a homomorphism with respect to each instantiated class.
-\notefoot{I think we could exploit a |Semiring b => Semiring (Map c b)| instance and so replace |unionWith (<+>)| by |(<+>)| and |empty| by |zero| here.
-Similarly for |single w|.
-Wait until I factor out an |Additive| superclass.
-% I might want to use \emph{total maps} \citep{Elliott-2009-tcm}, especially in \secref{Beyond Convolution}.
-Going further, I think I can write one body of code that works exactly as is for both |b <-- [c]| and |Trie b c|, by making |(<:)| be an associated pattern synonym and defining a general |atEps| and |deriv| in terms of it. Try it!}
 \end{theorem}
 
 %if False

@@ -213,6 +213,7 @@ type Z = Sum Integer
 --------------------------------------------------------------------}
 
 class Indexable k v p | p -> k v where
+  infixl 9 !
   (!) :: p -> k -> v
 
 instance Indexable k v (k -> v) where

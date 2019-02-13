@@ -23,7 +23,7 @@ import Examples
 
 -- | List trie, denoting '[c] -> b'"
 infix 1 :<
-data LTrie c b = b :< Map c (LTrie c b) -- deriving Show
+data LTrie c b = b :< (c ->* LTrie c b) -- deriving Show
 
 instance (Show c, Show b) => Show (LTrie c b) where
   showsPrec p (a :< dp) = showParen (p >= 1) $ showsPrec 2 a . showString " :< " . showsPrec 2 (M.toList dp)

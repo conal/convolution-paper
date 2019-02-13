@@ -21,6 +21,7 @@ default-extensions:
   - FlexibleInstances
   - FunctionalDependencies
   - GeneralizedNewtypeDeriving
+  - LambdaCase
   - MultiParamTypeClasses
   - PatternSynonyms
   - StandaloneDeriving

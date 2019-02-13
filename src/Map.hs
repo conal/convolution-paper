@@ -6,6 +6,8 @@
 
 module Map where
 
+import Prelude hiding (sum)
+
 import Data.Map (Map)
 import qualified Data.Map as M
 
@@ -13,19 +15,19 @@ import Semi
 
 -- #include "GenInstances.inc"
 
-newtype Map' a b = M (Map a b)
-  deriving (Show, Additive, HasSingle a b, LeftSemimodule b)
+infixl 0 *<-
+newtype b *<- a = M (a ->* b) deriving (Show, Additive, HasSingle a b, LeftSemimodule b)
 
-mapFun' :: (Ord a, Additive b) => Map' a b -> (b <-- a)
+-- Homomorphic denotation
+mapFun' :: (Ord a, Additive b) => b *<- a -> (b <-- a)
 mapFun' (M m) = C (m !)
 
-instance (Ord a, Monoid a, Semiring b) => Semiring (Map' a b) where
+instance (Ord a, Monoid a, Semiring b) => Semiring (b *<- a) where
   one = M (mempty +-> one)
-  -- M p <.> M q = M (M.fromListWith (<+>)
-  --                  [(kp <> kq, vp <.> vq) | (kp,vp) <- M.toList p, (kq,vq) <- M.toList q])
-  M m <.> M m' =
-    M (M.fromListWith (<+>)
-        [(k <> k', v <.> v') | (k,v) <- M.toList m, (k',v') <- M.toList m'])
+  -- M m <.> M m' =
+  --   sum [k <> k' +-> v <.> v' | (k,v) <- M.toList m, (k',v') <- M.toList m']
+  M p <.> M q = sum [u <> v +-> (p!u) <.> (q!v) | u <- M.keys p, v <- M.keys q]
+
 
 -- >>> x1 = single "a" <+> single "b"  :: Map' String Int
 -- >>> x1 <+> x1

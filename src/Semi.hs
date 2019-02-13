@@ -90,7 +90,10 @@ instance HasSingle a Bool [a] where
 instance HasSingle a Bool (Set a) where
   a +-> b = if b then S.singleton a else S.empty
 
-instance HasSingle a b (Map a b) where (+->) = M.singleton
+infixr 0 ->*
+type a ->* b = Map a b
+
+instance HasSingle a b (a ->* b) where (+->) = M.singleton
 
 {--------------------------------------------------------------------
     Instances
@@ -124,7 +127,7 @@ ApplMono([])
 ApplMono(Set)
 -- etc
 
-instance (Ord a, Additive b) => Additive (Map a b) where
+instance (Ord a, Additive b) => Additive (a ->* b) where
   zero = M.empty
   (<+>) = M.unionWith (<+>)
 
@@ -132,7 +135,7 @@ NullZero(Map a)
 
 FunctorSemimodule(Map a)
 
--- Do I want Semiring (Map a b)? If so, should it agree with a -> b. Oops! We'd
+-- Do I want Semiring (a ->* b)? If so, should it agree with a -> b. Oops! We'd
 -- need one to map all domain values to one. I could do it with a total map, but
 -- I think things then get complicated with different defaults.
 
@@ -307,7 +310,7 @@ deriving instance Indexable k v z => Indexable k v (Convo z)
 #if 1
 
 -- | Convolvable functions
-infixl 1 <--
+infixl 0 <--
 type b <-- a = Convo (a -> b)
 
 -- Hm. I can't give Functor, Applicative, Monad instances for Convo (a -> b)
@@ -339,7 +342,7 @@ instance (Decomposable b h (a -> b), Functor h) => Decomposable b h (b <-- a) wh
 #endif
 
 -- | Convolvable finite maps
-type M' b a = Convo (Map a b)
+type M' b a = Convo (a ->* b)
 
 -- | Convolvable finite sets
 type S' a = Convo (Set a)

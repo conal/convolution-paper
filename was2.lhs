@@ -464,7 +464,7 @@ instance (Monoid a, Ord a, Semiring b) => Semiring (b :<-- a) where
   zero = M empty
   one = single mempty
   M p  <+>  M q = M (unionWith (<+>) p q)
-  M p <.> M q = bigSumKeys (a <# keys p BR b <# keys q) h a b +-> (p!a) <.> (q!b)
+  M p <.> M q = bigSumKeys (a <# keys p BR b <# keys q) a <> b +-> (p!a) <.> (q!b)
 
 instance Semiring b => HasSingle (b :<-- a) a s where
   single a = M (singleton a one)

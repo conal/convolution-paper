@@ -19,7 +19,7 @@ default: $(otarg).pdf
 latex=latexmk -pdf
 latex+= -outdir=${outdir}
 # latex+= -synctex=1
-# latex+= -halt-on-error
+latex+= -halt-on-error
 # # Preview continuously
 # latex+= -pvc
 

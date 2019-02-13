@@ -30,15 +30,40 @@ instance (Show c, Show b) => Show (LTrie c b) where
 
 instance Functor (LTrie c) where
   fmap f = go where go (a :< dp) = f a :< fmap go dp
+  -- fmap f (a :< dp) = f a :< (fmap.fmap) f dp
+  -- fmap f (a :< dp) = f a :< fmap (fmap f) dp
 
 instance FunctorC (LTrie c)
+
+#if 0
+-- For the paper
+trieAt :: (Ord c, Additive b) => LTrie c b -> ([c] -> b)
+-- trieAt (b :< dp) [] = b
+-- trieAt (b :< dp) (c : cs) = trieAt (dp ! c) cs
+
+-- trieAt (b :< dp) = \ case { [] -> b ; c:cs -> trieAt (dp ! c) cs }
+
+-- trieAt (b :< dp) w = case w of { [] -> b ; c:cs -> trieAt (dp ! c) cs }
+
+trieAt (b :< dp) w = case w of { [] -> b ; c:cs -> dp ! c ! cs }
+
+-- trieAt (b :< dp) w = case w of
+--                        [] -> b
+--                        c:w' -> trieAt (dp!c) w'
+
+#endif
 
 -- trieFun :: (Ord c, Additive b) => LTrie c b -> ([c] -> b)
 -- trieFun (a :< dp) = a <: trieFun . (dp !)
 
 instance (Ord c, Additive b) => Indexable [c] b (LTrie c b) where
   -- (!) = trieFun
-  (!) (a :< dp) = a <: (!) . (dp !)
+  -- (!) (a :< dp) = a <: (!) . (dp !)
+
+  (b :< dp) ! w = case w of { [] -> b ; c:cs -> dp ! c ! cs }
+  -- (b :< _ ) ! []     = b
+  -- (_ :< dp) ! (c:cs) = dp ! c ! cs
+
   -- (a :< _ ) ! [] = a
   -- (_ :< dp) ! (c:cs) = (dp ! c) ! cs
 
@@ -46,7 +71,12 @@ instance (Ord c, Additive b) => Additive (LTrie c b) where
   zero = zero :< zero
   (a :< dp) <+> (b :< dq) = a <+> b  :<  dp <+> dq
 
-FunctorSemimodule(LTrie c)
+instance (Ord c, Semiring b) => LeftSemimodule b (LTrie c b) where scale s = fmap (s <.>)
+
+-- FunctorSemimodule(LTrie c)
+
+-- instance (Ord c, Semiring b) => LeftSemimodule b (LTrie c b) where
+--   s `scale` (b :< dp) = s <.> b :< fmap (s `scale`) dp
 
 instance (Ord c, Additive b, DetectableZero b) => DetectableZero (LTrie c b) where
   isZero (a :< dp) = isZero a && isZero dp
@@ -55,12 +85,21 @@ instance (Ord c, Additive b, DetectableZero b) => DetectableZero (LTrie c b) whe
 --   isOne (a :< dp) = isOne a && isZero dp
 
 instance (Ord c, Additive b) => HasSingle [c] b (LTrie c b) where
+#if 0
+  w +-> b = case w of { [] -> b :< zero ; c:cs -> zero :< (c +-> cs +-> b) }
+#elif 0
+  []   +-> b = b :< zero
+  c:cs +-> b = zero :< (c +-> cs +-> b)
+#elif 1
+  w +-> b = foldr (\ c t -> zero :< (c +-> t)) (b :< zero) w
+#else
   w +-> b = foldr cons nil w
    where
-     nil :: LTrie c b
+     -- nil :: LTrie c b
      nil = b :< zero
-     cons :: c -> LTrie c b -> LTrie c b
+     -- cons :: c -> LTrie c b -> LTrie c b
      cons c x = zero :< (c +-> x)
+#endif
 
 -- Is HasSingle even useful on LTrie?
 

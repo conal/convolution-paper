@@ -768,7 +768,7 @@ instance HasSingle Bool (Language a) where
 \end{code}
 }
 \begin{code}
-type Language a = L (P a) deriving (Additive, LeftSemimodule, HasSingle)
+type Language a = L (P a) deriving (Additive, LeftSemimodule Bool, HasSingle a Bool)
 
 instance Monoid a => Semiring (Language a) where
   one = L (set mempty)
@@ -838,20 +838,58 @@ instance Splittable [a] where
 
 \sectionl{Finite maps}
 
-\note{
-\begin{itemize}
-\item One version homomorphic to |a -> b|, and one to |b <-- a|.
-      Use analogous notation with oppositely pointing arrows of some sort.
-      I might want yet another pair for generalized tries.
-\item Introduce and use |Indexable|.
-\end{itemize}
-}
+One representation of \emph{partial} functions is the type of finite maps, |Map a b| from keys of type |a| to values of type |b|, represented is a key-ordered balanced tree \needcite{}.
+To model \emph{total} functions instead, we can treat unassigned keys as denoting zero.
+Conversely, merging two finite maps can yield a key collision, which can be resolved by addition.
+Both interpretations require |b| to be a semiring.
+
+Because we will encounter more representations of functions, let's use a common operation name for ``indexing'', or equivalently for interpreting as a function:
+\begin{code}
+class Indexable k v p | p -> k v where
+  (!) :: p -> k -> v
+\end{code}
+Given the definitions in \figrefdef{Map}{Finite maps}{
+\begin{code}
+instance (Ord a, Additive b) => Indexable a b (Map a b) where
+  m ! k = M.findWithDefault zero k m
+
+instance (Ord a, Additive b) => Additive (Map a b) where
+  zero = M.empty
+  (<+>) = M.unionWith (<+>)
+
+instance Ord a => LeftSemimodule (Map a b) where
+  s `scale` m = fmap (s NOP <.>) m
+
+instance HasSingle a b (Map a b) where
+  (+->) = M.singleton
+\end{code}
+\vspace{-4ex}
+}, |(!)| is a homomorphism with respect to each instantiated class.%
+\footnote{The ``|M|'' module qualifier indicates names coming from the finite map library.}
+\notefoot{Do I want a theorem and proof here?}
+
+A semantically suitable |p <.> q| could be defined by assigning key |k| to |(p ! k) <.> (q ! k)| for keys defined in \emph{both} |p| and |q| and discarding the rest, which would otherwise multiply to zero.
+On the other hand, a valid |one| for finite maps would have to assign |one| to \emph{every} key, of which there may well be infinitely many.
+We can, however, wrap |Map a b| into a new type that has a |Semiring| instance homomorphic to that of |b <-- a|:
+\begin{code}
+newtype Map' a b = M (Map a b) deriving (Additive, HasSingle a b, LeftSemimodule b)
+
+-- Homomorphic denotation
+mapFun' :: (Ord a, Additive b) => Map' a b -> (b <-- a)
+mapFun' (M m) = F (m NOP !)
+
+instance (Ord a, Monoid a, Semiring b) => Semiring (Map' a b) where
+  one = M (mempty +-> one)
+  M m <.> M m' = M (M.fromListWith (<+>) [(k <> k', v <.> v') | (k,v) <- M.toList m, (k',v') <- M.toList m'])
+\end{code}
+The finiteness of finite maps also interferes with giving a useful |StarSemiring| instance.
+
+\note{Use analogous notation with oppositely pointing arrows of some sort.
+I might want yet another pair for generalized tries.}
 
 \sectionl{Tries}
 
-\note{Rewrite the next paragraph after introducing finite maps.}
-
-We now have implementations of language recognition and its generalization to the monoid semiring |b <-- a|, packaged as instances of a few common algebraic abstractions (|Additive| etc).
+\secref{Languages and the monoid semiring} gives an implementation of language recognition and its generalization to the monoid semiring |b <-- a|, packaged as instances of a few common algebraic abstractions (|Additive| etc).
 While simple and correct, these implementations are quite inefficient, primarily due to naive backtracking.
 As a simple example, consider the language |single "pickles" + single "pickled"|, and suppose we want to test the word ``pickling'' for membership.
 The simple implementations above will first try ``pickles'', fail near the end, and then backtrack all the way to the beginning to try ``pickled''.
@@ -899,8 +937,6 @@ Wait until I factor out an |Additive| superclass.
 Going further, I think I can write one body of code that works exactly as is for both |b <-- [c]| and |Trie b c|, by making |(<:)| be an associated pattern synonym and defining a general |atEps| and |deriv| in terms of it. Try it!}
 \end{theorem}
 
-\note{Coinduction?}
-
 %if False
 
 *   I could first do regular functions with *Additive*, *HasSingle*, and *LeftSemimodule*.
@@ -928,19 +964,18 @@ Going further, I think I can write one body of code that works exactly as is for
 \sectionl{What's to come}
 
 \begin{itemize}
-\item Say just ``semimodule'', and add a remark that I really mean ``left semimodule'' throughout.
-  Or start out with ``left'', then make the remark, and then perhaps add an occasional ``(left)''.
-\item Finite maps, either as a running example or in its own section.
-One version like |a -> b| and another like |b <-- a|.
+\item |DetectableZero|
 \item Decomposing list functions
 \end{itemize}
 
 \sectionl{Miscellaneous notes}
 
 \begin{itemize}
+\item Say just ``semimodule'', and add a remark that I really mean ``left semimodule'' throughout.
+  Or start out with ``left'', then make the remark, and then perhaps add an occasional ``(left)''.
+\item Finite maps, either as a running example or in its own section.
+One version like |a -> b| and another like |b <-- a|.
 \item |single| as a monoid homomorphism (targeting the product monoid).
-\item
-  Finite maps, either as a running example or in its own section..
 \item
   Homomorphisms:
   \begin{itemize}
@@ -1082,9 +1117,13 @@ Then simplify to the lambda/sum form.}
 
 \end{enumerate}
 
+%% \subsection{\thmref{Map}}\proofLabel{theorem:Map}
+
 \subsection{\thmref{Trie}}\proofLabel{theorem:Trie}
 
 \begin{code}
+
+\workingHere
 
     trieAt (a :< dp) + trieAt (b :< dq)
 ==  \ w -> trieAt (a :< dp) w + trieAt (b :< dq) w
@@ -1102,6 +1141,8 @@ Then simplify to the lambda/sum form.}
 ==  trieAt (a + b  :<  dp + dq)
 
 \end{code}
+
+\note{Coinduction?}
 
 \bibliography{bib}
 

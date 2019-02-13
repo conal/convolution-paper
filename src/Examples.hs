@@ -7,7 +7,6 @@
 module Examples where
 
 import Semi
-import Language
 
 sa, sb, pink, pig :: (HasSingle String b x, Semiring b) => x
 sa   = single "a"

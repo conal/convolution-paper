@@ -489,9 +489,6 @@ Specifically, |p = b + m * p| has solution |p = star m * b| \citep{Dolan2013FunS
 %% Temporary deception. Later change scale's formatting back to the usual,
 %% and introduce (.>).
 
-%format `scale` = .>
-%format scale = (`scale`)
-
 As fields are to vector spaces, rings are to modules, and semirings are to \emph{semimodules}.
 For any semiring |s|, a \emph{left |s|-semimodule} is a additive monoid whose values can be multiplied on the left by |s| values, which play the role of ``scalars''.
 \begin{code}
@@ -526,6 +523,22 @@ instance LeftSemimodule s (a -> s) where
   s .> f = \ a -> s * f a
 \end{code}
 If we think of |a -> s| as a ``vector'' of |s| values, indexed by |a|, then |s .> f| scales each component of the vector |f| by |s|.
+
+There's a very important optimization to be made for scaling.
+When |s == zero|, |s .> p == zero|, so we can discard |p| entirely.
+Rather than burden each |LeftSemimodule| instance with this optimization, let's define |(.>)| to apply this optimization on top of a more primitive |scale| method:
+\begin{code}
+class (Semiring s, Additive b) => LeftSemimodule s b | b -> s where
+  scale :: s -> b -> b
+
+(.>) :: (Semiring b, Scalable b s, DetectableZero s) => s -> b -> b
+s .> b  | isZero s   = zero
+        | otherwise  = s `scale` b
+\end{code}
+The |DetectableZero| class \citep{semiring-num}:
+\begin{code}
+class Semiring a => DetectableZero a where isZero :: a -> Bool
+\end{code}
 
 \subsectionl{Singletons}
 
@@ -699,7 +712,7 @@ Equivalently,
 Next consider a |LeftSemimodule| instance for sets.
 We might be tempted to define |s .> p| to multiply |s| by each value in |p|, i.e.,
 \begin{code}
-instance LeftSemimodule s (Pow s) where s .> p = set (s * t | t <# p)    -- \emph{wrong}
+instance LeftSemimodule s (Pow s) where s `scale` p = set (s * t | t <# p)    -- \emph{wrong}
 \end{code}
 This definition, however, would violate the semimodule law that |zero .> p == zero|, since |zero .> p| would be |set zero|, but |zero| for sets is |emptyset|.
 Both semimodule distributive laws fail as well.
@@ -725,7 +738,7 @@ Equivalently,
 Summarizing,
 \begin{code}
 instance LeftSemimodule Bool (Pow a) where
-  s .> p = if s then p else zero
+  s `scale` p = if s then p else zero
 \end{code}
 While perhaps obscure at first, this alternative will prove useful later on.
 
@@ -764,7 +777,7 @@ instance Additive (Language a) where
   L p + L q = L (p + q)
 
 instance LeftSemimodule Bool (Language a) where
-  s .> L p = L (s .> p)
+  s `scale` L p = L (s .> p)
 
 instance HasSingle Bool (Language a) where
   a +-> b = L (a +-> b)
@@ -790,7 +803,7 @@ For reasons to become clear later, let's call this |a -> b| variation ``|b <-- a
 \notefoot{Introduce |Indexable| sooner, and add to the |deriving| list.}
 \begin{code}
 infixl 0 <--
-newtype b <-- a = F (a -> b) deriving (Additive, LeftSemimodule, HasSingle)
+newtype b <-- a = F (a -> b) deriving (Additive, HasSingle a b, LeftSemimodule b, Indexable a b)
 \end{code}
 The least imaginative thing we can try is to exactly mirror the |setPred|/|predSet| isomorphism:
 %format recogLang = lang
@@ -880,6 +893,8 @@ instance (Ord a, Additive b) => Additive (a ->* b) where
 instance Ord a => LeftSemimodule (a ->* b) where
   s `scale` m = fmap (s NOP <.>) m
 
+instance (Ord a, Additive b) => DetectableZero (a ->* b) where isZero = M.null
+
 instance HasSingle a b (a ->* b) where (+->) = M.singleton
 \end{code}
 \vspace{-4ex}
@@ -906,9 +921,6 @@ instance (Ord a, Monoid a, Semiring b) => Semiring (b *<- a) where
 \vspace{-4ex}
 }
 The finiteness of finite maps also interferes with giving a useful |StarSemiring| instance.
-
-\note{Use analogous notation with oppositely pointing arrows of some sort.
-I might want yet another pair for generalized tries.}
 
 \sectionl{Decomposing Functions from Lists}
 
@@ -950,50 +962,9 @@ b <: h = F (\ NOP case {NOP [] -> b NOP;NOP c:cs  -> unF (h c) cs NOP})
 Considering the isomorphism |Pow [c] =~ Bool <-- [c]|, this decomposition generalizes the |delta| and |deriv| operations used by \citet{Brzozowski64} mapping languages to languages (as sets of strings), the latter of which he referred to as the ``derivative''.\footnote{Brzozowski wrote ``$\derivOp_c\,p$'' instead of ``|deriv p c|'', but the latter will prove more convenient below.}
 
 Understanding how |atEps| and |deriv| relate to the semiring vocabulary will help us develop an efficient implementation in \secref{Tries}.
-%if False
-First, however, we'll need to generalize to representations other than |b <-- a|:
-\begin{code}
-class Decomposable a h s | a -> h s where
-  infix 1 <:
-  (<:)   :: s -> h a -> a
-  atEps  :: a -> s
-  deriv  :: a -> h a
-
-instance Semiring b => Decomposable ([c] -> b) ((->) c) b where
-  (b <: _) []      = b
-  (_ <: h) (c:cs)  = h c cs
-  atEps  f = f []
-  deriv  f = \ c cs -> f (c : cs)
-\end{code}
-We'll need a way to index into |h|:
-\notefoot{Perhaps introduce |Indexable| earlier and use in defining |mapTo| in \figref{:<--}.}
-\begin{code}
-class Indexable p k v | p -> k v  where (!) :: p -> k -> v
-
-instance Indexable (k -> v) k v   where f ! k = f k
-
-instance (Ord k, Semiring v) => Indexable (Map k v) k v where
-  m ! k = findWithDefault zero k m
-\end{code}
-
-\noindent
-Now adapt the |[c] -> b| instance of |Decomposable| to |b <-- [c]|:
-\begin{code}
-instance Semiring b => Decomposable (b <-- [c]) ((->) c) b where
-  b <: h = F (b <: unF . h)
-  atEps  (F f) = f mempty
-  deriv  (F f) = \ c -> F (\ cs -> f (c:cs))
-\end{code}
-%% \begin{code}
-%%   b <: h = F (\ NOP case  []    -> b
-%%                           c:cs  -> unF (h c) cs)
-%% \end{code}
-
-%endif
 
 \begin{lemma}[\provedIn{lemma:atEps b <-- [c]}]\lemlabel{atEps b <-- [c]}
-The |atEps| function is a star semiring homomorphism, i.e.,
-\notefoot{Also a semimodule homomorphism, i.e., ``linear''. I may want to say so here if I reorganize the paper so as to introduce semimodules sooner.}
+The |atEps| function is a star semiring and left semimodule homomorphism, i.e.,
 \begin{code}
 atEps zero         == zero
 atEps one          == one
@@ -1001,10 +972,8 @@ atEps (p  <+>  q)  == atEps p  <+>  atEps q
 atEps (p  <.>  q)  == atEps p  <.>  atEps q 
 
 atEps (star p)     == star (atEps p)
-
-atEps (s .> p)     == s * atEps p
 \end{code}
-Moreover, |atEps (single [d]) == zero|.
+Moreover, |atEps (s .> p) == s * atEps p|, and |atEps (single [d]) == zero|.\footnote{Mathematically, |atEps| is thus a semiring homomorphism as well, since every semiring is a (left and right) semimodule over itself. Declaring them as such in the Haskell implementation, however, would lead to ambiguity during type inference.}
 \end{lemma}
 \begin{lemma}[\provedIn{lemma:deriv b <-- [c]}, generalizing Lemma 3.1 of \citet{Brzozowski64}]\lemlabel{deriv b <-- [c]}
 Differentiation has the following properties:
@@ -1040,6 +1009,14 @@ s .> (a <: dp) = s <.> a <: (s NOP .>) . dp
 \end{spacing}
 \end{theorem}
 
+\workingHere
+
+\note{Introduce decomposition first on |[c] -> b|, skipping |Semiring| and |StarSemiring|.
+Then note that we'll want to generalize the decomposition, so define the |Decomposable| class.
+Work out what laws I need for |Decomposable| in order to give one |Semiring| and one |StarSemiring| instance that covers various cases, even beyond lists.
+I think I'll want to redefine |(<--)|, |(*<-)|, and |LTrie'|.}
+
+\noindent
 To make use of these insights, it will be convenient to generalize the decomposition to other representations:
 \begin{code}
 class Semiring a => Decomposable a h s | a -> h s where
@@ -1048,30 +1025,9 @@ class Semiring a => Decomposable a h s | a -> h s where
   atEps  :: a -> s
   deriv  :: a -> h a
 \end{code}
-The definitions given above correspond to an instance |Semiring b => Decomposable (b <-- [c]) ((->) c) b|.
-\notefoot{Use an associated pattern synonym instead.}
+The definitions of |(<:)|, |atEps|, and |deriv| given above correspond to an instance |Semiring b => Decomposable (b <-- [c]) ((->) c) b|.
 
-%format `scale` = "\mathbin{\hat{" .> "}}"
-%format scale = ( `scale` )
-Returning to scaling, there's a very important optimization to be made.
-When |s == zero|, |s .> p == zero|, so we can discard |p| entirely.
-Rather than burden each |Scalable| instance with this optimization, let's define |(.>)| to apply this optimization on top of a more primitive |scale| method:
-\begin{code}
-class Scalable b s | b -> s where
-  scale :: s -> b -> b
-
-(.>) :: (Semiring b, Scalable b s, DetectableZero s) => s -> b -> b
-s .> b  | isZero s   = zero
-        | otherwise  = s `scale` b
-\end{code}
-The |DetectableZero| class \citep{semiring-num}:
-\begin{code}
-class Semiring a => DetectableZero a where isZero :: a -> Bool
-\end{code}
-
-\sectionl{Regular Expressions}
-
-\note{A sort of ``free'' variant of functions. Easy to derive homomorphically. Corresponds to \citet{Brzozowski64} and other work on recognizing and parsing by derivatives.}
+\note{Use an associated pattern synonym instead, as I've now done in the implementation.}
 
 \sectionl{Tries}
 
@@ -1085,16 +1041,16 @@ This problem of redundant comparison is solved elegantly by the classic trie (``
 This data structure was later generalized to arbitrary (regular) algebraic data types \needcite{} and then from sets to functions \needcite{}.
 We'll explore the data type generalization later.\notefoot{Add a forward pointer or remove the promise.}
 Restricting our attention to functions of lists (``strings'' over some alphabet), we can formulate a simple trie data type as follows:
+\notefoot{Maybe another oppositely pointing arrows of some sort.
+I might want yet another pair for generalized tries.}
 %format :< = "\mathrel{\Varid{:\!\!\triangleleft}}"
 \begin{code}
 infix 1 :<
 data LTrie c b = b :< (c ->* LTrie c b)
 \end{code}
-As with finite maps, tries will denote functions via an |Indexable| instance, thus prescribing several |LTrie| instances:
+The similarity between the |LTrie| type and the function decomposition from \secref{Decomposing Functions from Lists} (motivating the constructor's name) makes for easy instance calculation.
 \begin{theorem}[\provedIn{theorem:Trie}]\thmlabel{Trie}
 Given the definitions in \figrefdef{Trie}{Tries as |[c] -> b|}{
-%format OD c s = (Ord SPC c, DetectableZero SPC s)
-%format OD c s = Ord SPC c
 \begin{code}
 infix 1 :<
 data LTrie c b = b :< (c ->* LTrie c b)
@@ -1111,6 +1067,9 @@ instance (Ord c, Additive b) => Additive (LTrie c b) where
 
 instance (Ord c, Semiring b) => LeftSemimodule b (LTrie c b) where
   s `scale` t = fmap (s NOP <.>) t
+
+instance (Ord c, Additive b, DetectableZero b) => DetectableZero (LTrie c b) where
+  isZero (a :< dp) = isZero a && isZero dp
 
 instance (Ord c, Additive b) => HasSingle [c] b (LTrie c b) where
   w +-> b = foldr (\ c t -> zero :< (c +-> t)) (b :< zero) w
@@ -1158,12 +1117,16 @@ instance (Ord c, StarSemiring b, DetectableZero b) => StarSemiring (LTrie' b c) 
   star (a :<: dp) = q where q = star a .> (one :<: fmap (<.> q) dp)
 \end{code}
 }.\footnote{The pattern synonym |(:<:)| enables matching and constructing |LTrie'| values as if they were defined as |data LTrie' b c = b :<: (c ->* LTrie' c b)| \needcite{}.
-This definition uses safe, zero-cost coercions between |c ->* LTrie c b| and |c ->* LTrie' b c| \needcite{}.}
+This definition uses safe, zero-cost coercions between |c ->* LTrie c b| and |c ->* LTrie' b c| \needcite{Breitner2016SZC}.}
 \notefoot{Introduce |DetectableZero| earlier.}
 
 The key to these instances is a decomposition principle for functions of lists.
 
 \workingHere
+
+\sectionl{Regular Expressions}
+
+\note{A sort of ``free'' variant of functions. Easy to derive homomorphically. Corresponds to \citet{Brzozowski64} and other work on recognizing and parsing by derivatives.}
 
 \sectionl{What's to come}
 
@@ -1488,6 +1451,84 @@ deriv (c' : w +-> b) c == if c' == c then w +-> b else zero
 \end{code}
 \end{proof}
 \vspace{-2ex}
+
+\subsection{\thmref{semiring decomp b <-- [c]}}\proofLabel{theorem:semiring decomp b <-- [c]}
+
+\begin{code}
+    zero
+==  atEps zero <: deriv zero  -- \lemref{decomp (b <-- [c])}
+==  zero <: (\ c -> zero)     -- \lemreftwo{atEps b <-- [c]}{deriv b <-- [c]}
+==  zero <: zero              -- |zero| on functions
+\end{code}
+
+\begin{code}
+    one
+==  atEps one <: deriv one  -- \lemref{decomp (b <-- [c])}
+==  one <: (\ c -> zero)    -- \lemreftwo{atEps b <-- [c]}{deriv b <-- [c]}
+==  one <: zero             -- |zero| on functions
+\end{code}
+
+\begin{code}
+    (a <: dp) <+> (b <: dp)
+==  atEps ((a <: dp) <+> (b <: dq)) <: deriv ((a <: dp) <+> (b <: dq))  -- \lemref{decomp (b <-- [c])}
+==  a <+> b <: dp <+> dq                                                -- \lemref{atEps and deriv via (<:)} below
+\end{code}
+
+%% (a  <:  dp)  <.>  q == a .> q <+> (zero <: (<.> NOP q) . dp)
+
+\begin{code}
+    (a <: dp) <.> (b <: dq)
+==  atEps ((a <: dp) <.> (b <: dq)) <: deriv ((a <: dp) <.> (b <: dq))        -- \lemref{decomp (b <-- [c])}
+==  a <.> b <: \ c -> a .> dq c <+> dp c <.> (b <: dq)                        -- \lemref{atEps and deriv via (<:)} below
+==  (a <.> b <+> zero) <: (\ c -> a .> dq c) <+> (\ c -> dp c <.> (b <: dq))  -- additive identity; |(<+>)| on functions
+==  (a <.> b <: \ c -> a .> dq c) <+> (zero <: \ c -> dp c <.> (b <: dq))     -- previous result
+==  a .> (b <: dq) <+> (zero <: \ c -> dp c <.> (b <: dq))                    -- \note{needs lemma}
+\end{code}
+
+%% \lemref{atEps and deriv via (<:)}
+
+%% star (a <: dp) = q where q = star a .> (one <: (<.> NOP q) .  dp)
+
+\begin{code}
+    star (a <: dp)
+==  atEps (star (a <: dp)) <: deriv (star (a <: dp))                     -- \lemref{decomp (b <-- [c])}
+==  star a <: \ c -> star a .> dp c * star (a <: dp)                     -- \lemref{atEps and deriv via (<:)} below
+==  star a .> (one <: \ c -> dp c * star (a <: dp))                      -- \note{needs same lemma as above}
+\end{code}
+
+\workingHere
+
+%% single w = product (map symbol w)
+%%   where
+%%      symbol d = zero <: equal d
+
+\begin{code}
+    |single w|
+==  ...
+\end{code}
+
+\begin{code}
+    s .> p
+==  ...
+\end{code}
+
+\begin{lemma}\lemlabel{atEps and deriv via (<:)}
+The |atEps| and |deriv| functions satisfy the following properties in terms of |(<:)|-decompositions:
+\begin{code}
+atEps ((a <: dp)  <+>  (b <: dq))  == a <+> b
+atEps ((a <: dp)  <.>  (b <: dq))  == a <.> b
+atEps (star (a <: dp)) == star a
+\end{code}
+\begin{code}
+deriv ((a <: dp)  <+>  (b <: dq)) c == dp c <+> dq c
+deriv ((a <: dp)  <.>  (b <: dq)) c == a .> dq c <+> dp c <.> (b <: dq)
+deriv (star (a <: dp)) c == star a .> dp c * star (a <: dp)
+\end{code}
+\end{lemma}
+\begin{proof}
+Substitute into \lemreftwo{atEps b <-- [c]}{deriv b <-- [c]}, and simplify, using the |Decomposable| laws.
+\notefoot{Have I stated these laws?}
+\end{proof}
 
 \subsection{\thmref{Trie}}\proofLabel{theorem:Trie}
 

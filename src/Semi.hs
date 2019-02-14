@@ -131,7 +131,9 @@ instance (Ord a, Additive b) => Additive (a ->* b) where
   zero = M.empty
   (<+>) = M.unionWith (<+>)
 
-NullZero(Map a)
+-- NullZero(Map a)
+
+instance (Ord a, Additive b) => DetectableZero (a ->* b) where isZero = M.null
 
 FunctorSemimodule(Map a)
 
@@ -318,25 +320,31 @@ type b <-- a = Convo (a -> b)
 -- since I need a to be the parameter.
 -- I guess I could wrap another newtype:
 
+#elif 1
+
+infixl 0 <--
+newtype b <-- a = F (a -> b) deriving (Additive, HasSingle a b, LeftSemimodule b, Indexable a b)
+
 #else
 
-infixl 1 <--
-newtype b <-- a = F { unF :: Convo (a -> b) } deriving (Additive)
+-- infixl 1 <--
+-- newtype b <-- a = F { unF :: Convo (a -> b) }
+--   deriving (Additive, LeftSemimodule b)
 
-deriving instance Semiring b => LeftSemimodule b (b <-- a)
+-- deriving instance Semiring b => LeftSemimodule b (b <-- a)
 
-deriving instance
-  (DetectableZero b, Semiring b, Decomposable b h (a -> b), Applicative h)
-  => Semiring (b <-- a)
+-- deriving instance
+--   (DetectableZero b, Semiring b, Decomposable b h (a -> b), Applicative h)
+--   => Semiring (b <-- a)
 
-deriving instance
-  (DetectableZero b, StarSemiring b, Decomposable b h (a -> b), Applicative h)
-  => StarSemiring (b <-- a)
+-- deriving instance
+--   (DetectableZero b, StarSemiring b, Decomposable b h (a -> b), Applicative h)
+--   => StarSemiring (b <-- a)
 
-instance (Decomposable b h (a -> b), Functor h) => Decomposable b h (b <-- a) where
-  s <: dp = F (s :<: fmap unF dp)
-  decomp (F (s :<: dp)) = (s, fmap F dp)
-  -- decomp (F (s :<: (fmap F -> dp))) = (s, dp)
+-- instance (Decomposable b h (a -> b), Functor h) => Decomposable b h (b <-- a) where
+--   s <: dp = F (s :<: fmap unF dp)
+--   decomp (F (s :<: dp)) = (s, fmap F dp)
+--   -- decomp (F (s :<: (fmap F -> dp))) = (s, dp)
 
 -- See how it goes
 

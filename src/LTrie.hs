@@ -104,8 +104,6 @@ newtype LTrie' b c = L (LTrie c b) deriving (Additive, HasSingle [c] b, LeftSemi
 
 -- Derive Indexable?
 
--- deriving instance Indexable k v z => Indexable k v (Convo z)
-
 -- unL :: LTrie' b c -> LTrie c b
 -- unL (L t) = t
 

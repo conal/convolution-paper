@@ -25,6 +25,7 @@ default-extensions:
   - MultiParamTypeClasses
   - PatternSynonyms
   - StandaloneDeriving
+  - TypeApplications
   - TypeFamilies
   - TypeOperators
   - UndecidableInstances

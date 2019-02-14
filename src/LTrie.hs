@@ -8,11 +8,12 @@ module LTrie where
 
 import Prelude hiding (sum,product)
 
+import GHC.Exts (coerce)
 import Data.Map (Map)
 import qualified Data.Map as M
 
 import Constrained
-import Semi
+import Semi hiding (pattern (:<:))
 import Language
 
 #ifdef EXAMPLES
@@ -35,45 +36,19 @@ instance Functor (LTrie c) where
 
 instance FunctorC (LTrie c)
 
-#if 0
--- For the paper
-trieAt :: (Ord c, Additive b) => LTrie c b -> ([c] -> b)
--- trieAt (b :< dp) [] = b
--- trieAt (b :< dp) (c : cs) = trieAt (dp ! c) cs
-
--- trieAt (b :< dp) = \ case { [] -> b ; c:cs -> trieAt (dp ! c) cs }
-
--- trieAt (b :< dp) w = case w of { [] -> b ; c:cs -> trieAt (dp ! c) cs }
-
-trieAt (b :< dp) w = case w of { [] -> b ; c:cs -> dp ! c ! cs }
-
--- trieAt (b :< dp) w = case w of
---                        [] -> b
---                        c:w' -> trieAt (dp!c) w'
-
-#endif
-
--- trieFun :: (Ord c, Additive b) => LTrie c b -> ([c] -> b)
--- trieFun (a :< dp) = a <: trieFun . (dp !)
-
 instance (Ord c, Additive b) => Indexable [c] b (LTrie c b) where
-  -- (!) = trieFun
-  -- (!) (a :< dp) = a <: (!) . (dp !)
-
   (b :< dp) ! w = case w of { [] -> b ; c:cs -> dp ! c ! cs }
-  -- (b :< _ ) ! []     = b
-  -- (_ :< dp) ! (c:cs) = dp ! c ! cs
-
   -- (a :< _ ) ! [] = a
   -- (_ :< dp) ! (c:cs) = (dp ! c) ! cs
+  -- (!) (a :< dp) = a <: (!) . (dp !)
 
 instance (Ord c, Additive b) => Additive (LTrie c b) where
   zero = zero :< zero
   (a :< dp) <+> (b :< dq) = a <+> b  :<  dp <+> dq
 
-instance (Ord c, Semiring b) => LeftSemimodule b (LTrie c b) where scale s = fmap (s <.>)
+FunctorSemimodule(LTrie c)
 
--- FunctorSemimodule(LTrie c)
+-- instance (Ord c, Semiring b) => LeftSemimodule b (LTrie c b) where scale s = fmap (s <.>)
 
 -- instance (Ord c, Semiring b) => LeftSemimodule b (LTrie c b) where
 --   s `scale` (b :< dp) = s <.> b :< fmap (s `scale`) dp
@@ -101,7 +76,7 @@ instance (Ord c, Additive b) => HasSingle [c] b (LTrie c b) where
      cons c x = zero :< (c +-> x)
 #endif
 
--- Is HasSingle even useful on LTrie?
+-- Is HasSingle even useful on LTrie? Yes, to inherit from LTrie'
 
 -- No Semiring instance, because one would have to map all possible keys to one.
 -- We inherit this limitation from finite maps.
@@ -116,10 +91,46 @@ instance Decomposable b (Map c) (LTrie c b) where
   (<:) = (:<)
   decomp (b :< dp) = (b, dp)
 
+#if 0
+
 type LTrie' b c = Convo (LTrie c b)
 
 trimT' :: (Ord c, Additive b, DetectableZero b) => Int -> LTrie' b c -> LTrie' b c
 trimT' n (C x) = C (trimT n x)
+
+#else
+
+newtype LTrie' b c = L (LTrie c b) deriving (Additive, HasSingle [c] b, LeftSemimodule b, Indexable [c] b)
+
+-- Derive Indexable?
+
+-- deriving instance Indexable k v z => Indexable k v (Convo z)
+
+-- unL :: LTrie' b c -> LTrie c b
+-- unL (L t) = t
+
+infix 1 :<:
+pattern (:<:) :: b -> (c ->* LTrie' b c) -> LTrie' b c
+pattern b :<: d <- L (b :< (coerce -> d)) where b :<: d = L (b :< coerce d)
+
+-- pattern b :<: d <- L (b :< (fmap L -> d)) where b :<: d = L (b :< fmap unL d)
+
+-- TODO: Use this version in the paper.
+
+
+{-# COMPLETE (:<:) :: LTrie' #-}
+
+trieFun' :: (Ord c, Additive b) => LTrie' b c -> (b <-- [c])
+trieFun' (L t) = C (t !)
+
+instance (Ord c, Semiring b, DetectableZero b) => Semiring (LTrie' b c) where
+  one = one :<: zero
+  (a :<: dp) <.> q = a .> q <+> (zero :<: fmap (<.> q) dp)
+
+instance (Ord c, StarSemiring b, DetectableZero b) => StarSemiring (LTrie' b c) where
+  star (a :<: dp) = q where q = star a .> (one :<: fmap (<.> q) dp)
+
+#endif
 
 #ifdef EXAMPLES
 

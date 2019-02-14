@@ -195,14 +195,14 @@ Natural numbers form a monoid under addition and zero.
 These two monoids are related via the function |length :: [a] -> N|, which not only maps lists to natural numbers, but does so in a way that preserves monoid structure:
 \begin{code}
     length mempty
-==  length []
-==  0
-==  mempty
+==  length []             -- |mempty| on |[a]|
+==  zero                  -- |length| definition
+==  mempty                -- |zero| on |N|
 
     length (u <> v)
-==  length (u ++ v)
-==  length u + length v
-==  length u <> length v
+==  length (u ++ v)       -- |(<>)| on |[a]|
+==  length u + length v   -- |length| definition and induction
+==  length u <> length v  -- |(<>)| on |N|
 \end{code}
 This pattern is common and useful enough to have a name:
 \begin{definition} \deflabel{monoid homomorphism}
@@ -459,6 +459,8 @@ Combining these two instances, consider |star f| for |f :: a -> Bool| (a ``predi
 ==  one                -- |one| on functions
 \end{code}
 
+%if False
+%% Now in a later section
 \noindent
 An example star semiring homomorphism applies a given function to |mempty| (though any other domain value would serve):
 %format atEps = "\Varid{at}_\epsilon"
@@ -466,6 +468,7 @@ An example star semiring homomorphism applies a given function to |mempty| (thou
 atEps :: ([a] -> Bool) -> Bool
 atEps f = f mempty
 \end{code}
+%endif
 
 A useful property of star semirings is that recursive affine equations have solutions.
 Specifically, |p = b + m * p| has solution |p = star m * b| \citep{Dolan2013FunSemi}:
@@ -689,7 +692,7 @@ Equivalently,
 \begin{code}
     star p
 ==  predSet (star (setPred p))  -- |predSet| injectivity
-==  predSet one                 -- from \secref{Star Semirings}
+==  predSet one                 -- |star| on |Bool| (\secref{Star Semirings})
 ==  one                         -- |predSet| is a semiring homomorphism
 \end{code}
 
@@ -784,6 +787,7 @@ They seem to spring from nothing, however, which is a bit disappointing compared
 Let's not give up yet, however.
 Perhaps there's a variation of the |a -> b| semiring that specializes with |b = Bool| to bear the same relationship to |Language a| that |a -> Bool| bears to |P a|.
 For reasons to become clear later, let's call this |a -> b| variation ``|b <-- a|'':
+\notefoot{Introduce |Indexable| sooner, and add to the |deriving| list.}
 \begin{code}
 infixl 0 <--
 newtype b <-- a = F (a -> b) deriving (Additive, LeftSemimodule, HasSingle)
@@ -889,7 +893,7 @@ We can, however, wrap |a ->* b| into a new type that has a |Semiring| instance h
 %format bigSumKeys (lim) = "\bigOp\sum{" lim "}{2}"
 \begin{code}
 infixl 0 *<-
-newtype b *<- a = M (a ->* b) deriving (Show, Additive, HasSingle a b, LeftSemimodule b)
+newtype b *<- a = M (a ->* b) deriving (Show, Additive, HasSingle a b, LeftSemimodule b, Indexable a b)
 
 -- Homomorphic denotation
 mapFun' :: (Ord a, Additive b) => (b *<- a) -> (b <-- a)
@@ -905,6 +909,169 @@ The finiteness of finite maps also interferes with giving a useful |StarSemiring
 
 \note{Use analogous notation with oppositely pointing arrows of some sort.
 I might want yet another pair for generalized tries.}
+
+\sectionl{Decomposing Functions from Lists}
+
+%format <: = "\mathrel{\blacktriangleleft}"
+%format <: = "\mathrel\triangleleft"
+%format atEps = "\Varid{at}_\epsilon"
+%format deriv = "\derivOp"
+
+For functions from \emph{lists} specifically, we can decompose in a way that lays the groundwork for more efficient implementations than the ones in previous sections.
+\begin{lemma}[\provedIn{lemma:decomp (b <-- [c])}]\lemlabel{decomp (b <-- [c])}
+Any |f :: b <-- [c]| can be decomposed as follows:\footnote{In terms of |a -> [c]| rather than |[c] <-- a|, the definitions would read more simply:
+\begin{code}
+atEps f = f mempty
+deriv f c cs = f (c:cs)
+b <: h = \ NOP case {NOP [] -> b NOP ; NOP c:cs -> h c cs NOP}
+\end{code}
+%% (b <: h) []      = b
+%% (b <: h) (c:cs)  = h c cs
+\vspace{-3ex}
+}
+\begin{code}
+f == atEps f <: deriv f
+\end{code}
+where
+\begin{code}
+atEps :: (b <-- [c]) -> b
+atEps (F f) = f mempty
+
+deriv :: (b <-- [c]) -> c -> (b <-- [c])
+deriv (F f) = \ c -> F (\ cs -> f (c:cs))
+
+infix 1 <:
+(<:) :: b -> (c -> (b <-- [c]) -> (b <-- [c])
+b <: h = F (\ NOP case {NOP [] -> b NOP;NOP c:cs  -> unF (h c) cs NOP})
+\end{code}
+\vspace{-3ex}
+\end{lemma}
+\noindent
+Considering the isomorphism |Pow [c] =~ Bool <-- [c]|, this decomposition generalizes the |delta| and |deriv| operations used by \citet{Brzozowski64} mapping languages to languages (as sets of strings), the latter of which he referred to as the ``derivative''.\footnote{Brzozowski wrote ``$\derivOp_c\,p$'' instead of ``|deriv p c|'', but the latter will prove more convenient below.}
+
+Understanding how |atEps| and |deriv| relate to the semiring vocabulary will help us develop an efficient implementation in \secref{Tries}.
+%if False
+First, however, we'll need to generalize to representations other than |b <-- a|:
+\begin{code}
+class Decomposable a h s | a -> h s where
+  infix 1 <:
+  (<:)   :: s -> h a -> a
+  atEps  :: a -> s
+  deriv  :: a -> h a
+
+instance Semiring b => Decomposable ([c] -> b) ((->) c) b where
+  (b <: _) []      = b
+  (_ <: h) (c:cs)  = h c cs
+  atEps  f = f []
+  deriv  f = \ c cs -> f (c : cs)
+\end{code}
+We'll need a way to index into |h|:
+\notefoot{Perhaps introduce |Indexable| earlier and use in defining |mapTo| in \figref{:<--}.}
+\begin{code}
+class Indexable p k v | p -> k v  where (!) :: p -> k -> v
+
+instance Indexable (k -> v) k v   where f ! k = f k
+
+instance (Ord k, Semiring v) => Indexable (Map k v) k v where
+  m ! k = findWithDefault zero k m
+\end{code}
+
+\noindent
+Now adapt the |[c] -> b| instance of |Decomposable| to |b <-- [c]|:
+\begin{code}
+instance Semiring b => Decomposable (b <-- [c]) ((->) c) b where
+  b <: h = F (b <: unF . h)
+  atEps  (F f) = f mempty
+  deriv  (F f) = \ c -> F (\ cs -> f (c:cs))
+\end{code}
+%% \begin{code}
+%%   b <: h = F (\ NOP case  []    -> b
+%%                           c:cs  -> unF (h c) cs)
+%% \end{code}
+
+%endif
+
+\begin{lemma}[\provedIn{lemma:atEps b <-- [c]}]\lemlabel{atEps b <-- [c]}
+The |atEps| function is a star semiring homomorphism, i.e.,
+\notefoot{Also a semimodule homomorphism, i.e., ``linear''. I may want to say so here if I reorganize the paper so as to introduce semimodules sooner.}
+\begin{code}
+atEps zero         == zero
+atEps one          == one
+atEps (p  <+>  q)  == atEps p  <+>  atEps q 
+atEps (p  <.>  q)  == atEps p  <.>  atEps q 
+
+atEps (star p)     == star (atEps p)
+
+atEps (s .> p)     == s * atEps p
+\end{code}
+Moreover, |atEps (single [d]) == zero|.
+\end{lemma}
+\begin{lemma}[\provedIn{lemma:deriv b <-- [c]}, generalizing Lemma 3.1 of \citet{Brzozowski64}]\lemlabel{deriv b <-- [c]}
+Differentiation has the following properties:
+\notefoot{If I replace application to |c| by indexing by |c| (i.e., |(! NOP c)|), will this lemma hold for all of the representations? I suspect so. Idea: Define $\derivOp_c\,p = \derivOp\,p\:!\:c$.}
+\begin{code}
+deriv zero  c == zero
+deriv one   c == zero
+deriv (p  <+>  q) c == deriv p c <+> deriv q c
+deriv (p  <.>  q) c == atEps p .> deriv q c <+> deriv p c <.> q
+
+deriv (star p) c == star (atEps p) .> deriv p c * star p
+
+deriv (s .> p) c == s .> deriv p c
+
+deriv (single [d]) c == equal c d
+\end{code}
+\end{lemma}
+\begin{theorem}[\provedIn{theorem:semiring decomp b <-- [c]}]\thmlabel{semiring decomp b <-- [c]}
+The following properties hold:
+\begin{spacing}{1.2}
+\begin{code}
+zero  == zero  <: zero
+one   == one   <: zero
+(a  <:  dp) <+> (b <: dq)  == a  <+>  b <: dp <+> dq
+(a  <:  dp) <.> q == a .> q <+> (zero <: (<.> NOP q) . dp)
+star (a <: dp) = q where q = star a .> (one <: (<.> NOP q) .  dp)
+
+single w = product (map symbol w) where symbol d = zero <: equal d
+
+s .> (a <: dp) = s <.> a <: (s NOP .>) . dp
+\end{code}
+\vspace{-6ex}
+\end{spacing}
+\end{theorem}
+
+To make use of these insights, it will be convenient to generalize the decomposition to other representations:
+\begin{code}
+class Semiring a => Decomposable a h s | a -> h s where
+  infix 1 <:
+  (<:)   :: s -> h a -> a
+  atEps  :: a -> s
+  deriv  :: a -> h a
+\end{code}
+The definitions given above correspond to an instance |Semiring b => Decomposable (b <-- [c]) ((->) c) b|.
+\notefoot{Use an associated pattern synonym instead.}
+
+%format `scale` = "\mathbin{\hat{" .> "}}"
+%format scale = ( `scale` )
+Returning to scaling, there's a very important optimization to be made.
+When |s == zero|, |s .> p == zero|, so we can discard |p| entirely.
+Rather than burden each |Scalable| instance with this optimization, let's define |(.>)| to apply this optimization on top of a more primitive |scale| method:
+\begin{code}
+class Scalable b s | b -> s where
+  scale :: s -> b -> b
+
+(.>) :: (Semiring b, Scalable b s, DetectableZero s) => s -> b -> b
+s .> b  | isZero s   = zero
+        | otherwise  = s `scale` b
+\end{code}
+The |DetectableZero| class \citep{semiring-num}:
+\begin{code}
+class Semiring a => DetectableZero a where isZero :: a -> Bool
+\end{code}
+
+\sectionl{Regular Expressions}
+
+\note{A sort of ``free'' variant of functions. Easy to derive homomorphically. Corresponds to \citet{Brzozowski64} and other work on recognizing and parsing by derivatives.}
 
 \sectionl{Tries}
 
@@ -970,11 +1137,33 @@ instance (Ord c, Additive b) => HasSingle [c] b (LTrie c b) where
 
 %endif
 
-\workingHere
+%format :<: = "\mathrel{\Varid{:\!\!\triangleleft\!:}}"
+As with |Pow a| and |a ->* b|, we can define a trie counterpart to the monoid semiring, here |b <-- [c]|, as shown in \figrefdef{LTrie'}{Tries as |b <-- [c]|}{
+\begin{code}
 
-%% *   Languages
-%% *   Regular expressions
-%% *   Monoid semirings and convolution
+newtype LTrie' b c = L { unL :: LTrie c b } deriving (Additive, HasSingle [c] b, LeftSemimodule b, Indexable [c] b)
+
+trieFun' :: (Ord c, Additive b) => LTrie' b c -> (b <-- [c])
+trieFun' (L t) = C (t NOP !)
+
+infix 1 :<:
+pattern (:<:) :: b -> (c ->* LTrie' b c) -> LTrie' b c
+pattern b :<: d <- L (b :< (coerce -> d)) where b :<: d = L (b :< coerce d)
+
+instance (Ord c, Semiring b, DetectableZero b) => Semiring (LTrie' b c) where
+  one = one :<: zero
+  (a :<: dp) <.> q = a .> q <+> (zero :<: fmap (<.> q) dp)
+
+instance (Ord c, StarSemiring b, DetectableZero b) => StarSemiring (LTrie' b c) where
+  star (a :<: dp) = q where q = star a .> (one :<: fmap (<.> q) dp)
+\end{code}
+}.\footnote{The pattern synonym |(:<:)| enables matching and constructing |LTrie'| values as if they were defined as |data LTrie' b c = b :<: (c ->* LTrie' c b)| \needcite{}.
+This definition uses safe, zero-cost coercions between |c ->* LTrie c b| and |c ->* LTrie' b c| \needcite{}.}
+\notefoot{Introduce |DetectableZero| earlier.}
+
+The key to these instances is a decomposition principle for functions of lists.
+
+\workingHere
 
 \sectionl{What's to come}
 
@@ -1008,7 +1197,7 @@ One version like |a -> b| and another like |b <-- a|.
     \item
       Regular expressions to sets
     \item
-      Contains \textbar{}mempty\textbar{} (\textbar{}hasEps\textbar{})
+      Contains |mempty| (|hasEps|)
     \end{itemize}
   \item
     Homomorphisms as specifications
@@ -1038,8 +1227,8 @@ One version like |a -> b| and another like |b <-- a|.
   \item
     The trie perspective naturally leads to generalizing from lists to arbitrary (regular?) algebraic data types.
     I'm less confident about this generalization claim, since I think we need a suitable monoid.
-    I think there's an underlying generic monad that specializes to lists and other algebraic data types, with monadic bind specializing to \textbar{}mappend\textbar{}.
-    On the other hand, with multiple substitution sites, inverting \textbar{}mappend\textbar{} seems tricky.
+    I think there's an underlying generic monad that specializes to lists and other algebraic data types, with monadic bind specializing to |mappend|.
+    On the other hand, with multiple substitution sites, inverting |mappend| seems tricky.
     Does it give a useful form of constrained or context-sensitive grammars?
   \item
     Convolution is a special case of the free semimodule applicative/monad.
@@ -1133,6 +1322,172 @@ Then simplify to the lambda/sum form.}
 \end{enumerate}
 
 %% \subsection{\thmref{Map}}\proofLabel{theorem:Map}
+
+\subsection{\lemref{decomp (b <-- [c])}}\proofLabel{lemma:decomp (b <-- [c])}
+
+\begin{proof}
+Any argument to |f| must be either |[]| or |c : cs| for some value |c| and list |cs|.
+Consider each case:
+\begin{code}
+    (atEps f <: deriv f) []
+==  atEps f []                   -- |b <: h| definition
+==  f []                         -- |atEps| definition
+                                           
+    (atEps f <: deriv f) (c:cs)  NOP
+==  deriv f (c:cs)               -- |b <: h| definition
+==  f (c:cs)                     -- |deriv| definition
+\end{code}
+Thus, for \emph{all} |w :: [c]|, |f w == (atEps f <: deriv f) w|, from which the lemma follows by extensionality.
+\end{proof}
+
+\subsection{\lemref{atEps b <-- [c]}}\proofLabel{lemma:atEps b <-- [c]}
+
+\begin{code}
+
+    atEps zero
+==  atEps (F (\ a -> zero))  -- |zero| on |b <-- a|
+==  (\ a -> zero) []         -- |atEps| definition
+==  zero                     -- $\beta$ reduction
+
+    atEps one
+==  atEps (F (equal mempty))  -- |one| on |b <-- a|
+==  equal mempty mempty       -- |atEps| definition            
+==  one                       -- |equal| definition
+
+    atEps (F f <+> F g)
+==  atEps (F (\ a -> f a <+> g a))      -- |(<+>)| on |b <-- a|
+==  (\ a -> f a <+> g a) []             -- |atEps| definition
+==  f [] <+> g []                       -- $\beta$ reduction
+==  atEps (F f) <+> atEps (F g)         -- |atEps| definition
+
+    atEps (F f <.> F g)
+==  atEps (bigSum (u,v) u <> v +-> f u <.> g v)               -- |(<.>)| on |b <-- a|
+==  atEps (\ w -> bigSumQ (u,v BR u <> v == []) f u <.> g v)  -- alternative definition from \figref{<--}
+==  bigSumKeys (u,v BR u == [] && v == []) NOP f u <.> g v    -- |u <> v == [] <=> u == [] && v == []| 
+==  f [] <.> g []                                             -- singleton sum
+==  atEps (F f) <.> atEps (F g)                               -- |atEps| definition
+
+    atEps (star p)
+==  atEps (one <+> p <.> star p)        -- defining property of |star|
+==  one <+> atEps p <.> atEps (star p)  -- |atEps| distributes over |one|, |(<+>)| and |(<.>)|
+==  one <+> atEps p <.> star (atEps p)  -- coinduction (?)
+==  star (atEps p)                      -- defining property of |star|
+
+    atEps (s .> F f)
+==  atEps (F (\ a -> s * f a))
+==  (\ a -> s * f a) []
+==  s * f []
+==  s * atEps (F f)
+\end{code}
+\note{For the |star p| proof, maybe instead show inductively that |atEps (pow p n) == pow (atEps p) n| for all |n >= 0|, and then appeal to the summation definition of |star p|.}
+
+\subsection{\lemref{deriv b <-- [c]}}\proofLabel{lemma:deriv b <-- [c]}
+
+\begin{code}
+    deriv zero
+==  deriv (F (\ w -> zero))                  -- |zero| on |b <-- a|
+==  \ c -> F (\ cs -> (\ w -> zero) (c:cs))  -- |deriv| on |b <-- a|
+==  \ c -> F (\ cs -> zero)                  -- $\beta$ reduction
+==  \ c -> zero                              -- |zero| on |b <-- a|
+==  zero                                     -- |zero| on |a -> b|
+\end{code}
+\vspace{-3ex}
+\begin{code}
+    deriv one
+==  deriv (single mempty)                   -- |one| on |b <-- a|
+==  deriv (F (equal mempty))                -- |single| on |b <-- a|
+==  \ c -> F (\ cs -> equal mempty (c:cs))  -- |deriv| on |b <-- a|
+==  \ c -> F (\ cs -> zero)                 -- |c:cs /= mempty|
+==  \ c -> zero                             -- |zero| on |b <-- a|
+==  zero                                    -- |zero| on |a -> b|
+\end{code}
+\vspace{-3ex}
+\begin{code}
+    deriv (F f <+> F g)
+==  deriv (F (\ w -> f w <+> g w))                        -- |(<+>)| on |b <-- a|
+==  \ c -> F (\ cs -> (\ w -> f w <+> g w) (c:cs))        -- |deriv| on |b <-- a|
+==  \ c -> F (\ cs -> f (c:cs) <+> g (c:cs))              -- $\beta$ reduction
+==  \ c -> F (\ cs -> f (c:cs)) <+> F (\ cs -> g (c:cs))  -- |(<+>)| on |b <-- a|
+==  \ c -> deriv (F f) c <+> deriv (F g) c                -- |deriv| on |b <-- a|
+==  deriv (F f) <+> deriv (F g)                           -- |(<+>)| on |a -> b|
+\end{code}
+\begin{code}
+    deriv (F f <.> F g)
+==  deriv (bigSum (u,v) u <> v +-> f u <.> g v)                                                                             -- |(<.>)| on |b <-- a|
+==  deriv (bigSum v (mempty <> v +-> f mempty <.> g v) <+> bigSumQ (c',u',v) ((c':u') <> v +-> f (c':u') <.> g v))          -- empty vs nonempty |u|
+==  deriv (bigSum v (mempty <> v +-> f mempty <.> g v)) <+> deriv (bigSumA (c',u',v) ((c':u') <> v +-> f (c':u') <.> g v))  -- additivity of |deriv| (above)
+\end{code}
+First addend:
+\begin{code}
+    deriv (bigSum v (mempty <> v +-> f mempty <.> g v))
+==  deriv (bigSum v (v +-> f mempty <.> g v))  -- monoid law
+==  deriv (f mempty .> bigSum v (v +-> g v))   -- distributivity (semiring law)
+==  f mempty .> deriv (bigSum v v +-> g v)     -- linearity of |deriv| \note{(needs lemma)}
+==  f mempty .> deriv (F g)                    -- \lemref{decomp +->}
+==  atEps (F f) .> deriv (F g)                 -- |atEps| on |b <-- a|
+\end{code}
+Second addend:
+\begin{code}
+    deriv (bigSumA (c',u',v) ((c':u') <> v +-> f (c':u') <.> g v))
+==  bigSumA (c',u',v) deriv ((c':u') <> v +-> f (c':u') <.> g v)    -- additivity of |deriv|
+==  bigSumA (c',u',v) deriv (c' : (u' <> v) +-> f (c':u') <.> g v)  -- |(<>)| on lists
+==  \ c -> bigSum (u',v) u' <> v +-> f (c:u') <.> g v               -- \lemref{deriv +->} below
+==  \ c -> bigSum (u',v) u' <> v +-> (\ cs -> f (c:cs)) u' <.> g v  -- $\beta$ expansion
+==  \ c -> F (\ cs -> f (c:cs)) <.> F g                             -- |(<.>)| on |b <-- a|
+==  \ c -> deriv (F f) c <.> F g                                    -- |deriv| on |b <-- a|
+\end{code}
+Combine addends, and let |p = F f| and |q = F g|:
+\begin{code}
+    deriv (p <.> q) c
+==  deriv (F f <.> F g) c
+==  ...
+==  atEps (F f) .> deriv (F g) c <+> deriv (F f) c <.> F g
+==  atEps p .> deriv q c <+> deriv p c <.> q
+\end{code}    
+
+\noindent
+Finally, closure:
+\begin{code}
+    deriv (star p) c
+==  deriv (one <+> p <.> star p) c                        -- star semiring law
+==  deriv one c <+> deriv (p <.> star p) c                -- additivity of |deriv|
+==  deriv (p <.> star p) c                                -- |deriv one c == zero| (above)
+==  atEps p .> deriv (star p) c <+> deriv p c <.> star p  -- |deriv (p * q)| above
+\end{code}
+Thus, by \lemref{affine fixed point} below,
+\begin{code}
+deriv (star p) c == star (atEps p) .> deriv p c <.> star p
+\end{code}
+
+\begin{lemma}\lemlabel{deriv +->}
+Differentiation and |(+->)| satisfy the following relationships:
+\begin{code}
+deriv (mempty +-> b) c == zero
+
+deriv (c' : w +-> b) c == if c' == c then w +-> b else zero
+\end{code}
+\end{lemma}
+\begin{proof}~
+\begin{code}
+    deriv (mempty +-> b) c
+==  deriv (F (\ w -> if w == mempty then b else zero)) c         -- |(+->)| defining
+==  F (\ cs -> (\ w -> if w == mempty then b else zero) (c:cs))  -- |deriv| on |b <-- a|
+==  F (\ cs -> if c:cs == mempty then b else zero)               -- $\beta$ reduction
+==  F (\ cs -> if False then b else zero)                        -- |c:cs /== mempty|
+==  F (\ cs -> zero)                                             -- |if-then-else| definition
+==  zero                                                         -- |zero| on |b <-- a|
+\end{code}
+\begin{code}
+    deriv (c' : w +-> b) c
+==  deriv (F (\ a -> if a == c':w then b else zero)) c               -- |(+->)| definition
+==  F (\ cs -> (\ a -> if a == c':w then b else zero) (c:cs))        -- |deriv| on |b <-- a|
+==  F (\ cs -> if c:cs == c':w then b else zero)                     -- $\beta$ reduction
+==  F (\ cs -> if c==c' && cs == w then b else zero)                 -- injectivity of |(:)|
+==  if c==c' then F (\ cs -> if cs == w then b else zero) else zero  -- property of |if-then-else|
+==  if c==c' then w +-> b else zero                                  -- |(+->)| on |b <-- a|
+\end{code}
+\end{proof}
+\vspace{-2ex}
 
 \subsection{\thmref{Trie}}\proofLabel{theorem:Trie}
 

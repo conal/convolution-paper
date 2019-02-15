@@ -1,3 +1,4 @@
+-- {-# LANGUAGE DeriveAnyClass #-}
 -- {-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
 
 -- | Commutative monoids, semirings, and semimodules
@@ -281,6 +282,18 @@ fromBool True  = one
 newtype Convo z = C z
   deriving (Show, Additive, DetectableZero, LeftSemimodule b, HasSingle a b)
 
+-- When I try deriving Decomposable b h:
+-- 
+--  • Couldn't match representation of type ‘h z’
+--                             with that of ‘h (Convo z)’
+--      arising from the coercion of the method ‘<:’
+--        from type ‘b -> h z -> z’ to type ‘b -> h (Convo z) -> Convo z’
+--    NB: We cannot know what roles the parameters to ‘h’ have;
+--      we must assume that the role is nominal
+--  • When deriving the instance for (Decomposable b h (Convo z))
+-- 
+-- To do: check whether GHC has role constraints
+
 unC :: Convo z -> z
 unC (C z) = z
 
@@ -292,7 +305,8 @@ instance ( Decomposable b h z, LeftSemimodule b z, Functor h, Additive z
 instance (Functor h, Decomposable b h z) => Decomposable b h (Convo z) where
   a <: dp = C (a <: fmap unC dp)
   decomp (C (decomp -> (a,dp))) = (a, fmap C dp)
-
+  {-# INLINE (<:) #-}
+  {-# INLINE decomp #-}
 {-# COMPLETE (:<:) :: Convo #-}
 
 -- deriving instance LeftSemimodule b z => LeftSemimodule b (Convo z)
@@ -310,7 +324,7 @@ instance ( DetectableZero b, StarSemiring b, Functor h, Additive (h (Convo z))
 
 deriving instance Indexable k v z => Indexable k v (Convo z)
 
-#if 1
+#if 0
 
 -- | Convolvable functions
 infixl 0 <--
@@ -320,10 +334,29 @@ type b <-- a = Convo (a -> b)
 -- since I need a to be the parameter.
 -- I guess I could wrap another newtype:
 
+(!^) :: Indexable a b z => z -> (b <-- a)
+(!^) = C . (!)
+
 #elif 1
 
 infixl 0 <--
 newtype b <-- a = F (a -> b) deriving (Additive, HasSingle a b, LeftSemimodule b, Indexable a b)
+
+-- deriving instance Decomposable b h (a -> b) => Decomposable b h (b <-- a)
+
+-- • Couldn't match representation of type ‘h (a -> b)’
+--                            with that of ‘h (b <-- a)’
+--     arising from a use of ‘GHC.Prim.coerce’
+--   NB: We cannot know what roles the parameters to ‘h’ have;
+--     we must assume that the role is nominal
+
+-- Instead, manually derive special cases. Does GHC have role constraints?
+
+deriving instance Semiring b => Decomposable b Identity (b <-- N)
+deriving instance Decomposable b ((->) c) (b <-- [c])
+
+(!^) :: Indexable a b z => z -> (b <-- a)
+(!^) = F . (!)
 
 #else
 

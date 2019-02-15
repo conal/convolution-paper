@@ -968,6 +968,11 @@ b <: h = \ NOP case {NOP [] -> b NOP ; NOP c:cs -> h c cs NOP}
 \begin{code}
 f == atEps f <: deriv f
 \end{code}
+Moreover, for all |b| and |h|,
+\begin{code}
+atEps  (b <: h) = b
+deriv  (b <: h) = h
+\end{code}
 where
 \begin{code}
 atEps :: (b <-- [c]) -> b
@@ -1317,6 +1322,23 @@ Consider each case:
 ==  f (c:cs)                     -- |deriv| definition
 \end{code}
 Thus, for \emph{all} |w :: [c]|, |f w == (atEps f <: deriv f) w|, from which the lemma follows by extensionality.
+
+For the other two equations:
+\begin{code}
+    atEps (b <: h)
+==  atEps (F (\ NOP case {NOP [] -> b NOP ; NOP c:cs -> h c cs NOP}))                  -- |(<:)| definition
+==  (\ NOP case {NOP [] -> b NOP ; NOP c:cs -> h c cs NOP}) []                         -- |atEps| definition
+==  b                                                                                  -- semantics of |case|
+\end{code}
+\begin{code}
+    deriv (b <: h)
+==  deriv (F (\ NOP case {NOP [] -> b NOP ; NOP c:cs -> h c cs NOP}))                  -- |(<:)| definition
+==  \ c -> F (\ cs -> (\ NOP case {NOP [] -> b NOP ; NOP c:cs -> h c cs NOP}) (c:cs))  -- |deriv| definition
+==  \ c -> F (\ cs -> unF (h c) cs)                                                    -- semantics of |case|
+==  \ c -> F (unF (h c))                                                               -- $\eta$ reduction
+==  \ c -> h c                                                                         -- |F . unF == id|
+==  h                                                                                  -- $\eta$ reduction
+\end{code}
 \end{proof}
 
 \subsection{\lemref{atEps b <-- [c]}}\proofLabel{lemma:atEps b <-- [c]}

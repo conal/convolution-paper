@@ -1492,6 +1492,9 @@ deriv (c' : w +-> b) c == if c' == c then w +-> b else zero
 
 \subsection{\thmref{semiring decomp b <-- [c]}}\proofLabel{theorem:semiring decomp b <-- [c]}
 
+\note{Maybe not worth spelling out.
+I could say ``Proof: Immediate from \lemrefthree{decomp (b <-- [c])}{atEps b <-- [c]}{deriv b <-- [c]}''.}
+
 \begin{code}
     zero
 ==  atEps zero <: deriv zero  -- \lemref{decomp (b <-- [c])}
@@ -1566,8 +1569,7 @@ deriv (star (a <: dp)) c == star a .> dp c * star (a <: dp)
 \end{code}
 \end{lemma}
 \begin{proof}
-Substitute into \lemreftwo{atEps b <-- [c]}{deriv b <-- [c]}, and simplify, using the |Decomposable| laws.
-\notefoot{Have I stated these laws?}
+Substitute into \lemreftwo{atEps b <-- [c]}{deriv b <-- [c]}, and simplify, using \lemref{decomp (b <-- [c])}.
 \end{proof}
 
 \subsection{\thmref{Trie}}\proofLabel{theorem:Trie}

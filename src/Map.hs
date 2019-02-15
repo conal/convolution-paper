@@ -16,10 +16,6 @@ import Semi
 infixl 0 *<-
 newtype b *<- a = M (a ->* b) deriving (Show, Additive, HasSingle a b, LeftSemimodule b, DetectableZero, Indexable a b)
 
--- Homomorphic denotation
-mapFun' :: (Ord a, Additive b) => (b *<- a) -> (b <-- a)
-mapFun' (M m) = C (m !)
-
 instance (Ord a, Monoid a, Semiring b) => Semiring (b *<- a) where
   one = M (mempty +-> one)
   M p <.> M q = sum [u <> v +-> p!u <.> q!v | u <- M.keys p, v <- M.keys q]

@@ -53,6 +53,9 @@ FunctorSemimodule(LTrie c)
 -- instance (Ord c, Semiring b) => LeftSemimodule b (LTrie c b) where
 --   s `scale` (b :< dp) = s <.> b :< fmap (s `scale`) dp
 
+-- instance (Ord c, Semiring b) => LeftSemimodule b (LTrie c b) where
+--   scale s = go where go (b :< dp) = s <.> b :< fmap go dp
+
 instance (Ord c, Additive b, DetectableZero b) => DetectableZero (LTrie c b) where
   isZero (a :< dp) = isZero a && isZero dp
 
@@ -100,7 +103,8 @@ trimT' n (C x) = C (trimT n x)
 
 #else
 
-newtype LTrie' b c = L (LTrie c b) deriving (Additive, HasSingle [c] b, LeftSemimodule b, Indexable [c] b)
+newtype LTrie' b c = L (LTrie c b) deriving
+  (Additive, HasSingle [c] b, LeftSemimodule b, Indexable [c] b, Decomposable b (Map c))
 
 -- Derive Indexable?
 
@@ -111,15 +115,15 @@ infix 1 :<:
 pattern (:<:) :: b -> (c ->* LTrie' b c) -> LTrie' b c
 pattern b :<: d <- L (b :< (coerce -> d)) where b :<: d = L (b :< coerce d)
 
+{-# COMPLETE (:<:) :: LTrie' #-}
+
 -- pattern b :<: d <- L (b :< (fmap L -> d)) where b :<: d = L (b :< fmap unL d)
 
 -- TODO: Use this version in the paper.
 
-
-{-# COMPLETE (:<:) :: LTrie' #-}
-
-trieFun' :: (Ord c, Additive b) => LTrie' b c -> (b <-- [c])
-trieFun' (L t) = C (t !)
+-- trieFun' :: (Ord c, Additive b) => LTrie' b c -> (b <-- [c])
+-- -- trieFun' (L t) = C (t !)
+-- trieFun' = C . (!)
 
 instance (Ord c, Semiring b, DetectableZero b) => Semiring (LTrie' b c) where
   one = one :<: zero

@@ -556,6 +556,7 @@ The affine equation |q == r <+> s .> q| has solution |q = star s .> r|.
 ==  one .> r <+> (s <.> star s) .> r    -- distributivity
 ==  r <+> s .> (star s .> r)            -- multiplicative identity and associativity
 \end{code}
+\vspace{-4ex}
 \end{proof}
 
 \subsectionl{Singletons}
@@ -564,7 +565,6 @@ We now have a fair amount of vocabulary for combining values.
 We'll also want an operation that constructs a ``vector'' with a single non-zero component:
 %format +-> = "\mapsto"
 \begin{code}
-infix 1 +->
 class HasSingle a b x | x -> a b where
   infixr 1 +->
   (+->) :: a -> b -> x
@@ -994,37 +994,46 @@ Understanding how |atEps| and |deriv| relate to the semiring vocabulary will hel
 
 \begin{lemma}[\provedIn{lemma:atEps b <-- [c]}]\lemlabel{atEps b <-- [c]}
 The |atEps| function is a star semiring and left semimodule homomorphism, i.e.,
+\begin{spacing}{1.2}
 \begin{code}
 atEps zero         == zero
 atEps one          == one
 atEps (p  <+>  q)  == atEps p  <+>  atEps q 
 atEps (p  <.>  q)  == atEps p  <.>  atEps q 
-
-atEps (star p) == star (atEps p)
+atEps (star p)     == star (atEps p)
 \end{code}
-Moreover,\footnote{Mathematically, |atEps| is thus a left |b|-semiring homomorphism as well, since every semiring is a (left and right) semimodule over itself. Declaring them as such in the Haskell implementation, however, would lead to ambiguity during type inference.}
+\end{spacing}
+\noindent
+Moreover,\footnote{Mathematically, the |(.>)| equation says that |atEps| is a left |b|-semiring homomorphism as well, since every semiring is a (left and right) semimodule over itself.
+Likewise, the |(+->)| equation might be written as ``|null w +-> b|'' or even ``|atEps w +-> b|''.
+These prettier formulations would lead to ambiguity during Haskell type inference.}
+\begin{spacing}{1.2}
 \begin{code}
-atEps (s .> p) == s * atEps p
-atEps (w +-> b) == if null w then b else zero
+atEps (s .> p)   == s * atEps p
+atEps (w +-> b)  == if null w then b else zero
 \end{code}
-\note{Look for a more homomorphic framing of the |(+->)| equation, say ``|null w +-> b|'' or even ``|atEps w +-> b|''.
-Again, there may be ambiguity issues with Haskell type inference.}
+\end{spacing}
+\vspace{-2ex}
+\noindent
+\note{Probably break |w +-> b| into |[] +-> b| and |c:cs +-> b|, as with |deriv| below.}
 \end{lemma}
 \begin{lemma}[\provedIn{lemma:deriv b <-- [c]}, generalizing Lemma 3.1 of \citet{Brzozowski64}]\lemlabel{deriv b <-- [c]}
 Differentiation has the following properties:
 \notefoot{If I replace application to |c| by indexing by |c| (i.e., |(! NOP c)|), will this lemma hold for all of the representations? I suspect so. Idea: Define $\derivOp_c\,p = \derivOp\,p\:!\:c$.}
+\begin{spacing}{1.2}
 \begin{code}
 deriv zero  c == zero
 deriv one   c == zero
 deriv (p  <+>  q) c == deriv p c <+> deriv q c
 deriv (p  <.>  q) c == atEps p .> deriv q c <+> deriv p c <.> q
-
 deriv (star p) c == star (atEps p) .> deriv p c * star p
-
 deriv (s .> p) c == s .> deriv p c
 
-deriv (single [d]) c == equal c d
+deriv (    []       +-> b) c == zero
+deriv (c'  :  cs'   +-> b) c == if c == c' then cs' +-> b else zero
 \end{code}
+\end{spacing}
+\vspace{-2ex}
 \end{lemma}
 \begin{theorem}[\provedIn{theorem:semiring decomp b <-- [c]}]\thmlabel{semiring decomp b <-- [c]}
 The following properties hold:
@@ -1442,33 +1451,48 @@ Second addend:
 ==  \ c -> F (\ cs -> f (c:cs)) <.> F g                             -- |(<.>)| on |b <-- a|
 ==  \ c -> deriv (F f) c <.> F g                                    -- |deriv| on |b <-- a|
 \end{code}
-Combine addends, and let |p = F f| and |q = F g|:
+Combining addends,
 \begin{code}
-    deriv (p <.> q) c
-==  deriv (F f <.> F g) c
-==  ...
-==  atEps (F f) .> deriv (F g) c <+> deriv (F f) c <.> F g
-==  atEps p .> deriv q c <+> deriv p c <.> q
-\end{code}    
+deriv (F f <.> F g) c == atEps (F f) .> deriv (F g) c <+> deriv (F f) c <.> F g
+\end{code}
 
 \noindent
-Next, closure:
+Continuing with the other equations in \lemref{deriv b <-- [c]},
+
 \begin{code}
     deriv (star p) c
 ==  deriv (one <+> p <.> star p) c                        -- star semiring law
 ==  deriv one c <+> deriv (p <.> star p) c                -- additivity of |deriv|
 ==  deriv (p <.> star p) c                                -- |deriv one c == zero| (above)
 ==  atEps p .> deriv (star p) c <+> deriv p c <.> star p  -- |deriv (p * q)| above
+==  star (atEps p) .> deriv p c <.> star p                -- \lemref{affine over semimodule}
 \end{code}
-Thus, by \lemref{affine over semiring},
+
 \begin{code}
-deriv (star p) c == star (atEps p) .> deriv p c <.> star p
+    deriv (s .> F f) c
+==  deriv (F (\ w -> s * f w)) c         -- |(.>)| on |b <-- a|
+==  F (\ cs -> (\ w -> s * f w) (c:cs))  -- |deriv| definition
+==  F (\ cs -> s * f (c:cs))             -- $\beta$ reduction
+==  s .> F (\ cs -> f (c:cs))            -- |(.>)| on |b <-- a|
+==  s .> deriv (F f) c                   -- |deriv| definition
 \end{code}
 
-\note{|deriv (s .> p) c == s .> deriv p c|}
+\begin{code}
+    deriv ([] +-> b) c
+==  deriv (F (\ w -> if w == [] then b else zero))           -- |(+->)| on |b <-- a|
+==  F (\ cs -> (\ w -> if w == [] then b else zero) (c:cs))  -- |deriv| definition
+==  F (\ cs -> if c:cs == [] then b else zero)               -- $\beta$ reduction
+==  F (\ cs -> zero)                                         -- |c:cs /= []|
+==  zero                                                     -- |zero| on |b <-- a|
 
-\note{|deriv (single [d]) c == equal c d|}
-
+    deriv (F (\ w -> if w == c':cs' then b else zero)) c
+==  F (\ cs -> (\ w -> if w == c':cs' then b else zero) (c:cs))            -- |(+->)| on |b <-- a|
+==  F (\ cs -> if c:cs == c':cs' then b else zero)                         -- $\beta$ reduction
+==  F (\ cs -> if c == c' && cs == cs' then b else zero)                   -- |(:)| injectivity
+==  F (\ cs -> if c == c' then (if cs == cs' then b else zero) else zero)  -- property of |if| and |(&&)|
+==  if c == c' then (F (\ cs -> if cs == cs' then b else zero) else zero)  -- property of |if|
+==  if c == c' then cs' +-> b else zero                                    -- |(+->)| on |b <-- a|
+\end{code}
 
 \begin{lemma}\lemlabel{deriv +->}
 Differentiation and |(+->)| satisfy the following relationships:

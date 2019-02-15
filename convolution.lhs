@@ -1002,7 +1002,13 @@ atEps (p  <.>  q)  == atEps p  <.>  atEps q
 
 atEps (star p) == star (atEps p)
 \end{code}
-Moreover, |atEps (s .> p) == s * atEps p|, and |atEps (single [d]) == zero|.\footnote{Mathematically, |atEps| is thus a left |b|-semiring homomorphism as well, since every semiring is a (left and right) semimodule over itself. Declaring them as such in the Haskell implementation, however, would lead to ambiguity during type inference.}
+Moreover,\footnote{Mathematically, |atEps| is thus a left |b|-semiring homomorphism as well, since every semiring is a (left and right) semimodule over itself. Declaring them as such in the Haskell implementation, however, would lead to ambiguity during type inference.}
+\begin{code}
+atEps (s .> p) == s * atEps p
+atEps (w +-> b) == if null w then b else zero
+\end{code}
+\note{Look for a more homomorphic framing of the |(+->)| equation, say ``|null w +-> b|'' or even ``|atEps w +-> b|''.
+Again, there may be ambiguity issues with Haskell type inference.}
 \end{lemma}
 \begin{lemma}[\provedIn{lemma:deriv b <-- [c]}, generalizing Lemma 3.1 of \citet{Brzozowski64}]\lemlabel{deriv b <-- [c]}
 Differentiation has the following properties:
@@ -1065,10 +1071,11 @@ While simple and correct, these implementations are quite inefficient, primarily
 As a simple example, consider the language |single "pickles" + single "pickled"|, and suppose we want to test the word ``pickling'' for membership.
 The simple implementations above will first try ``pickles'', fail near the end, and then backtrack all the way to the beginning to try ``pickled''.
 The second attempt redundantly discovers that the prefix ``pickl'' is also a prefix of the candidate word.
+\note{Also mention nondeterministic splitting (|(<>)| inversion) for |(*)|, and clearly articulate how to avoid it. This explanation is less clear to me.}
 
 This problem of redundant comparison is solved elegantly by the classic trie (``prefix tree'') data structure \needcite{}.
 This data structure was later generalized to arbitrary (regular) algebraic data types \needcite{} and then from sets to functions \needcite{}.
-We'll explore the data type generalization later.\notefoot{Add a forward pointer or remove the promise.}
+We'll explore the data type generalization later.\notefoot{Add a forward pointer, or remove the promise.}
 Restricting our attention to functions of lists (``strings'' over some alphabet), we can formulate a simple trie data type as follows:
 \notefoot{Maybe another oppositely pointing arrows of some sort.
 I might want yet another pair for generalized tries.}
@@ -1078,8 +1085,10 @@ infix 1 :<
 data LTrie c b = b :< (c ->* LTrie c b)
 \end{code}
 The similarity between the |LTrie| type and the function decomposition from \secref{Decomposing Functions from Lists} (motivating the constructor's name) makes for easy instance calculation.
-\begin{theorem}[\provedIn{theorem:Trie}]\thmlabel{Trie}
-Given the definitions in \figrefdef{Trie}{Tries as |[c] -> b|}{
+As with |Pow a| and |a ->* b|, we can define a trie counterpart to the monoid semiring, here |b <-- [c]|.
+\note{Consider combining the following two theorems into one.}
+\begin{theorem}[\provedIn{theorem:LTrie}]\thmlabel{LTrie}
+Given the definitions in \figrefdef{LTrie}{Tries as |[c] -> b|}{
 \begin{code}
 infix 1 :<
 data LTrie c b = b :< (c ->* LTrie c b)
@@ -1103,27 +1112,9 @@ instance (Ord c, Additive b) => HasSingle [c] b (LTrie c b) where
 \vspace{-4ex}
 }, |(!)| is a homomorphism with respect to each instantiated class.
 \end{theorem}
-
-%if False
-
-*   I could first do regular functions with *Additive*, *HasSingle*, and *LeftSemimodule*.
-    The calculations are much simpler than for *Semiring* and *StarSemiring*.
-*   Motivate decomposition by examining inefficiency in the simple implementation of addition and singletons for predicates and general functions.
-    *   Example: `single "pink" + single "pig"` or `single "pickles" + single "pickled"`.
-        Given the word "pickled", the simple implementation first tries "pickles", fails near the end, and starts over on "pickled" before succeeding.
-        Similarly for "picket", which fails both branches.
-    *   The problem here is the backtracking search understands nothing of the similarities of the words in the language.
-        This problem is solved elegantly by the classic trie (aka "prefix tree") data structure.
-        Define the trie type and the isomorphism between tries and functions.
-        Then calculate as usual.
-        Similarly for the *Semiring* and *Semimodules*.
-        (Work with functions, since the specialization to sets is mechanical.)
-    *   Then do the monoid semiring, which is trickier but quite useful.
-
-%endif
-
 %format :<: = "\mathrel{\Varid{:\!\!\triangleleft\!:}}"
-As with |Pow a| and |a ->* b|, we can define a trie counterpart to the monoid semiring, here |b <-- [c]|, as shown in \figrefdef{LTrie'}{Tries as |b <-- [c]|}{
+\begin{theorem}[\provedIn{theorem:LTrie'}]\thmlabel{LTrie'}
+Given the definitions in \figrefdef{LTrie'}{Tries as |b <-- [c]|}{
 \begin{code}
 
 newtype LTrie' b c = L (LTrie c b) deriving (Additive, HasSingle [c] b, LeftSemimodule b, Indexable [c] b)
@@ -1139,9 +1130,10 @@ instance (Ord c, Semiring b, DetectableZero b) => Semiring (LTrie' b c) where
 instance (Ord c, StarSemiring b, DetectableZero b) => StarSemiring (LTrie' b c) where
   star (a :<: dp) = q where q = star a .> (one :<: fmap (<.> q) dp)
 \end{code}
-}.\footnote{The pattern synonym |(:<:)| enables matching and constructing |LTrie'| values as if they were defined as |data LTrie' b c = b :<: (c ->* LTrie' c b)| \needcite{}.
+}, |(!^)| is a homomorphism with respect to each instantiated class.\footnote{The pattern synonym |(:<:)| enables matching and constructing |LTrie'| values as if they were defined as |data LTrie' b c = b :<: (c ->* LTrie' c b)| \needcite{}.
 This definition uses safe, zero-cost coercions between |c ->* LTrie c b| and |c ->* LTrie' b c| \needcite{Breitner2016SZC}.}
 \notefoot{Introduce |DetectableZero| earlier.}
+\end{theorem}
 
 \workingHere
 
@@ -1190,8 +1182,7 @@ One version like |a -> b| and another like |b <-- a|.
   Language ``derivatives'':
   \begin{itemize}
   \item
-    I'm unsure whether to place this section here.
-    If so, how can I make it flow well?
+    I'm unsure where to place this section.
   \item
     Briefly present Brzozowski's method (for recognizing regular languages).
   \item
@@ -1344,42 +1335,56 @@ For the other two equations:
 \subsection{\lemref{atEps b <-- [c]}}\proofLabel{lemma:atEps b <-- [c]}
 
 \begin{code}
-
     atEps zero
 ==  atEps (F (\ a -> zero))  -- |zero| on |b <-- a|
 ==  (\ a -> zero) []         -- |atEps| definition
 ==  zero                     -- $\beta$ reduction
-
+\end{code}
+\begin{code}
     atEps one
 ==  atEps (F (equal mempty))  -- |one| on |b <-- a|
 ==  equal mempty mempty       -- |atEps| definition            
 ==  one                       -- |equal| definition
-
+\end{code}
+\begin{code}
     atEps (F f <+> F g)
 ==  atEps (F (\ a -> f a <+> g a))      -- |(<+>)| on |b <-- a|
 ==  (\ a -> f a <+> g a) []             -- |atEps| definition
 ==  f [] <+> g []                       -- $\beta$ reduction
 ==  atEps (F f) <+> atEps (F g)         -- |atEps| definition
-
+\end{code}
+\begin{code}
     atEps (F f <.> F g)
 ==  atEps (bigSum (u,v) u <> v +-> f u <.> g v)               -- |(<.>)| on |b <-- a|
 ==  atEps (\ w -> bigSumQ (u,v BR u <> v == []) f u <.> g v)  -- alternative definition from \figref{<--}
 ==  bigSumKeys (u,v BR u == [] && v == []) NOP f u <.> g v    -- |u <> v == [] <=> u == [] && v == []| 
 ==  f [] <.> g []                                             -- singleton sum
 ==  atEps (F f) <.> atEps (F g)                               -- |atEps| definition
-
+\end{code}
+\begin{code}
     atEps (star p)
 ==  atEps (one <+> p <.> star p)        -- defining property of |star|
 ==  one <+> atEps p <.> atEps (star p)  -- |atEps| distributes over |one|, |(<+>)| and |(<.>)|
-==  one <+> atEps p <.> star (atEps p)  -- coinduction (?)
+==  one <+> atEps p <.> star (atEps p)  -- \note{coinduction?}
 ==  star (atEps p)                      -- defining property of |star|
-
-    atEps (s .> F f)
-==  atEps (F (\ a -> s * f a))
-==  (\ a -> s * f a) []
-==  s * f []
-==  s * atEps (F f)
 \end{code}
+\begin{code}
+    atEps (s .> F f)
+==  atEps (F (\ a -> s * f a))  -- |(.>)| on |b <-- a|
+==  (\ a -> s * f a) []         -- |atEps| definition
+==  s * f []                    -- $\beta$ reduction
+==  s * atEps (F f)             -- |atEps| definition
+\end{code}
+\begin{code}
+    atEps (w +-> b)
+==  atEps (F (\ w' -> if w' == w then b else zero))  -- |(+->)| on |b <-- [c]|
+==  (\ w' -> if w' == w then b else zero) []         -- |atEps| definition
+==  if [] == w then b else zero                      -- $\beta$ reduction
+==  if null w then b else zero                       -- |null| definition
+\end{code}
+
+\note{To do: Fix various lemmas, theorems, and proofs to use |a +-> b| instead of |single a|.}
+
 \note{For the |star p| proof, maybe instead show inductively that |atEps (pow p n) == pow (atEps p) n| for all |n >= 0|, and then appeal to the summation definition of |star p|.}
 
 \subsection{\lemref{deriv b <-- [c]}}\proofLabel{lemma:deriv b <-- [c]}
@@ -1447,7 +1452,7 @@ Combine addends, and let |p = F f| and |q = F g|:
 \end{code}    
 
 \noindent
-Finally, closure:
+Next, closure:
 \begin{code}
     deriv (star p) c
 ==  deriv (one <+> p <.> star p) c                        -- star semiring law
@@ -1459,6 +1464,11 @@ Thus, by \lemref{affine over semiring},
 \begin{code}
 deriv (star p) c == star (atEps p) .> deriv p c <.> star p
 \end{code}
+
+\note{|deriv (s .> p) c == s .> deriv p c|}
+
+\note{|deriv (single [d]) c == equal c d|}
+
 
 \begin{lemma}\lemlabel{deriv +->}
 Differentiation and |(+->)| satisfy the following relationships:
@@ -1523,7 +1533,7 @@ I could say ``Proof: Immediate from \lemrefthree{decomp (b <-- [c])}{atEps b <--
 ==  a <.> b <: \ c -> a .> dq c <+> dp c <.> (b <: dq)                        -- \lemref{atEps and deriv via (<:)} below
 ==  (a <.> b <+> zero) <: (\ c -> a .> dq c) <+> (\ c -> dp c <.> (b <: dq))  -- additive identity; |(<+>)| on functions
 ==  (a <.> b <: \ c -> a .> dq c) <+> (zero <: \ c -> dp c <.> (b <: dq))     -- previous result
-==  a .> (b <: dq) <+> (zero <: \ c -> dp c <.> (b <: dq))                    -- \note{needs lemma}
+==  a .> (b <: dq) <+> (zero <: \ c -> dp c <.> (b <: dq))                    -- \lemref{atEps and deriv via (<:)} below
 ==  a .> (b <: dq) <+> (zero <: (<.> NOP (b <: dq)) . dp)                     -- |(.)| definition
 ==  a .> (b <: dq) <+> (zero <: fmap (<.> NOP (b <: dq)) dp)                  -- fmap on functions
 \end{code}
@@ -1536,10 +1546,15 @@ I could say ``Proof: Immediate from \lemrefthree{decomp (b <-- [c])}{atEps b <--
     star (a <: dp)
 ==  atEps (star (a <: dp)) <: deriv (star (a <: dp))                     -- \lemref{decomp (b <-- [c])}
 ==  star a <: \ c -> star a .> dp c * star (a <: dp)                     -- \lemref{atEps and deriv via (<:)} below
-==  star a .> (one <: \ c -> dp c * star (a <: dp))                      -- \note{needs same lemma as above}
+==  star a .> (one <: \ c -> dp c * star (a <: dp))                      -- \lemref{atEps and deriv via (<:)} below
 \end{code}
 
 \workingHere
+
+\begin{code}
+    s .> p
+==  ...
+\end{code}
 
 %% single w = product (map symbol w)
 %%   where
@@ -1550,29 +1565,29 @@ I could say ``Proof: Immediate from \lemrefthree{decomp (b <-- [c])}{atEps b <--
 ==  ...
 \end{code}
 
-\begin{code}
-    s .> p
-==  ...
-\end{code}
-
 \begin{lemma}\lemlabel{atEps and deriv via (<:)}
 The |atEps| and |deriv| functions satisfy the following properties in terms of |(<:)|-decompositions:
+\begin{spacing}{1.2}
 \begin{code}
-atEps ((a <: dp)  <+>  (b <: dq))  == a <+> b
-atEps ((a <: dp)  <.>  (b <: dq))  == a <.> b
+atEps ((a <: dp)  <+>  (b <: dq)) == a <+> b
+atEps ((a <: dp)  <.>  (b <: dq)) == a <.> b
 atEps (star (a <: dp)) == star a
+atEps (s .> (a <: dp)) == s * a
+
 \end{code}
 \begin{code}
 deriv ((a <: dp)  <+>  (b <: dq)) c == dp c <+> dq c
 deriv ((a <: dp)  <.>  (b <: dq)) c == a .> dq c <+> dp c <.> (b <: dq)
 deriv (star (a <: dp)) c == star a .> dp c * star (a <: dp)
+deriv (s .> (a <: dp)) c == s .> dp c
 \end{code}
+\end{spacing}
 \end{lemma}
 \begin{proof}
 Substitute into \lemreftwo{atEps b <-- [c]}{deriv b <-- [c]}, and simplify, using \lemref{decomp (b <-- [c])}.
 \end{proof}
 
-\subsection{\thmref{Trie}}\proofLabel{theorem:Trie}
+\subsection{\thmref{LTrie}}\proofLabel{theorem:LTrie}
 
 \workingHere
 
@@ -1596,6 +1611,8 @@ Substitute into \lemreftwo{atEps b <-- [c]}{deriv b <-- [c]}, and simplify, usin
 \end{code}
 
 \note{Coinduction?}
+
+\subsection{\thmref{LTrie'}}\proofLabel{theorem:LTrie'}
 
 \bibliography{bib}
 

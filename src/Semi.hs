@@ -71,7 +71,7 @@ s .> b | isZero s  = zero
 --------------------------------------------------------------------}
 
 class HasSingle a b x | x -> a b where
-  infixr 1 +->
+  infixr 2 +->
   (+->) :: a -> b -> x
 
 single :: (HasSingle a b x, Semiring b) => a -> x

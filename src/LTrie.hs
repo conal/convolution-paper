@@ -64,12 +64,12 @@ instance (Ord c, Additive b, DetectableZero b) => DetectableZero (LTrie c b) whe
 
 instance (Ord c, Additive b) => HasSingle [c] b (LTrie c b) where
 #if 0
-  w +-> b = case w of { [] -> b :< zero ; c:cs -> zero :< (c +-> cs +-> b) }
+  w +-> b = case w of { [] -> b :< zero ; c:cs -> zero :< c +-> cs +-> b }
 #elif 0
   []   +-> b = b :< zero
   c:cs +-> b = zero :< (c +-> cs +-> b)
 #elif 1
-  w +-> b = foldr (\ c t -> zero :< (c +-> t)) (b :< zero) w
+  w +-> b = foldr (\ c t -> zero :< c +-> t) (b :< zero) w
 #else
   w +-> b = foldr cons nil w
    where

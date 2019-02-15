@@ -566,7 +566,7 @@ We'll also want an operation that constructs a ``vector'' with a single non-zero
 %format +-> = "\mapsto"
 \begin{code}
 class HasSingle a b x | x -> a b where
-  infixr 1 +->
+  infixr 2 +->
   (+->) :: a -> b -> x
 \end{code}
 Two specializations of |a +-> b| will come in handy: one for |a = mempty|, and one for |b = one|.
@@ -839,7 +839,7 @@ To cement our analogy, let's require that |recogLang| (and hence |langRecog|) be
 If we apply the same sort of reasoning as in \secref{Calculating Instances from Homomorphisms} and then generalize from |Bool| to an arbitrary semiring, we get the definitions in \figrefdef{<--}{The monoid semiring}{
 \begin{code}
 instance (Semiring b, Monoid a) => Semiring (b <-- a) where
-  one = F (single mempty)
+  one = single mempty
   F f * F g  = bigSum (u,v) u <> v +-> f u <.> g v
              = F (\ w -> bigSumQ (u,v BR u <> v == w) f u <.> g v)
 
@@ -994,7 +994,7 @@ Understanding how |atEps| and |deriv| relate to the semiring vocabulary will hel
 
 \begin{lemma}[\provedIn{lemma:atEps b <-- [c]}]\lemlabel{atEps b <-- [c]}
 The |atEps| function is a star semiring and left semimodule homomorphism, i.e.,
-\begin{spacing}{1.2}
+\begin{spacing}{1.4}
 \begin{code}
 atEps zero         == zero
 atEps one          == one
@@ -1007,20 +1007,21 @@ atEps (star p)     == star (atEps p)
 Moreover,\footnote{Mathematically, the |(.>)| equation says that |atEps| is a left |b|-semiring homomorphism as well, since every semiring is a (left and right) semimodule over itself.
 Likewise, the |(+->)| equation might be written as ``|null w +-> b|'' or even ``|atEps w +-> b|''.
 These prettier formulations would lead to ambiguity during Haskell type inference.}
-\begin{spacing}{1.2}
+\begin{spacing}{1.4}
 \begin{code}
 atEps (s .> p)   == s * atEps p
-atEps (w +-> b)  == if null w then b else zero
+
+atEps (   []     +-> b) == b
+atEps (c  :  cs  +-> b) == zero
 \end{code}
 \end{spacing}
 \vspace{-2ex}
 \noindent
-\note{Probably break |w +-> b| into |[] +-> b| and |c:cs +-> b|, as with |deriv| below.}
 \end{lemma}
 \begin{lemma}[\provedIn{lemma:deriv b <-- [c]}, generalizing Lemma 3.1 of \citet{Brzozowski64}]\lemlabel{deriv b <-- [c]}
 Differentiation has the following properties:
 \notefoot{If I replace application to |c| by indexing by |c| (i.e., |(! NOP c)|), will this lemma hold for all of the representations? I suspect so. Idea: Define $\derivOp_c\,p = \derivOp\,p\:!\:c$.}
-\begin{spacing}{1.2}
+\begin{spacing}{1.4}
 \begin{code}
 deriv zero  c == zero
 deriv one   c == zero
@@ -1037,17 +1038,15 @@ deriv (c'  :  cs'   +-> b) c == if c == c' then cs' +-> b else zero
 \end{lemma}
 \begin{theorem}[\provedIn{theorem:semiring decomp b <-- [c]}]\thmlabel{semiring decomp b <-- [c]}
 The following properties hold:
-\begin{spacing}{1.2}
+\begin{spacing}{1.4}
 \begin{code}
 zero  == zero  <: zero
 one   == one   <: zero
 (a  <:  dp) <+> (b <: dq)  == a  <+>  b <: dp <+> dq
 (a  <:  dp) <.> q == a .> q <+> (zero <: fmap (<.> NOP q) dp)
 star (a <: dp) = q where q = star a .> (one <: fmap (<.> NOP q) dp)
-
-single w = product (map symbol w) where symbol d = zero <: equal d
-
 s .> (a <: dp) = s <.> a <: fmap (s NOP .>) dp
+w +-> b = foldr (\ c t -> zero <: c +-> t) (b <: zero) w
 \end{code}
 \vspace{-6ex}
 \end{spacing}
@@ -1116,7 +1115,7 @@ instance (Ord c, Additive b, DetectableZero b) => DetectableZero (LTrie c b) whe
   isZero (a :< dp) = isZero a && isZero dp
 
 instance (Ord c, Additive b) => HasSingle [c] b (LTrie c b) where
-  w +-> b = foldr (\ c t -> zero :< (c +-> t)) (b :< zero) w
+  w +-> b = foldr (\ c t -> zero :< c +-> t) (b :< zero) w
 \end{code}
 \vspace{-4ex}
 }, |(!)| is a homomorphism with respect to each instantiated class.
@@ -1384,6 +1383,7 @@ For the other two equations:
 ==  s * f []                    -- $\beta$ reduction
 ==  s * atEps (F f)             -- |atEps| definition
 \end{code}
+%if False
 \begin{code}
     atEps (w +-> b)
 ==  atEps (F (\ w' -> if w' == w then b else zero))  -- |(+->)| on |b <-- [c]|
@@ -1391,8 +1391,21 @@ For the other two equations:
 ==  if [] == w then b else zero                      -- $\beta$ reduction
 ==  if null w then b else zero                       -- |null| definition
 \end{code}
+%else
+\begin{code}
+    atEps ([] +-> b)
+==  atEps (F (\ w -> if w == [] then b else zero))    -- |(+->)| on |b <-- [c]|
+==  (\ w -> if w == [] then b else zero) []           -- |atEps| definition
+==  if [] == [] then b else zero                      -- $\beta$ reduction
+==  b                                                 -- |if True|
 
-\note{To do: Fix various lemmas, theorems, and proofs to use |a +-> b| instead of |single a|.}
+    atEps (c:cs +-> b)
+==  atEps (F (\ w -> if w == c:cs then b else zero))  -- |(+->)| on |b <-- [c]|
+==  (\ w -> if w == c:cs then b else zero) []         -- |atEps| definition
+==  if [] == c:cs then b else zero                    -- $\beta$ reduction
+==  zero                                              -- |if False|
+\end{code}
+%endif
 
 \note{For the |star p| proof, maybe instead show inductively that |atEps (pow p n) == pow (atEps p) n| for all |n >= 0|, and then appeal to the summation definition of |star p|.}
 
@@ -1557,7 +1570,7 @@ I could say ``Proof: Immediate from \lemrefthree{decomp (b <-- [c])}{atEps b <--
 ==  a <.> b <: \ c -> a .> dq c <+> dp c <.> (b <: dq)                        -- \lemref{atEps and deriv via (<:)} below
 ==  (a <.> b <+> zero) <: (\ c -> a .> dq c) <+> (\ c -> dp c <.> (b <: dq))  -- additive identity; |(<+>)| on functions
 ==  (a <.> b <: \ c -> a .> dq c) <+> (zero <: \ c -> dp c <.> (b <: dq))     -- previous result
-==  a .> (b <: dq) <+> (zero <: \ c -> dp c <.> (b <: dq))                    -- \lemref{atEps and deriv via (<:)} below
+==  a .> (b <: dq) <+> (zero <: \ c -> dp c <.> (b <: dq))                    -- |(.>)| case below
 ==  a .> (b <: dq) <+> (zero <: (<.> NOP (b <: dq)) . dp)                     -- |(.)| definition
 ==  a .> (b <: dq) <+> (zero <: fmap (<.> NOP (b <: dq)) dp)                  -- fmap on functions
 \end{code}
@@ -1570,24 +1583,31 @@ I could say ``Proof: Immediate from \lemrefthree{decomp (b <-- [c])}{atEps b <--
     star (a <: dp)
 ==  atEps (star (a <: dp)) <: deriv (star (a <: dp))                     -- \lemref{decomp (b <-- [c])}
 ==  star a <: \ c -> star a .> dp c * star (a <: dp)                     -- \lemref{atEps and deriv via (<:)} below
-==  star a .> (one <: \ c -> dp c * star (a <: dp))                      -- \lemref{atEps and deriv via (<:)} below
+==  star a .> (one <: \ c -> dp c * star (a <: dp))                      -- |(.>)| case below
 \end{code}
-
-\workingHere
 
 \begin{code}
-    s .> p
-==  ...
+    s .> (b <: h)
+==  atEps (s .> (b <: h)) <: deriv (s .> (b <: h))  -- \lemref{decomp (b <-- [c])}
+==  s * b <: \ c -> s .> dp c                       -- \lemref{atEps and deriv via (<:)} below
+==  s * b <: (s .>) . dp                            -- |(.)| definition
+==  s * b <: fmap (s .>) dp                         -- |fmap| on functions
 \end{code}
-
-%% single w = product (map symbol w)
-%%   where
-%%      symbol d = zero <: equal d
 
 \begin{code}
-    |single w|
-==  ...
+    [] +-> b
+==  atEps ([] +-> b) <: deriv ([] +-> b)               -- \lemref{decomp (b <-- [c])}
+==  b <: \ c -> zero                                   -- \lemreftwo{atEps b <-- [c]}{deriv b <-- [c]}
+==  b <: zero                                          -- |zero| on functions
+
+    c':cs' +-> b
+==  atEps (c':cs' +-> b) <: deriv (c':cs' +-> b)       -- \lemref{decomp (b <-- [c])}
+==  zero <: \ c -> if c = c' then cs' +-> b else zero  -- \lemreftwo{atEps b <-- [c]}{deriv b <-- [c]}
+==  zero <: c' +-> cs' +-> b                           -- |(+->)| on functions
 \end{code}
+Expressed via |foldr|,
+
+> w +-> b = foldr (\ c t -> zero <: c +-> t) (b <: zero) w
 
 \begin{lemma}\lemlabel{atEps and deriv via (<:)}
 The |atEps| and |deriv| functions satisfy the following properties in terms of |(<:)|-decompositions:
@@ -1606,6 +1626,7 @@ deriv (star (a <: dp)) c == star a .> dp c * star (a <: dp)
 deriv (s .> (a <: dp)) c == s .> dp c
 \end{code}
 \end{spacing}
+\vspace{-2ex}
 \end{lemma}
 \begin{proof}
 Substitute into \lemreftwo{atEps b <-- [c]}{deriv b <-- [c]}, and simplify, using \lemref{decomp (b <-- [c])}.

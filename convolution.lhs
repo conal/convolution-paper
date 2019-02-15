@@ -470,8 +470,10 @@ atEps f = f mempty
 \end{code}
 %endif
 
-A useful property of star semirings is that recursive affine equations have solutions.
-Specifically, |p = b + m * p| has solution |p = star m * b| \citep{Dolan2013FunSemi}:
+A useful property of star semirings is that recursive affine equations have solutions:
+\begin{lemma}\lemlabel{affine over semiring}
+The affine equation |p = b + m * p| has solution |p = star m * b| \citep{Dolan2013FunSemi}:
+\end{lemma}
 \begin{code}
     b + m * (star m * b)
 ==  b + (m * star m) * b      -- associativity of |(+)|
@@ -480,7 +482,7 @@ Specifically, |p = b + m * p| has solution |p = star m * b| \citep{Dolan2013FunS
 ==  star m * b                -- star semiring law
 \end{code}
 
-\note{Mention tropical semirings, optimization algebra, schedule algebra (max-plus), and optimization algebra \citep{Golan2005RecentSemi}. Maybe also polynomials.}
+\note{Mention tropical semirings, schedule algebra (max-plus), and optimization algebra (min-plus) \citep{Golan2005RecentSemi}. Maybe also polynomials.}
 
 \subsectionl{Semimodules}
 
@@ -490,7 +492,8 @@ Specifically, |p = b + m * p| has solution |p = star m * b| \citep{Dolan2013FunS
 %% and introduce (.>).
 
 As fields are to vector spaces, rings are to modules, and semirings are to \emph{semimodules}.
-For any semiring |s|, a \emph{left |s|-semimodule} is a additive monoid whose values can be multiplied on the left by |s| values, which play the role of ``scalars''.
+For any semiring |s|, a \emph{left |s|-semimodule} |b| is a additive monoid whose values can be multiplied on the left by |s| values.
+Here, |s| plays the role of ``scalars'', while |b| plays the role of ``vectors''.
 \begin{code}
 class (Semiring s, Additive b) => LeftSemimodule s b | b -> s where
   (.>) :: s -> b -> b
@@ -504,12 +507,12 @@ s .> (b + c) == s .> b + s .> c
 one   .> b == b
 zero  .> b == zero
 \end{code}
-There is also a corresponding notion of \emph{right} |s|-semimodule with multiplication on the right by |s| values, which we will not need in this paper.
-(Rings also have left- and right-modules, and in \emph{commutative} rings and semirings (including vector spaces), the left and right variant coincide.)
+There is also a corresponding notion of \emph{right} |s|-semimodule (with multiplication on the right by |s| values), which we will not need in this paper.
+(Rings also have left- and right-modules, and in \emph{commutative} rings and semirings (including vector spaces), the left and right variants coincide.)
 
 As usual, we have a corresponding notion of homomorphism, which is more commonly referred to as ``linearity'':
 \begin{definition} \deflabel{left semimodule homomorphism}
-A function |h| from one left |s|-semimodule to another is an \emph{left |s|-semimodule homomorphism} if it is an additive monoid homomorphism (\defref{additive monoid homomorphism}) and satisfies the following additional properties:
+A function |h| from one left |s|-semimodule to another is a \emph{left |s|-semimodule homomorphism} if it is an additive monoid homomorphism (\defref{additive monoid homomorphism}) and satisfies the following additional properties:
 \begin{code}
 h (s .> b) == s .> h b
 \end{code}
@@ -524,6 +527,8 @@ instance LeftSemimodule s (a -> s) where
 \end{code}
 If we think of |a -> s| as a ``vector'' of |s| values, indexed by |a|, then |s .> f| scales each component of the vector |f| by |s|.
 
+%format `scale` = "\mathbin{\hat{".>"}}"
+%format scale = "("`scale`")"
 There's a very important optimization to be made for scaling.
 When |s == zero|, |s .> p == zero|, so we can discard |p| entirely.
 Rather than burden each |LeftSemimodule| instance with this optimization, let's define |(.>)| to apply this optimization on top of a more primitive |scale| method:
@@ -540,10 +545,23 @@ The |DetectableZero| class \citep{semiring-num}:
 class Semiring a => DetectableZero a where isZero :: a -> Bool
 \end{code}
 
+Recursive affine equations in semimodules over star semirings have solutions:
+\begin{lemma}\lemlabel{affine over semimodule}
+The affine equation |q == r <+> s .> q| has solution |q = star s .> r|.
+\end{lemma}
+\begin{proof}~
+\begin{code}
+    star s .> r
+==  (one <+> s <.> star s) .> r         -- star semiring law
+==  one .> r <+> (s <.> star s) .> r    -- distributivity
+==  r <+> s .> (star s .> r)            -- multiplicative identity and associativity
+\end{code}
+\end{proof}
+
 \subsectionl{Singletons}
 
 We now have a fair amount of vocabulary for combining values.
-We'll also want an operation that takes constructs a function that is non-zero at only one domain value:
+We'll also want an operation that constructs a ``vector'' with a single non-zero component:
 %format +-> = "\mapsto"
 \begin{code}
 infix 1 +->
@@ -559,6 +577,7 @@ single a = a +-> one
 value :: (HasSingle a b x, Monoid a) => b -> x
 value b = mempty +-> b
 \end{code}
+In particular, |mempty +-> one == single mempty == value one|.
 As first examples, we have sets and functions:
 \begin{code}
 instance HasSingle a Bool (P a) where
@@ -787,7 +806,7 @@ instance HasSingle Bool (Language a) where
 type Language a = L (P a) deriving (Additive, LeftSemimodule Bool, HasSingle a Bool)
 
 instance Monoid a => Semiring (Language a) where
-  one = L (set mempty)
+  one = L (set mempty) -- |== mempty +-> one == single mempty == value one| (\secref{Singletons})
   L p * L q = L (set (u <> v # u <# p && v <# q))
 
 instance StarSemiring (Language a) -- use default |star| definition (\secref{Star Semirings}).
@@ -817,15 +836,16 @@ langRecog :: Language a -> (Bool <-- a)
 langRecog (L p) = F (setPred p)
 \end{code}
 To cement our analogy, let's require that |recogLang| (and hence |langRecog|) be a homomorphism for all of the classes defined in \secref{Monoids, Semirings and Semimodules}.
-If we apply the same sort of reasoning as in \secref{Calculating Instances from Homomorphisms} and then generalize from |Bool| to an arbitrary semiring, we get the following definitions:
+If we apply the same sort of reasoning as in \secref{Calculating Instances from Homomorphisms} and then generalize from |Bool| to an arbitrary semiring, we get the definitions in \figrefdef{<--}{The monoid semiring}{
 \begin{code}
 instance (Semiring b, Monoid a) => Semiring (b <-- a) where
-  one = F (mempty +-> one)
+  one = F (single mempty)
   F f * F g  = bigSum (u,v) u <> v +-> f u <.> g v
              = F (\ w -> bigSumQ (u,v BR u <> v == w) f u <.> g v)
 
 instance (Semiring b, Monoid a)  => StarSemiring (b <-- a)  -- default |star|
 \end{code}
+}.
 The |b <-- a| type is known as ``the monoid semiring'', and its |(*)| operation as ``convolution'' \citep{golan2013semirings,wilding2015linear}.
 
 \begin{theorem}[\provedIn{theorem:Semiring (b <-- a)}]\thmlabel{Semiring (b <-- a)}
@@ -900,27 +920,31 @@ instance HasSingle a b (a ->* b) where (+->) = M.singleton
 \vspace{-4ex}
 }, |(!)| is a homomorphism with respect to each instantiated class.%
 \footnote{The ``|M|'' module qualifier indicates names coming from the finite map library.}
-\notefoot{Do I want a theorem and proof here?}
-
+\notefoot{Do I want a theorem and proof here?
+I think so, though I'll have to make a few assumptions about finite maps.
+On the other hand, those assumptions don't differ much from the homomorphism properties I'm claiming to hold.}
 A semantically suitable |p <.> q| could be defined by assigning key |k| to |p ! k <.> q ! k| for keys defined in \emph{both} |p| and |q| and discarding the rest, which would otherwise multiply to zero.
 On the other hand, a valid |one| for finite maps would have to assign |one| to \emph{every} key, of which there may well be infinitely many.
-We can, however, wrap |a ->* b| into a new type that has a |Semiring| instance homomorphic to (and very closely resembling) that of |b <-- a| from \secref{Languages and the monoid semiring}, as shown in \figrefdef{*<-}{Finite maps as |b <-- a|}{
+
+We can wrap |a ->* b| into a new type that does have a |Semiring| instance homomorphic to (and very closely resembling) that of |b <-- a| from \secref{Languages and the monoid semiring}, as shown in \figrefdef{*<-}{Finite maps as |b <-- a|}{
 %format bigSumKeys (lim) = "\bigOp\sum{" lim "}{2}"
 \begin{code}
 infixl 0 *<-
-newtype b *<- a = M (a ->* b) deriving (Show, Additive, HasSingle a b, LeftSemimodule b, Indexable a b)
-
--- Homomorphic denotation
-mapFun' :: (Ord a, Additive b) => (b *<- a) -> (b <-- a)
-mapFun' (M m) = F (m NOP !)
+newtype b *<- a = M (a ->* b) deriving (Additive, HasSingle a b, LeftSemimodule b, Indexable a b)
 
 instance (Ord a, Monoid a, Semiring b) => Semiring (b *<- a) where
   one = single mempty
   M p <.> M q = bigSumKeys (u <# M.keys p BR v <# M.keys q) u <> v +-> p!u <.> q!v
 \end{code}
 \vspace{-4ex}
-}
-The finiteness of finite maps also interferes with giving a useful |StarSemiring| instance.
+}.
+%format !^ = "\hat{"!"}"
+The finiteness of finite maps, however, interferes with giving a useful |StarSemiring| instance.
+Given the definitions in \figref{*<-}, |(!^)| is a homomorphism with respect to each instantiated class, where |(!^)| interprets a representation as |b <-- a| instead of |a -> b|:
+\begin{code}
+(!^) :: Indexable a b z => z -> (b <-- a)
+(!^) = F . (!)
+\end{code}
 
 \sectionl{Decomposing Functions from Lists}
 
@@ -971,9 +995,9 @@ atEps one          == one
 atEps (p  <+>  q)  == atEps p  <+>  atEps q 
 atEps (p  <.>  q)  == atEps p  <.>  atEps q 
 
-atEps (star p)     == star (atEps p)
+atEps (star p) == star (atEps p)
 \end{code}
-Moreover, |atEps (s .> p) == s * atEps p|, and |atEps (single [d]) == zero|.\footnote{Mathematically, |atEps| is thus a semiring homomorphism as well, since every semiring is a (left and right) semimodule over itself. Declaring them as such in the Haskell implementation, however, would lead to ambiguity during type inference.}
+Moreover, |atEps (s .> p) == s * atEps p|, and |atEps (single [d]) == zero|.\footnote{Mathematically, |atEps| is thus a left |b|-semiring homomorphism as well, since every semiring is a (left and right) semimodule over itself. Declaring them as such in the Haskell implementation, however, would lead to ambiguity during type inference.}
 \end{lemma}
 \begin{lemma}[\provedIn{lemma:deriv b <-- [c]}, generalizing Lemma 3.1 of \citet{Brzozowski64}]\lemlabel{deriv b <-- [c]}
 Differentiation has the following properties:
@@ -998,12 +1022,12 @@ The following properties hold:
 zero  == zero  <: zero
 one   == one   <: zero
 (a  <:  dp) <+> (b <: dq)  == a  <+>  b <: dp <+> dq
-(a  <:  dp) <.> q == a .> q <+> (zero <: (<.> NOP q) . dp)
-star (a <: dp) = q where q = star a .> (one <: (<.> NOP q) .  dp)
+(a  <:  dp) <.> q == a .> q <+> (zero <: fmap (<.> NOP q) dp)
+star (a <: dp) = q where q = star a .> (one <: fmap (<.> NOP q) dp)
 
 single w = product (map symbol w) where symbol d = zero <: equal d
 
-s .> (a <: dp) = s <.> a <: (s NOP .>) . dp
+s .> (a <: dp) = s <.> a <: fmap (s NOP .>) dp
 \end{code}
 \vspace{-6ex}
 \end{spacing}
@@ -1014,12 +1038,12 @@ s .> (a <: dp) = s <.> a <: (s NOP .>) . dp
 \note{Introduce decomposition first on |[c] -> b|, skipping |Semiring| and |StarSemiring|.
 Then note that we'll want to generalize the decomposition, so define the |Decomposable| class.
 Work out what laws I need for |Decomposable| in order to give one |Semiring| and one |StarSemiring| instance that covers various cases, even beyond lists.
-I think I'll want to redefine |(<--)|, |(*<-)|, and |LTrie'|.}
+I think I'll want to redefine |(<--)|, |LTrie'|, and |RegExp'|.}
 
 \noindent
 To make use of these insights, it will be convenient to generalize the decomposition to other representations:
 \begin{code}
-class Semiring a => Decomposable a h s | a -> h s where
+class Decomposable a h s | a -> h s where
   infix 1 <:
   (<:)   :: s -> h a -> a
   atEps  :: a -> s
@@ -1058,15 +1082,12 @@ data LTrie c b = b :< (c ->* LTrie c b)
 instance (Ord c, Additive b) => Indexable [c] b (LTrie c b) where
   (b :< dp) ! w = case w of {NOP [] -> b NOP;NOP c:cs -> dp ! c ! cs NOP}
 
-instance Functor (LTrie c) where
-  fmap f (a :< dp) = f a :< (fmap.fmap) f dp
-
 instance (Ord c, Additive b) => Additive (LTrie c b) where
   zero = zero :< zero
   (a :< dp) <+> (b :< dq) = a <+> b  :<  dp <+> dq
 
 instance (Ord c, Semiring b) => LeftSemimodule b (LTrie c b) where
-  s `scale` t = fmap (s NOP <.>) t
+  s `scale` (b :< dp) = s <.> b :< fmap (s NOP `scale`) dp
 
 instance (Ord c, Additive b, DetectableZero b) => DetectableZero (LTrie c b) where
   isZero (a :< dp) = isZero a && isZero dp
@@ -1100,10 +1121,7 @@ instance (Ord c, Additive b) => HasSingle [c] b (LTrie c b) where
 As with |Pow a| and |a ->* b|, we can define a trie counterpart to the monoid semiring, here |b <-- [c]|, as shown in \figrefdef{LTrie'}{Tries as |b <-- [c]|}{
 \begin{code}
 
-newtype LTrie' b c = L { unL :: LTrie c b } deriving (Additive, HasSingle [c] b, LeftSemimodule b, Indexable [c] b)
-
-trieFun' :: (Ord c, Additive b) => LTrie' b c -> (b <-- [c])
-trieFun' (L t) = C (t NOP !)
+newtype LTrie' b c = L (LTrie c b) deriving (Additive, HasSingle [c] b, LeftSemimodule b, Indexable [c] b)
 
 infix 1 :<:
 pattern (:<:) :: b -> (c ->* LTrie' b c) -> LTrie' b c
@@ -1119,8 +1137,6 @@ instance (Ord c, StarSemiring b, DetectableZero b) => StarSemiring (LTrie' b c) 
 }.\footnote{The pattern synonym |(:<:)| enables matching and constructing |LTrie'| values as if they were defined as |data LTrie' b c = b :<: (c ->* LTrie' c b)| \needcite{}.
 This definition uses safe, zero-cost coercions between |c ->* LTrie c b| and |c ->* LTrie' b c| \needcite{Breitner2016SZC}.}
 \notefoot{Introduce |DetectableZero| earlier.}
-
-The key to these instances is a decomposition principle for functions of lists.
 
 \workingHere
 
@@ -1417,7 +1433,7 @@ Finally, closure:
 ==  deriv (p <.> star p) c                                -- |deriv one c == zero| (above)
 ==  atEps p .> deriv (star p) c <+> deriv p c <.> star p  -- |deriv (p * q)| above
 \end{code}
-Thus, by \lemref{affine fixed point} below,
+Thus, by \lemref{affine over semiring},
 \begin{code}
 deriv (star p) c == star (atEps p) .> deriv p c <.> star p
 \end{code}
@@ -1457,14 +1473,14 @@ deriv (c' : w +-> b) c == if c' == c then w +-> b else zero
 \begin{code}
     zero
 ==  atEps zero <: deriv zero  -- \lemref{decomp (b <-- [c])}
-==  zero <: (\ c -> zero)     -- \lemreftwo{atEps b <-- [c]}{deriv b <-- [c]}
+==  zero <: \ c -> zero       -- \lemreftwo{atEps b <-- [c]}{deriv b <-- [c]}
 ==  zero <: zero              -- |zero| on functions
 \end{code}
 
 \begin{code}
     one
 ==  atEps one <: deriv one  -- \lemref{decomp (b <-- [c])}
-==  one <: (\ c -> zero)    -- \lemreftwo{atEps b <-- [c]}{deriv b <-- [c]}
+==  one <: \ c -> zero      -- \lemreftwo{atEps b <-- [c]}{deriv b <-- [c]}
 ==  one <: zero             -- |zero| on functions
 \end{code}
 
@@ -1483,6 +1499,8 @@ deriv (c' : w +-> b) c == if c' == c then w +-> b else zero
 ==  (a <.> b <+> zero) <: (\ c -> a .> dq c) <+> (\ c -> dp c <.> (b <: dq))  -- additive identity; |(<+>)| on functions
 ==  (a <.> b <: \ c -> a .> dq c) <+> (zero <: \ c -> dp c <.> (b <: dq))     -- previous result
 ==  a .> (b <: dq) <+> (zero <: \ c -> dp c <.> (b <: dq))                    -- \note{needs lemma}
+==  a .> (b <: dq) <+> (zero <: (<.> NOP (b <: dq)) . dp)                     -- |(.)| definition
+==  a .> (b <: dq) <+> (zero <: fmap (<.> NOP (b <: dq)) dp)                  -- fmap on functions
 \end{code}
 
 %% \lemref{atEps and deriv via (<:)}
@@ -1532,9 +1550,9 @@ Substitute into \lemreftwo{atEps b <-- [c]}{deriv b <-- [c]}, and simplify, usin
 
 \subsection{\thmref{Trie}}\proofLabel{theorem:Trie}
 
-\begin{code}
-
 \workingHere
+
+\begin{code}
 
     trieAt (a :< dp) + trieAt (b :< dq)
 ==  \ w -> trieAt (a :< dp) w + trieAt (b :< dq) w

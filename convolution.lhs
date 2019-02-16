@@ -49,13 +49,13 @@ Conal Elliott
 
 \setlength{\blanklineskip}{2ex} % blank lines in code environment
 
-\nc\proofLabel[1]{\label{proof:#1}}
+\nc\prooflabel[1]{\label{proof:#1}}
 %if short
-\nc\proofRef[1]{proof in \citep[Appendix C]{Elliott-2019-convolution-extended}}
+\nc\proofref[1]{proof in \citep[Appendix C]{Elliott-2019-convolution-extended}}
 %else
-\nc\proofRef[1]{Appendix \ref{proof:#1}}
+\nc\proofref[1]{Appendix \ref{proof:#1}}
 %endif
-\nc\provedIn[1]{\textnormal{Proved in \proofRef{#1}}}
+\nc\provedIn[1]{\textnormal{Proved in \proofref{#1}}}
 
 \nc\set[1]{\{\,#1\,\}}
 \nc\Pow{\mathcal{P}}
@@ -294,38 +294,10 @@ h (u + v) == h u + h v
 \end{definition}
 \noindent
 Curried functions of \emph{any number} of arguments (and additive result type) are additive, thanks to repeated application of this instance.
-In fact, currying itself is an \emph{additive monoid homomorphism}:
-\notefoot{Move these proofs to the appendix.}
-\begin{code}
-    curry zero
-==  curry (\ (x,y) -> zero)                  -- |zero| on functions
-==  \ x -> \ y -> zero                       -- |curry| definition
-==  \ x -> zero                              -- |zero| on functions
-==  zero                                     -- |zero| on functions
-
-    curry (f + g)
-==  curry (\ (x,y) -> f (x,y) + g (x,y))     -- |(+)| on functions
-==  \ x -> \ y -> f (x,y) + g (x,y)          -- |curry| definition
-==  \ x -> \ y -> curry f x y + curry g x y  -- |curry| definition (twice)
-==  \ x -> curry f x + curry g x             -- |(+)| on functions
-==  curry f + curry g                        -- |(+)| on functions
-\end{code}
-Likewise for uncurrying:
-\notefoot{Probably suggest as an exercise.}
-\begin{code}
-    uncurry zero
-==  uncurry (\ x -> zero)                         -- |zero| on functions
-==  uncurry (\ x -> \ y -> zero)                  -- |zero| on functions
-==  \ (x,y) -> zero                               -- |uncurry| definition
-==  zero                                          -- |zero| on functions
-
-    uncurry (f + g)
-==  uncurry (\ x -> f x + g x)                    -- |(+)| on functions
-==  uncurry (\ x -> \ y -> f x y + g x y)         -- |(+)| on functions
-==  \ (x,y) -> f x y + g x y                      -- |uncurry| definition
-==  \ (x,y) -> uncurry f (x,y) + uncurry g (x,y)  -- |uncurry| definition (twice)
-==  uncurry f + uncurry g                         -- |(+)| on functions
-\end{code}
+In fact,
+\begin{theorem}[\provedIn{theorem:curry additive}]\thmlabel{curry additive}
+Currying and uncurrying are additive monoid homomorphisms.
+\end{theorem}
 
 \subsectionl{Semirings}
 
@@ -399,6 +371,14 @@ instance Semiring b => Semiring (a -> b) where
 \end{code}
 As with |Additive|, this |Semiring| instance implies that curried functions (of any number and type of arguments and with semiring result type) are semirings, with |curry| and |uncurry| being semiring homomorphisms.
 
+
+\begin{theorem}
+Currying and uncurrying are semiring homomorphisms.
+\end{theorem}
+\begin{proof}
+Similar to the proof of \thmref{curry additive} in \proofref{theorem:curry additive}.
+\end{proof}
+
 \subsectionl{Star Semirings}
 
 The semiring operations allow all \emph{finite} combinations of addition, zero, multiplication, and one.
@@ -422,7 +402,7 @@ class Semiring b => StarSemiring b  where
 Sometimes there are more appealing alternative implementations.
 For instance, when subtraction and division are available, we can instead define |star p = inverse (one - p)|.
 
-Predictably,
+Predictably, there is a notion of homomorphisms for star semirings:
 \begin{definition} \deflabel{star semiring homomorphism}
 A function |h| from one star semiring to another is a \emph{star semiring homomorphism} if it is a semiring homomorphism (\defref{semiring homomorphism}) and satisfies the following additional property:
 \begin{code}
@@ -747,6 +727,8 @@ The necessary homomorphism property:
 setPred (s .> p) == s .> setPred p
 \end{code}
 Equivalently,
+\begin{spacing}{1.2}
+\vspace{-1ex}
 \begin{code}
     s .> p
 ==  predSet (s .> setPred p)                                    -- |predSet| injectivity
@@ -759,6 +741,8 @@ Equivalently,
 ==  if s then p else emptyset                                   -- |predSet . setPred == id|
 ==  if s then p else zero                                       -- |zero| for sets
 \end{code}
+\end{spacing}
+\noindent
 Summarizing,
 \begin{code}
 instance LeftSemimodule Bool (Pow a) where
@@ -850,6 +834,7 @@ instance (Semiring b, Monoid a) => Semiring (b <-- a) where
 
 instance (Semiring b, Monoid a)  => StarSemiring (b <-- a)  -- default |star|
 \end{code}
+\vspace{-4ex}
 }.
 The |b <-- a| type is known as ``the monoid semiring'', and its |(*)| operation as ``convolution'' \citep{golan2013semirings,wilding2015linear}.
 
@@ -892,7 +877,7 @@ instance Splittable [a] where
 %format *<- = "\overset{\:\mapSym}{"<--"}"
 %endif
 
-One representation of \emph{partial} functions is the type of finite maps, |a ->* b| from keys of type |a| to values of type |b|, represented is a key-ordered balanced tree \needcite{}.
+One representation of \emph{partial} functions is the type of finite maps, |a ->* b| from keys of type |a| to values of type |b|, represented is a key-ordered balanced tree \citep{Adams1993Sets,Straka2012ATR,Nievergelt1973BST}.
 To model \emph{total} functions instead, we can treat unassigned keys as denoting zero.
 Conversely, merging two finite maps can yield a key collision, which can be resolved by addition.
 Both interpretations require |b| to be a semiring.
@@ -1617,7 +1602,38 @@ For instance, |(set 3 + set 5) * {0,...,10}| vs |set 3 * {0,...,10} + set 5 * {0
 
 \sectionl{Proofs}
 
-\subsection{\lemref{decomp +->}}\proofLabel{lemma:decomp +->}
+\subsection{\thmref{curry additive}}\prooflabel{theorem:curry additive}
+
+\begin{code}
+    curry zero
+==  curry (\ (x,y) -> zero)                       -- |zero| on functions
+==  \ x -> \ y -> zero                            -- |curry| definition
+==  \ x -> zero                                   -- |zero| on functions
+==  zero                                          -- |zero| on functions
+
+    curry (f + g)
+==  curry (\ (x,y) -> f (x,y) + g (x,y))          -- |(+)| on functions
+==  \ x -> \ y -> f (x,y) + g (x,y)               -- |curry| definition
+==  \ x -> \ y -> curry f x y + curry g x y       -- |curry| definition (twice)
+==  \ x -> curry f x + curry g x                  -- |(+)| on functions
+==  curry f + curry g                             -- |(+)| on functions
+NOP
+
+    uncurry zero
+==  uncurry (\ x -> zero)                         -- |zero| on functions
+==  uncurry (\ x -> \ y -> zero)                  -- |zero| on functions
+==  \ (x,y) -> zero                               -- |uncurry| definition
+==  zero                                          -- |zero| on functions
+
+    uncurry (f + g)
+==  uncurry (\ x -> f x + g x)                    -- |(+)| on functions
+==  uncurry (\ x -> \ y -> f x y + g x y)         -- |(+)| on functions
+==  \ (x,y) -> f x y + g x y                      -- |uncurry| definition
+==  \ (x,y) -> uncurry f (x,y) + uncurry g (x,y)  -- |uncurry| definition (twice)
+==  uncurry f + uncurry g                         -- |(+)| on functions
+\end{code}
+
+\subsection{\lemref{decomp +->}}\prooflabel{lemma:decomp +->}
 
 \begin{code}
     bigSum a a +-> f a
@@ -1627,7 +1643,7 @@ For instance, |(set 3 + set 5) * {0,...,10}| vs |set 3 * {0,...,10} + set 5 * {0
 ==  f                                                 -- $\eta$ reduction
 \end{code}
 
-\subsection{\thmref{Semiring (b <-- a)}}\proofLabel{theorem:Semiring (b <-- a)}
+\subsection{\thmref{Semiring (b <-- a)}}\prooflabel{theorem:Semiring (b <-- a)}
 
 There are three parts to the homomorphism requirements (\defreftwo{star semiring homomorphism}{left semimodule homomorphism}):
 \begin{enumerate}
@@ -1693,9 +1709,9 @@ Then simplify to the lambda/sum form.}
 
 \end{enumerate}
 
-%% \subsection{\thmref{Map}}\proofLabel{theorem:Map}
+%% \subsection{\thmref{Map}}\prooflabel{theorem:Map}
 
-\subsection{\lemref{decomp (b <-- [c])}}\proofLabel{lemma:decomp (b <-- [c])}
+\subsection{\lemref{decomp (b <-- [c])}}\prooflabel{lemma:decomp (b <-- [c])}
 
 \begin{proof}
 Any argument to |f| must be either |[]| or |c : cs| for some value |c| and list |cs|.
@@ -1729,7 +1745,7 @@ For the other two equations:
 \end{code}
 \end{proof}
 
-\subsection{\lemref{atEps b <-- [c]}}\proofLabel{lemma:atEps b <-- [c]}
+\subsection{\lemref{atEps b <-- [c]}}\prooflabel{lemma:atEps b <-- [c]}
 
 \begin{code}
     atEps zero
@@ -1798,7 +1814,7 @@ For the other two equations:
 
 \note{For the |star p| proof, maybe instead show inductively that |atEps (pow p n) == pow (atEps p) n| for all |n >= 0|, and then appeal to the summation definition of |star p|.}
 
-\subsection{\lemref{deriv b <-- [c]}}\proofLabel{lemma:deriv b <-- [c]}
+\subsection{\lemref{deriv b <-- [c]}}\prooflabel{lemma:deriv b <-- [c]}
 
 \begin{code}
     deriv zero
@@ -1926,7 +1942,7 @@ deriv (c' : w +-> b) c == if c' == c then w +-> b else zero
 \end{proof}
 \vspace{-2ex}
 
-\subsection{\thmref{semiring decomp b <-- [c]}}\proofLabel{theorem:semiring decomp b <-- [c]}
+\subsection{\thmref{semiring decomp b <-- [c]}}\prooflabel{theorem:semiring decomp b <-- [c]}
 
 \note{Maybe not worth spelling out.
 I could say ``Proof: Immediate from \lemrefthree{decomp (b <-- [c])}{atEps b <-- [c]}{deriv b <-- [c]}''.}
@@ -2021,18 +2037,18 @@ deriv (s .> (a <: dp)) c == s .> dp c
 Substitute into \lemreftwo{atEps b <-- [c]}{deriv b <-- [c]}, and simplify, using \lemref{decomp (b <-- [c])}.
 \end{proof}
 
-\subsection{\thmref{LTrie}}\proofLabel{theorem:LTrie}
+\subsection{\thmref{LTrie}}\prooflabel{theorem:LTrie}
 
 \note{Fill in from journal notes of 2019-02-14. It's a straightforward application of \thmref{semiring decomp b <-- [c]}.}
 
 \note{Coinduction?}
 
-\subsection{\thmref{Fourier}}\proofLabel{theorem:Fourier}
+\subsection{\thmref{Fourier}}\prooflabel{theorem:Fourier}
 
 %format T = "\mathcal F"
 \note{Additivity of |T|, and the convolution theorem. What about |star p| and |single w|?}
 
-\subsection{\thmref{decomp (b <-- N)}}\proofLabel{theorem:decomp (b <-- N)}
+\subsection{\thmref{decomp (b <-- N)}}\prooflabel{theorem:decomp (b <-- N)}
 
 \begin{code}
     atEps (F f) <: deriv (F f)
@@ -2044,7 +2060,7 @@ Substitute into \lemreftwo{atEps b <-- [c]}{deriv b <-- [c]}, and simplify, usin
 ==  F f                                                         -- property of conditional
 \end{code}
 
-\subsection{\lemref{deriv (b <-- N)}}\proofLabel{lemma:deriv (b <-- N)}
+\subsection{\lemref{deriv (b <-- N)}}\prooflabel{lemma:deriv (b <-- N)}
 
 \begin{code}
     deriv zero
@@ -2117,7 +2133,7 @@ Differentiation on |b <-- N| satisfies the following properties on singletons:
 \end{code}
 \end{lemma}
 
-\subsection{\thmref{standard FunApp}}\proofLabel{theorem:standard FunApp}
+\subsection{\thmref{standard FunApp}}\prooflabel{theorem:standard FunApp}
 
 First consider |fmap|, as defined in \figref{FunApp}.
 \begin{code}
@@ -2143,7 +2159,7 @@ Similarly for |liftA2|:
 \end{code}
 \end{spacing}
 
-\subsection{\thmref{poly fun}}\proofLabel{theorem:poly fun}
+\subsection{\thmref{poly fun}}\prooflabel{theorem:poly fun}
 
 The semantics as polynomial functions:
 \begin{code}

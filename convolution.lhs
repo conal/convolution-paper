@@ -163,7 +163,9 @@ All of the algorithms in the paper follow from very simple specifications in the
 
 %format (inverse x) = x "^{-1}"
 
-%% \sectionl{Introduction}
+\sectionl{Introduction}
+
+\note{Trim the abstract, moving some content here and expanding. Contributions.}
 
 \sectionl{Monoids, Semirings and Semimodules}
 
@@ -533,6 +535,7 @@ If we think of |a -> s| as a ``vector'' of |s| values, indexed by |a|, then |s .
 %format scale = "("`scale`")"
 There's a very important optimization to be made for scaling.
 When |s == zero|, |s .> p == zero|, so we can discard |p| entirely.
+This optimization applies quite often in practice, for instance with languages, which tend to be sparse.
 Rather than burden each |LeftSemimodule| instance with this optimization, let's define |(.>)| to apply this optimization on top of a more primitive |scale| method:
 \begin{code}
 class (Semiring s, Additive b) => LeftSemimodule s b | b -> s where
@@ -1150,6 +1153,402 @@ How far back could I remove the distinction?}
 
 \note{A sort of ``free'' variant of functions. Easy to derive homomorphically. Corresponds to \citet{Brzozowski64} and other work on recognizing and parsing by derivatives.}
 
+
+\sectionl{Convolution}
+
+Consider again the definition of multiplication in the monoid semiring, on |f,g :: b <-- a| from \figref{<--}.
+\begin{code}
+F f * F g  = bigSum (u,v) u <> v +-> f u <.> g v
+\end{code}
+%if False
+\begin{equation}\eqnlabel{convolution}
+f * g = \sum_{u,v} u \mappend v \mapsto f\,u * g\,v
+\end{equation}
+%endif
+Specializing the \emph{codomain} to |Bool|, we get
+
+>   f <.> g = bigOr (u,v) u <> v +-> f u && g v
+
+Using the set/predicate isomorphism from \secref{Calculating Instances from Homomorphisms}, we can translate this definition from predicates to ``languages'' (sets of values in some monoid):
+
+>   f <.> g = set (u <> v | u <# f && v <# g)
+
+which is the definition of the concatenation of two languages from  \secref{Languages and the monoid semiring}.
+
+By specializing the \emph{domain} of the functions to sequences (from general monoids), we got efficient matching of semiring-generalized ``languages'', as in \secreftwo{Decomposing Functions from Lists}{Tries}, which translates to regular expressions (\secref{Regular Expressions}), generalizing work of \citet{Brzozowski64}\note{, while apparently improving performance.
+\notefoot{Measure and compare in \secref{Regular Expressions}.}}
+
+%format R = "\mathbb R"
+%format C = "\mathbb C"
+
+%format bigSumPlus (lim) = "\bigOp\sum{" lim "}{1.5}"
+Let's now consider specializing the functions' domains to \emph{integers} rather than sequences, recalling that integers (and numeric types in general) form a monoid under addition.
+\vspace{-2ex}
+\begin{spacing}{1.5}
+\begin{code}
+f <.> g  == bigSum (u,v) u <> v +-> f u <.> g v
+         == bigSum (u,v) u + v +-> f u <.> g v                              -- monoid under addition
+         == bigSum (u,v) (\ w -> if w == u + v then f u <.> g v else zero)  -- |(+->)| definition
+         == \ w -> bigSum (u,v) (if w == u + v then f u <.> g v else zero)  -- |(<+>)| on functions
+         == \ w -> bigSumPlus (u,v BR u + v == w) f u <.> g v               -- skip zeros (additive identity)
+         == \ w -> bigSumPlus (u,v BR v == w - u) f u <.> g v               -- solve |u + v == w| for |v|
+         == \ w -> bigSum u f u <.> g (w - u)                               -- substitute |w - u| for |v|
+\end{code}
+\end{spacing}
+\vspace{-3ex}
+\noindent
+This last form is the standard definition of one-dimensional, discrete \emph{convolution} \needcite{}.\footnote{Note that this reasoning applies to \emph{any} group (monoid with inverses)}
+Therefore, just as monoid semiring multiplication generalizes language concatenation (via the predicate/set isomorphism), it also generalizes the usual notion of discrete convolution.
+Moreover, if the domain is a continuous type such as |R| or |C|, we can reinterpret summation as integration, resulting in \emph{continuous} convolution \needcite{}.
+Additionally, for multi-dimensional (discrete or continuous) convolution, we can simply use tuples of scalar indices for |w| and |u|, defining tuple addition and subtraction componentwise.
+\notefoot{More generally, cartesian products of monoids are also monoids.
+Consider multi-dimensional convolution in which different dimensions have different types, even mixing discrete and continuous, and maybe even sequences and numbers.
+At the least, it's useful to combine finite dimensions of different sizes.}
+\begin{theorem}[\provedIn{theorem:Fourier}]\thmlabel{Fourier}
+The Fourier transform is a semiring homomorphism from |b <- a| to |a -> b|.
+\end{theorem}
+
+\note{Maybe give some convolution examples.}
+
+\workingHere
+
+\note{This section assumes I'm going with the |Decomposable| interface, but it doesn't yet use a single unified |Convo| type.}
+
+%format Identity = I
+Let's now consider functions from |N| rather than from |Z|.
+As in \secref{Decomposing Functions from Lists}, we can define a decomposition on functions from |N|:
+\notefoot{I suspect that the |Decomposable| interface isn't quite the right generalization. Try some additional monoids, and examine via more generic constructions for underlying monoids, including general sums and products. Relate to generalized tries \citep{Hinze2000GGT}.}
+\begin{code}
+newtype Identity a = Identity a  -- identity functor
+
+instance Semiring b => Decomposable (b <-- N) Identity b where
+  b <: Identity (F f) = F (\ i -> if i == 0 then b else f (i - 1))
+  atEps  (F f)  = f 0
+  deriv  (F f)  = Identity (F (f . (1 NOP +)))
+\end{code}
+\begin{theorem}[\provedIn{theorem:decomp (b <-- N)}]\thmlabel{decomp (b <-- N)}
+For all |p :: b <-- N|, |p == atEps p <: deriv p|.
+\end{theorem}
+
+Differentiation is much as in \lemref{deriv b <-- [c]}:
+\notefoot{I'm leaning toward inverting the organization of this paper, starting with convolution, then semimodule function/applicative/monad, and languages later still.
+That way, I can introduce |b <-- N| before the somewhat more complicated |b <-- [c]|.}
+\begin{lemma}[\provedIn{lemma:deriv (b <-- N)}]\lemlabel{deriv (b <-- N)}
+Differentiation on |b <-- N|, has the following properties (eliding |Identity| constructors):
+\notefoot{If I give a |Semiring| instance for |Identity b| (for semirings |b|), then I think these equations hold as written. I bet I can do the same for |b <-- [c]|, and maybe for all domains |a| for which |Decomposable a|. Try it!}
+\notefoot{What about |single i|? Important?}
+\begin{code}
+deriv zero  == zero
+deriv one   == zero
+deriv (p  <+>  q) == deriv p <+> deriv q
+deriv (p  <.>  q) == atEps p .> deriv q <+> deriv p <.> q
+
+deriv (star p) == star (atEps p) .> deriv p <.> star p
+\end{code}
+%% deriv (single [d]) c == equal c d
+\end{lemma}
+\begin{corollary}\corlabel{decomp b <-- N}
+The following properties hold for |b <-- N|:
+\notefoot{Work out |single n| or |n +-> b|, probably as a simple generalization of |one|.}
+\begin{code}
+zero  = zero  <: zero
+one   = one   <: zero
+(a  <:  dp)  <+>  (b <: dq) = (a  <+>  b) <: (dp <+> dq)
+(a  <:  dp)  <.>  (b <: dq) = (a  <.>  b) <: (a .> dq <+> dp <.> (b <: dq))
+
+star (a <: as) = q where q = star a .> (one <: as <.> q)
+\end{code}
+%% single w = product (map symbol w)
+%%   where
+%%      symbol d = zero <: equal d
+\end{corollary}
+
+\note{Remark that |N =~ [()]|, so this decomposition is a special case of  \secref{Decomposing Functions from Lists}. On the other hand, I think I'll move the whole language discussion to \emph{after} this decomposition.}
+
+%format :# = "\mathbin{:\!\!\#}"
+While the |b <-- N| representation makes for simple semantics and reasoning, there are more efficient alternatives.
+For instance, consider streams, as shown in \figrefdef{Stream}{Streams}{
+\begin{code}
+infixr 1 :#
+data Stream b = b :# Stream b
+
+instance Indexable (Stream b) N b where
+  (b :# bs) ! n = if n == 0 then b else bs ! (n-1)
+
+streamF :: Stream b -> (b <-- N)
+streamF bs = F (bs NOP !)
+
+instance DetectableZero b => Decomposable (Stream b) Identity b where
+  b <: Identity bs = b :# bs
+  atEps  (b  :# _   )  = b
+  deriv  (_  :# bs  )  = Identity bs
+
+instance DetectableZero b => Semiring (Stream b) where
+  zero = q where q = zero :# q
+  one = one :# zero
+  (u :# us') <+> (v :# vs') = u <+> v :# us' <+> vs'
+  (u :# us') <.> vs@(v :# vs') = u <.> v :# u .> vs' <+> us' <.> vs
+
+instance (StarSemiring b, DetectableZero b) => StarSemiring (Stream b) where
+  star (a :# as) = q where q = star a .> (one :# as <.> q)
+
+instance DetectableZero s => Scalable (Stream s) s where
+  s `scale` (b :# bs) = (s <.> b) :# (s `scale` bs)
+\end{code}
+\vspace{-6ex}
+}.
+\begin{theorem}\thmlabel{Stream}
+Given the definitions in \figref{Stream}, |streamF| is a homomorphism with respect to each instantiated class.
+\end{theorem}
+\begin{proof}
+Immediate from \corref{decomp b <-- N}.
+\end{proof}
+
+\workingHere
+
+\noindent
+\note{Next:
+\begin{itemize}
+\item Discuss how |Stream b| is much more efficient than |b <-- N|.
+\item Somewhere I think I should be showing and using the |Splittable N| instance. See previous note.
+\item Lists (finite) instead of streams (infinite), with a semantic function that zero-pads.
+\item Non-scalar domains as in notes from 2019-01-\{28,29\}.
+\end{itemize}
+}
+
+\sectionl{Beyond Convolution}
+
+%format Fin (m) = Fin "_{" m "}"
+%format Array (m) = Array "_{" m "}"
+
+Some uses of convolution (including convolutional neural networks \needcite{}) involve functions having finite support, i.e., non-zero on only a finite subset of their domains.
+\notefoot{First suggest finite maps, using instances from \figref{*<-}. Then intervals/arrays.}
+In many cases, these domain subsets may be defined by finite \emph{intervals}.
+For instance, such a 2D operation would be given by intervals in each dimension, together specifying lower left and upper right corners of a 2D interval (rectangle) outside of which the functions are guaranteed to be zero.
+The two input intervals needn't have the same size, and the result's interval of support is larger than both inputs, with size equaling the sum of the sizes in each dimension (minus one for the discrete case).
+\notefoot{Show an example as a picture.}
+Since the result's support size is entirely predictable and based only on the arguments' sizes, it is appealing to track sizes statically via types.
+For instance, a 1D convolution might have the following type:
+\notefoot{To do: More clearly distinguish between functions with finite support vs functions with finite domains. I think I started this paragraph with the former mindset but switched to the latter.}
+\begin{code}
+(*) :: Semiring s => Array (m+1) s -> Array (n+1) s -> Array (m+n+1) s
+\end{code}
+Unfortunately, this signature is incompatible with the general type of |(*)|, in which arguments and result all have the same type.
+
+From the perspective of functions, an array of size |n| is a memoized function from |Fin n|, which represents the finite set |set (0, ..., n-1)|.
+Although we can still define a convolution-like operation in terms of index addition, indices no longer form a monoid, simply due to the non-uniformity of types.
+%format lift0
+%format lift1
+%format lift2
+%format liftn = lift "_n"
+%if False
+
+The inability to support convolution on statically sized arrays (or other memoized forms of functions over finite domains) as semiring multiplication came from the expectation that index/argument combination is via a monoid.
+%endif
+This limitation is a shame, since convolution still makes sense:
+\begin{code}
+f <.> g = bigSum (u,v) u + v +-> f u <.> g v
+\end{code}
+where now
+\begin{code}
+(+) :: Fin (m+1) -> Fin (n+1) -> Fin (m+n+1)
+\end{code}
+(As in \secref{Convolution}, we're continuing to elide the |F| constructors for |b <-- a| of \figref{<--}.)
+Fortunately, this monoid expectation can be dropped by generalizing from monoidal combination to an \emph{arbitrary} binary operation |h :: a -> b -> c|.
+For now, let's call this more general operation ``|lift2 h|''.
+\notefoot{Maybe remark on the mixture of ``|->|'' and ``|<--|''.}
+\begin{code}
+lift2 :: Semiring s => (a -> b -> c) -> (s <-- a) -> (s <-- b) -> (s <-- c)
+lift2 h f g = \ w -> bigSum (u,v) h u v +-> f u <.> g v
+\end{code}
+We can similarly lift functions of \emph{any} arity:
+%format a1
+%format an = a "_n"
+%format f1
+%format fn = f "_n"
+%format u1
+%format un = u "_n"
+\begin{code}
+liftn :: Semiring s => (a1 -> ... -> an -> b) -> (s <-- a1) -> ... -> (s <-- an) -> (s <-- b)
+liftn h f1 ... fn = bigSumQ (u1, ..., un) h u1 cdots un +-> f1 u1 <.> cdots <.> fn un
+\end{code}
+Here we are summing over the set-valued \emph{preimage} of |w| under |h|.
+Now consider two specific cases of |liftn|:
+\begin{code}
+lift1 :: Semiring s => (a -> b) -> (s <-- a) -> (s <-- b)
+lift1 h f = bigSum u h u +-> f u
+
+lift0 :: Semiring s => b -> (s <-- b)
+lift0 b  = b +-> one
+         = single b
+\end{code}
+
+%format FunctorC = Functor
+%format ApplicativeC = Applicative
+%format MonadC = Monad
+%format fmapC = fmap
+%format pureC = pure
+%format liftA2C = liftA2
+%format >>== = >>=
+%format SRM = DetectableZero
+%% %format keys p = p
+\noindent
+The signatures of |lift2|, |lift1|, and |lift0| generalize to those of |liftA2|, |fmap|, and |pure| from the |Functor| and |Applicative| type classes \needcite, so let's replace the specialized operations with standard ones.
+An enhanced version of these classes appear in \figrefdef{FunApp}{|Functor| and |Applicative| classes and some instances}{
+\begin{code}
+class FunctorC f where
+  type Ok f a :: Constraint
+  type Ok f a = ()
+  fmapC :: (Ok f a, Ok f b) => (a -> b) -> f a -> f b
+
+class FunctorC f => ApplicativeC f where
+  pureC :: Ok f a => a -> f a
+  liftA2C :: (Ok f a, Ok f b, Ok f c) => (a -> b -> c) -> f a -> f b -> f c
+
+infixl 1 >>==
+class ApplicativeC f => MonadC f where
+  (>>==) :: (Ok f a, Ok f b) => f a -> (a -> f b) -> f b
+
+instance Functor Pow where
+  fmap h p = set (h a | a <# p)
+
+instance Applicative Pow where
+  pure b = single b
+  liftA2 h p q = set (h a b | a <# p && b <# q)
+
+instance Functor [] where
+  fmap h as = [h a | a <- as]
+
+instance Applicative [] where
+  pure a = single a
+  liftA2 h p q = [h u v | u <- p, v <- q]
+
+instance SRM b => FunctorC ((:<--) b) where
+  type Ok ((:<--) b) a = (Ord a, Monoid a)
+  fmapC h (M p) = bigSumKeys (a <# keys p) h a +-> p ! a
+
+instance SRM b => ApplicativeC ((:<--) b) where
+  pureC a = single a
+  liftA2C h (M p) (M q) = bigSumKeys (a <# keys p BR b <# keys q) h a b +-> (p!a) <.> (q!b)
+
+instance Semiring b => Functor ((<--) b) where
+  type Ok ((<--) b) a = (Eq a, Monoid a)
+  fmap h (F f) = bigSum u h u +-> f u
+
+instance Semiring b => Applicative ((<--) b) where
+  pure a = single a
+  liftA2 h (F f) (F g) = bigSum (u,v) h u v +-> f u <.> g v
+\end{code}
+\vspace{-3ex}
+}, along with instances for some of the language representations we've considered so far.%
+\footnote{The enhancement is the associated constraint \citep{Bolingbroke2011CK} |Ok|, limiting the types that the class methods must support. The line ``|type Ok f a = ()|'' means that the constraint on |a| defaults to |()|, which holds vacuously for all |a|.}%
+\footnote{Originally, |Applicative| had a |(<*>)| method from which one can easily define |liftA2|. Since the base library version 4.10 \needcite, |liftA2| was added as a method (along with a default definition of |(<*>)|) to allow for more efficient implementation. \note{Cite \href{https://ghc.haskell.org/trac/ghc/ticket/13191}{GHC ticket 13191} if I can't find a better reference.}}%
+%if False
+\footnote{The methods on |(:<--) b| (finite maps to |b|) are written in straight Haskell as follows:
+\vspace{-0.5ex}
+\begin{code}
+  fmapC h (M p) = sum [ h a +-> s | (a,s) <- toList p ]
+
+  liftA2C h (M p) (M q) = sum [ h a b +-> s <.> t | (a,s) <- toList p, (b,t) <- toList q]
+\end{code}
+\vspace{-3ex}
+}%
+%endif
+\notefoot{The |Monoid a| requirement for |(:<--) b| and |(<--) b| is due to the corresponding |Semiring| instances, but really just for
+|one| and |(<.>)|, which we're not using. To do: factor |Additive| out of |Semiring|, and drop the |Monoid a| requirements here. I'll have to return to defining my own classes. If I make this change, then give an |Additive| instance for |Map| and use it for |(:<--)|. Similarly for lists and streams consistently with their denotation as |N -> b|. Wrap for |b <-- N|.}
+Higher-arity liftings can be defined via these three.
+(Exercise.)
+The use of |s <-- t| as an alternative to |t -> s| allows us to give instances for both and to stay within Haskell's type system (and ability to infer types via first-order unification).
+For |b <-- a|, these definitions are not really executable code, since they involve summations are over potentially infinite ranges (as with our semiring instances for |b <-- a| in \figref{<--}).
+\begin{theorem}
+For each instance defined in \figref{FunApp}, the following equalities hold:
+\notefoot{Probe more into the pattern of |single = pure|, |one = single mempty| and |(*) = liftA2 (<>)|.
+Also the relationship between forward and reverse functions and maps.}
+\begin{code}
+one  = pure mempty
+(*)  = liftA2 (<>)
+\end{code}
+\end{theorem}
+\begin{proof}
+Immediate from the instance definitions.
+\end{proof}
+
+\sectionl{The free semimodule monad}
+
+Where there's an applicative, there's often a compatible monad.
+For |b <-- a|, the monad is known as the ``free semimodule monad'' (or sometimes the ``free \emph{vector space} monad'') \needcite{}.
+(A semimodule is like a vector space but relaxes the requirement of a \emph{field} of scalars to a semiring.)
+One can think of a free semimodule over a semiring |b| as |b <-- a| for some set |a| of ``indices'' and semiring |b| of ``scalars''.
+The dimension of the semimodule is the cardinality of |a|.
+Basis vectors have the form |single u| for some |u :: a|, mapping |u| to |one| and everything else to |zero| as in \figref{<--}.
+%if False
+\begin{theorem}[\provedIn{theorem:decompose liftA2}]\thmlabel{decompose liftA2}
+Every function |f :: b <-- a| can be decomposed into this basis as follows:
+\notefoot{I'm not assuming finite support, which is part of the usual definition but problematic for the applications in this paper. Is nthere a problem with dropping finite support and finiteness of linear combinations?}
+\begin{code}
+F f = bigSum u (f u .> single u)
+\end{code}
+\vspace{-4ex}
+\end{theorem}
+%endif
+
+The monad instance is defined as follows:\footnote{The |return| method does not appear here, since it is equivalent to |pure| from |Applicative|.}
+\begin{code}
+instance Semiring s => Monad ((<--) s) where
+  (>>=) :: (s <-- a) -> (a -> (s <-- b))) -> (s <-- b)
+  F f >>= h = bigSum a f a .> h a
+\end{code}
+\vspace{-4ex}
+\begin{theorem}[\provedIn{theorem:standard FunApp}]\thmlabel{standard FunApp}
+The definitions of |fmap| and |liftA2| on |((<--) b)| in \figref{FunApp} satisfy the following standard equations for monads:
+\begin{code}
+fmap h p = p >>= pure . h
+
+liftA2 h p q  = p >>= \ u -> fmap (h u) q
+              = p >>= \ u -> q >>= \ v -> pure (h u v)
+\end{code}
+\end{theorem}
+
+\sectionl{More applications}
+
+\subsectionl{Polynomials}
+
+%format N = "\mathbb{N}"
+%format (Sum a) = a
+
+As is well known, univariate polynomials form a semiring and can be multiplied by \emph{convolving} their coefficients.
+Perhaps less known is that this trick extends naturally to multivariate polynomials and to (univariate and multivariate) power series.
+
+Looking more closely, univariate polynomials (and even power series) can be represented by a collection of coefficients indexed by exponents.
+For a polynomial in a variable |x|, an association of exponent |i| to coefficient |c| represents the polynomial term |c * pow x i|.
+One can use a variety of representations for these indexed collections.
+We'll consider efficient representations below, but let's begin as |b <-- N| along with a denotation as |b -> b|, where |N| is the additive monoid of natural numbers:
+%% Elide the Sum isomorphism
+% type N = Sum Natural
+\begin{code}
+poly :: Semiring b => (b <-- N) -> (b -> b)
+poly (F f) = \ x -> bigSum i  f i * pow x i
+\end{code}
+Polynomial multiplication via convolution follows from the following property:
+\begin{theorem}[\provedIn{theorem:poly fun}]\thmlabel{poly fun}
+The function |poly| is a semiring homomorphism when multiplication on |b| commutes.
+\end{theorem}
+
+\workingHere
+
+\noindent
+\note{Next:
+\begin{itemize}\itemsep0ex
+\item Generalize via monoidal scan
+\item Examples
+\item Finite maps
+\item Non-scalar domains (``multivariate'' polynomials) as in notes from 2019-01-\{28,29\}
+\item Non-scalar codomains
+\end{itemize}
+}
+
+
+
 \sectionl{Miscellaneous notes}
 
 \begin{itemize}
@@ -1628,7 +2027,190 @@ Substitute into \lemreftwo{atEps b <-- [c]}{deriv b <-- [c]}, and simplify, usin
 
 \note{Coinduction?}
 
-\subsection{\thmref{LTrie'}}\proofLabel{theorem:LTrie'}
+\subsection{\thmref{Fourier}}\proofLabel{theorem:Fourier}
+
+%format T = "\mathcal F"
+\note{Additivity of |T|, and the convolution theorem. What about |star p| and |single w|?}
+
+\subsection{\thmref{decomp (b <-- N)}}\proofLabel{theorem:decomp (b <-- N)}
+
+\begin{code}
+    atEps (F f) <: deriv (F f)
+==  f 0 <: I (F (f . (1 NOP +)))                                -- |atEps| and |deriv| on |b <-- N|
+==  F (\ i -> if i == 0 then f 0 else (f . (1 NOP +)) (i - 1))  -- |(<:)| on |b <-- N|
+==  F (\ i -> if i == 0 then f 0 else f (1 + (i - 1)))          -- |(.)| definition
+==  F (\ i -> if i == 0 then f 0 else f i)                      -- arithmetic
+==  F (\ i -> if i == 0 then f i else f i)                      -- |i == 0| in |then| branch
+==  F f                                                         -- property of conditional
+\end{code}
+
+\subsection{\lemref{deriv (b <-- N)}}\proofLabel{lemma:deriv (b <-- N)}
+
+\begin{code}
+    deriv zero
+==  deriv (F (\ i -> zero))        -- |zero| on |b <-- a|
+==  F ((\ i -> zero) . (+ NOP 1))  -- |deriv| definition
+==  F (\ i -> zero)                -- $\beta$ reduction
+==  zero                           -- |zero| on |b <-- a|
+\end{code}
+\begin{code}
+    deriv one
+==  deriv (F (\ i -> if i == 0 then one else zero))   -- |one| on |b <-- a|
+==  F (\ i -> if i+1 == 0 then one else zero)         -- |deriv| definition
+==  F (\ i -> zero)                                   -- |i+1 /= 0|
+==  zero                                              -- |zero| on |b <-- a|
+\end{code}
+\begin{code}
+    deriv (F f <+> F g)
+==  deriv (F (\ i -> f i <+> g i))             -- |(<+>)| on |b <-- a|
+==  F (\ i -> f (i+1) <+> g (i+1))             -- |deriv| definition; $\beta$ reduction
+==  F (\ i -> f (i+1)) <+> F (\ i -> g (i+1))  -- |(<+>)| on |b <-- a|
+==  deriv (F f) <+> deriv (F g)                -- |deriv| definition
+\end{code}
+\begin{code}
+    deriv (F f <.> F g)
+==  deriv (bigSum (u,v)  u + v +-> f u <.> g v)                 -- |(<.>)| on |b <-- a|
+==  bigSum (u,v)  deriv (u + v +-> f u <.> g v)                 -- |deriv| additivity (previous property)
+==  (bigSum v  deriv (0 + v +-> f 0 <.> g v)) <+>
+    (bigSum (u',v)  deriv (1 + u' + v +-> f (1 + u') <.> g v))  -- case split |u|
+\end{code}
+First addend:
+\begin{code}
+    bigSum v  deriv (0 + v +-> f 0 <.> g v)
+==  f 0 .> (bigSum v  deriv (v +-> g v))                        -- linearity
+==  f 0 .> deriv (bigSum v  (v +-> g v))                        -- additivity
+==  f 0 .> deriv (F g)                                          -- \lemref{decomp +->}
+\end{code}
+Second addend:
+\begin{code}
+    bigSum (u',v)  deriv (1 + u' + v +-> f (1 + u') <.> g v)
+==  bigSum (u',v)  u' + v +-> f (1 + u') <.> g v                -- \lemref{deriv +-> Nat} below
+==  F (f . (1 NOP +)) <.> F g                                   -- |(<.>)| on |b <-- a|
+==  deriv (F f) <.> F g                                         -- |deriv| on |b <-- a|
+\end{code}
+Combining results:
+\begin{code}
+deriv (F f <.> F g) == f 0 .> deriv (F g) <+> deriv (F f) <.> F g
+\end{code}
+i.e.,
+\begin{code}
+deriv (p <.> q) == atEps p .> deriv q <+> deriv p <.> q
+\end{code}
+
+\noindent
+\note{Next, derivations for |closure p| and either |single n| or |n +-> b|.}
+
+\begin{lemma}\lemlabel{deriv +-> Nat}
+Differentiation on |b <-- N| satisfies the following properties on singletons:
+\begin{code}
+    deriv (0 +-> b)
+==  deriv (F (\ j -> if j == 0 then b else zero))    -- |(+->)| definition
+==  F (\ j -> if j+1 == 0 then b else zero)          -- |deriv| on |b <-- N|
+==  F (\ j -> zero)                                  -- |j+1 /= 0| (for |N|)
+==  zero                                             -- |zero| on |b <-- a|
+
+    deriv (i+1 +-> b)
+==  deriv (F (\ j -> if j == i+1 then b else zero))  -- |(+->)| definition   
+==  F (\ j -> if j+1 == i+1 then b else zero)        -- |deriv| on |b <-- N| 
+==  F (\ j -> if j == i then b else zero)            -- |(+ NOP 1)| is injective
+==  i +-> b                                          -- |zero| on |b <-- a|  
+\end{code}
+\end{lemma}
+
+\subsection{\thmref{standard FunApp}}\proofLabel{theorem:standard FunApp}
+
+First consider |fmap|, as defined in \figref{FunApp}.
+\begin{code}
+    fmap h (F f)
+==  bigSum u h u +-> f u          -- definition of |fmap| on |(<--) b|
+==  bigSum u f u .> single (h u)  -- definition of |(+->)|
+==  bigSum u f u .> pure (h u)    -- |single = pure|
+==  F f >>= pure . h              -- definition of |(>>=)|
+\end{code}
+\noindent
+Similarly for |liftA2|:
+\vspace{-1ex}
+\begin{spacing}{1.5}
+\begin{code}
+    liftA2 h (F f) (F g)
+==  bigSum (u,v) h u v +-> f u <.> g v              -- definition of |liftA2|
+==  bigSum (u,v) (f u * g v) .> single (h u v)      -- definition of |(+->)|
+==  bigSum (u,v) f u .> (g v .> single (h u v))     -- associativity
+==  bigSum u f u .> bigSum v g v .> single (h u v)  -- linearity
+==  bigSum u f u .> bigSum v h u v +-> g v          -- definition of |(+->)|
+==  bigSum u f u .> fmap (h u) (F g)                -- definition of |fmap|
+==  f >>= \ u -> fmap (h u) (F g)                   -- definition of |(>>=)|
+\end{code}
+\end{spacing}
+
+\subsection{\thmref{poly fun}}\proofLabel{theorem:poly fun}
+
+The semantics as polynomial functions:
+\begin{code}
+poly :: Semiring b => (b <-- N) -> (b -> b)
+poly (F f) = \ x -> bigSum i  f i <.> pow x i
+\end{code}
+Monomials are especially simple:
+\begin{lemma}\lemlabel{poly +->}
+\begin{code}
+poly (n +-> b) = \ x -> b * pow x n
+\end{code}
+\end{lemma}
+\begin{proof}~
+\begin{code}
+poly (n +-> b)
+poly (\ i -> if i == n then b else zero)                  -- |(+->)| definition
+\ x -> bigSum i (if i == n then b else zero) <.> pow x n  -- |poly| definition
+\ x -> b * pow x n                                        -- other terms vanish
+\end{code}
+\end{proof}
+
+\noindent
+Homomorphism proofs for \thmref{poly fun}:
+\begin{code}
+    poly zero
+==  poly (F (\ i -> zero))             -- |zero| on |b <-- a|
+==  \ x -> bigSum i  zero <.> pow x i  -- |poly| definition
+==  \ x -> bigSum i  zero              -- |zero| as annihilator
+==  \ x -> zero                        -- |zero| as additive identity
+==  zero                               -- |zero| on |a -> b|
+\end{code}
+
+\begin{code}
+    poly one
+==  poly (F (\ i -> if i == mempty then one else zero))             -- |one| on |b <-- a|
+==  poly (F (\ i -> if i == Sum 0 then one else zero))              -- |mempty| on |N|
+==  \ x -> bigSum i (if i == Sum 0 then one else zero) <.> pow x i  -- |poly| definition
+==  \ x -> bigSum i (if i == Sum 0 then pow x i else zero)          -- simplify
+==  \ x -> pow x 0                                                  -- other terms vanish
+==  \ x -> one                                                      -- multiplicative identity
+==  one                                                             -- |one| on |a -> b|
+\end{code}
+
+\begin{code}
+    poly (F f <+> F g)
+==  poly (F (\ i -> f i <+> g i))                                       -- |(<+>)| on |b <-- a|
+==  \ x -> bigSum i  (f i <+> g i) <.> pow x i                          -- |poly| definition
+==  \ x -> bigSum i  f i <.> pow x i <+> g i <.> pow x i                -- distributivity
+==  \ x -> (bigSum i  f i <.> pow x i) <+> (bigSum i  g i <.> pow x i)  -- summation property
+==  \ x -> poly (F f) x <+> poly (F g) x                                -- |poly| definition
+==  poly (F f) <+> poly (F g)                                           -- |(<+>)| on |a -> b|
+\end{code}
+
+\begin{code}
+    poly (F f <.> F g)
+==  poly (bigSum (i,j)  i + j +-> f i <.> g j)                          -- |(<.>)| on |b <-- a|
+==  bigSum (i,j)  poly (i + j +-> f i <.> g j)                          -- additivity of |poly| (previous property)
+==  bigSum (i,j) (\ x -> (f i <.> g j) <.> pow x (i + j))               -- \lemref{poly +->}
+==  \ x -> bigSum (i,j) (f i <.> g j) <.> pow x (i + j)                 -- |(<+>)| on functions
+==  \ x -> bigSum (i,j) (f i <.> g j) <.> (pow x i <.> pow x j)         -- exponentiation property
+==  \ x -> bigSum (i,j) (f i <.> pow x i) <.> (g j <.> pow x j)         -- commutativity assumption
+==  \ x -> (bigSum i  f i <.> pow x i) <.> (bigSum j  g j <.> pow x j)  -- summation property
+==  \ x -> poly (F f) x <.> poly (F g) x                                -- |poly| definition
+==  poly (F f) <.> poly (F g)                                           -- |(<.>)| on functions
+\end{code}
+
+\note{The sum and product derivations might read more easily in reverse.}
 
 \bibliography{bib}
 

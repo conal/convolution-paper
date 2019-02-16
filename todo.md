@@ -5,7 +5,19 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 
 ## To-do items for the paper and code
 
+### Major
+
+*   Related work. Lots of references below.
+*   Consider again removing the types that behave like `a -> b` instead of `b <-- a`.
+    I don't know how I could then get the functor/applicative/monad instances I want, since the type parameters would be in the wrong order.
+    One possibility is to save that discussion and the parallel types for the extended/journal version of the paper.
 *   Explore Brzozowski derivatives as actual derivatives of residual functions, as in my journal notes from 2019-02-08.
+*   Generalization from lists to arbitrary regular algebraic data types.
+*   Super-memoization.
+    See notes from 2018-12-02 and 2018-12-05.
+
+### Misc
+
 *   Maybe drop `HasSingle` and define `single` via `fmap` and `one`.
 *   Derive a semiring for lists based on a homomorphism from `[a]` to `a <-- Nat`.
 *   From recognition to "parsing", i.e., generating rich representations.
@@ -54,43 +66,43 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 *   Track down references for convolution over functions with arbitrary *monoidal* domains.
     Also "convolutional algebras".
     See, e.g., "[group algebra](https://www.encyclopediaofmath.org/index.php/Group_algebra)" and "[convolution algebra](https://ncatlab.org/nlab/show/convolution+algebra)".
-*   Some references:
-    *   Brzozowski derivatives:
-        *   [Wikipedia page on the *Brzozowski derivative*](https://en.wikipedia.org/wiki/Brzozowski_derivative)
-        *   [*Derivatives of Regular Expressions*]
-        *   [*Rewriting Extended Regular Expressions*]
-        *   [*Some Properties of Brzozowski Derivatives of Regular Expressions*]
-        *   [*Derivatives of Regular Expressions and an Application*]
-        *   [*Regular-expression derivatives reexamined*]
-        *   [*Derivatives for Enhanced Regular Expressions*]
-        *   [*Regular expression sub-matching using partial derivatives*]
-        *   [*Testing Extended Regular Language Membership Incrementally by Rewriting*]
-        *   [*Yacc is dead*]
-        *   [*Yacc is dead: An update*]
-    *   Semirings:
-        *   [*Some Recent Applications of Semiring Theory*]
-        *   [*Fun with Semirings: A functional pearl on the abuse of linear algebra*]
-        *   [*Linear Algebra Over Semirings*]
-    *   On semirings and parsing:
-        *   [*Parsing Inside-Out*]
-        *   [*Semiring Parsing*]
-        *   [*Algebraic Foundation of Statistical Parsing: Semiring Parsing*]
-        *   [*Goodman: Semiring Parsing*]
-    *   Comonad references:
-        *   [Monads from Comonads](http://comonad.com/reader/2011/monads-from-comonads/) (blog post by Ed Kmett, 2011)
-        *   [*Monads from Comonads, Comonads from Monads*]
-        *   [*Should I use a Monad or a Comonad?*]
-    *   Other:
-        *   [*Convolution as a Unifying Concept: Applications in Separation Logic, Interval Calculi, and Concurrency*]
-        *   [*Introduction to weighted automata theory*]
-        *   [*Weighted Automata*]
-        *   [*Quantifiers on languages and codensity monads*]
-        *   [What is a coalgebra intuitively?](https://mathoverflow.net/questions/76509/what-is-a-coalgebra-intuitively)
-        *   [*Bases as coalgebras*](https://arxiv.org/pdf/1309.0844.pdf)
-        *   [*The Dual of Substitution is Redecoration*]
-        *   [*Higher Dimensional Trees, Algebraically*]
-*   Super-memoization.
-    See notes from 2018-12-02 and 2018-12-05
+
+### Some references
+
+*   Brzozowski derivatives:
+    *   [Wikipedia page on the *Brzozowski derivative*](https://en.wikipedia.org/wiki/Brzozowski_derivative)
+    *   [*Derivatives of Regular Expressions*]
+    *   [*Rewriting Extended Regular Expressions*]
+    *   [*Some Properties of Brzozowski Derivatives of Regular Expressions*]
+    *   [*Derivatives of Regular Expressions and an Application*]
+    *   [*Regular-expression derivatives reexamined*]
+    *   [*Derivatives for Enhanced Regular Expressions*]
+    *   [*Regular expression sub-matching using partial derivatives*]
+    *   [*Testing Extended Regular Language Membership Incrementally by Rewriting*]
+    *   [*Yacc is dead*]
+    *   [*Yacc is dead: An update*]
+*   Semirings:
+    *   [*Some Recent Applications of Semiring Theory*]
+    *   [*Fun with Semirings: A functional pearl on the abuse of linear algebra*]
+    *   [*Linear Algebra Over Semirings*]
+*   On semirings and parsing:
+    *   [*Parsing Inside-Out*]
+    *   [*Semiring Parsing*]
+    *   [*Algebraic Foundation of Statistical Parsing: Semiring Parsing*]
+    *   [*Goodman: Semiring Parsing*]
+*   Comonad references:
+    *   [Monads from Comonads](http://comonad.com/reader/2011/monads-from-comonads/) (blog post by Ed Kmett, 2011)
+    *   [*Monads from Comonads, Comonads from Monads*]
+    *   [*Should I use a Monad or a Comonad?*]
+*   Other:
+    *   [*Convolution as a Unifying Concept: Applications in Separation Logic, Interval Calculi, and Concurrency*]
+    *   [*Introduction to weighted automata theory*]
+    *   [*Weighted Automata*]
+    *   [*Quantifiers on languages and codensity monads*]
+    *   [What is a coalgebra intuitively?](https://mathoverflow.net/questions/76509/what-is-a-coalgebra-intuitively)
+    *   [*Bases as coalgebras*](https://arxiv.org/pdf/1309.0844.pdf)
+    *   [*The Dual of Substitution is Redecoration*]
+    *   [*Higher Dimensional Trees, Algebraically*]
 
 ## Did
 

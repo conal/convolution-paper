@@ -4,7 +4,10 @@
 \documentclass[hidelinks,twoside]{article}  % fleqn,
 
 \usepackage[margin=0.12in]{geometry}  % 0.12in, 0.9in, 1in
-% \geometry{paperwidth=6.75in}  % Handy for previewing in portrait
+
+%% \geometry{paperwidth=6.75in}  % for iPad portrait preview
+
+\geometry{paperwidth=10in} % for 2-up on big monitor
 
 %% \documentclass{article}
 %% \usepackage{fullpage}
@@ -370,9 +373,7 @@ instance Semiring b => Semiring (a -> b) where
   f * g  = \ a -> f a * g a
 \end{code}
 As with |Additive|, this |Semiring| instance implies that curried functions (of any number and type of arguments and with semiring result type) are semirings, with |curry| and |uncurry| being semiring homomorphisms.
-
-
-\begin{theorem}
+\begin{theorem}\thmlabel{curry semiring}
 Currying and uncurrying are semiring homomorphisms.
 \end{theorem}
 \begin{proof}
@@ -496,7 +497,7 @@ There is also a corresponding notion of \emph{right} |s|-semimodule (with multip
 
 As usual, we have a corresponding notion of homomorphism, which is more commonly referred to as ``linearity'':
 \begin{definition} \deflabel{left semimodule homomorphism}
-A function |h| from one left |s|-semimodule to another is a \emph{left |s|-semimodule homomorphism} if it is an additive monoid homomorphism (\defref{additive monoid homomorphism}) and satisfies the following additional properties:
+A function |h| from one left |s|-semimodule to another is a \emph{left |s|-semimodule homomorphism} if it is an additive monoid homomorphism (\defref{additive monoid homomorphism}) and satisfies the following additional property:
 \begin{code}
 h (s .> b) == s .> h b
 \end{code}
@@ -575,11 +576,12 @@ instance (Eq a, Additive b) => HasSingle a b (a -> b) where
 \noindent
 The |(+->)| operation gives a way to decompose arbitrary functions:
 \begin{lemma}[\provedIn{lemma:decomp +->}]\lemlabel{decomp +->}
-For all |f :: a -> b| where |b| is a semiring,
+For all |f :: a -> b| where |b| is an additive monoid,
 \begin{code}
 f == bigSum a a +-> f a
 \end{code}
 \end{lemma}
+% In practice, |f| is often ``sparse'', i.e., non-zero on a relatively small (e.g., finite) subset of its domain.
 
 \sectionl{Calculating Instances from Homomorphisms}
 
@@ -824,7 +826,7 @@ recogLang (F f) = L (predSet f)
 langRecog :: Language a -> (Bool <-- a)
 langRecog (L p) = F (setPred p)
 \end{code}
-To cement our analogy, let's require that |recogLang| (and hence |langRecog|) be a homomorphism for all of the classes defined in \secref{Monoids, Semirings and Semimodules}.
+To cement our analogy, let's require |recogLang| (and hence |langRecog|) to be a homomorphism for all of the classes defined in \secref{Monoids, Semirings and Semimodules}.
 If we apply the same sort of reasoning as in \secref{Calculating Instances from Homomorphisms} and then generalize from |Bool| to an arbitrary semiring, we get the definitions in \figrefdef{<--}{The monoid semiring}{
 \begin{code}
 instance (Semiring b, Monoid a) => Semiring (b <-- a) where
@@ -1013,15 +1015,15 @@ Differentiation has the following properties:
 \notefoot{If I replace application to |c| by indexing by |c| (i.e., |(! NOP c)|), will this lemma hold for all of the representations? I suspect so. Idea: Define $\derivOp_c\,p = \derivOp\,p\:!\:c$.}
 \begin{spacing}{1.4}
 \begin{code}
-deriv zero  c == zero
-deriv one   c == zero
-deriv (p  <+>  q) c == deriv p c <+> deriv q c
-deriv (p  <.>  q) c == atEps p .> deriv q c <+> deriv p c <.> q
-deriv (star p) c == star (atEps p) .> deriv p c * star p
-deriv (s .> p) c == s .> deriv p c
+deriv zero  == zero
+deriv one   == zero
+deriv (p  <+>  q) == deriv p <+> deriv q
+deriv (p  <.>  q) == \ c -> atEps p .> deriv q c <+> deriv p c <.> q
+deriv (star p) == \ c -> star (atEps p) .> deriv p c * star p
+deriv (s .> p) == \ c -> s .> deriv p c
 
-deriv (    []       +-> b) c == zero
-deriv (c'  :  cs'   +-> b) c == if c == c' then cs' +-> b else zero
+deriv (    []       +-> b) == zero
+deriv (c'  :  cs'   +-> b) == c' +-> cs' +-> b
 \end{code}
 \end{spacing}
 \vspace{-2ex}
@@ -1142,14 +1144,10 @@ How far back could I remove the distinction?}
 \sectionl{Convolution}
 
 Consider again the definition of multiplication in the monoid semiring, on |f,g :: b <-- a| from \figref{<--}.
+Eliding |F| constructors for now,
 \begin{code}
-F f * F g  = bigSum (u,v) u <> v +-> f u <.> g v
+f * g  = bigSum (u,v) u <> v +-> f u <.> g v
 \end{code}
-%if False
-\begin{equation}\eqnlabel{convolution}
-f * g = \sum_{u,v} u \mappend v \mapsto f\,u * g\,v
-\end{equation}
-%endif
 Specializing the \emph{codomain} to |Bool|, we get
 
 >   f <.> g = bigOr (u,v) u <> v +-> f u && g v
@@ -1171,11 +1169,8 @@ Let's now consider specializing the functions' domains to \emph{integers} rather
 \vspace{-2ex}
 \begin{spacing}{1.5}
 \begin{code}
-f <.> g  == bigSum (u,v) u <> v +-> f u <.> g v
-         == bigSum (u,v) u + v +-> f u <.> g v                              -- monoid under addition
-         == bigSum (u,v) (\ w -> if w == u + v then f u <.> g v else zero)  -- |(+->)| definition
-         == \ w -> bigSum (u,v) (if w == u + v then f u <.> g v else zero)  -- |(<+>)| on functions
-         == \ w -> bigSumPlus (u,v BR u + v == w) f u <.> g v               -- skip zeros (additive identity)
+f <.> g  == bigSum (u,v) u + v +-> f u <.> g v                              -- \figref{<--} with |(<>) = (+)|
+         == \ w -> bigSumPlus (u,v BR u + v == w) f u <.> g v               -- equivalent definition
          == \ w -> bigSumPlus (u,v BR v == w - u) f u <.> g v               -- solve |u + v == w| for |v|
          == \ w -> bigSum u f u <.> g (w - u)                               -- substitute |w - u| for |v|
 \end{code}
@@ -1189,6 +1184,8 @@ Additionally, for multi-dimensional (discrete or continuous) convolution, we can
 \notefoot{More generally, cartesian products of monoids are also monoids.
 Consider multi-dimensional convolution in which different dimensions have different types, even mixing discrete and continuous, and maybe even sequences and numbers.
 At the least, it's useful to combine finite dimensions of different sizes.}
+Alternatively, curry, convolve, and uncurry, exploiting the fact that |curry| is a semiring homomorphism.
+\notefoot{Have I stated and proved the relevant lemma for currying and uncurrying with the \emph{monoid semiring}? \thmreftwo{curry additive}{curry semiring} are for |a -> b|, not |b <-- a|.}
 \begin{theorem}[\provedIn{theorem:Fourier}]\thmlabel{Fourier}
 The Fourier transform is a semiring homomorphism from |b <- a| to |a -> b|.
 \end{theorem}
@@ -1259,9 +1256,6 @@ data Stream b = b :# Stream b
 
 instance Indexable (Stream b) N b where
   (b :# bs) ! n = if n == 0 then b else bs ! (n-1)
-
-streamF :: Stream b -> (b <-- N)
-streamF bs = F (bs NOP !)
 
 instance DetectableZero b => Decomposable (Stream b) Identity b where
   b <: Identity bs = b :# bs
@@ -1381,6 +1375,7 @@ lift0 b  = b +-> one
 The signatures of |lift2|, |lift1|, and |lift0| generalize to those of |liftA2|, |fmap|, and |pure| from the |Functor| and |Applicative| type classes \needcite, so let's replace the specialized operations with standard ones.
 An enhanced version of these classes appear in \figrefdef{FunApp}{|Functor| and |Applicative| classes and some instances}{
 \begin{code}
+
 class FunctorC f where
   type Ok f a :: Constraint
   type Ok f a = ()
@@ -1394,28 +1389,6 @@ infixl 1 >>==
 class ApplicativeC f => MonadC f where
   (>>==) :: (Ok f a, Ok f b) => f a -> (a -> f b) -> f b
 
-instance Functor Pow where
-  fmap h p = set (h a | a <# p)
-
-instance Applicative Pow where
-  pure b = single b
-  liftA2 h p q = set (h a b | a <# p && b <# q)
-
-instance Functor [] where
-  fmap h as = [h a | a <- as]
-
-instance Applicative [] where
-  pure a = single a
-  liftA2 h p q = [h u v | u <- p, v <- q]
-
-instance SRM b => FunctorC ((:<--) b) where
-  type Ok ((:<--) b) a = (Ord a, Monoid a)
-  fmapC h (M p) = bigSumKeys (a <# keys p) h a +-> p ! a
-
-instance SRM b => ApplicativeC ((:<--) b) where
-  pureC a = single a
-  liftA2C h (M p) (M q) = bigSumKeys (a <# keys p BR b <# keys q) h a b +-> (p!a) <.> (q!b)
-
 instance Semiring b => Functor ((<--) b) where
   type Ok ((<--) b) a = (Eq a, Monoid a)
   fmap h (F f) = bigSum u h u +-> f u
@@ -1423,13 +1396,22 @@ instance Semiring b => Functor ((<--) b) where
 instance Semiring b => Applicative ((<--) b) where
   pure a = single a
   liftA2 h (F f) (F g) = bigSum (u,v) h u v +-> f u <.> g v
+
+instance DetectableZero b => FunctorC ((*<-) b) where
+  type Ok ((*<-) b) a = (Ord a, Monoid a)
+  fmapC h (M p) = bigSumKeys (a <# M.keys p) h a +-> p ! a
+
+instance DetectableZero b => ApplicativeC ((*<-) b) where
+  pureC a = single a
+  liftA2C h (M p) (M q) = bigSumKeys (a <# M.keys p BR b <# M.keys q) h a b +-> (p!a) <.> (q!b)
+
 \end{code}
 \vspace{-3ex}
 }, along with instances for some of the language representations we've considered so far.%
 \footnote{The enhancement is the associated constraint \citep{Bolingbroke2011CK} |Ok|, limiting the types that the class methods must support. The line ``|type Ok f a = ()|'' means that the constraint on |a| defaults to |()|, which holds vacuously for all |a|.}%
 \footnote{Originally, |Applicative| had a |(<*>)| method from which one can easily define |liftA2|. Since the base library version 4.10 \needcite, |liftA2| was added as a method (along with a default definition of |(<*>)|) to allow for more efficient implementation. \note{Cite \href{https://ghc.haskell.org/trac/ghc/ticket/13191}{GHC ticket 13191} if I can't find a better reference.}}%
 %if False
-\footnote{The methods on |(:<--) b| (finite maps to |b|) are written in straight Haskell as follows:
+\footnote{The methods on |(*<-) b| (finite maps to |b|) are written in straight Haskell as follows:
 \vspace{-0.5ex}
 \begin{code}
   fmapC h (M p) = sum [ h a +-> s | (a,s) <- toList p ]
@@ -1439,8 +1421,8 @@ instance Semiring b => Applicative ((<--) b) where
 \vspace{-3ex}
 }%
 %endif
-\notefoot{The |Monoid a| requirement for |(:<--) b| and |(<--) b| is due to the corresponding |Semiring| instances, but really just for
-|one| and |(<.>)|, which we're not using. To do: factor |Additive| out of |Semiring|, and drop the |Monoid a| requirements here. I'll have to return to defining my own classes. If I make this change, then give an |Additive| instance for |Map| and use it for |(:<--)|. Similarly for lists and streams consistently with their denotation as |N -> b|. Wrap for |b <-- N|.}
+\notefoot{The |Monoid a| requirement for |(*<-) b| and |(<--) b| is due to the corresponding |Semiring| instances, but really just for
+|one| and |(<.>)|, which we're not using. To do: factor |Additive| out of |Semiring|, and drop the |Monoid a| requirements here. I'll have to return to defining my own classes. If I make this change, then give an |Additive| instance for |Map| and use it for |(*<-)|. Similarly for lists and streams consistently with their denotation as |N -> b|. Wrap for |b <-- N|.}
 Higher-arity liftings can be defined via these three.
 (Exercise.)
 The use of |s <-- t| as an alternative to |t -> s| allows us to give instances for both and to stay within Haskell's type system (and ability to infer types via first-order unification).
@@ -1462,20 +1444,8 @@ Immediate from the instance definitions.
 
 Where there's an applicative, there's often a compatible monad.
 For |b <-- a|, the monad is known as the ``free semimodule monad'' (or sometimes the ``free \emph{vector space} monad'') \needcite{}.
-(A semimodule is like a vector space but relaxes the requirement of a \emph{field} of scalars to a semiring.)
-One can think of a free semimodule over a semiring |b| as |b <-- a| for some set |a| of ``indices'' and semiring |b| of ``scalars''.
 The dimension of the semimodule is the cardinality of |a|.
 Basis vectors have the form |single u| for some |u :: a|, mapping |u| to |one| and everything else to |zero| as in \figref{<--}.
-%if False
-\begin{theorem}[\provedIn{theorem:decompose liftA2}]\thmlabel{decompose liftA2}
-Every function |f :: b <-- a| can be decomposed into this basis as follows:
-\notefoot{I'm not assuming finite support, which is part of the usual definition but problematic for the applications in this paper. Is nthere a problem with dropping finite support and finiteness of linear combinations?}
-\begin{code}
-F f = bigSum u (f u .> single u)
-\end{code}
-\vspace{-4ex}
-\end{theorem}
-%endif
 
 The monad instance is defined as follows:\footnote{The |return| method does not appear here, since it is equivalent to |pure| from |Applicative|.}
 \begin{code}
@@ -1504,10 +1474,10 @@ liftA2 h p q  = p >>= \ u -> fmap (h u) q
 As is well known, univariate polynomials form a semiring and can be multiplied by \emph{convolving} their coefficients.
 Perhaps less known is that this trick extends naturally to multivariate polynomials and to (univariate and multivariate) power series.
 
-Looking more closely, univariate polynomials (and even power series) can be represented by a collection of coefficients indexed by exponents.
-For a polynomial in a variable |x|, an association of exponent |i| to coefficient |c| represents the polynomial term |c * pow x i|.
+Looking more closely, univariate polynomials (and even power series) can be represented by a collection of coefficients indexed by exponents, or conversely as a collection of exponents weighted by coefficients.
+For a polynomial in a variable |x|, an association of coefficient |c| with exponent |i| represents the monomial (polynomial term) |c * pow x i|.
 One can use a variety of representations for these indexed collections.
-We'll consider efficient representations below, but let's begin as |b <-- N| along with a denotation as |b -> b|, where |N| is the additive monoid of natural numbers:
+We'll consider efficient representations below, but let's begin as |b <-- N| along with a denotation as |b -> b|:
 %% Elide the Sum isomorphism
 % type N = Sum Natural
 \begin{code}
@@ -1531,8 +1501,6 @@ The function |poly| is a semiring homomorphism when multiplication on |b| commut
 \item Non-scalar codomains
 \end{itemize}
 }
-
-
 
 \sectionl{Miscellaneous notes}
 
@@ -1844,6 +1812,7 @@ For the other two equations:
 ==  \ c -> deriv (F f) c <+> deriv (F g) c                -- |deriv| on |b <-- a|
 ==  deriv (F f) <+> deriv (F g)                           -- |(<+>)| on |a -> b|
 \end{code}
+%format bigSumA (lim) = "\bigOp\sum{" lim "}{1}"
 \begin{code}
     deriv (F f <.> F g)
 ==  deriv (bigSum (u,v) u <> v +-> f u <.> g v)                                                                             -- |(<.>)| on |b <-- a|
@@ -1855,7 +1824,7 @@ First addend:
     deriv (bigSum v (mempty <> v +-> f mempty <.> g v))
 ==  deriv (bigSum v (v +-> f mempty <.> g v))  -- monoid law
 ==  deriv (f mempty .> bigSum v (v +-> g v))   -- distributivity (semiring law)
-==  f mempty .> deriv (bigSum v v +-> g v)     -- linearity of |deriv| \note{(needs lemma)}
+==  f mempty .> deriv (bigSum v v +-> g v)     -- additivity of |deriv| (above)
 ==  f mempty .> deriv (F g)                    -- \lemref{decomp +->}
 ==  atEps (F f) .> deriv (F g)                 -- |atEps| on |b <-- a|
 \end{code}
@@ -1878,21 +1847,21 @@ deriv (F f <.> F g) c == atEps (F f) .> deriv (F g) c <+> deriv (F f) c <.> F g
 Continuing with the other equations in \lemref{deriv b <-- [c]},
 
 \begin{code}
-    deriv (star p) c
-==  deriv (one <+> p <.> star p) c                        -- star semiring law
-==  deriv one c <+> deriv (p <.> star p) c                -- additivity of |deriv|
-==  deriv (p <.> star p) c                                -- |deriv one c == zero| (above)
-==  atEps p .> deriv (star p) c <+> deriv p c <.> star p  -- |deriv (p * q)| above
-==  star (atEps p) .> deriv p c <.> star p                -- \lemref{affine over semimodule}
+    deriv (star p)
+==  deriv (one <+> p <.> star p)                                 -- star semiring law
+==  deriv one <+> deriv (p <.> star p)                           -- additivity of |deriv| (above)
+==  deriv (p <.> star p)                                         -- |deriv one == zero| (above)
+==  \ c -> atEps p .> deriv (star p) c <+> deriv p c <.> star p  -- |deriv (p * q)| above
+==  \ c -> star (atEps p) .> deriv p c <.> star p                -- \lemref{affine over semimodule}
 \end{code}
 
 \begin{code}
-    deriv (s .> F f) c
-==  deriv (F (\ w -> s * f w)) c         -- |(.>)| on |b <-- a|
-==  F (\ cs -> (\ w -> s * f w) (c:cs))  -- |deriv| definition
-==  F (\ cs -> s * f (c:cs))             -- $\beta$ reduction
-==  s .> F (\ cs -> f (c:cs))            -- |(.>)| on |b <-- a|
-==  s .> deriv (F f) c                   -- |deriv| definition
+    deriv (s .> F f)
+==  deriv (F (\ w -> s * f w))                  -- |(.>)| on |b <-- a|
+==  \ c -> F (\ cs -> (\ w -> s * f w) (c:cs))  -- |deriv| definition
+==  \ c -> F (\ cs -> s * f (c:cs))             -- $\beta$ reduction
+==  \ c -> s .> F (\ cs -> f (c:cs))            -- |(.>)| on |b <-- a|
+==  \ c -> s .> deriv (F f) c                   -- |deriv| definition
 \end{code}
 
 \begin{code}
@@ -1903,13 +1872,16 @@ Continuing with the other equations in \lemref{deriv b <-- [c]},
 ==  F (\ cs -> zero)                                         -- |c:cs /= []|
 ==  zero                                                     -- |zero| on |b <-- a|
 
-    deriv (F (\ w -> if w == c':cs' then b else zero)) c
-==  F (\ cs -> (\ w -> if w == c':cs' then b else zero) (c:cs))            -- |(+->)| on |b <-- a|
-==  F (\ cs -> if c:cs == c':cs' then b else zero)                         -- $\beta$ reduction
-==  F (\ cs -> if c == c' && cs == cs' then b else zero)                   -- |(:)| injectivity
-==  F (\ cs -> if c == c' then (if cs == cs' then b else zero) else zero)  -- property of |if| and |(&&)|
-==  if c == c' then (F (\ cs -> if cs == cs' then b else zero) else zero)  -- property of |if|
-==  if c == c' then cs' +-> b else zero                                    -- |(+->)| on |b <-- a|
+    deriv (c':cs' +-> b)
+==  deriv (F (\ w -> if w == c':cs' then b else zero))                            -- |(+->)| on |b <-- a|
+==  \ c -> F (\ cs -> (\ w -> if w == c':cs' then b else zero) (c:cs))            -- |(+->)| on |b <-- a|
+==  \ c -> F (\ cs -> if c:cs == c':cs' then b else zero)                         -- $\beta$ reduction
+==  \ c -> F (\ cs -> if c == c' && cs == cs' then b else zero)                   -- |(:)| injectivity
+==  \ c -> F (\ cs -> if c == c' then (if cs == cs' then b else zero) else zero)  -- property of |if| and |(&&)|
+==  \ c -> if c == c' then (F (\ cs -> if cs == cs' then b else zero) else zero)  -- property of |if|
+==  \ c -> if c == c' then cs' +-> b else zero                                    -- |(+->)| on |b <-- a|
+==  c' +-> cs' +-> b                                                              -- |(+->)| on |s -> t|
+
 \end{code}
 
 \begin{lemma}\lemlabel{deriv +->}
@@ -1984,11 +1956,16 @@ I could say ``Proof: Immediate from \lemrefthree{decomp (b <-- [c])}{atEps b <--
 
 %% star (a <: dp) = q where q = star a .> (one <: (<.> NOP q) .  dp)
 
+%% deriv (star p) c == star (atEps p) .> deriv p c <.> star p
+
+%% deriv (star (a <: dp)) c == star a .> dp c * star (a <: dp)  -- {atEps and deriv via (<:)}
+
 \begin{code}
     star (a <: dp)
-==  atEps (star (a <: dp)) <: deriv (star (a <: dp))                     -- \lemref{decomp (b <-- [c])}
-==  star a <: \ c -> star a .> dp c * star (a <: dp)                     -- \lemref{atEps and deriv via (<:)} below
-==  star a .> (one <: \ c -> dp c * star (a <: dp))                      -- |(.>)| case below
+==  atEps (star (a <: dp)) <: deriv (star (a <: dp))            -- \lemref{decomp (b <-- [c])}
+==  star a <: \ c -> star a .> dp c * star (a <: dp)            -- \lemref{atEps and deriv via (<:)} below
+==  star a .> (one <: \ c -> dp c * star (a <: dp))             -- |(.>)| case below
+==  star a .> (one <: fmap (* NOP (wrap (star (a <: dp)))) dp)  -- |fmap| on functions
 \end{code}
 
 \begin{code}
@@ -1996,7 +1973,7 @@ I could say ``Proof: Immediate from \lemrefthree{decomp (b <-- [c])}{atEps b <--
 ==  atEps (s .> (b <: h)) <: deriv (s .> (b <: h))  -- \lemref{decomp (b <-- [c])}
 ==  s * b <: \ c -> s .> dp c                       -- \lemref{atEps and deriv via (<:)} below
 ==  s * b <: (s .>) . dp                            -- |(.)| definition
-==  s * b <: fmap (s .>) dp                         -- |fmap| on functions
+==  s * b <: fmap (s NOP .>) dp                     -- |fmap| on functions
 \end{code}
 
 \begin{code}

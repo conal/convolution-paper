@@ -104,7 +104,7 @@ trimT' n (C x) = C (trimT n x)
 #else
 
 newtype LTrie' b c = L (LTrie c b) deriving
-  (Additive, HasSingle [c] b, LeftSemimodule b, Indexable [c] b, Decomposable b (Map c))
+  (Additive, DetectableZero, HasSingle [c] b, LeftSemimodule b, Indexable [c] b, Decomposable b (Map c))
 
 -- Derive Indexable?
 

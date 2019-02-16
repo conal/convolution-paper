@@ -14,7 +14,8 @@ import qualified Data.Map as M
 import Semi
 
 infixl 0 *<-
-newtype b *<- a = M (a ->* b) deriving (Show, Additive, HasSingle a b, LeftSemimodule b, DetectableZero, Indexable a b)
+newtype b *<- a = M (a ->* b) deriving
+  (Show, Additive, DetectableZero, HasSingle a b, LeftSemimodule b, Indexable a b)
 
 instance (Ord a, Monoid a, Semiring b) => Semiring (b *<- a) where
   one = M (mempty +-> one)

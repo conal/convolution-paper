@@ -494,6 +494,8 @@ The affine equation |p = b + m * p| has solution |p = star m * b| \citep{Dolan20
 As fields are to vector spaces, rings are to modules, and semirings are to \emph{semimodules}.
 For any semiring |s|, a \emph{left |s|-semimodule} |b| is a additive monoid whose values can be multiplied on the left by |s| values.
 Here, |s| plays the role of ``scalars'', while |b| plays the role of ``vectors''.
+\notefoot{Perhaps say just ``semimodule'', and add a remark that I really mean ``left semimodule'' throughout.
+Or start out with ``left'', then make the remark, and then perhaps add an occasional ``(left)''.}
 \begin{code}
 class (Semiring s, Additive b) => LeftSemimodule s b | b -> s where
   (.>) :: s -> b -> b
@@ -930,7 +932,7 @@ We can wrap |a ->* b| into a new type that does have a |Semiring| instance homom
 %format bigSumKeys (lim) = "\bigOp\sum{" lim "}{2}"
 \begin{code}
 infixl 0 *<-
-newtype b *<- a = M (a ->* b) deriving (Additive, HasSingle a b, LeftSemimodule b, Indexable a b)
+newtype b *<- a = M (a ->* b) deriving (Additive, DetectableZero, HasSingle a b, LeftSemimodule b, Indexable a b)
 
 instance (Ord a, Monoid a, Semiring b) => Semiring (b *<- a) where
   one = single mempty
@@ -1070,7 +1072,7 @@ class Decomposable a h s | a -> h s where
 \end{code}
 The definitions of |(<:)|, |atEps|, and |deriv| given above correspond to an instance |Semiring b => Decomposable (b <-- [c]) ((->) c) b|.
 
-\note{Use an associated pattern synonym instead, as I've now done in the implementation.}
+\note{Use a sort of associated pattern synonym instead, as I've now done in the implementation.}
 
 \sectionl{Tries}
 
@@ -1094,9 +1096,9 @@ data LTrie c b = b :< (c ->* LTrie c b)
 \end{code}
 The similarity between the |LTrie| type and the function decomposition from \secref{Decomposing Functions from Lists} (motivating the constructor's name) makes for easy instance calculation.
 As with |Pow a| and |a ->* b|, we can define a trie counterpart to the monoid semiring, here |b <-- [c]|.
-\note{Consider combining the following two theorems into one.}
 \begin{theorem}[\provedIn{theorem:LTrie}]\thmlabel{LTrie}
-Given the definitions in \figrefdef{LTrie}{Tries as |[c] -> b|}{
+Given the definitions in \figrefdef{LTrie}{Tries as |[c] -> b| and as |b <-- [c]|}{
+%format :<: = "\mathrel{\Varid{:\!\!\triangleleft\!:}}"
 \begin{code}
 infix 1 :<
 data LTrie c b = b :< (c ->* LTrie c b)
@@ -1116,16 +1118,10 @@ instance (Ord c, Additive b, DetectableZero b) => DetectableZero (LTrie c b) whe
 
 instance (Ord c, Additive b) => HasSingle [c] b (LTrie c b) where
   w +-> b = foldr (\ c t -> zero :< c +-> t) (b :< zero) w
-\end{code}
-\vspace{-4ex}
-}, |(!)| is a homomorphism with respect to each instantiated class.
-\end{theorem}
-%format :<: = "\mathrel{\Varid{:\!\!\triangleleft\!:}}"
-\begin{theorem}[\provedIn{theorem:LTrie'}]\thmlabel{LTrie'}
-Given the definitions in \figrefdef{LTrie'}{Tries as |b <-- [c]|}{
-\begin{code}
 
-newtype LTrie' b c = L (LTrie c b) deriving (Additive, HasSingle [c] b, LeftSemimodule b, Indexable [c] b)
+NOP
+newtype LTrie' b c = L (LTrie c b) deriving
+  (Additive, DetectableZero, HasSingle [c] b, LeftSemimodule b, Indexable [c] b)
 
 infix 1 :<:
 pattern (:<:) :: b -> (c ->* LTrie' b c) -> LTrie' b c
@@ -1133,15 +1129,20 @@ pattern b :<: d <- L (b :< (coerce -> d)) where b :<: d = L (b :< coerce d)
 
 instance (Ord c, Semiring b, DetectableZero b) => Semiring (LTrie' b c) where
   one = one :<: zero
-  (a :<: dp) <.> q = a .> q <+> (zero :<: fmap (<.> q) dp)
+  (a :<: dp) <.> q = a .> q <+> (zero :<: fmap (<.> NOP q) dp)
 
 instance (Ord c, StarSemiring b, DetectableZero b) => StarSemiring (LTrie' b c) where
-  star (a :<: dp) = q where q = star a .> (one :<: fmap (<.> q) dp)
+  star (a :<: dp) = q where q = star a .> (one :<: fmap (<.> NOP q) dp)
 \end{code}
-}, |(!^)| is a homomorphism with respect to each instantiated class.\footnote{The pattern synonym |(:<:)| enables matching and constructing |LTrie'| values as if they were defined as |data LTrie' b c = b :<: (c ->* LTrie' c b)| \needcite{}.
-This definition uses safe, zero-cost coercions between |c ->* LTrie c b| and |c ->* LTrie' b c| \needcite{Breitner2016SZC}.}
-\notefoot{Introduce |DetectableZero| earlier.}
+\vspace{-4ex}
+}, |(!)| is a homomorphism with respect to each class instantiated for |LTrie|, and |(!^)| is a homomorphism with respect to each class instantiated for |LTrie'|.%
+\footnote{The pattern synonym \citep{Pickering2016PS} |(:<:)| enables matching and constructing |LTrie'| values as if they were defined as |data LTrie' b c = b :<: (c ->* LTrie' c b)|.
+Its definition uses safe, zero-cost coercions \cite{Breitner2016SZC} between |c ->* LTrie c b| and |c ->* LTrie' b c|.}
 \end{theorem}
+
+\note{To reduce conceptual clutter, consider dropping the |LTrie|/|LTrie'| distinction, keeping the latter semantics and former name.
+Same for |RegExp|.
+How far back could I remove the distinction?}
 
 \workingHere
 
@@ -1149,20 +1150,9 @@ This definition uses safe, zero-cost coercions between |c ->* LTrie c b| and |c 
 
 \note{A sort of ``free'' variant of functions. Easy to derive homomorphically. Corresponds to \citet{Brzozowski64} and other work on recognizing and parsing by derivatives.}
 
-\sectionl{What's to come}
-
-\begin{itemize}
-\item |DetectableZero|
-\item Decomposing list functions
-\end{itemize}
-
 \sectionl{Miscellaneous notes}
 
 \begin{itemize}
-\item Say just ``semimodule'', and add a remark that I really mean ``left semimodule'' throughout.
-  Or start out with ``left'', then make the remark, and then perhaps add an occasional ``(left)''.
-\item Finite maps, either as a running example or in its own section.
-One version like |a -> b| and another like |b <-- a|.
 \item |single| as a monoid homomorphism (targeting the product monoid).
 \item
   Homomorphisms:
@@ -1634,26 +1624,7 @@ Substitute into \lemreftwo{atEps b <-- [c]}{deriv b <-- [c]}, and simplify, usin
 
 \subsection{\thmref{LTrie}}\proofLabel{theorem:LTrie}
 
-\workingHere
-
-\begin{code}
-
-    trieAt (a :< dp) + trieAt (b :< dq)
-==  \ w -> trieAt (a :< dp) w + trieAt (b :< dq) w
-==  ...
-==  \ w -> case { [] -> a + b ; c:cs -> trieAt (dp ! c) cs + trieAt (dq ! c) cs }
-
-    trieAt (dp ! c) cs + trieAt (dq ! c) cs
-==  (trieAt (dp ! c) + trieAt (dq ! c)) cs
-==  (trieAt ((dp ! c) + (dq ! c))) cs
-==  trieAt ((dp + dq) ! c) cs
-
-    ...
-==  \ w -> case { [] -> a + b ; c:cs -> trieAt (dp ! c) cs + trieAt (dq ! c) cs }
-==  \ w -> case { [] -> a + b ; c:cs -> trieAt ((dp + dq) ! c) cs }
-==  trieAt (a + b  :<  dp + dq)
-
-\end{code}
+\note{Fill in from journal notes of 2019-02-14. It's a straightforward application of \thmref{semiring decomp b <-- [c]}.}
 
 \note{Coinduction?}
 

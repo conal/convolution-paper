@@ -7,10 +7,17 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 
 ### Major
 
+*   Benchmarking at least of regexp vs tries.
+    Last I checked, my regexp implementations fail to terminate on $a^n n^bn$.
 *   Related work. Lots of references below.
+*   Generalize decomposition-based semirings, and streamline the special cases.
 *   Consider again removing the types that behave like `a -> b` instead of `b <-- a`.
     I don't know how I could then get the functor/applicative/monad instances I want, since the type parameters would be in the wrong order.
     One possibility is to save that discussion and the parallel types for the extended/journal version of the paper.
+    Idea: Gloss over the distinction through most of the paper, giving just the convolution-style semiring instances, noting that we've lost compelling semiring instances and promising that we'll get them back later.
+    Later, when I want FAM instances, I'll have to introduce `newtype` wrappers in order to swap type parameters.
+    Or hopefully just a single `newtype` adapter for a variety of types homomorphic to `b <-- a`.
+    At that point, we can restore the pointwise semiring instances for |a -> b|, inherit them via deriving, and add `Semiring` and `StarSemiring`.
 *   Explore Brzozowski derivatives as actual derivatives of residual functions, as in my journal notes from 2019-02-08.
 *   Generalization from lists to arbitrary regular algebraic data types.
 *   Super-memoization.

@@ -1186,6 +1186,7 @@ Consider multi-dimensional convolution in which different dimensions have differ
 At the least, it's useful to combine finite dimensions of different sizes.}
 Alternatively, curry, convolve, and uncurry, exploiting the fact that |curry| is a semiring homomorphism.
 \notefoot{Have I stated and proved the relevant lemma for currying and uncurrying with the \emph{monoid semiring}? \thmreftwo{curry additive}{curry semiring} are for |a -> b|, not |b <-- a|.}
+\notefoot{Mention the connection between generalized tries and currying.}
 \begin{theorem}[\provedIn{theorem:Fourier}]\thmlabel{Fourier}
 The Fourier transform is a semiring homomorphism from |b <- a| to |a -> b|.
 \end{theorem}

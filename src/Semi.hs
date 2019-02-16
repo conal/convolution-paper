@@ -1,5 +1,6 @@
+{-# LANGUAGE QuantifiedConstraints #-}
 -- {-# LANGUAGE DeriveAnyClass #-}
--- {-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
+{-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
 
 -- | Commutative monoids, semirings, and semimodules
 
@@ -8,6 +9,7 @@ module Semi where
 -- import Control.Applicative (liftA2)
 import GHC.Natural (Natural)
 import Data.Functor.Identity (Identity(..))
+import GHC.Exts (Coercible,coerce)
 
 import Data.Set (Set)
 import Data.Map (Map)
@@ -279,6 +281,13 @@ fromBool True  = one
     Convolution-style semiring
 --------------------------------------------------------------------}
 
+type AF f = (Functor f, Applicative f)
+
+-- type CoercibleF t = forall a b. Coercible a b => Coercible (t a) (t b)
+
+class    (forall u v. Coercible u v => Coercible (t u) (t v)) => CoercibleFC t
+instance (forall u v. Coercible u v => Coercible (t u) (t v)) => CoercibleFC t
+
 newtype Convo z = C z
   deriving (Show, Additive, DetectableZero, LeftSemimodule b, HasSingle a b)
 
@@ -302,12 +311,29 @@ instance ( Decomposable b h z, LeftSemimodule b z, Functor h, Additive z
       => DetectableOne (Convo z) where
   isOne (a :<: dp) = isOne a && isZero dp
 
+
+#if 0
+
+deriving instance (forall a b. Coercible a b => Coercible (t a) (t b), Decomposable b h z) => Decomposable b h (Convo z)
+
+-- • Couldn't match representation of type ‘t0 a’ with that of ‘t0 b1’
+--   NB: We cannot know what roles the parameters to ‘t0’ have;
+--     we must assume that the role is nominal
+-- • In the ambiguity check for an instance declaration
+--   To defer the ambiguity check to use sites, enable AllowAmbiguousTypes
+
+-- deriving instance (Decomposable b h z, CoercibleFC h) => Decomposable b h (Convo z)
+
+#else
+
 instance (Functor h, Decomposable b h z) => Decomposable b h (Convo z) where
   a <: dp = C (a <: fmap unC dp)
   decomp (C (decomp -> (a,dp))) = (a, fmap C dp)
   {-# INLINE (<:) #-}
   {-# INLINE decomp #-}
 {-# COMPLETE (:<:) :: Convo #-}
+
+#endif
 
 -- deriving instance LeftSemimodule b z => LeftSemimodule b (Convo z)
 

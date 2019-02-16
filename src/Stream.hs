@@ -37,7 +37,12 @@ instance MonadC       Stream
 instance Decomposable b Identity (Stream b) where
   b <: Identity bs = b :# bs
   decomp (b :# bs) = (b, Identity bs)
--- {-# COMPLETE (:<:) :: Stream b #-} -- won't parse
+
+-- {-# COMPLETE (:<:) :: Stream #-} -- won't parse
+-- 
+-- • Orphan COMPLETE pragmas not supported
+--   A COMPLETE pragma must mention at least one data constructor
+--   or pattern synonym defined in the same module.
 
 ApplSemi(Stream)
 

@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-unused-imports #-} -- Examples
+
 -- | Streams (infinite lists)
 
 module Stream where
@@ -12,6 +14,10 @@ import Semi
 
 infixr 1 :#
 data Stream b = b :# Stream b
+
+instance Decomposable b Identity (Stream b) where
+  b <: Identity bs = b :# bs
+  decomp (b :# bs) = (b, Identity bs)
 
 instance Functor Stream where fmap f (b :# bs) = f b :# fmap f bs
 
@@ -34,10 +40,6 @@ instance FunctorC     Stream
 instance ApplicativeC Stream
 instance MonadC       Stream
 
-instance Decomposable b Identity (Stream b) where
-  b <: Identity bs = b :# bs
-  decomp (b :# bs) = (b, Identity bs)
-
 -- {-# COMPLETE (:<:) :: Stream #-} -- won't parse
 -- 
 -- • Orphan COMPLETE pragmas not supported
@@ -57,4 +59,14 @@ instance Indexable N b (Stream b) where
 --   (b :# _)  ! Sum 0 = b
 --   (_ :# bs) ! Sum n = bs ! Sum (n-1)
 
-type Stream' b = Convo (Stream b)
+type Stream' b = Decomp (Stream b)
+
+-- instance Indexable N b (Stream' b) where
+--   (b :# bs) ! n = if n == 0 then b else bs ! (n-1)
+
+-- Functional dependency conflict with a definition in Semi:
+--
+-- instance (Decomposable b h x, Indexable c (Decomp x) (h (Decomp x)))
+--       => Indexable [c] b (Decomp x) where
+--   -- (b :<: dp) ! w = case w of { [] -> b ; c:cs -> dp ! c ! cs }
+--   (!) = accept

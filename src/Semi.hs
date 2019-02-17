@@ -1,7 +1,3 @@
--- {-# LANGUAGE IncoherentInstances #-} -- See comment
--- {-# LANGUAGE RoleAnnotations #-}
-{-# LANGUAGE QuantifiedConstraints #-}
--- {-# LANGUAGE DeriveAnyClass #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
 
 -- | Commutative monoids, semirings, and semimodules
@@ -19,7 +15,7 @@ import Data.Map (Map)
 import qualified Data.Set as S
 import qualified Data.Map as M
 
-import Misc ((:*))
+import Misc ((:*),Con1,Con2)
 import Constrained
 
 #include "GenInstances.inc"
@@ -233,12 +229,9 @@ instance (Ord k, Additive v) => Indexable k v (Map k v) where
     Decomposition (move elsewhere?)
 --------------------------------------------------------------------}
 
--- type role Decomposable _ representational _
+type CoercibleF = Con2 Coercible
 
--- • Roles other than ‘nominal’ for class parameters can lead to incoherence.
---   Use IncoherentInstances to allow this; bad role found
-
-class Functor h => Decomposable b h x | x -> h b where
+class (Functor h, CoercibleF h) => Decomposable b h x | x -> h b where
   infix 1 <:
   (<:)  :: b -> h x -> x
   decomp  :: x -> b :* h x
@@ -280,152 +273,6 @@ fromBool True  = one
 
 -- TODO: Map, N -> b
 
-#if 0
-
-infix 1 :<:
-pattern (:<:) :: Decomposable b h x => b -> h x -> x
-pattern b :<: as <- (decomp -> (b,as)) where b :<: as = b <: as
-
-{--------------------------------------------------------------------
-    Convolution-style semiring
---------------------------------------------------------------------}
-
-type AF f = (Functor f, Applicative f)
-
--- type CoercibleF t = forall a b. Coercible a b => Coercible (t a) (t b)
-
-class    (forall u v. Coercible u v => Coercible (t u) (t v)) => CoercibleFC t
-instance (forall u v. Coercible u v => Coercible (t u) (t v)) => CoercibleFC t
-
-newtype Convo z = C z
-  deriving (Show, Additive, DetectableZero, LeftSemimodule b, HasSingle a b)
-
--- When I try deriving Decomposable b h:
--- 
---  • Couldn't match representation of type ‘h z’
---                             with that of ‘h (Convo z)’
---      arising from the coercion of the method ‘<:’
---        from type ‘b -> h z -> z’ to type ‘b -> h (Convo z) -> Convo z’
---    NB: We cannot know what roles the parameters to ‘h’ have;
---      we must assume that the role is nominal
---  • When deriving the instance for (Decomposable b h (Convo z))
--- 
--- To do: check whether GHC has role constraints
-
-unC :: Convo z -> z
-unC (C z) = z
-
-instance ( Decomposable b h z, LeftSemimodule b z, Additive z
-         , DetectableZero b, DetectableOne b, DetectableZero (h (Convo z)) )
-      => DetectableOne (Convo z) where
-  isOne (a :<: dp) = isOne a && isZero dp
-
-
-#if 0
-
-deriving instance (forall a b. Coercible a b => Coercible (t a) (t b), Decomposable b h z) => Decomposable b h (Convo z)
-
--- • Couldn't match representation of type ‘t0 a’ with that of ‘t0 b1’
---   NB: We cannot know what roles the parameters to ‘t0’ have;
---     we must assume that the role is nominal
--- • In the ambiguity check for an instance declaration
---   To defer the ambiguity check to use sites, enable AllowAmbiguousTypes
-
--- deriving instance (Decomposable b h z, CoercibleFC h) => Decomposable b h (Convo z)
-
-#else
-
-instance Decomposable b h z => Decomposable b h (Convo z) where
-  a <: dp = C (a <: fmap unC dp)
-  decomp (C (decomp -> (a,dp))) = (a, fmap C dp)
-  {-# INLINE (<:) #-}
-  {-# INLINE decomp #-}
-{-# COMPLETE (:<:) :: Convo #-}
-
-#endif
-
--- deriving instance LeftSemimodule b z => LeftSemimodule b (Convo z)
-
-instance ( DetectableZero b, Semiring b, Additive (h (Convo z))
-         , Additive z, LeftSemimodule b z, Decomposable b h z )
-      => Semiring (Convo z) where
-  one = one <: zero
-  (a :<: dp) <.> q = (a .> q) <+> (zero :<: fmap (<.> q) dp)
-
-instance ( DetectableZero b, StarSemiring b, Additive (h (Convo z))
-         , Additive z, LeftSemimodule b z, Decomposable b h z
-         ) => StarSemiring (Convo z) where
-  star (a :<: dp) = q where q = star a .> (one :<: fmap (<.> q) dp)
-
-deriving instance Indexable k v z => Indexable k v (Convo z)
-
-#if 0
-
--- | Convolvable functions
-infixl 0 <--
-type b <-- a = Convo (a -> b)
-
--- Hm. I can't give Functor, Applicative, Monad instances for Convo (a -> b)
--- since I need a to be the parameter.
--- I guess I could wrap another newtype:
-
-(!^) :: Indexable a b z => z -> (b <-- a)
-(!^) = C . (!)
-
-#elif 1
-
-infixl 0 <--
-newtype b <-- a = F (a -> b) deriving (Additive, HasSingle a b, LeftSemimodule b, Indexable a b)
-
--- deriving instance Decomposable b h (a -> b) => Decomposable b h (b <-- a)
-
--- • Couldn't match representation of type ‘h (a -> b)’
---                            with that of ‘h (b <-- a)’
---     arising from a use of ‘GHC.Prim.coerce’
---   NB: We cannot know what roles the parameters to ‘h’ have;
---     we must assume that the role is nominal
-
--- Instead, manually derive special cases. Does GHC have role constraints?
-
-deriving instance Semiring b => Decomposable b Identity (b <-- N)
-deriving instance Decomposable b ((->) c) (b <-- [c])
-
-(!^) :: Indexable a b z => z -> (b <-- a)
-(!^) = F . (!)
-
-#else
-
--- infixl 1 <--
--- newtype b <-- a = F { unF :: Convo (a -> b) }
---   deriving (Additive, LeftSemimodule b)
-
--- deriving instance Semiring b => LeftSemimodule b (b <-- a)
-
--- deriving instance
---   (DetectableZero b, Semiring b, Decomposable b h (a -> b), Applicative h)
---   => Semiring (b <-- a)
-
--- deriving instance
---   (DetectableZero b, StarSemiring b, Decomposable b h (a -> b), Applicative h)
---   => StarSemiring (b <-- a)
-
--- instance (Decomposable b h (a -> b)) => Decomposable b h (b <-- a) where
---   s <: dp = F (s :<: fmap unF dp)
---   decomp (F (s :<: dp)) = (s, fmap F dp)
---   -- decomp (F (s :<: (fmap F -> dp))) = (s, dp)
-
--- See how it goes
-
-#endif
-
--- | Convolvable finite maps
-type M' b a = Convo (a ->* b)
-
--- | Convolvable finite sets
-type S' a = Convo (Set a)
-
-#endif
-
 {--------------------------------------------------------------------
     Another experiment: Decomposables
 --------------------------------------------------------------------}
@@ -435,64 +282,37 @@ newtype Decomp x = D x
 
 -- newtype Decomp x = D { unD :: x }
 
-#if 0
--- type AdditiveF h = (forall a. Additive a => Additive (h a) :: Constraint)
--- type CoercibleF h = (forall u v. Coercible u v => Coercible (h u) (h v) :: Constraint)
+deriving instance Decomposable b h x => Decomposable b h (Decomp x)
 
-type Up1 con h = (forall a. con a => con (h a) :: Constraint)
-type Up2 con h = (forall a b. con a b => con (h a) (h b) :: Constraint)
+deriving instance (Decomposable b h x, AdditiveF h, Additive b, DetectableZero x)
+               => DetectableZero (Decomp x)
 
-type AdditiveF  h = Up1 Additive  h
-type CoercibleF h = Up2 Coercible h
-
-#else
-
--- class    (forall u v. Coercible u v => Coercible (h u) (h v)) => CoercibleF h
--- instance (forall u v. Coercible u v => Coercible (h u) (h v)) => CoercibleF h
-
-class    (forall u. con u => con (h u)) => Up1 con h
-instance (forall u. con u => con (h u)) => Up1 con h
-
-class    (forall u v. con u v => con (h u) (h v)) => Up2 con h
-instance (forall u v. con u v => con (h u) (h v)) => Up2 con h
-
-type AdditiveF  = Up1 Additive
-type CoercibleF = Up2 Coercible
-
-#endif
-
-deriving instance (Decomposable b h x, CoercibleF h) => Decomposable b h (Decomp x)
+deriving instance (Decomposable b h x, HasSingle a b x) => HasSingle a b (Decomp x)
 
 infix 1 :<:
-pattern (:<:) :: (Decomposable b h x, CoercibleF h) => b -> h (Decomp x) -> Decomp x
+pattern (:<:) :: Decomposable b h x => b -> h (Decomp x) -> Decomp x
 pattern b :<: as <- (decomp -> (b,as)) where b :<: as = b <: as
 {-# COMPLETE (:<:) :: Decomp #-}
 
 -- pattern b :<: as <- (decomp . unD -> (b,fmap D -> as)) where b :<: as = D (b <: fmap unD as)
 
-instance (Decomposable b h x, Additive b, CoercibleF h, AdditiveF h) => Additive (Decomp x) where
+type AdditiveF  = Con1 Additive
+
+instance (Decomposable b h x, Additive b, AdditiveF h) => Additive (Decomp x) where
   zero = zero :<: zero
   (a :<: dp) <+> (b :<: dq) = a <+> b  :<:  dp <+> dq
 
--- TODO: make CoercibleF h a superclass of Decomposable b h x, and drop several
--- explicit uses.
-
-instance (Decomposable b h x, Semiring b, CoercibleF h)
-      => LeftSemimodule b (Decomp x) where
+instance (Decomposable b h x, Semiring b) => LeftSemimodule b (Decomp x) where
   s `scale` (b :<: dp) = s <.> b :<: fmap (s `scale`) dp
 
-instance ( Decomposable b h x, CoercibleF h, AdditiveF h
-         , Semiring b, DetectableZero b ) => Semiring (Decomp x) where
+instance (Decomposable b h x, AdditiveF h, Semiring b, DetectableZero b)
+      => Semiring (Decomp x) where
   one = one :<: zero
   (a :<: dp) <.> q = a .> q <+> (zero :<: fmap (<.> q) dp)
 
-instance ( Decomposable b h x, CoercibleF h, AdditiveF h
-         , StarSemiring b, DetectableZero b ) => StarSemiring (Decomp x) where
+instance (Decomposable b h x, AdditiveF h, StarSemiring b, DetectableZero b)
+      => StarSemiring (Decomp x) where
   star (a :<: dp) = q where q = star a .> (one :<: fmap (<.> q) dp)
 
-deriving instance ( Decomposable b h x, CoercibleF h, AdditiveF h
-                  , Additive b, DetectableZero x ) => DetectableZero (Decomp x)
 
-deriving instance (Decomposable b h x, CoercibleF h, HasSingle a b x) => HasSingle a b (Decomp x)
-
--- DetectableZero, HasSingle
+-- TODO: try without AdditiveF

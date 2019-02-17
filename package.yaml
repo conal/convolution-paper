@@ -24,6 +24,8 @@ default-extensions:
   - LambdaCase
   - MultiParamTypeClasses
   - PatternSynonyms
+  - QuantifiedConstraints
+  - RankNTypes
   - StandaloneDeriving
   - TypeApplications
   - TypeFamilies
@@ -61,8 +63,10 @@ library:
     - Decomp
     - Stream
     - LTrie
+    - DLTrie
     - RegExp
     - Map
+    # - Convo
     # - Set
     # - Fun
     - Examples

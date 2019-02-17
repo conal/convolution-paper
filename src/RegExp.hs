@@ -16,7 +16,7 @@ import Prelude hiding (sum,product)
 import Data.Map (Map,keys)
 #endif
 
-import Semi
+import Semi hiding (Decomposable(..))
 
 #ifdef EXAMPLES
 import Language
@@ -96,8 +96,9 @@ instance (D0 b, D1 b, Semiring b) => Semiring (RegExp c b) where
 instance (D0 b, D1 b, Semiring b) => StarSemiring (RegExp c b) where
   star = Star
 
-instance (D0 b, D1 b, Semiring b) => HasSingle [c] b (RegExp c b) where
-  w +-> b = product (map Char w) <.> Value b
+instance (DetectableZero b, D1 b, Semiring b) => HasSingle [c] b (RegExp c b) where
+  w +-> b = b .> product (map Char w)
+  -- w +-> b = product (map Char w) <.> Value b
 
 #ifdef MAPS
 type M = Map
@@ -107,21 +108,25 @@ keys :: (c -> x) -> [c]
 keys = error "keys for (->) undefined"
 #endif
 
-instance (Ord c, StarSemiring b, DetectableZero b, D1 b)
-      => Decomposable b (M c) (RegExp c b) where
-  e <: d = Value e <+> sum [ Char c <.> d ! c | c <- keys d ]
+-- instance (Ord c, StarSemiring b, DetectableZero b, D1 b)
+--       => Decomposable b (M c) (RegExp c b) where
+--   e <: d = Value e <+> sum [ Char c <.> d ! c | c <- keys d ]
 
-  atEps (Char _)   = zero
-  atEps (Value b)  = b
-  atEps (p :<+> q) = atEps p <+> atEps q
-  atEps (p :<.> q) = atEps p <.> atEps q
-  atEps (Star p)   = star (atEps p)
-  
-  deriv (Char c)   = single c
-  deriv (Value _)  = zero
-  deriv (p :<+> q) = deriv p <+> deriv q
-  deriv (p :<.> q) = fmap (atEps p .>) (deriv q) <+> fmap (<.> q) (deriv p)
-  deriv (Star p)   = fmap (\ d -> star (atEps p) .> d <.> Star p) (deriv p)
+atEps :: StarSemiring b => RegExp c b -> b
+atEps (Char _)   = zero
+atEps (Value b)  = b
+atEps (p :<+> q) = atEps p <+> atEps q
+atEps (p :<.> q) = atEps p <.> atEps q
+atEps (Star p)   = star (atEps p)
+
+deriv :: (StarSemiring b, DetectableZero b, Eq c) => RegExp c b -> c -> RegExp c b
+deriv (Char c)   = single c
+deriv (Value _)  = zero
+deriv (p :<+> q) = deriv p <+> deriv q
+deriv (p :<.> q) = \ c -> atEps p .> deriv q c <+> deriv p c <.> q
+                   -- fmap (atEps p .>) (deriv q) <+> fmap (<.> q) (deriv p)
+deriv (Star p)   = \ c -> star (atEps p) .> deriv p c <.> star p
+                   -- fmap (\ d -> star (atEps p) .> d <.> Star p) (deriv p)
 
 -- | Interpret a regular expression
 regexp :: (Semiring b, LeftSemimodule b x, StarSemiring x, HasSingle [c] b x, D0 b)
@@ -135,7 +140,9 @@ regexp (Star u)     = star (regexp u)
 instance (StarSemiring b, Ord c, DetectableZero b, D1 b)
       => Indexable [c] b (RegExp c b) where
   -- e ! w = (regexp e :: b <-- [c]) ! w
-  (!) = accept
+  -- (!) = accept
+  e ! w = atEps (foldl (\ p c -> deriv p c) e w)
+
 
 -- Alternatively, use regexp to convert to LTrie, and then use (!).
 

@@ -4,6 +4,8 @@
 \documentclass[twoside]{article}  % fleqn, 
 \usepackage[margin=0.12in]{geometry}  % 0.12in, 0.9in, 1in
 
+%% \geometry{paperheight=9in} % for 2-up on big monitor, larger text
+
 %% \documentclass{article}
 %% \usepackage{fullpage}
 

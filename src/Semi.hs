@@ -273,6 +273,16 @@ fromBool True  = one
 
 -- TODO: Map, N -> b
 
+-- | Derivative of a language w.r.t a string
+derivs :: (Decomposable b h x, Indexable c x (h x)) => x -> [c] -> x
+-- derivs = foldl ((!) . deriv)
+derivs = foldl (\ p c -> deriv p ! c)
+
+accept :: (Decomposable b h x, Indexable c x (h x)) => x -> [c] -> b
+-- accept x w = atEps (derivs x w)
+accept x cs = atEps (foldl (\ p c -> deriv p ! c) x cs)
+
+
 {--------------------------------------------------------------------
     Another experiment: Decomposables
 --------------------------------------------------------------------}
@@ -280,8 +290,6 @@ fromBool True  = one
 newtype Decomp x = D x deriving (Show)
 
 deriving instance Decomposable b h x => Decomposable b h (Decomp x)
-
-deriving instance (Decomposable b h x, HasSingle a b x) => HasSingle a b (Decomp x)
 
 infix 1 :<:
 pattern (:<:) :: Decomposable b h x => b -> h (Decomp x) -> Decomp x
@@ -294,8 +302,18 @@ instance (Decomposable b h x, AdditiveF h, Additive b) => Additive (Decomp x) wh
   zero = zero :<: zero
   (a :<: dp) <+> (b :<: dq) = a <+> b  :<:  dp <+> dq
 
-deriving instance (Decomposable b h x, AdditiveF h, Additive b, DetectableZero x)
-               => DetectableZero (Decomp x)
+type DetectableZeroF = Con1 DetectableZero
+type DetectableOneF  = Con1 DetectableOne
+
+instance ( Decomposable b h x, AdditiveF h, DetectableZeroF h
+         , Additive b, DetectableZero b )
+      => DetectableZero (Decomp x) where
+  isZero (a :<: dp) = isZero a && isZero dp
+
+instance ( Decomposable b h x, AdditiveF h, DetectableZeroF h
+         , DetectableZero b, DetectableOne b, Semiring b )
+      => DetectableOne (Decomp x) where
+  isOne (a :<: dp) = isOne a && isZero dp
 
 instance (Decomposable b h x, Semiring b) => LeftSemimodule b (Decomp x) where
   s `scale` (b :<: dp) = s <.> b :<: fmap (s `scale`) dp
@@ -308,3 +326,21 @@ instance (Decomposable b h x, AdditiveF h, Semiring b, DetectableZero b)
 instance (Decomposable b h x, AdditiveF h, StarSemiring b, DetectableZero b)
       => StarSemiring (Decomp x) where
   star (a :<: dp) = q where q = star a .> (one :<: fmap (<.> q) dp)
+
+instance (Decomposable b h x, Indexable c (Decomp x) (h (Decomp x)))
+      => Indexable [c] b (Decomp x) where
+  -- (b :<: dp) ! w = case w of { [] -> b ; c:cs -> dp ! c ! cs }
+  (!) = accept
+
+-- deriving instance (Decomposable b h x, HasSingle a b x) => HasSingle a b (Decomp x)
+
+instance ( Decomposable b h x, Indexable c (Decomp x) (h (Decomp x)), AdditiveF h
+         , HasSingle c (Decomp x) (h (Decomp x)), Additive b )
+      => HasSingle [c] b (Decomp x) where
+  w +-> b = foldr (\ c t -> zero :<: c +-> t) (b :<: zero) w
+
+-- | Trim to a finite depth, for examination.
+trimD :: (Decomposable b h x, AdditiveF h, Additive b) => Int -> Decomp x -> Decomp x
+trimD 0 _ = zero
+trimD n (b :<: ts) = b :<: fmap (trimD (n-1)) ts
+-- trimD n (b :<: ts) = b :<: M.filter (not . isZero) (fmap (trimD (n-1)) ts)

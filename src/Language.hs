@@ -16,13 +16,6 @@ equal' a b a' = if a == a' then b else zero
 equal :: (Eq a, Semiring b) => a -> a -> b
 equal a = equal' a one
 
--- | Derivative of a language w.r.t a string
-derivs :: (Decomposable b h x, Indexable c x (h x)) => x -> [c] -> x
-derivs = foldl ((!) . deriv)
-
-accept :: (Decomposable b h x, Indexable c x (h x)) => x -> [c] -> b
-accept p w = atEps (derivs p w)
-
 {--------------------------------------------------------------------
     Invertible monoids
 --------------------------------------------------------------------}

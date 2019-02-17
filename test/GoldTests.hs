@@ -37,11 +37,15 @@ basicTests = testGroup "Various representations"
   -- , tests @(S.RegExp  Char     ) "SetRegExp"
   -- , tests @(S.Trie    Char     ) "SetTrie"
 
-  , tests @(Convo (String -> Bool)) "F"  -- works
-  , tests @(Convo (Decomp  Char Bool)) "FunDecomp" -- works
+  -- , tests @(Convo (String -> Bool)) "F"  -- works
+  -- , tests @(Convo (Decomp  Char Bool)) "FunDecomp" -- works
+
+  -- , tests @(RegExp  Char Bool) "MapRegExp"  -- use with MAPS defined in RegExp
+
   , tests @(RegExp  Char Bool) "FunRegExp"
+
   -- , tests @(Convo (RegExp  Char Bool)) "FunRegExp" -- hangs on as-a
-  , tests @(Convo (LTrie    Char Bool)) "FunTrie" -- works
+  -- , tests @(Convo (LTrie    Char Bool)) "FunTrie" -- works
 
   ]
 
@@ -79,7 +83,7 @@ tests group = testGroup group
   , gold "pps-pinkpigpinkpigpig" $ pps ! "pinkpigpinkpigpig"
 
   -- These recursive examples are challenging.
-  , groupNot ["FunRegExp"] $
+  , groupNot ["MapRegExp"] $
     testGroup "anbn"
     [ gold "anbn-eps"              $ anbn ! ""
     , gold "anbn-ab"               $ anbn ! "ab"

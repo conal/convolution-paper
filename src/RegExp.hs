@@ -11,9 +11,9 @@ import Prelude hiding (sum,product)
 import Data.Map (Map,keys)
 
 import Semi
-import Language
 
 #ifdef EXAMPLES
+import Language
 import Examples
 #endif
 
@@ -89,7 +89,7 @@ instance (D b, Semiring b) => HasSingle [c] b (RegExp c b) where
 
 instance (D b, Ord c, StarSemiring b, DetectableZero b)
       => Decomposable b (Map c) (RegExp c b) where
-  e <: d = Value e <+> sum [ single [c] <.> d ! c | c <- keys d ]
+  e <: d = Value e <+> sum [ Char c <.> d ! c | c <- keys d ]
 
   atEps (Char _)   = zero
   atEps (Value b)  = b
@@ -119,7 +119,6 @@ instance (StarSemiring b, Ord c, DetectableZero b, D b)
 
 -- Alternatively, use regexp to convert to LTrie, and then use (!).
 
-
 #ifdef EXAMPLES
 
 {--------------------------------------------------------------------
@@ -127,7 +126,7 @@ instance (StarSemiring b, Ord c, DetectableZero b, D b)
 --------------------------------------------------------------------}
 
 type L  = RegExp Char Bool
-type L' = Convo L
+-- type L' = Convo L
 
 -- Non-recursive examples are tidier with OPTIMIZE
 

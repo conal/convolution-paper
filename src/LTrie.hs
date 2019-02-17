@@ -184,3 +184,11 @@ type L' = Convo L
 -- True
 
 #endif
+
+{-# OPTIONS_GHC -Wall #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
+
+-- | 
+
+module LTrie where
+

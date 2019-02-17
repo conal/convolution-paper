@@ -8,7 +8,13 @@ module RegExp where
 
 import Prelude hiding (sum,product)
 
+-- -- Whether to use finite maps instead of functions
+-- The recursive examples are fine with functions but wedge with maps.
+-- #define MAPS
+
+#ifdef MAPS
 import Data.Map (Map,keys)
+#endif
 
 import Semi
 
@@ -36,23 +42,25 @@ data RegExp c b =
 
 #ifdef OPTIMIZE
 
-type D b = (DetectableZero b, DetectableOne b)
+type D0 b = DetectableZero b
+type D1 b = DetectableOne b
 
-instance D b => DetectableZero (RegExp c b) where
+instance DetectableZero b => DetectableZero (RegExp c b) where
   isZero (Value b) = isZero b
   isZero _         = False
 
-instance D b => DetectableOne (RegExp c b) where
+instance (DetectableZero b, DetectableOne b) => DetectableOne (RegExp c b) where
   isOne (Value b) = isOne b
   isOne _         = False
 
 #else
 
-type D b = (() ~ ())
+type D0 b = (() ~ ())
+type D1 b = (() ~ ())
 
 #endif
 
-instance (D b, Additive b) => Additive (RegExp c b) where
+instance (D0 b, Additive b) => Additive (RegExp c b) where
   zero  = Value zero
 #ifdef OPTIMIZE
   p <+> q | isZero q  = p
@@ -62,7 +70,10 @@ instance (D b, Additive b) => Additive (RegExp c b) where
   (<+>) = (:<+>)
 #endif
 
-instance (D b, Semiring b) => LeftSemimodule b (RegExp c b) where
+instance (Semiring b, D0 b, D1 b) => LeftSemimodule b (RegExp c b) where
+#if 1
+  b `scale` e = Value b <.> e
+#else
   scale b = go
    where
      go (Char c)   = Char c
@@ -70,8 +81,9 @@ instance (D b, Semiring b) => LeftSemimodule b (RegExp c b) where
      go (u :<+> v) = go u <+> go v
      go (u :<.> v) = go u <.> go v
      go (Star u)   = star (go u)
+#endif
 
-instance (D b, Semiring b) => Semiring (RegExp c b) where
+instance (D0 b, D1 b, Semiring b) => Semiring (RegExp c b) where
   one   = Value one
 #ifdef OPTIMIZE
   p <.> q | isOne q   = p
@@ -81,14 +93,22 @@ instance (D b, Semiring b) => Semiring (RegExp c b) where
   (<.>) = (:<.>)
 #endif
 
-instance (D b, Semiring b) => StarSemiring (RegExp c b) where
+instance (D0 b, D1 b, Semiring b) => StarSemiring (RegExp c b) where
   star = Star
 
-instance (D b, Semiring b) => HasSingle [c] b (RegExp c b) where
+instance (D0 b, D1 b, Semiring b) => HasSingle [c] b (RegExp c b) where
   w +-> b = product (map Char w) <.> Value b
 
-instance (D b, Ord c, StarSemiring b, DetectableZero b)
-      => Decomposable b (Map c) (RegExp c b) where
+#ifdef MAPS
+type M = Map
+#else
+type M = (->)
+keys :: (c -> x) -> [c]
+keys = error "keys for (->) undefined"
+#endif
+
+instance (Ord c, StarSemiring b, DetectableZero b, D1 b)
+      => Decomposable b (M c) (RegExp c b) where
   e <: d = Value e <+> sum [ Char c <.> d ! c | c <- keys d ]
 
   atEps (Char _)   = zero
@@ -104,7 +124,7 @@ instance (D b, Ord c, StarSemiring b, DetectableZero b)
   deriv (Star p)   = fmap (\ d -> star (atEps p) .> d <.> Star p) (deriv p)
 
 -- | Interpret a regular expression
-regexp :: (Semiring b, LeftSemimodule b x, StarSemiring x, HasSingle [c] b x, DetectableZero b)
+regexp :: (Semiring b, LeftSemimodule b x, StarSemiring x, HasSingle [c] b x, D0 b)
        => RegExp c b -> x
 regexp (Char c)     = single [c]
 regexp (Value b)    = value b
@@ -112,7 +132,7 @@ regexp (u  :<+>  v) = regexp u <+> regexp v
 regexp (u  :<.>  v) = regexp u <.> regexp v
 regexp (Star u)     = star (regexp u)
 
-instance (StarSemiring b, Ord c, DetectableZero b, D b)
+instance (StarSemiring b, Ord c, DetectableZero b, D1 b)
       => Indexable [c] b (RegExp c b) where
   -- e ! w = (regexp e :: b <-- [c]) ! w
   (!) = accept

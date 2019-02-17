@@ -359,14 +359,14 @@ Much more recently \citet{Might2010YaccID} extended the technique from regular t
 %% %format deriv (c) = "\deriv{"c"}"
 %% %format derivs (s) = "\derivs{"s"}"
 
-\begin{definition} deflabel{derivs}
+\begin{definition} \deflabel{derivs}
 The \emph{derivative} $\derivs u p$ of a language $p$ with respect to a string $u$ is the set of $u$-suffixes of strings in $p$, i.e.,
 $$ \derivs u p = \set{ v \mid u \mappend v \in p } $$
 \end{definition}
 \begin{lemma}\lemlabel{derivs-member}
 For a string $s$ and language $p$,
 $$ s \in p \iff \mempty \in \derivs s p .$$
-Proof: immediate from efref{derivs}.
+Proof: immediate from \defref{derivs}.
 \end{lemma}
 The practical value of \lemref{derivs-member} is that |derivs s p| and |mempty|-containment can be computed easily and efficiently, thanks to \lemrefs{derivs-monoid}{hasEps} below.
 \begin{lemma}[\provedIn{lemma:derivs-monoid}]\lemlabel{derivs-monoid}
@@ -407,7 +407,7 @@ $$ \delta\,p = \iteB{\mempty \in p}{\one}{\zero} . $$
 \end{lemma}
 All that remains now is to see how to test whether $\mempty \in p$ for a language $p$.
 \begin{lemma}[\provedIn{lemma:hasEps}]\lemlabel{hasEps}
-The following properties hold:\notefoot{Move this definition to after efref{derivs} and \lemref{derivs-member}, which motivate |hasEps|.}
+The following properties hold:\notefoot{Move this definition to after \defref{derivs} and \lemref{derivs-member}, which motivate |hasEps|.}
 $$ \mempty \not\in \zero $$
 $$ \mempty \in \one $$
 $$ \mempty \in p + q \iff \mempty \in p \lor \mempty \in q $$

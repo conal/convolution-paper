@@ -7,7 +7,9 @@
 
 %% \geometry{paperwidth=6.75in}  % for iPad portrait preview
 
-\geometry{paperwidth=10in} % for 2-up on big monitor
+%% \geometry{paperwidth=10in} % for 2-up on big monitor
+
+%% \geometry{paperheight=9.5in} % for 2-up on big monitor
 
 %% \documentclass{article}
 %% \usepackage{fullpage}
@@ -1003,8 +1005,8 @@ These prettier formulations would lead to ambiguity during Haskell type inferenc
 \begin{code}
 atEps (s .> p)   == s * atEps p
 
-atEps (   []     +-> b) == b
-atEps (c  :  cs  +-> b) == zero
+atEps (    []      +-> b) == b
+atEps (c'  :  cs'  +-> b) == zero
 \end{code}
 \end{spacing}
 \vspace{-2ex}
@@ -1044,7 +1046,7 @@ w +-> b = foldr (\ c t -> zero <: c +-> t) (b <: zero) w
 \end{spacing}
 \end{theorem}
 
-\workingHere
+%if False
 
 \note{Introduce decomposition first on |[c] -> b|, skipping |Semiring| and |StarSemiring|.
 Then note that we'll want to generalize the decomposition, so define the |Decomposable| class.
@@ -1060,9 +1062,24 @@ class Decomposable a h s | a -> h s where
   atEps  :: a -> s
   deriv  :: a -> h a
 \end{code}
+Further, as |Decomposable| laws, require the equations in \lemref{decomp (b <-- [c])} relating |(<:)|, |atEps|, and |deriv|, together with the following properties of |h|:
+\begin{itemize}
+\item |forall a NOP.NOP Additive a => Additive (h a)|
+\item |forall a b NOP.NOP Indexable a b (h b)|
+\item |(!^)| is an additive homomorphism
+\item \note{Maybe a few more. Proof details in progress. See journal notes 2018-01-15.} 
+\end{itemize}
 The definitions of |(<:)|, |atEps|, and |deriv| given above correspond to an instance |Semiring b => Decomposable (b <-- [c]) ((->) c) b|.
 
-\note{Use a sort of associated pattern synonym instead, as I've now done in the implementation.}
+\begin{theorem}[\provedIn{theorem:semiring decomp generalized}]\thmlabel{semiring decomp generalized}
+For any |Decomposable a h s| (satisfying the laws), if the equations of \thmref{semiring decomp b <-- [c]} hold, then |(!^)| is a |StarSemiring|, |Semimodule|, and |HasSingle| homomorphism.
+\end{theorem}
+
+%endif
+
+\sectionl{Regular Expressions}
+
+\note{A sort of ``free'' variant of functions. Easy to derive homomorphically. Corresponds to \citet{Brzozowski64} and other work on recognizing and parsing by derivatives.}
 
 \sectionl{Tries}
 
@@ -1092,6 +1109,11 @@ Given the definitions in \figrefdef{LTrie}{Tries as |[c] -> b| and as |b <-- [c]
 \begin{code}
 infix 1 :<
 data LTrie c b = b :< (c ->* LTrie c b)
+
+instance Decomposable b (Map c) (LTrie c b) where
+  (<:) = (:<)
+  atEps (b :< _) = b
+  deriv (_ :< d) = d
 
 instance (Ord c, Additive b) => Indexable [c] b (LTrie c b) where
   (b :< dp) ! w = case w of {NOP [] -> b NOP;NOP c:cs -> dp ! c ! cs NOP}
@@ -1135,10 +1157,6 @@ Same for |RegExp|.
 How far back could I remove the distinction?}
 
 \workingHere
-
-\sectionl{Regular Expressions}
-
-\note{A sort of ``free'' variant of functions. Easy to derive homomorphically. Corresponds to \citet{Brzozowski64} and other work on recognizing and parsing by derivatives.}
 
 
 \sectionl{Convolution}
@@ -1768,16 +1786,16 @@ For the other two equations:
 %else
 \begin{code}
     atEps ([] +-> b)
-==  atEps (F (\ w -> if w == [] then b else zero))    -- |(+->)| on |b <-- [c]|
-==  (\ w -> if w == [] then b else zero) []           -- |atEps| definition
-==  if [] == [] then b else zero                      -- $\beta$ reduction
-==  b                                                 -- |if True|
+==  atEps (F (\ w -> if w == [] then b else zero))      -- |(+->)| on |b <-- [c]|
+==  (\ w -> if w == [] then b else zero) []             -- |atEps| definition
+==  if [] == [] then b else zero                        -- $\beta$ reduction
+==  b                                                   -- |if True|
 
-    atEps (c:cs +-> b)
-==  atEps (F (\ w -> if w == c:cs then b else zero))  -- |(+->)| on |b <-- [c]|
-==  (\ w -> if w == c:cs then b else zero) []         -- |atEps| definition
-==  if [] == c:cs then b else zero                    -- $\beta$ reduction
-==  zero                                              -- |if False|
+    atEps (c':cs' +-> b)
+==  atEps (F (\ w -> if w == c':cs' then b else zero))  -- |(+->)| on |b <-- [c]|
+==  (\ w -> if w == c':cs' then b else zero) []         -- |atEps| definition
+==  if [] == c':cs' then b else zero                    -- $\beta$ reduction
+==  zero                                                -- |if False|
 \end{code}
 %endif
 
@@ -2014,6 +2032,8 @@ deriv (s .> (a <: dp)) c == s .> dp c
 \begin{proof}
 Substitute into \lemreftwo{atEps b <-- [c]}{deriv b <-- [c]}, and simplify, using \lemref{decomp (b <-- [c])}.
 \end{proof}
+
+%% \subsection{\thmref{semiring decomp generalized}}\prooflabel{theorem:semiring decomp generalized}
 
 \subsection{\thmref{LTrie}}\prooflabel{theorem:LTrie}
 

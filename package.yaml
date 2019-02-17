@@ -63,13 +63,15 @@ library:
     - Decomp
     - Stream
     - LTrie
-    - DLTrie
     - RegExp
     - Map
-    # - Convo
+    - Examples
+    # To abandon
+    - DLTrie
+    - Convo
+    - CLTrie
     # - Set
     # - Fun
-    - Examples
 
 tests:
   test:

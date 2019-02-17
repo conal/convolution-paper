@@ -277,15 +277,9 @@ fromBool True  = one
     Another experiment: Decomposables
 --------------------------------------------------------------------}
 
-newtype Decomp x = D x
-  deriving (Show)
-
--- newtype Decomp x = D { unD :: x }
+newtype Decomp x = D x deriving (Show)
 
 deriving instance Decomposable b h x => Decomposable b h (Decomp x)
-
-deriving instance (Decomposable b h x, AdditiveF h, Additive b, DetectableZero x)
-               => DetectableZero (Decomp x)
 
 deriving instance (Decomposable b h x, HasSingle a b x) => HasSingle a b (Decomp x)
 
@@ -294,13 +288,14 @@ pattern (:<:) :: Decomposable b h x => b -> h (Decomp x) -> Decomp x
 pattern b :<: as <- (decomp -> (b,as)) where b :<: as = b <: as
 {-# COMPLETE (:<:) :: Decomp #-}
 
--- pattern b :<: as <- (decomp . unD -> (b,fmap D -> as)) where b :<: as = D (b <: fmap unD as)
-
 type AdditiveF  = Con1 Additive
 
-instance (Decomposable b h x, Additive b, AdditiveF h) => Additive (Decomp x) where
+instance (Decomposable b h x, AdditiveF h, Additive b) => Additive (Decomp x) where
   zero = zero :<: zero
   (a :<: dp) <+> (b :<: dq) = a <+> b  :<:  dp <+> dq
+
+deriving instance (Decomposable b h x, AdditiveF h, Additive b, DetectableZero x)
+               => DetectableZero (Decomp x)
 
 instance (Decomposable b h x, Semiring b) => LeftSemimodule b (Decomp x) where
   s `scale` (b :<: dp) = s <.> b :<: fmap (s `scale`) dp
@@ -313,6 +308,3 @@ instance (Decomposable b h x, AdditiveF h, Semiring b, DetectableZero b)
 instance (Decomposable b h x, AdditiveF h, StarSemiring b, DetectableZero b)
       => StarSemiring (Decomp x) where
   star (a :<: dp) = q where q = star a .> (one :<: fmap (<.> q) dp)
-
-
--- TODO: try without AdditiveF

@@ -7,9 +7,9 @@
 
 %% \geometry{paperwidth=6.75in}  % for iPad portrait preview
 
-%% \geometry{paperwidth=10in} % for 2-up on big monitor
+%% \geometry{paperheight=9in} % for 2-up on big monitor, larger text
 
-%% \geometry{paperheight=9.5in} % for 2-up on big monitor
+%% \geometry{paperwidth=10.5in} % 2-up big monitor, smaller text
 
 %% \documentclass{article}
 %% \usepackage{fullpage}
@@ -982,9 +982,55 @@ b <: h = F (\ NOP case {NOP [] -> b NOP;NOP c:cs  -> unF (h c) cs NOP})
 \vspace{-3ex}
 \end{lemma}
 \noindent
-Considering the isomorphism |Pow [c] =~ Bool <-- [c]|, this decomposition generalizes the |delta| and |deriv| operations used by \citet{Brzozowski64} mapping languages to languages (as sets of strings), the latter of which he referred to as the ``derivative''.\footnote{Brzozowski wrote ``$\derivOp_c\,p$'' instead of ``|deriv p c|'', but the latter will prove more convenient below.}
+%format derivs = deriv "^{\ast}"
+%format derivs' (w) = derivs "_{" w "}"
+Considering the isomorphism |Pow [c] =~ Bool <-- [c]|, this decomposition generalizes the |delta| and |deriv| operations used by \citet{Brzozowski64} mapping languages to languages (as sets of strings), the latter of which he referred to as the ``derivative''.\footnote{Brzozowski wrote ``|derivs' c p|'' instead of ``|deriv p c|'', but the latter will prove more convenient below.}
+Brzozowski used differentiation with respect to single symbols to implement a more general form of language differentiation with respect to a \emph{string} of symbols, where the \emph{derivative} |derivs u p| of a language |p| with respect to a prefix string |u| is the set of |u|-suffixes of strings in |p|, i.e.,
 
-Understanding how |atEps| and |deriv| relate to the semiring vocabulary will help us develop an efficient implementation in \secref{Tries}.
+> derivs p u = set (v | u <> v <# p)
+
+so that
+
+> u <# p <=> mempty <# derivs p u
+
+Further, he noted that\footnote{Here, Brzozowski's notation makes for a prettier formulation:
+\begin{code}
+derivs' mempty p    == p
+derivs' (u <> v) p  == derivs' v (derivs' u p)
+\end{code}
+Equivalently,
+\begin{code}
+derivs' mempty    == id
+derivs' (u <> v)  == derivs' v . derivs' u
+\end{code}
+where |id| is the identity function.
+In other words, |derivs'| is a contravariant monoid homomorphism (targeting the monoid of endofunctions).}
+\begin{code}
+derivs p mempty    == p
+derivs p (u <> v)  == derivs (derivs p u) v
+\end{code}
+Thanks to this decomposition property and the fact that |deriv p c == derivs p [c]|, one can successively differentiate with respect to single symbols.
+
+Generalizing from sets to functions,\notefoot{Intriguingly, |atEps| and |derivs| correspond to |coreturn| and |cojoin| for the function-from-monoid comonad \needcite{}.}
+
+> derivs f = \ u v -> f (u <> v)
+
+so that
+\begin{code}
+f  == \ u -> derivs f u mempty
+   == \ u -> atEps (derivs f u)
+   == atEps . derivs f
+   == atEps . foldl deriv f
+\end{code}
+where |foldl| is the usual left fold on lists:
+\begin{code}
+foldl h e []      = e
+foldl h e (c:cs)  = foldl h (h e c) cs
+\end{code}
+
+\workingHere
+
+Understanding how |atEps| and |deriv| relate to the semiring vocabulary will help us develop efficient implementations in later sections.
 
 \begin{lemma}[\provedIn{lemma:atEps b <-- [c]}]\lemlabel{atEps b <-- [c]}
 The |atEps| function is a star semiring and left semimodule homomorphism, i.e.,
@@ -1000,13 +1046,13 @@ atEps (star p)     == star (atEps p)
 \noindent
 Moreover,\footnote{Mathematically, the |(.>)| equation says that |atEps| is a left |b|-semiring homomorphism as well, since every semiring is a (left and right) semimodule over itself.
 Likewise, the |(+->)| equation might be written as ``|null w +-> b|'' or even ``|atEps w +-> b|''.
-These prettier formulations would lead to ambiguity during Haskell type inference.}
+Unfortunately, these prettier formulations would lead to ambiguity during Haskell type inference.}
 \begin{spacing}{1.4}
 \begin{code}
 atEps (s .> p)   == s * atEps p
 
-atEps (    []      +-> b) == b
-atEps (c'  :  cs'  +-> b) == zero
+atEps (   []     +-> b) == b
+atEps (c  :  cs  +-> b) == zero
 \end{code}
 \end{spacing}
 \vspace{-2ex}
@@ -1024,8 +1070,8 @@ deriv (p  <.>  q) == \ c -> atEps p .> deriv q c <+> deriv p c <.> q
 deriv (star p) == \ c -> star (atEps p) .> deriv p c * star p
 deriv (s .> p) == \ c -> s .> deriv p c
 
-deriv (    []       +-> b) == zero
-deriv (c'  :  cs'   +-> b) == c' +-> cs' +-> b
+deriv (    []     +-> b) == zero
+deriv (c   :  cs  +-> b) == c +-> cs +-> b
 \end{code}
 \end{spacing}
 \vspace{-2ex}
@@ -1086,14 +1132,14 @@ For any |Decomposable a h s| (satisfying the laws), if the equations of \thmref{
 %format :<+> = "\mathbin{:\!\!+}"
 %format :<.> = "\mathbin{:\!\!\conv}"
 \begin{code}
-infixl 6 :<+>
-infixl 7 :<.>
+infixl 6                  :<+>
+infixl 7                  :<.>
 
-data RegExp c s   =  Char c
-                  |  Value s
-                  |  RegExp c s  :<+>  RegExp c s
-                  |  RegExp c s  :<.>  RegExp c s
-                  |  Star (RegExp c s)
+data RegExp c s             =  Char c
+                            |  Value s
+                            |  RegExp c s  :<+>  RegExp c s
+                            |  RegExp c s  :<.>  RegExp c s
+                            |  Star (RegExp c s)
 
 instance Additive b => Additive (RegExp c b) where
   zero  = Value zero
@@ -1113,29 +1159,29 @@ instance (DetectableZero b, Semiring b) => HasSingle [c] b (RegExp c b) where
   w +-> b = b .> product (map Char w)
 
 atEps :: StarSemiring b => RegExp c b -> b
-atEps (Char _)     = zero
-atEps (Value b)    = b
-atEps (p :<+> q)   = atEps p <+> atEps q
-atEps (p :<.> q)   = atEps p <.> atEps q
-atEps (Star p)     = star (atEps p)
+atEps (Char _)        = zero
+atEps (Value b)       = b
+atEps (p   :<+>  q)   = atEps p    <+>  atEps q
+atEps (p   :<.>  q)   = atEps p    <.>  atEps q
+atEps (Star p)        = star (atEps p)
 
 deriv :: (StarSemiring b, DetectableZero b, Eq c) => RegExp c b -> c -> RegExp c b
-deriv (Char c)      = single c
-deriv (Value _)     = zero
-deriv (p :<+> q)    = deriv p <+> deriv q
-deriv (p :<.> q)    = \ c -> atEps p .> deriv q c <+> deriv p c <.> q
-deriv (Star p)      = \ c -> star (atEps p) .> deriv p c <.> star p
+deriv (Char c)       = single c
+deriv (Value _)      = zero
+deriv (p  :<+>  q)   = deriv p <+> deriv q
+deriv (p  :<.>  q)   = \ c -> atEps p .> deriv q c <+> deriv p c <.> q
+deriv (Star p)       = \ c -> star (atEps p) .> deriv p c <.> star p
 
-instance (StarSemiring b, Ord c, DetectableZero b, D b) => Indexable [c] b (RegExp c b) where
-  e ! w = atEps (foldl (\ p c -> deriv p c) e w)
+instance (StarSemiring b, Ord c, DetectableZero b) => Indexable [c] b (RegExp c b) where
+  e ! w = atEps (foldl deriv e w)
 
 -- Interpret a regular expression
-regexp :: (Semiring b, LeftSemimodule b x, StarSemiring x, HasSingle [c] b x, DetectableZero b) => RegExp c b -> x
-regexp (Char c)       = single [c]
-regexp (Value b)      = value b
-regexp (u  :<+>  v)   = regexp u <+> regexp v
-regexp (u  :<.>  v)   = regexp u <.> regexp v
-regexp (Star u)       = star (regexp u)
+regexp :: (StarSemiring x, LeftSemimodule b x, HasSingle [c] b x, Semiring b) => RegExp c b -> x
+regexp (Char c)         = single [c]
+regexp (Value b)        = value b
+regexp (u   :<+>  v)    = regexp u  <+>  regexp v
+regexp (u   :<.>  v)    = regexp u  <.>  regexp v
+regexp (Star u)         = star (regexp u)
 \end{code}
 \vspace{-4ex}
 } generalizes regular expressions in the same way that |b <-- a| generalizes |Pow a|, to yield a value of type |b| (a star semiring).

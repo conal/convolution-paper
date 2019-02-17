@@ -1,3 +1,5 @@
+-- {-# LANGUAGE IncoherentInstances #-} -- See comment
+-- {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 -- {-# LANGUAGE DeriveAnyClass #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
@@ -9,7 +11,7 @@ module Semi where
 -- import Control.Applicative (liftA2)
 import GHC.Natural (Natural)
 import Data.Functor.Identity (Identity(..))
-import GHC.Exts (Coercible,coerce)
+import GHC.Exts (Coercible,coerce,Constraint)
 
 import Data.Set (Set)
 import Data.Map (Map)
@@ -231,7 +233,12 @@ instance (Ord k, Additive v) => Indexable k v (Map k v) where
     Decomposition (move elsewhere?)
 --------------------------------------------------------------------}
 
-class Decomposable b h x | x -> h b where
+-- type role Decomposable _ representational _
+
+-- • Roles other than ‘nominal’ for class parameters can lead to incoherence.
+--   Use IncoherentInstances to allow this; bad role found
+
+class Functor h => Decomposable b h x | x -> h b where
   infix 1 <:
   (<:)  :: b -> h x -> x
   decomp  :: x -> b :* h x
@@ -241,10 +248,6 @@ class Decomposable b h x | x -> h b where
   deriv = snd . decomp
   decomp x = (atEps x, deriv x)
   {-# MINIMAL (<:), ((deriv , atEps) | decomp) #-}
-
-infix 1 :<:
-pattern (:<:) :: Decomposable b h x => b -> h x -> x
-pattern b :<: as <- (decomp -> (b,as)) where b :<: as = b <: as
 
 instance Semiring b => Decomposable b Identity (N -> b) where
   b <: Identity f = \ i -> if i == 0 then b else f (i - 1)
@@ -277,6 +280,12 @@ fromBool True  = one
 
 -- TODO: Map, N -> b
 
+#if 0
+
+infix 1 :<:
+pattern (:<:) :: Decomposable b h x => b -> h x -> x
+pattern b :<: as <- (decomp -> (b,as)) where b :<: as = b <: as
+
 {--------------------------------------------------------------------
     Convolution-style semiring
 --------------------------------------------------------------------}
@@ -306,7 +315,7 @@ newtype Convo z = C z
 unC :: Convo z -> z
 unC (C z) = z
 
-instance ( Decomposable b h z, LeftSemimodule b z, Functor h, Additive z
+instance ( Decomposable b h z, LeftSemimodule b z, Additive z
          , DetectableZero b, DetectableOne b, DetectableZero (h (Convo z)) )
       => DetectableOne (Convo z) where
   isOne (a :<: dp) = isOne a && isZero dp
@@ -326,7 +335,7 @@ deriving instance (forall a b. Coercible a b => Coercible (t a) (t b), Decomposa
 
 #else
 
-instance (Functor h, Decomposable b h z) => Decomposable b h (Convo z) where
+instance Decomposable b h z => Decomposable b h (Convo z) where
   a <: dp = C (a <: fmap unC dp)
   decomp (C (decomp -> (a,dp))) = (a, fmap C dp)
   {-# INLINE (<:) #-}
@@ -337,13 +346,13 @@ instance (Functor h, Decomposable b h z) => Decomposable b h (Convo z) where
 
 -- deriving instance LeftSemimodule b z => LeftSemimodule b (Convo z)
 
-instance ( DetectableZero b, Semiring b, Functor h, Additive (h (Convo z))
+instance ( DetectableZero b, Semiring b, Additive (h (Convo z))
          , Additive z, LeftSemimodule b z, Decomposable b h z )
       => Semiring (Convo z) where
   one = one <: zero
   (a :<: dp) <.> q = (a .> q) <+> (zero :<: fmap (<.> q) dp)
 
-instance ( DetectableZero b, StarSemiring b, Functor h, Additive (h (Convo z))
+instance ( DetectableZero b, StarSemiring b, Additive (h (Convo z))
          , Additive z, LeftSemimodule b z, Decomposable b h z
          ) => StarSemiring (Convo z) where
   star (a :<: dp) = q where q = star a .> (one :<: fmap (<.> q) dp)
@@ -400,7 +409,7 @@ deriving instance Decomposable b ((->) c) (b <-- [c])
 --   (DetectableZero b, StarSemiring b, Decomposable b h (a -> b), Applicative h)
 --   => StarSemiring (b <-- a)
 
--- instance (Decomposable b h (a -> b), Functor h) => Decomposable b h (b <-- a) where
+-- instance (Decomposable b h (a -> b)) => Decomposable b h (b <-- a) where
 --   s <: dp = F (s :<: fmap unF dp)
 --   decomp (F (s :<: dp)) = (s, fmap F dp)
 --   -- decomp (F (s :<: (fmap F -> dp))) = (s, dp)
@@ -414,3 +423,76 @@ type M' b a = Convo (a ->* b)
 
 -- | Convolvable finite sets
 type S' a = Convo (Set a)
+
+#endif
+
+{--------------------------------------------------------------------
+    Another experiment: Decomposables
+--------------------------------------------------------------------}
+
+newtype Decomp x = D x
+  deriving (Show)
+
+-- newtype Decomp x = D { unD :: x }
+
+#if 0
+-- type AdditiveF h = (forall a. Additive a => Additive (h a) :: Constraint)
+-- type CoercibleF h = (forall u v. Coercible u v => Coercible (h u) (h v) :: Constraint)
+
+type Up1 con h = (forall a. con a => con (h a) :: Constraint)
+type Up2 con h = (forall a b. con a b => con (h a) (h b) :: Constraint)
+
+type AdditiveF  h = Up1 Additive  h
+type CoercibleF h = Up2 Coercible h
+
+#else
+
+-- class    (forall u v. Coercible u v => Coercible (h u) (h v)) => CoercibleF h
+-- instance (forall u v. Coercible u v => Coercible (h u) (h v)) => CoercibleF h
+
+class    (forall u. con u => con (h u)) => Up1 con h
+instance (forall u. con u => con (h u)) => Up1 con h
+
+class    (forall u v. con u v => con (h u) (h v)) => Up2 con h
+instance (forall u v. con u v => con (h u) (h v)) => Up2 con h
+
+type AdditiveF  = Up1 Additive
+type CoercibleF = Up2 Coercible
+
+#endif
+
+deriving instance (Decomposable b h x, CoercibleF h) => Decomposable b h (Decomp x)
+
+infix 1 :<:
+pattern (:<:) :: (Decomposable b h x, CoercibleF h) => b -> h (Decomp x) -> Decomp x
+pattern b :<: as <- (decomp -> (b,as)) where b :<: as = b <: as
+{-# COMPLETE (:<:) :: Decomp #-}
+
+-- pattern b :<: as <- (decomp . unD -> (b,fmap D -> as)) where b :<: as = D (b <: fmap unD as)
+
+instance (Decomposable b h x, Additive b, CoercibleF h, AdditiveF h) => Additive (Decomp x) where
+  zero = zero :<: zero
+  (a :<: dp) <+> (b :<: dq) = a <+> b  :<:  dp <+> dq
+
+-- TODO: make CoercibleF h a superclass of Decomposable b h x, and drop several
+-- explicit uses.
+
+instance (Decomposable b h x, Semiring b, CoercibleF h)
+      => LeftSemimodule b (Decomp x) where
+  s `scale` (b :<: dp) = s <.> b :<: fmap (s `scale`) dp
+
+instance ( Decomposable b h x, CoercibleF h, AdditiveF h
+         , Semiring b, DetectableZero b ) => Semiring (Decomp x) where
+  one = one :<: zero
+  (a :<: dp) <.> q = a .> q <+> (zero :<: fmap (<.> q) dp)
+
+instance ( Decomposable b h x, CoercibleF h, AdditiveF h
+         , StarSemiring b, DetectableZero b ) => StarSemiring (Decomp x) where
+  star (a :<: dp) = q where q = star a .> (one :<: fmap (<.> q) dp)
+
+deriving instance ( Decomposable b h x, CoercibleF h, AdditiveF h
+                  , Additive b, DetectableZero x ) => DetectableZero (Decomp x)
+
+deriving instance (Decomposable b h x, CoercibleF h, HasSingle a b x) => HasSingle a b (Decomp x)
+
+-- DetectableZero, HasSingle

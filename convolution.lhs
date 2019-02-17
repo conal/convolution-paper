@@ -1174,14 +1174,6 @@ deriv (Star p)       = \ c -> star (atEps p) .> deriv p c <.> star p
 
 instance (StarSemiring b, Ord c, DetectableZero b) => Indexable [c] b (RegExp c b) where
   e ! w = atEps (foldl deriv e w)
-
--- Interpret a regular expression
-regexp :: (StarSemiring x, LeftSemimodule b x, HasSingle [c] b x, Semiring b) => RegExp c b -> x
-regexp (Char c)         = single [c]
-regexp (Value b)        = value b
-regexp (u   :<+>  v)    = regexp u  <+>  regexp v
-regexp (u   :<.>  v)    = regexp u  <.>  regexp v
-regexp (Star u)         = star (regexp u)
 \end{code}
 \vspace{-4ex}
 } generalizes regular expressions in the same way that |b <-- a| generalizes |Pow a|, to yield a value of type |b| (a star semiring).
@@ -1190,14 +1182,17 @@ The constructor |Value b| generalizes |zero| and |one| to yield a semiring value
 Given the definitions in \figref{RegExpFun}, |regexp| and |(!^)| are homomorphisms with respect to each instantiated class.
 \end{theorem}
 
-Regular expression matching can thus be done in two ways.
-One is via successive syntactic differentiation with respect to each successive character in a given string, with |atEps| applied to the resulting regular expression.
-This technique was used by \citet{Brzozowski64} and corresponds to the |Indexable| instance in \figref{RegExpFun}.
-The other way is to re-interpret the original (syntactic) regular expression in another semiring via |regexp| in \figref{RegExpFun}.
+Note that the definition of |e ! w| in \figref{RegExpFun} is exactly |atEps (derivs e w)|, which performs repeated syntactic transformation with respect to successive characters in |w|, successively performing syntactic differentiation, with |atEps| applied to the final resulting regular expression.
+Alternatively, we can re-interpret the original (syntactic) regular expression in another semiring as follows:
+\begin{code}
+regexp :: (StarSemiring x, LeftSemimodule b x, HasSingle [c] b x, Semiring b) => RegExp c b -> x
+regexp (Char c)         = single [c]
+regexp (Value b)        = value b
+regexp (u   :<+>  v)    = regexp u  <+>  regexp v
+regexp (u   :<.>  v)    = regexp u  <.>  regexp v
+regexp (Star u)         = star (regexp u)
+\end{code}
 Next, we will see one such semiring that eliminates the syntactic overhead of repeatedly transforming regular expressions.
-
-\note{Move |regexp| out of the figure, and split up the matching description.
-Explain Brzozowski's technique more clearly, then give the alternative via |regexp|.}
 
 \sectionl{Tries}
 

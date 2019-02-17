@@ -129,7 +129,7 @@ deriv (Star p)   = \ c -> star (atEps p) .> deriv p c <.> star p
                    -- fmap (\ d -> star (atEps p) .> d <.> Star p) (deriv p)
 
 -- | Interpret a regular expression
-regexp :: (Semiring b, LeftSemimodule b x, StarSemiring x, HasSingle [c] b x, D0 b)
+regexp :: (StarSemiring x, LeftSemimodule b x, HasSingle [c] b x, Semiring b, D0 b)
        => RegExp c b -> x
 regexp (Char c)     = single [c]
 regexp (Value b)    = value b
@@ -141,7 +141,7 @@ instance (StarSemiring b, Ord c, DetectableZero b, D1 b)
       => Indexable [c] b (RegExp c b) where
   -- e ! w = (regexp e :: b <-- [c]) ! w
   -- (!) = accept
-  e ! w = atEps (foldl (\ p c -> deriv p c) e w)
+  e ! w = atEps (foldl deriv e w)
 
 
 -- Alternatively, use regexp to convert to LTrie, and then use (!).

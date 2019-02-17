@@ -1081,6 +1081,78 @@ For any |Decomposable a h s| (satisfying the laws), if the equations of \thmref{
 
 \note{A sort of ``free'' variant of functions. Easy to derive homomorphically. Corresponds to \citet{Brzozowski64} and other work on recognizing and parsing by derivatives.}
 
+\lemreftwo{atEps b <-- [c]}{deriv b <-- [c]} generalize and were inspired by a technique of \citet{Brzozowski64} for recognizing regular languages.
+\figrefdef{RegExpFun}{Semiring-generalized regular expressions}{
+%format :<+> = "\mathbin{:\!\!+}"
+%format :<.> = "\mathbin{:\!\!\conv}"
+\begin{code}
+infixl 6 :<+>
+infixl 7 :<.>
+
+data RegExp c s   =  Char c
+                  |  Value s
+                  |  RegExp c s  :<+>  RegExp c s
+                  |  RegExp c s  :<.>  RegExp c s
+                  |  Star (RegExp c s)
+
+instance Additive b => Additive (RegExp c b) where
+  zero  = Value zero
+  (<+>) = (:<+>)
+
+instance Semiring b => LeftSemimodule b (RegExp c b) where
+  b `scale` e = Value b <.> e
+
+instance Semiring b => Semiring (RegExp c b) where
+  one   = Value one
+  (<.>) = (:<.>)
+
+instance Semiring b => StarSemiring (RegExp c b) where
+  star e = Star e
+
+instance (DetectableZero b, Semiring b) => HasSingle [c] b (RegExp c b) where
+  w +-> b = b .> product (map Char w)
+
+atEps :: StarSemiring b => RegExp c b -> b
+atEps (Char _)     = zero
+atEps (Value b)    = b
+atEps (p :<+> q)   = atEps p <+> atEps q
+atEps (p :<.> q)   = atEps p <.> atEps q
+atEps (Star p)     = star (atEps p)
+
+deriv :: (StarSemiring b, DetectableZero b, Eq c) => RegExp c b -> c -> RegExp c b
+deriv (Char c)      = single c
+deriv (Value _)     = zero
+deriv (p :<+> q)    = deriv p <+> deriv q
+deriv (p :<.> q)    = \ c -> atEps p .> deriv q c <+> deriv p c <.> q
+deriv (Star p)      = \ c -> star (atEps p) .> deriv p c <.> star p
+
+instance (StarSemiring b, Ord c, DetectableZero b, D b) => Indexable [c] b (RegExp c b) where
+  e ! w = atEps (foldl (\ p c -> deriv p c) e w)
+
+-- Interpret a regular expression
+regexp :: (Semiring b, LeftSemimodule b x, StarSemiring x, HasSingle [c] b x, DetectableZero b) => RegExp c b -> x
+regexp (Char c)       = single [c]
+regexp (Value b)      = value b
+regexp (u  :<+>  v)   = regexp u <+> regexp v
+regexp (u  :<.>  v)   = regexp u <.> regexp v
+regexp (Star u)       = star (regexp u)
+\end{code}
+\vspace{-4ex}
+} generalizes regular expressions in the same way that |b <-- a| generalizes |Pow a|, to yield a value of type |b| (a star semiring).
+The constructor |Value b| generalizes |zero| and |one| to yield a semiring value.
+\begin{theorem}\thmlabel{RegExpFun}
+Given the definitions in \figref{RegExpFun}, |regexp| and |(!^)| are homomorphisms with respect to each instantiated class.
+\end{theorem}
+
+Regular expression matching can thus be done in two ways.
+One is via successive syntactic differentiation with respect to each successive character in a given string, with |atEps| applied to the resulting regular expression.
+This technique was used by \citet{Brzozowski64} and corresponds to the |Indexable| instance in \figref{RegExpFun}.
+The other way is to re-interpret the original (syntactic) regular expression in another semiring via |regexp| in \figref{RegExpFun}.
+Next, we will see one such semiring that eliminates the syntactic overhead of repeatedly transforming regular expressions.
+
+\note{Move |regexp| out of the figure, and split up the matching description.
+Explain Brzozowski's technique more clearly, then give the alternative via |regexp|.}
+
 \sectionl{Tries}
 
 \secref{Languages and the monoid semiring} gives an implementation of language recognition and its generalization to the monoid semiring |b <-- a|, packaged as instances of a few common algebraic abstractions (|Additive| etc).
@@ -2112,7 +2184,7 @@ deriv (p <.> q) == atEps p .> deriv q <+> deriv p <.> q
 \end{code}
 
 \noindent
-\note{Next, derivations for |closure p| and either |single n| or |n +-> b|.}
+\note{Next, derivations for |star p| and either |single n| or |n +-> b|.}
 
 \begin{lemma}\lemlabel{deriv +-> Nat}
 Differentiation on |b <-- N| satisfies the following properties on singletons:

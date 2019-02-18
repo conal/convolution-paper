@@ -10,6 +10,7 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 *   Benchmarking at least of regexp vs tries.
     Last I checked, my regexp implementations fail to terminate on $a^n n^bn$.
 *   Related work. Lots of references below.
+*   Use the conference style files.
 *   Generalize decomposition-based semirings, and streamline the special cases.
 *   Consider again removing the types that behave like `a -> b` instead of `b <-- a`.
     I don't know how I could then get the functor/applicative/monad instances I want, since the type parameters would be in the wrong order.

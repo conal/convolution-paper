@@ -754,11 +754,12 @@ The |(<.>)| implementation above will try all possible three-way splittings of t
 
 \sectionl{Finite maps}
 
+\note{I don't think finite maps need their section. Look for another home. Maybe with |LTrie| as a suggested functor.}
+
 One representation of \emph{partial} functions is the type of finite maps, |Map a b| from keys of type |a| to values of type |b|, represented is a key-ordered balanced tree \citep{Adams1993Sets,Straka2012ATR,Nievergelt1973BST}.
 To model \emph{total} functions instead, we can treat unassigned keys as denoting zero.
 Conversely, merging two finite maps can yield a key collision, which can be resolved by addition.
 Both interpretations require |b| to be an additive monoid.
-
 Given the definitions in \figrefdef{Map}{Finite maps}{
 \begin{code}
 instance Ord a => Indexable (Map a) where
@@ -794,17 +795,8 @@ On the other hand, those assumptions don't differ much from the homomorphism pro
 %format deriv = "\derivOp"
 
 For functions from \emph{lists} specifically, we can decompose in a way that lays the groundwork for more efficient implementations than the ones in previous sections.
-\begin{lemma}[\provedIn{lemma:decomp (b <-- [c])}]\lemlabel{decomp (b <-- [c])}
-Any |f :: b <-- [c]| can be decomposed as follows:\footnote{In terms of |a -> [c]| rather than |[c] <-- a|, the definitions would read more simply:
-\begin{code}
-atEps f = f mempty
-deriv f c cs = f (c:cs)
-b <: h = \ NOP case {NOP [] -> b NOP ; NOP c:cs -> h c cs NOP}
-\end{code}
-%% (b <: h) []      = b
-%% (b <: h) (c:cs)  = h c cs
-\vspace{-3ex}
-}
+\begin{lemma}[\provedIn{lemma:decomp ([c] -> b)}]\lemlabel{decomp ([c] -> b)}
+Any |f :: [c] -> b| can be decomposed as follows:
 \begin{code}
 f == atEps f <: deriv f
 \end{code}
@@ -815,22 +807,22 @@ deriv  (b <: h) = h
 \end{code}
 where
 \begin{code}
-atEps :: (b <-- [c]) -> b
-atEps (F f) = f mempty
+atEps :: ([c] -> b) -> b
+atEps f = f mempty
 
-deriv :: (b <-- [c]) -> c -> (b <-- [c])
-deriv (F f) = \ c -> F (\ cs -> f (c:cs))
+deriv :: ([c] -> b) -> c -> ([c] -> b)
+deriv f = \ c cs -> f (c:cs)
 
 infix 1 <:
-(<:) :: b -> (c -> (b <-- [c])) -> (b <-- [c])
-b <: h = F (\ NOP case {NOP [] -> b NOP;NOP c:cs  -> unF (h c) cs NOP})
+(<:) :: b -> (c -> ([c] -> b)) -> ([c] -> b)
+b <: h = F (\ NOP case {NOP [] -> b NOP;NOP c:cs  -> h c cs NOP})
 \end{code}
 \vspace{-3ex}
 \end{lemma}
 \noindent
 %format derivs = deriv "^{\ast}"
 %format derivs' (w) = derivs "_{" w "}"
-Considering the isomorphism |Pow [c] =~ Bool <-- [c]|, this decomposition generalizes the |delta| and |deriv| operations used by \citet{Brzozowski64} mapping languages to languages (as sets of strings), the latter of which he referred to as the ``derivative''.\footnote{Brzozowski wrote ``|derivs' c p|'' instead of ``|deriv p c|'', but the latter will prove more convenient below.}
+Considering the isomorphism |Pow [c] =~ [c] -> Bool|, this decomposition generalizes the |delta| and |deriv| operations used by \citet{Brzozowski64} mapping languages to languages (as sets of strings), the latter of which he referred to as the ``derivative''.\footnote{Brzozowski wrote ``|derivs' c p|'' instead of ``|deriv p c|'', but the latter will prove more convenient below.}
 Brzozowski used differentiation with respect to single symbols to implement a more general form of language differentiation with respect to a \emph{string} of symbols, where the \emph{derivative} |derivs u p| of a language |p| with respect to a prefix string |u| is the set of |u|-suffixes of strings in |p|, i.e.,
 
 > derivs p u = set (v | u <> v <# p)
@@ -877,7 +869,7 @@ foldl h e (c:cs)  = foldl h (h e c) cs
 
 Understanding how |atEps| and |deriv| relate to the semiring vocabulary will help us develop efficient implementations in later sections.
 
-\begin{lemma}[\provedIn{lemma:atEps b <-- [c]}]\lemlabel{atEps b <-- [c]}
+\begin{lemma}[\provedIn{lemma:atEps [c] -> b}]\lemlabel{atEps [c] -> b}
 The |atEps| function is a star semiring and left semimodule homomorphism, i.e.,
 \begin{spacing}{1.4}
 \begin{code}
@@ -903,7 +895,7 @@ atEps (c  :  cs  +-> b) == zero
 \vspace{-2ex}
 \noindent
 \end{lemma}
-\begin{lemma}[\provedIn{lemma:deriv b <-- [c]}, generalizing Lemma 3.1 of \citet{Brzozowski64}]\lemlabel{deriv b <-- [c]}
+\begin{lemma}[\provedIn{lemma:deriv [c] -> b}, generalizing Lemma 3.1 of \citet{Brzozowski64}]\lemlabel{deriv [c] -> b}
 Differentiation has the following properties:
 \notefoot{If I replace application to |c| by indexing by |c| (i.e., |(! NOP c)|), will this lemma hold for all of the representations? I suspect so. Idea: Define $\derivOp_c\,p = \derivOp\,p\:!\:c$.}
 \begin{spacing}{1.4}
@@ -921,7 +913,7 @@ deriv (c   :  cs  +-> b) == c +-> cs +-> b
 \end{spacing}
 \vspace{-2ex}
 \end{lemma}
-\begin{theorem}[\provedIn{theorem:semiring decomp b <-- [c]}]\thmlabel{semiring decomp b <-- [c]}
+\begin{theorem}[\provedIn{theorem:semiring decomp [c] -> b}]\thmlabel{semiring decomp [c] -> b}
 The following properties hold:
 \begin{spacing}{1.4}
 \begin{code}
@@ -953,17 +945,17 @@ class Decomposable a h s | a -> h s where
   atEps  :: a -> s
   deriv  :: a -> h a
 \end{code}
-Further, as |Decomposable| laws, require the equations in \lemref{decomp (b <-- [c])} relating |(<:)|, |atEps|, and |deriv|, together with the following properties of |h|:
+Further, as |Decomposable| laws, require the equations in \lemref{decomp ([c] -> b)} relating |(<:)|, |atEps|, and |deriv|, together with the following properties of |h|:
 \begin{itemize}
 \item |forall a NOP.NOP Additive a => Additive (h a)|
 \item |forall a b NOP.NOP Indexable a b (h b)|
 \item |(!^)| is an additive homomorphism
 \item \note{Maybe a few more. Proof details in progress. See journal notes 2018-01-15.} 
 \end{itemize}
-The definitions of |(<:)|, |atEps|, and |deriv| given above correspond to an instance |Semiring b => Decomposable (b <-- [c]) ((->) c) b|.
+The definitions of |(<:)|, |atEps|, and |deriv| given above correspond to an instance |Semiring b => Decomposable ([c] -> b) ((->) c) b|.
 
 \begin{theorem}[\provedIn{theorem:semiring decomp generalized}]\thmlabel{semiring decomp generalized}
-For any |Decomposable a h s| (satisfying the laws), if the equations of \thmref{semiring decomp b <-- [c]} hold, then |(!^)| is a |StarSemiring|, |Semimodule|, and |HasSingle| homomorphism.
+For any |Decomposable a h s| (satisfying the laws), if the equations of \thmref{semiring decomp [c] -> b} hold, then |(!^)| is a |StarSemiring|, |Semimodule|, and |HasSingle| homomorphism.
 \end{theorem}
 
 %endif
@@ -971,7 +963,7 @@ For any |Decomposable a h s| (satisfying the laws), if the equations of \thmref{
 
 \sectionl{Regular Expressions}
 
-\lemreftwo{atEps b <-- [c]}{deriv b <-- [c]} generalize and were inspired by a technique of \citet{Brzozowski64} for recognizing regular languages.
+\lemreftwo{atEps [c] -> b}{deriv [c] -> b} generalize and were inspired by a technique of \citet{Brzozowski64} for recognizing regular languages.
 \figrefdef{RegExpFun}{Semiring-generalized regular expressions}{
 %format :<+> = "\mathbin{:\!\!+}"
 %format :<.> = "\mathbin{:\!\!\conv}"
@@ -1059,9 +1051,9 @@ infix 1 :<
 data LTrie c b = b :< (c ->* LTrie c b)
 \end{code}
 The similarity between the |LTrie| type and the function decomposition from \secref{Decomposing Functions from Lists} (motivating the constructor's name) makes for easy instance calculation.
-As with |Pow a| and |Map a b|, we can define a trie counterpart to the monoid semiring, here |b <-- [c]|.
+As with |Pow a| and |Map a b|, we can define a trie counterpart to the monoid semiring, here |[c] -> b|.
 \begin{theorem}[\provedIn{theorem:LTrie}]\thmlabel{LTrie}
-Given the definitions in \figrefdef{LTrie}{Tries as |[c] -> b| and as |b <-- [c]|}{
+Given the definitions in \figrefdef{LTrie}{Tries as |[c] -> b| and as |[c] -> b|}{
 %format :<: = "\mathrel{\Varid{:\!\!\triangleleft\!:}}"
 \begin{code}
 infix 1 :<
@@ -1192,7 +1184,7 @@ deriv :: (b <-- N) -> (b <-- N)
 deriv (F f) = F (\ n -> f (n + 1))
 \end{code}
 Then for all |f :: b <-- N|, |f == atEps f <: deriv f|.
-\lemref{deriv b <-- [c]} specializes for |b <-- N| as follows:
+\lemref{deriv [c] -> b} specializes for |b <-- N| as follows:
 %format foldN = fold "_{" N "}"
 \begin{spacing}{1.4}
 \begin{code}
@@ -1725,7 +1717,7 @@ Then simplify to the lambda/sum form.}
 
 %% \subsection{\thmref{Map}}\prooflabel{theorem:Map}
 
-\subsection{\lemref{decomp (b <-- [c])}}\prooflabel{lemma:decomp (b <-- [c])}
+\subsection{\lemref{decomp ([c] -> b)}}\prooflabel{lemma:decomp ([c] -> b)}
 
 \begin{proof}
 Any argument to |f| must be either |[]| or |c : cs| for some value |c| and list |cs|.
@@ -1759,7 +1751,7 @@ For the other two equations:
 \end{code}
 \end{proof}
 
-\subsection{\lemref{atEps b <-- [c]}}\prooflabel{lemma:atEps b <-- [c]}
+\subsection{\lemref{atEps [c] -> b}}\prooflabel{lemma:atEps [c] -> b}
 
 \begin{code}
     atEps zero
@@ -1805,7 +1797,7 @@ For the other two equations:
 %if False
 \begin{code}
     atEps (w +-> b)
-==  atEps (F (\ w' -> if w' == w then b else zero))  -- |(+->)| on |b <-- [c]|
+==  atEps (F (\ w' -> if w' == w then b else zero))  -- |(+->)| on |[c] -> b|
 ==  (\ w' -> if w' == w then b else zero) []         -- |atEps| definition
 ==  if [] == w then b else zero                      -- $\beta$ reduction
 ==  if null w then b else zero                       -- |null| definition
@@ -1813,13 +1805,13 @@ For the other two equations:
 %else
 \begin{code}
     atEps ([] +-> b)
-==  atEps (F (\ w -> if w == [] then b else zero))      -- |(+->)| on |b <-- [c]|
+==  atEps (F (\ w -> if w == [] then b else zero))      -- |(+->)| on |[c] -> b|
 ==  (\ w -> if w == [] then b else zero) []             -- |atEps| definition
 ==  if [] == [] then b else zero                        -- $\beta$ reduction
 ==  b                                                   -- |if True|
 
     atEps (c':cs' +-> b)
-==  atEps (F (\ w -> if w == c':cs' then b else zero))  -- |(+->)| on |b <-- [c]|
+==  atEps (F (\ w -> if w == c':cs' then b else zero))  -- |(+->)| on |[c] -> b|
 ==  (\ w -> if w == c':cs' then b else zero) []         -- |atEps| definition
 ==  if [] == c':cs' then b else zero                    -- $\beta$ reduction
 ==  zero                                                -- |if False|
@@ -1828,7 +1820,7 @@ For the other two equations:
 
 \note{For the |star p| proof, maybe instead show inductively that |atEps (pow p n) == pow (atEps p) n| for all |n >= 0|, and then appeal to the summation definition of |star p|.}
 
-\subsection{\lemref{deriv b <-- [c]}}\prooflabel{lemma:deriv b <-- [c]}
+\subsection{\lemref{deriv [c] -> b}}\prooflabel{lemma:deriv [c] -> b}
 
 \begin{code}
     deriv zero
@@ -1890,7 +1882,7 @@ deriv (F f <.> F g) c == atEps (F f) .> deriv (F g) c <+> deriv (F f) c <.> F g
 \end{code}
 
 \noindent
-Continuing with the other equations in \lemref{deriv b <-- [c]},
+Continuing with the other equations in \lemref{deriv [c] -> b},
 
 \begin{code}
     deriv (star p)
@@ -1960,28 +1952,28 @@ deriv (c' : w +-> b) c == if c' == c then w +-> b else zero
 \end{proof}
 \vspace{-2ex}
 
-\subsection{\thmref{semiring decomp b <-- [c]}}\prooflabel{theorem:semiring decomp b <-- [c]}
+\subsection{\thmref{semiring decomp [c] -> b}}\prooflabel{theorem:semiring decomp [c] -> b}
 
 \note{Maybe not worth spelling out.
-I could say ``Proof: Immediate from \lemrefthree{decomp (b <-- [c])}{atEps b <-- [c]}{deriv b <-- [c]}''.}
+I could say ``Proof: Immediate from \lemrefthree{decomp ([c] -> b)}{atEps [c] -> b}{deriv [c] -> b}''.}
 
 \begin{code}
     zero
-==  atEps zero <: deriv zero  -- \lemref{decomp (b <-- [c])}
-==  zero <: \ c -> zero       -- \lemreftwo{atEps b <-- [c]}{deriv b <-- [c]}
+==  atEps zero <: deriv zero  -- \lemref{decomp ([c] -> b)}
+==  zero <: \ c -> zero       -- \lemreftwo{atEps [c] -> b}{deriv [c] -> b}
 ==  zero <: zero              -- |zero| on functions
 \end{code}
 
 \begin{code}
     one
-==  atEps one <: deriv one  -- \lemref{decomp (b <-- [c])}
-==  one <: \ c -> zero      -- \lemreftwo{atEps b <-- [c]}{deriv b <-- [c]}
+==  atEps one <: deriv one  -- \lemref{decomp ([c] -> b)}
+==  one <: \ c -> zero      -- \lemreftwo{atEps [c] -> b}{deriv [c] -> b}
 ==  one <: zero             -- |zero| on functions
 \end{code}
 
 \begin{code}
     (a <: dp) <+> (b <: dp)
-==  atEps ((a <: dp) <+> (b <: dq)) <: deriv ((a <: dp) <+> (b <: dq))  -- \lemref{decomp (b <-- [c])}
+==  atEps ((a <: dp) <+> (b <: dq)) <: deriv ((a <: dp) <+> (b <: dq))  -- \lemref{decomp ([c] -> b)}
 ==  a <+> b <: dp <+> dq                                                -- \lemref{atEps and deriv via (<:)} below
 \end{code}
 
@@ -1989,7 +1981,7 @@ I could say ``Proof: Immediate from \lemrefthree{decomp (b <-- [c])}{atEps b <--
 
 \begin{code}
     (a <: dp) <.> (b <: dq)
-==  atEps ((a <: dp) <.> (b <: dq)) <: deriv ((a <: dp) <.> (b <: dq))        -- \lemref{decomp (b <-- [c])}
+==  atEps ((a <: dp) <.> (b <: dq)) <: deriv ((a <: dp) <.> (b <: dq))        -- \lemref{decomp ([c] -> b)}
 ==  a <.> b <: \ c -> a .> dq c <+> dp c <.> (b <: dq)                        -- \lemref{atEps and deriv via (<:)} below
 ==  (a <.> b <+> zero) <: (\ c -> a .> dq c) <+> (\ c -> dp c <.> (b <: dq))  -- additive identity; |(<+>)| on functions
 ==  (a <.> b <: \ c -> a .> dq c) <+> (zero <: \ c -> dp c <.> (b <: dq))     -- previous result
@@ -2008,7 +2000,7 @@ I could say ``Proof: Immediate from \lemrefthree{decomp (b <-- [c])}{atEps b <--
 
 \begin{code}
     star (a <: dp)
-==  atEps (star (a <: dp)) <: deriv (star (a <: dp))            -- \lemref{decomp (b <-- [c])}
+==  atEps (star (a <: dp)) <: deriv (star (a <: dp))            -- \lemref{decomp ([c] -> b)}
 ==  star a <: \ c -> star a .> dp c * star (a <: dp)            -- \lemref{atEps and deriv via (<:)} below
 ==  star a .> (one <: \ c -> dp c * star (a <: dp))             -- |(.>)| case below
 ==  star a .> (one <: fmap (* NOP (wrap (star (a <: dp)))) dp)  -- |fmap| on functions
@@ -2016,7 +2008,7 @@ I could say ``Proof: Immediate from \lemrefthree{decomp (b <-- [c])}{atEps b <--
 
 \begin{code}
     s .> (b <: h)
-==  atEps (s .> (b <: h)) <: deriv (s .> (b <: h))  -- \lemref{decomp (b <-- [c])}
+==  atEps (s .> (b <: h)) <: deriv (s .> (b <: h))  -- \lemref{decomp ([c] -> b)}
 ==  s * b <: \ c -> s .> dp c                       -- \lemref{atEps and deriv via (<:)} below
 ==  s * b <: (s .>) . dp                            -- |(.)| definition
 ==  s * b <: fmap (s NOP .>) dp                     -- |fmap| on functions
@@ -2024,13 +2016,13 @@ I could say ``Proof: Immediate from \lemrefthree{decomp (b <-- [c])}{atEps b <--
 
 \begin{code}
     [] +-> b
-==  atEps ([] +-> b) <: deriv ([] +-> b)               -- \lemref{decomp (b <-- [c])}
-==  b <: \ c -> zero                                   -- \lemreftwo{atEps b <-- [c]}{deriv b <-- [c]}
+==  atEps ([] +-> b) <: deriv ([] +-> b)               -- \lemref{decomp ([c] -> b)}
+==  b <: \ c -> zero                                   -- \lemreftwo{atEps [c] -> b}{deriv [c] -> b}
 ==  b <: zero                                          -- |zero| on functions
 
     c':cs' +-> b
-==  atEps (c':cs' +-> b) <: deriv (c':cs' +-> b)       -- \lemref{decomp (b <-- [c])}
-==  zero <: \ c -> if c = c' then cs' +-> b else zero  -- \lemreftwo{atEps b <-- [c]}{deriv b <-- [c]}
+==  atEps (c':cs' +-> b) <: deriv (c':cs' +-> b)       -- \lemref{decomp ([c] -> b)}
+==  zero <: \ c -> if c = c' then cs' +-> b else zero  -- \lemreftwo{atEps [c] -> b}{deriv [c] -> b}
 ==  zero <: c' +-> cs' +-> b                           -- |(+->)| on functions
 \end{code}
 Expressed via |foldr|,
@@ -2057,14 +2049,14 @@ deriv (s .> (a <: dp)) c == s .> dp c
 \vspace{-2ex}
 \end{lemma}
 \begin{proof}
-Substitute into \lemreftwo{atEps b <-- [c]}{deriv b <-- [c]}, and simplify, using \lemref{decomp (b <-- [c])}.
+Substitute into \lemreftwo{atEps [c] -> b}{deriv [c] -> b}, and simplify, using \lemref{decomp ([c] -> b)}.
 \end{proof}
 
 %% \subsection{\thmref{semiring decomp generalized}}\prooflabel{theorem:semiring decomp generalized}
 
 \subsection{\thmref{LTrie}}\prooflabel{theorem:LTrie}
 
-\note{Fill in from journal notes of 2019-02-14. It's a straightforward application of \thmref{semiring decomp b <-- [c]}.}
+\note{Fill in from journal notes of 2019-02-14. It's a straightforward application of \thmref{semiring decomp [c] -> b}.}
 
 \note{Coinduction?}
 

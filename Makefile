@@ -8,7 +8,10 @@ otarg = $(outdir)/$(targ)
 # # Doesn't work
 # .PRECIOUS: $(outdir)/%.tex $(outdir)/%.pdf
 
-.PRECIOUS: out/convolution.tex out/convolution.pdf out/was2.tex out/was2.pdf
+.PRECIOUS: out/convolution.tex out/convolution.pdf
+.PRECIOUS: out/was1.tex out/was1.pdf
+.PRECIOUS: out/was2.tex out/was2.pdf
+.PRECIOUS: out/was3.tex out/was3.pdf
 
 default: $(otarg).pdf
 

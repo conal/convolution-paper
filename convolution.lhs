@@ -654,8 +654,7 @@ Note that the left |s|-semimodule laws specialized to |s=Bool| require |True| (|
 
 \sectionl{Languages and the Monoid Semiring}
 
-A ``language'' is a set of strings over some alphabet, so the |Additive|, |Semiring|, and |LeftSemimodule| instances for sets given above apply directly to languages.
-Other than |(.>)| and |star|, all of the operations provided by these instances correspond to common and useful building blocks of languages.
+A ``language'' is a set of strings over some alphabet, so the |Additive| and |LeftSemimodule| instances for sets given above apply directly.
 Conspicuously missing, however, are the usual notions of language concatenation and closure (Kleene star), defined as follows for languages |U| and |V|:
 \begin{code}
 U V = set (u <> v | u <# U && v <# V)
@@ -669,81 +668,48 @@ A bit of reasoning shows that all of the semiring laws would hold as well:
 \item Concatenation distributes over union, both from the left and from the right.
 \item The |zero| (empty) language annihilates (yields |zero|) under concatenation, both from the left and from the right.
 \end{itemize}
-Moreover, all we needed from strings is that they form a monoid.
-
-We could decide that we have the wrong |Semiring| instance for sets, which would imply that the |setPred| homomorphisms in \secref{Calculating Instances from Homomorphisms} are the wrong specifications to use.
-The existing |Semiring| instance for sets is useful, however, and is compelling in its relationship to functions and |Bool|.
-Moreover, the concatenation-based semiring only applies to sets of values from a monoid, while the existing instance applies to sets of all types.
-Instead of replacing our |Semiring (P a)| instance, let's add a new one.
-Doing so requires a new type that shares essentially the same |Additive| and |LeftSemimodule| instances:\footnote{The ``|deriving|'' clause \needcite{}, of which we'll make similar use later in the paper, means that the |newtype| constructor/isomorphism is a homomorphism for the derived classes (|Additive|, |LeftSemimodule|, and |HasSingle|) and so is equivalent to the following instance definitions:
+Moreover, all we needed from strings is that they form a monoid, so we may as well generalize:
 \begin{code}
-instance Additive (Language a) where
-  zero = L zero
-  L p + L q = L (p + q)
+instance Monoid a => Semiring (P a) where
+  one = set mempty -- |== mempty +-> one == single mempty == value one| (\secref{Singletons})
+  p * q = set (u <> v # u <# p && v <# q)
 
-instance LeftSemimodule Bool (Language a) where
-  s `scale` L p = L (s .> p)
-
-instance HasSingle Bool (Language a) where
-  a +-> b = L (a +-> b)
-\end{code}
-}
-\begin{code}
-type Language a = L (P a) deriving (Additive, LeftSemimodule Bool, HasSingle a Bool)
-
-instance Monoid a => Semiring (Language a) where
-  one = L (set mempty) -- |== mempty +-> one == single mempty == value one| (\secref{Singletons})
-  L p * L q = L (set (u <> v # u <# p && v <# q))
-
-instance StarSemiring (Language a) -- use default |star| definition (\secref{Star Semirings}).
+instance StarSemiring (Pow a) -- use default |star| definition (\secref{Star Semirings}).
 \end{code}
 
+%% %format <-- = "\leftarrow"
+
+%% I'm postponing introduction of <--. For now, flag uses visibly.
+%format <-- = "\note{\underset{\scriptscriptstyle \text{oops}}{\leftarrow}}"
+%format F = "\note{\Varid{F}}"
 \noindent
-%format <-- = "\leftarrow"
 These new instances indeed satisfy the laws for additive monoids, semimodules, semirings, and star semirings.
-They seem to spring from nothing, however, which is a bit disappointing compared with the way the set instances follow inevitably from the requirement that |setPred| be a star semiring homomorphism (\secref{Calculating Instances from Homomorphisms}).
+They seem to spring from nothing, however, which is a bit disappointing compared with the way the |Additive| and |LeftSemimodule| instances for sets follow inevitably from the requirement that |setPred| be a homomorphism for those classes (\secref{Calculating Instances from Homomorphisms}).
 Let's not give up yet, however.
-Perhaps there's a variation of the |a -> b| semiring that specializes with |b = Bool| to bear the same relationship to |Language a| that |a -> Bool| bears to |P a|.
-For reasons to become clear later, let's call this |a -> b| variation ``|b <-- a|'':
-\notefoot{Introduce |Indexable| sooner, and add to the |deriving| list.}
-\begin{code}
-infixl 0 <--
-newtype b <-- a = F (a -> b) deriving (Additive, HasSingle a b, LeftSemimodule b, Indexable a b)
-\end{code}
-The least imaginative thing we can try is to exactly mirror the |setPred|/|predSet| isomorphism:
-%format recogLang = lang
-%format langRecog = inverse recogLang
-%format langRecog = recogLang "^{-1}"
-\begin{code}
-recogLang :: (Bool <-- a) -> Set a
-recogLang (F f) = L (predSet f)
-
-langRecog :: Language a -> (Bool <-- a)
-langRecog (L p) = F (setPred p)
-\end{code}
-To cement our analogy, let's require |recogLang| (and hence |langRecog|) to be a homomorphism for all of the classes defined in \secref{Monoids, Semirings and Semimodules}.
+Perhaps there's a |Semiring| instance for |a -> b| that specializes with |b = Bool| to bear the same relationship to |Pow a| that the |Additive| and |LeftSemimodule| do.
+The least imaginative thing we can try is to require that |setPred| be a \emph{semiring} homomorphism.
 If we apply the same sort of reasoning as in \secref{Calculating Instances from Homomorphisms} and then generalize from |Bool| to an arbitrary semiring, we get the definitions in \figrefdef{<--}{The monoid semiring}{
 \begin{code}
-instance (Semiring b, Monoid a) => Semiring (b <-- a) where
+instance (Semiring b, Monoid a) => Semiring (a -> b) where
   one = single mempty
-  F f * F g  = bigSum (u,v) u <> v +-> f u <.> g v
-             = F (\ w -> bigSumQ (u,v BR u <> v == w) f u <.> g v)
+  f * g  = bigSum (u,v) u <> v +-> f u <.> g v
+         = \ w -> bigSumQ (u,v BR u <> v == w) f u <.> g v
 
-instance (Semiring b, Monoid a)  => StarSemiring (b <-- a)  -- default |star|
+instance (Semiring b, Monoid a)  => StarSemiring (a -> b)  -- default |star|
 \end{code}
 \vspace{-4ex}
 }.
-The |b <-- a| type is known as ``the monoid semiring'', and its |(*)| operation as ``convolution'' \citep{golan2013semirings,wilding2015linear}.
+With this instance, |a -> b| type is known as ``the monoid semiring'', and its |(*)| operation as ``convolution'' \citep{golan2013semirings,wilding2015linear}.
 
 \begin{theorem}[\provedIn{theorem:Semiring (b <-- a)}]\thmlabel{Semiring (b <-- a)}
-Given the derived and explicitly defined instances for |b <-- a| above, |recogLang| is a homomorphism with respect to each instantiated class.
+Given the instances for |a -> b| above, |setPred| is a homomorphism with respect to each instantiated class.
 \end{theorem}
 
 %% %format splits = split
 For some monoids, we can also express the product operation in a more clearly computable form via \emph{splittings}:
 %format bigSumSplits (lim) = "\bigOp\sum{" lim "}{2.5}"
 \begin{code}
-  F f <.> F g = F (\ w -> bigSumSplits ((u,v) <# splits w) f u * g v)
+  f <.> g = \ w -> bigSumSplits ((u,v) <# splits w) f u * g v
 \end{code}
 where |splits w| yields all pairs |(u,v)| such that |u <> v == w|:
 % \notefoot{Maybe generalize from \emph{lists} of pairs to an associated |Foldable|.}
@@ -771,23 +737,17 @@ The |(<.>)| implementation above will try all possible three-way splittings of t
 
 \sectionl{Finite maps}
 
-%% I'd like to 
-%if False
-\nc\mapSym{{}^{\scriptscriptstyle m}}
-%format ->* = "\underset{\mapSym\:}{"->"}"
-%format *<- = "\underset{\:\mapSym}{"<--"}"
-%else
 \nc\mapSym{{}_{\scriptscriptstyle\mathit{m}}}
 %format ->* = "\overset{\mapSym\:}{"->"}"
 %format *<- = "\overset{\:\mapSym}{"<--"}"
-%endif
+%% TODO: remove *<-
 
 One representation of \emph{partial} functions is the type of finite maps, |a ->* b| from keys of type |a| to values of type |b|, represented is a key-ordered balanced tree \citep{Adams1993Sets,Straka2012ATR,Nievergelt1973BST}.
 To model \emph{total} functions instead, we can treat unassigned keys as denoting zero.
 Conversely, merging two finite maps can yield a key collision, which can be resolved by addition.
-Both interpretations require |b| to be a semiring.
+Both interpretations require |b| to be an additive monoid.
 
-Because we will encounter more representations of functions, let's use a common operation name for ``indexing'', or equivalently for interpreting as a function:
+Because we will encounter more representations of functions, let's use a common operation name for ``indexing'', or equivalently for interpreting as a function.
 \begin{code}
 class Indexable k v p | p -> k v where
   infixl 9 !

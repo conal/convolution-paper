@@ -134,7 +134,7 @@ All of the algorithms in the paper follow from very simple specifications in the
 %% %format * = "\times"
 
 %format `elem` = "\mathbin{`\Varid{elem}`}"
-%format <# = "\mathop{\in}"
+%format <# = "\mathbin{\in}"
 %format # = "\mid"
 
 %% Sometimes formatting breaks without an infix separator.
@@ -169,9 +169,11 @@ All of the algorithms in the paper follow from very simple specifications in the
 
 %format (inverse x) = x "^{-1}"
 
+
 \sectionl{Introduction}
 
 \note{Trim the abstract, moving some content here and expanding. Contributions.}
+
 
 \sectionl{Monoids, Semirings and Semimodules}
 
@@ -275,13 +277,7 @@ u + zero == u
 
 u + v == v + u
 \end{code}
-While lists with append form a non-additive monoid, natural numbers with addition do.
-Another example is sets with union:
-\begin{code}
-instance Additive (Pow a) where
-  zero  = emptyset
-  (+)   = union
-\end{code}
+Unlike lists with append, natural numbers form a \emph{additive} monoid.
 Another example is functions with pointwise addition, with any domain and with any \emph{additive} codomain:
 \begin{code}
 instance Additive b => Additive (a -> b) where
@@ -366,22 +362,8 @@ positive one   ==  True   == one
 positive (m  +  n) == positive m  ||  positive n == positive m  +  positive n
 positive (m  *  n) == positive m  &&  positive n == positive m  *  positive n
 \end{code}
+%% \vspace{-4ex}
 \end{spacing}
-
-\noindent
-Another example semiring is functions, building on the |Additive (a -> b)| instance above:
-\begin{code}
-instance Semiring b => Semiring (a -> b) where
-  one = \ a -> one
-  f * g  = \ a -> f a * g a
-\end{code}
-As with |Additive|, this |Semiring| instance implies that curried functions (of any number and type of arguments and with semiring result type) are semirings, with |curry| and |uncurry| being semiring homomorphisms.
-\begin{theorem}\thmlabel{curry semiring}
-Currying and uncurrying are semiring homomorphisms.
-\end{theorem}
-\begin{proof}
-Similar to the proof of \thmref{curry additive} in \proofref{theorem:curry additive}.
-\end{proof}
 
 \subsectionl{Star Semirings}
 
@@ -423,50 +405,20 @@ instance StarSemiring Bool where
           = True
           = one
 \end{code}
-Another example is functions to any semiring:
-\begin{code}
-instance StarSemiring b => StarSemiring (a -> b) where
-  star f = \ a -> star (f a)
-\end{code}
-To see that the law holds:
-\begin{code}
-    one + f * star f
-==  \ a -> one + f a * star f a    -- |one|, |(+)|, and |(*)| on functions
-==  \ a -> one + f a * star (f a)  -- |star| on functions
-==  \ a -> star (f a)              -- star semiring law
-==  star f                         -- |star| on functions
-\end{code}
-\noindent
-Combining these two instances, consider |star f| for |f :: a -> Bool| (a ``predicate''):
-\begin{code}
-    star f
-==  \ a -> star (f a)  -- |star| on functions
-==  \ a -> one         -- |star| on |Bool|
-==  one                -- |one| on functions
-\end{code}
 
-%if False
-%% Now in a later section
-\noindent
-An example star semiring homomorphism applies a given function to |mempty| (though any other domain value would serve):
-%format atEps = "\Varid{at}_\epsilon"
-\begin{code}
-atEps :: ([a] -> Bool) -> Bool
-atEps f = f mempty
-\end{code}
-%endif
-
-A useful property of star semirings is that recursive affine equations have solutions:
+A useful property of star semirings is that recursive affine equations have solutions \citep{Dolan2013FunSemi}:
 \begin{lemma}\lemlabel{affine over semiring}
-In a star semiring, the affine equation |p = b + m * p| has solution |p = star m * b| \citep{Dolan2013FunSemi}:
+In a star semiring, the affine equation |p = b + m * p| has solution |p = star m * b|:
 \end{lemma}
+\begin{proof}~
 \begin{code}
     b + m * (star m * b)
-==  b + (m * star m) * b      -- associativity of |(+)|
+==  b + (m * star m) * b      -- associativity of |(*)|
 ==  one * b + m * star m * b  -- identity for |(*)|
 ==  (one + m * star m) * b    -- distributivity
 ==  star m * b                -- star semiring law
 \end{code}
+\end{proof}
 
 \note{Mention tropical semirings, schedule algebra (max-plus), and optimization algebra (min-plus) \citep{Golan2005RecentSemi}. Maybe also polynomials.}
 
@@ -534,10 +486,12 @@ The |DetectableZero| class \citep{semiring-num}:
 class Semiring a => DetectableZero a where isZero :: a -> Bool
 \end{code}
 
-Recursive affine equations in semimodules over star semirings have solutions:
+As with star semirings (\lemref{affine over semiring}), recursive affine equations in semimodules \emph{over} star semirings also have solutions:
 \begin{lemma}\lemlabel{affine over semimodule}
-In a left semimodule over a star semiring, the affine equation |q == r <+> s .> q| has solution |q = star s .> r|.
+In a left semimodule over a star semiring, the affine equation |p == b <+> m .> p| has solution |p = star m .> b|.
 \end{lemma}
+The proof closely resembles that of \lemref{affine over semiring}, using the left semimodule laws above.
+%if False
 \begin{proof}~
 \begin{code}
     star s .> r
@@ -547,6 +501,7 @@ In a left semimodule over a star semiring, the affine equation |q == r <+> s .> 
 \end{code}
 \vspace{-4ex}
 \end{proof}
+%endif
 
 \subsectionl{Singletons}
 
@@ -567,11 +522,8 @@ value :: (HasSingle a b x, Monoid a) => b -> x
 value b = mempty +-> b
 \end{code}
 In particular, |mempty +-> one == single mempty == value one|.
-As first examples, we have sets and functions:
+As a first example, we have functions:
 \begin{code}
-instance HasSingle a Bool (P a) where
-  a +-> b = if b then set a else emptyset
-
 instance (Eq a, Additive b) => HasSingle a b (a -> b) where
   a +-> b = \ a' -> if a == a' then b else zero
 \end{code}
@@ -583,34 +535,25 @@ For all |f :: a -> b| where |b| is an additive monoid,
 \begin{code}
 f == bigSum a a +-> f a
 \end{code}
+\vspace{-3ex}
 \end{lemma}
-% In practice, |f| is often ``sparse'', i.e., non-zero on a relatively small (e.g., finite) subset of its domain.
+\noindent
+In the uses below, |f| is often ``sparse'', i.e., non-zero on a relatively small (e.g., finite) subset of its domain.
+
+\note{Currying property goes here.}
+
 
 \sectionl{Calculating Instances from Homomorphisms}
 
-In \secref{Monoids, Semirings and Semimodules}, we met the |Additive| instance for sets, along with the |Additive|, |Semiring|, and |LeftSemimodule| instances for functions.
-Do sets also have (law-abiding) |Semiring| and |LeftSemimodule| instances?
-Is there more than one choice, and if so, how might we choose?
+So far, we've started with instance definitions and then noted and proved homomorphisms where they arise.
+We can instead invert the process, taking homomorphisms as specifications and \emph{calculating} instance definitions that satisfy them.
+This process of calculating instances from homomorphisms is the central guiding principle of this paper, so let's see how it works.
 
-Let's start investigating these questions by reviewing the |Additive| instances for functions and sets from \secref{Additive Monoids}:
-\\
-\begin{minipage}[b]{0.41\textwidth}
-\begin{code}
-instance Additive b => Additive (a -> b) where
-  zero = \ a -> zero
-  f + g  = \ a -> f a + g a
-\end{code}
-\end{minipage}
-\begin{minipage}[b]{0ex}{\rule[2ex]{0.5pt}{0.5in}}\end{minipage}
-\begin{minipage}[b]{0.3\textwidth} % \mathindent1em
-\begin{code}
-instance Additive (Pow a) where
-  zero = emptyset
-  p + q = p `union` q
-\end{code}
-\end{minipage}
-\\
-Sets and functions-to-booleans (``predicates'') are closely related via set membership:
+Consider a type of mathematical \emph{sets} of values of some type |a|, which we'll write as ``|Pow a|''.
+Are there useful instances of the abstractions from \secref{Monoids, Semirings and Semimodules} for sets?
+Rather than guess at such instances and then trying to prove the required laws, let's consider how sets are related to a type for which we already know instances, namely functions.
+
+Sets are closely related to functions-to-booleans (``predicates''):
 %format setPred = pred
 %% doesn't work
 %format predSet = inverse setPred
@@ -622,100 +565,49 @@ setPred as = \ a -> a <# as
 predSet :: (a -> Bool) -> Pow a
 predSet f = set (a | f a)
 \end{code}
-This relationship is not only a bijection, but a \emph{bijective additive monoid homomorphism}:
+This pair of functions forms an isomorphism, i.e., |predSet . setPred == id| and |setPred . predSet == id|, as can be checked by inlining definitions and simplifying.
+Moreover, for sets |p| and |q|, |p == q <=> setPred p == setPred q|, by the \emph{extensionality} axiom of sets and of functions.
+Let's also require that |setPred| be an \emph{additive monoid homomorphism}.
+The required homomorphism properties:
 \begin{code}
-    setPred zero
-==  \ a -> a <# zero                  -- |setPred| definition
-==  \ a -> a <# emptyset              -- |zero| on |P a|
-==  \ a -> False                      -- property of sets
-==  \ a -> zero                       -- |zero| on |Bool|
-==  zero                              -- |zero| on functions
+setPred zero == zero
 
-    setPred (p + q)
-==  \ a -> a <# (p + q)               -- |setPred| definition
-==  \ a -> a <# (p `union` q)         -- |(+)| on |P a|
-==  \ a -> (a <# p) || (a <# q)       -- property of sets
-==  \ a -> (a <# p) + (a <# q)        -- |(+)| on |Bool|
-==  \ a -> setPred p a + setPred q a  -- |setPred| definition
-==  setPred p + setPred q             -- |(+)| on functions
+setPred (p + q) == setPred p + setPred q
 \end{code}
-Likewise for |predSet|, following from similar reasoning or more immediately from bijectivity%
-%if False
-.
-%else
-:
-\begin{code}
-    predSet zero
-==  predSet (setPred zero)                               -- above
-==  zero                                                 -- |predSet . setPred == id|
-
-    predSet (f + g)
-==  predSet (setPred (predSet f) + setPred (predSet g))  -- |setPred . predSet == id|
-==  predSet (setPred (predSet f + predSet g))            -- above
-==  predSet f + predSet g                                -- |setPred . predSet == id|
-\end{code}
-%endif
-
-So far, we've started with instance definitions and then proved such homomorphisms.
-We can instead invert the process, taking homomorphisms as specifications and \emph{calculating} instance definitions that satisfy them.
-This process of calculating instances from homomorphisms is the central guiding principle throughout the rest of this paper, so let's see how it works.
-
-We have a |Semiring| instance for functions to any semiring---and hence to |Bool| in particular---and we have a function |setPred| from sets to membership functions (predicates).
-We've see that |setPred| is an additive monoid homomorphism, based on a known |Additive| instance for sets.
-Now let's also require |setPred| to be a \emph{semiring homomorphism} and deduce a sufficient |Semiring| instance for sets.
-The needed homomorphism properties:
-\begin{spacing}{1.2}
-\begin{code}
-setPred one == one
-setPred (p * q) == setPred p * setPred q
-\end{code}
-\end{spacing}
-We already know definitions of |setPred| as well as the function versions of |one| and |(*)| (on the RHS) but not yet the set versions of |one| and |(*)| (on the LHS).
+We already know definitions of |setPred| as well as the function versions of |zero| and |(+)| (on the RHS) but not yet the set versions of |zero| and |(+)| (on the LHS).
 We thus have two algebra problems in two unknowns.
 Since only one unknown appears in each homomorphism equation, we can solve them independently.
 The |setPred|/|predSet| isomorphism makes it easy to solve these equations, and removes all semantic choice (allowing only varying implementations of the same meaning).
 \begin{code}
-     setPred one == one
-<=>  predSet (setPred one) == predSet one                          -- |predSet| injectivity
-<=>  one == predSet one                                            -- |predSet . setPred == id|
+     setPred zero == zero
+<=>  predSet (setPred zero) == predSet zero                        -- |predSet| injectivity
+<=>  zero == predSet zero                                          -- |predSet . setPred == id|
 
-     setPred (p * q) == setPred p * setPred q
-<=>  predSet (setPred (p * q)) == predSet (setPred p * setPred q)  -- |predSet| injectivity
-<=>  p * q == predSet (setPred p * setPred q)                      -- |predSet . setPred == id|
+     setPred (p + q) == setPred p + setPred q
+<=>  predSet (setPred (p + q)) == predSet (setPred p + setPred q)  -- |predSet| injectivity
+<=>  p + q == predSet (setPred p + setPred q)                      -- |predSet . setPred == id|
 \end{code}
-We thus have a sufficient (and in this case semantically necessary) definitions for |one| and |(*)| on sets.
+We thus have a sufficient (and in this case semantically necessary) definitions for |zero| and |(+)| on sets.
 Now let's simplify to get more direct definitions:
 \begin{code}
-    predSet one
-==  predSet (\ a -> one)                         -- |one| on functions
-==  predSet (\ a -> True)                        -- |one| on |Bool|
-==  set (a # True)                               -- |predSet| definition
+    predSet zero
+==  predSet (\ a -> zero)                        -- |zero| on functions
+==  predSet (\ a -> False)                       -- |zero| on |Bool|
+==  set (a # False)                              -- |predSet| definition
+==  emptyset
 
-    predSet (setPred p * setPred q)
-==  predSet ((\ a -> a <# p) * (\ a -> a <# q))  -- |setPred| definition (twice)
-==  predSet (\ a -> (a <# p) * (a <# q))         -- |(*)| on functions
-==  predSet (\ a -> a <# p && a <# q)            -- |(*)| on |Bool|
-==  set (a # a <# p && a <# q)                   -- |predSet| definition
-==  p `intersection` q                           -- |intersect| definition
+    predSet (setPred p + setPred q)
+==  predSet ((\ a -> a <# p) + (\ a -> a <# q))  -- |setPred| definition (twice)
+==  predSet (\ a -> (a <# p) + (a <# q))         -- |(+)| on functions
+==  predSet (\ a -> a <# p || a <# q)            -- |(+)| on |Bool|
+==  set (a # a <# p || a <# q)                   -- |predSet| definition
+==  p `union` q                                  -- |union| definition
 \end{code}
-Without applying any real creativity, we have deduced the desired |Semiring| instance for sets, which has a pleasing duality with the |Additive| instance:
+Without applying any real creativity, we have deduced the desired |Semiring| instance for sets:
 \begin{code}
-instance Semiring (P a) where
-  one = set (a # True)
-  p * q = p `intersection` q
-\end{code}
-
-We can similarly calculate a |StarSemiring| instance for sets from a requirement that |predSet| be a star semiring homomorphism.
-That homomorphism equation:
-\begin{code}
-setPred (star p) == star (setPred p)
-\end{code}
-Equivalently,
-\begin{code}
-    star p
-==  predSet (star (setPred p))  -- |predSet| injectivity
-==  predSet one                 -- |star| on |Bool| (\secref{Star Semirings})
-==  one                         -- |predSet| is a semiring homomorphism
+instance Additive (Pow a) where
+  zero  = emptyset
+  (+)   = union
 \end{code}
 
 Next consider a |LeftSemimodule| instance for sets.
@@ -876,6 +768,7 @@ The second attempt redundantly discovers that the prefix ``pickl'' is also a pre
 Next consider the language |single "ca" <.> single "ts" <.> single "up"|, and suppose we want to test ``catsup'' for membership.
 The |(<.>)| implementation above will try all possible three-way splittings of the test string.
 
+
 \sectionl{Finite maps}
 
 %% I'd like to 
@@ -947,6 +840,7 @@ Given the definitions in \figref{*<-}, |(!^)| is a homomorphism with respect to 
 (!^) :: Indexable a b z => z -> (b <-- a)
 (!^) = F . (!)
 \end{code}
+
 
 \sectionl{Decomposing Functions from Lists}
 
@@ -1130,6 +1024,7 @@ For any |Decomposable a h s| (satisfying the laws), if the equations of \thmref{
 
 %endif
 
+
 \sectionl{Regular Expressions}
 
 \lemreftwo{atEps b <-- [c]}{deriv b <-- [c]} generalize and were inspired by a technique of \citet{Brzozowski64} for recognizing regular languages.
@@ -1198,6 +1093,7 @@ regexp (u   :<.>  v)    = regexp u  <.>  regexp v
 regexp (Star u)         = star (regexp u)
 \end{code}
 Next, we will see one such semiring that eliminates the syntactic overhead of repeatedly transforming regular expressions.
+
 
 \sectionl{Tries}
 
@@ -1279,6 +1175,7 @@ Since the derivative collections are represented by a data structure (finite map
 \note{To reduce conceptual clutter, consider dropping the |LTrie|/|LTrie'| distinction, keeping the latter semantics and former name.
 Same for |RegExp|.
 How far back could I remove the distinction?}
+
 
 \sectionl{Convolution}
 
@@ -1642,6 +1539,7 @@ one  = pure mempty
 Immediate from the instance definitions.
 \end{proof}
 
+
 \sectionl{The Free Semimodule Monad}
 
 Where there's an applicative, there's often a compatible monad.
@@ -1665,6 +1563,7 @@ liftA2 h p q  = p >>= \ u -> fmap (h u) q
               = p >>= \ u -> q >>= \ v -> pure (h u v)
 \end{code}
 \end{theorem}
+
 
 \sectionl{More Applications}
 
@@ -1703,6 +1602,7 @@ The function |poly| is a semiring homomorphism when multiplication on |b| commut
 \item Non-scalar codomains
 \end{itemize}
 }
+
 
 \sectionl{Miscellaneous Notes}
 
@@ -1768,7 +1668,9 @@ The function |poly| is a semiring homomorphism when multiplication on |b| commut
 \note{I might next consider possibilities for sets as a semiring. One tempting possibility is to use ``nondeterministic'' addition and multiplication, but distributivity fails.
 For instance, |(set 3 + set 5) * {0,...,10}| vs |set 3 * {0,...,10} + set 5 * {0,...,10}|, as the latter has many more values than the former.}
 
+
 \appendix
+
 
 \sectionl{Proofs}
 

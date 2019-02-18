@@ -12,61 +12,35 @@ import Semi
 
 #include "GenInstances.inc"
 
-infixr 1 :#
-data Stream b = b :# Stream b
+infixr 1 :<
+data Stream b = b :< Stream b
 
-instance Decomposable b Identity (Stream b) where
-  b <: Identity bs = b :# bs
-  decomp (b :# bs) = (b, Identity bs)
+instance Additive b => Additive (Stream b) where
+  zero = zero :< zero
+  (a :< dp) <+> (b :< dq) = a <+> b  :<  dp <+> dq
 
-instance Functor Stream where fmap f (b :# bs) = f b :# fmap f bs
+instance Semiring b => LeftSemimodule b (Stream b) where
+  scale s = go where go (b :< dp) = s <.> b :< go dp
 
-instance Applicative Stream where
-#if 1
-  pure b = q where q = b :# q
-  liftA2 h = go where go (a :# as) (b :# bs) = h a b :# go as bs
-#else
-  pure b = b :# pure b
-  liftA2 h (a :# as) (b :# bs) = h a b :# liftA2 h as bs
-#endif
+instance (Additive b, DetectableZero b) => DetectableZero (Stream b) where
+  isZero (a :< dp) = isZero a && isZero dp
 
-instance Monad Stream where
-  -- (s :# ss') >>= f = let (b :# _) = f s in b :# (ss' >>= f)
-  ss >>= f = joinS (fmap f ss)
-   where
-     joinS ((a :# _) :# ss') = a :# joinS ss'
+instance (Semiring b, DetectableZero b) => Semiring (Stream b) where
+  one = one :< zero
+  (a :< dp) <.> q = a .> q <+> (zero :< dp <.> q)
 
-instance FunctorC     Stream
-instance ApplicativeC Stream
-instance MonadC       Stream
+instance (Additive b, DetectableZero b, DetectableOne b) => DetectableOne (Stream b) where
+  isOne (a :< dp) = isOne a && isZero dp
 
--- {-# COMPLETE (:<:) :: Stream #-} -- won't parse
--- 
--- • Orphan COMPLETE pragmas not supported
---   A COMPLETE pragma must mention at least one data constructor
---   or pattern synonym defined in the same module.
+instance (StarSemiring b, DetectableZero b) => StarSemiring (Stream b) where
+  star (a :< dp) = q where q = star a .> (one :< dp <.> q)
 
-ApplSemi(Stream)
+instance Additive b => HasSingle N b (Stream b) where
+  w +-> b = foldN (zero :<) (b :< zero) w
+
+foldN :: (b -> b) -> b -> N -> b
+foldN h e 0 = e
+foldN h e n = foldN h (h e) (n-1)
 
 instance Indexable N b (Stream b) where
-  (b :# bs) ! n = if n == 0 then b else bs ! (n-1)
-
--- instance Indexable N b (Stream b) where
---   (b :# _)  ! 0 = b
---   (_ :# bs) ! n = bs ! (n-1)
-
--- instance Indexable N b (Stream b) where
---   (b :# _)  ! Sum 0 = b
---   (_ :# bs) ! Sum n = bs ! Sum (n-1)
-
-type Stream' b = Decomp (Stream b)
-
--- instance Indexable N b (Stream' b) where
---   (b :# bs) ! n = if n == 0 then b else bs ! (n-1)
-
--- Functional dependency conflict with a definition in Semi:
---
--- instance (Decomposable b h x, Indexable c (Decomp x) (h (Decomp x)))
---       => Indexable [c] b (Decomp x) where
---   -- (b :<: dp) ! w = case w of { [] -> b ; c:cs -> dp ! c ! cs }
---   (!) = accept
+  (b :< bs) ! n = if n == 0 then b else bs ! (n-1)

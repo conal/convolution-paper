@@ -143,7 +143,8 @@ All of the algorithms in the paper follow from very simple specifications in the
 
 %format (paren (e)) = "\left(" e "\right)"
 
-%format N = "\mathbb{N}"
+%format N = "\mathbb N"
+%format Z = "\mathbb Z"
 %format Pow = "\Pow"
 %format emptyset = "\emptyset"
 %format (single (s)) = "\single{"s"}"
@@ -983,7 +984,7 @@ deriv :: (b <-- [c]) -> c -> (b <-- [c])
 deriv (F f) = \ c -> F (\ cs -> f (c:cs))
 
 infix 1 <:
-(<:) :: b -> (c -> (b <-- [c]) -> (b <-- [c])
+(<:) :: b -> (c -> (b <-- [c])) -> (b <-- [c])
 b <: h = F (\ NOP case {NOP [] -> b NOP;NOP c:cs  -> unF (h c) cs NOP})
 \end{code}
 \vspace{-3ex}
@@ -1031,6 +1032,7 @@ f  == \ u -> derivs f u mempty
 \end{code}
 where |foldl| is the usual left fold on lists:
 \begin{code}
+foldl :: (c -> b -> b) -> b -> [c] -> b
 foldl h e []      = e
 foldl h e (c:cs)  = foldl h (h e c) cs
 \end{code}
@@ -1332,94 +1334,105 @@ The Fourier transform is a semiring and left semimodule homomorphism from |b <- 
 
 \workingHere
 
-\note{This section assumes I'm going with the |Decomposable| interface, but it doesn't yet use a single unified |Convo| type.}
-
-%format Identity = I
+%format Unit = "\mathbb 1"
+%format Unit = ()
 Let's now consider functions from |N| rather than from |Z|.
-As in \secref{Decomposing Functions from Lists}, we can define a decomposition on functions from |N|:
-\notefoot{I suspect that the |Decomposable| interface isn't quite the right generalization. Try some additional monoids, and examine via more generic constructions for underlying monoids, including general sums and products. Relate to generalized tries \citep{Hinze2000GGT}.}
+Because |N =~ [Unit]| (essentially, Peano numbers), we can start with the definitions in \secref{Decomposing Functions from Lists} for domain |[c]|.
+Letting |c = Unit| and exploiting the isomorphism |z <-- Unit =~ z|, we get a simpler decomposition:
 \begin{code}
-newtype Identity a = Identity a  -- identity functor
+infix 1 <:
+(<:) :: b -> (b <-- N) -> (b <-- N)
+b <: F h = F (\ NOP case {NOP 0 -> b NOP;NOP n + 1  -> h n NOP})
 
-instance Semiring b => Decomposable (b <-- N) Identity b where
-  b <: Identity (F f) = F (\ i -> if i == 0 then b else f (i - 1))
-  atEps  (F f)  = f 0
-  deriv  (F f)  = Identity (F (f . (1 NOP +)))
+atEps :: (b <-- N) -> b
+atEps (F f) = f zero
+
+deriv :: (b <-- N) -> (b <-- N)
+deriv (F f) = F (\ n -> f (n + 1))
 \end{code}
-\begin{theorem}[\provedIn{theorem:decomp (b <-- N)}]\thmlabel{decomp (b <-- N)}
-For all |p :: b <-- N|, |p == atEps p <: deriv p|.
-\end{theorem}
-
-Differentiation is much as in \lemref{deriv b <-- [c]}:
-\notefoot{I'm leaning toward inverting the organization of this paper, starting with convolution, then semimodule function/applicative/monad, and languages later still.
-That way, I can introduce |b <-- N| before the somewhat more complicated |b <-- [c]|.}
-\begin{lemma}[\provedIn{lemma:deriv (b <-- N)}]\lemlabel{deriv (b <-- N)}
-Differentiation on |b <-- N|, has the following properties (eliding |Identity| constructors):
-\notefoot{If I give a |Semiring| instance for |Identity b| (for semirings |b|), then I think these equations hold as written. I bet I can do the same for |b <-- [c]|, and maybe for all domains |a| for which |Decomposable a|. Try it!}
-\notefoot{What about |single i|? Important?}
-\begin{code}
-deriv zero  == zero
-deriv one   == zero
-deriv (p  <+>  q) == deriv p <+> deriv q
-deriv (p  <.>  q) == atEps p .> deriv q <+> deriv p <.> q
-
-deriv (star p) == star (atEps p) .> deriv p <.> star p
-\end{code}
-%% deriv (single [d]) c == equal c d
-\end{lemma}
-\begin{corollary}\corlabel{decomp b <-- N}
-The following properties hold for |b <-- N|:
-\notefoot{Work out |single n| or |n +-> b|, probably as a simple generalization of |one|.}
+Then for all |f :: b <-- N|, |f == atEps f <: deriv f|.
+\lemlabel{deriv b <-- [c]} specializes for |b <-- N| as follows:
+%format foldN = fold "_{" N "}"
+\begin{spacing}{1.4}
 \begin{code}
 zero  = zero  <: zero
 one   = one   <: zero
 (a  <:  dp)  <+>  (b <: dq) = (a  <+>  b) <: (dp <+> dq)
-(a  <:  dp)  <.>  (b <: dq) = (a  <.>  b) <: (a .> dq <+> dp <.> (b <: dq))
-
-star (a <: as) = q where q = star a .> (one <: as <.> q)
+(a  <:  dp)  <.>  q == a .> q <+> (zero <: dp <.> q)
+star (a <: dp) = q where q = star a .> (one <: dp <.> q)
+s .> (a <: dp) = s <.> a <: s .> dp
+w +-> b = foldN (zero :<) (b :< zero) w
 \end{code}
-%% single w = product (map symbol w)
-%%   where
-%%      symbol d = zero <: equal d
-\end{corollary}
-
-\note{Remark that |N =~ [()]|, so this decomposition is a special case of  \secref{Decomposing Functions from Lists}. On the other hand, I think I'll move the whole language discussion to \emph{after} this decomposition.}
+\end{spacing}
+\noindent
+where
+\begin{code}
+foldN :: (b -> b) -> b -> N -> b
+foldN h e 0  = e
+foldN h e n  = foldN h (h e) (n-1)
+\end{code}
 
 %format :# = "\mathbin{:\!\!\#}"
-While the |b <-- N| representation makes for simple semantics and reasoning, there are more efficient alternatives.
-For instance, consider streams, as shown in \figrefdef{Stream}{Streams}{
+Just as |LTrie c| (list tries) naturally memoize functions from |[c]|, their specialization |LTrie ()| naturally memoizes functions from |N|.
+Specializing |LTrie ()| yields \emph{streams} (Peano tries), as shown in \figrefdef{Stream}{Streams}{
 \begin{code}
-infixr 1 :#
-data Stream b = b :# Stream b
+infixr 1 :<
+data Stream b = b :< Stream b
 
-instance Indexable (Stream b) N b where
-  (b :# bs) ! n = if n == 0 then b else bs ! (n-1)
+instance Additive b => Additive (Stream b) where
+  zero = zero :< zero
+  (a :< dp) <+> (b :< dq) = a <+> b  :<  dp <+> dq
 
-instance DetectableZero b => Decomposable (Stream b) Identity b where
-  b <: Identity bs = b :# bs
-  atEps  (b  :# _   )  = b
-  deriv  (_  :# bs  )  = Identity bs
+instance Semiring b => LeftSemimodule b (Stream b) where
+  scale s = go where go (b :< dp) = s <.> b :< go dp
 
-instance DetectableZero b => Semiring (Stream b) where
-  zero = q where q = zero :# q
-  one = one :# zero
-  (u :# us') <+> (v :# vs') = u <+> v :# us' <+> vs'
-  (u :# us') <.> vs@(v :# vs') = u <.> v :# u .> vs' <+> us' <.> vs
+instance (Additive b, DetectableZero b) => DetectableZero (Stream b) where
+  isZero (a :< dp) = isZero a && isZero dp
+
+instance (Semiring b, DetectableZero b) => Semiring (Stream b) where
+  one = one :< zero
+  (a :< dp) <.> q = a .> q <+> (zero :< dp <.> q)
 
 instance (StarSemiring b, DetectableZero b) => StarSemiring (Stream b) where
-  star (a :# as) = q where q = star a .> (one :# as <.> q)
+  star (a :< dp) = q where q = star a .> (one :< dp <.> q)
 
-instance DetectableZero s => Scalable (Stream s) s where
-  s `scale` (b :# bs) = (s <.> b) :# (s `scale` bs)
+instance Additive b => HasSingle N b (Stream b) where
+  w +-> b = foldN (zero NOP :<) (b :< zero) w
+
+instance Indexable N b (Stream b) where
+  (b :< bs) ! n = if n == 0 then b else bs ! (n-1)
 \end{code}
 \vspace{-6ex}
 }.
 \begin{theorem}\thmlabel{Stream}
-Given the definitions in \figref{Stream}, |streamF| is a homomorphism with respect to each instantiated class.
+Given the definitions in \figref{Stream}, |(!^)| is a homomorphism with respect to each instantiated class.
 \end{theorem}
 \begin{proof}
-Immediate from \corref{decomp b <-- N}.
+Specialization of \thmref{LTrie}.
 \end{proof}
+
+\note{A much simpler alternative is to replace |Map ()| by |Identity| in |LTrie (Map ())|.
+I should probably generalize |LTrie| to take a functor parameter.
+I don't quite need |Representable|, but I can use something from the |keys| library.
+Oh, funny. I think I want this one:
+\begin{code}
+class Lookup f => Indexable f where
+  index :: f a -> Key f -> a
+
+class Lookup f where
+  lookup :: Key f -> f a -> Maybe a
+
+type family Key (f :: * -> *)
+\end{code}
+Maybe use the cofree comonad:
+\begin{code}
+infixr 5 :<
+data Cofree f a = a :< f (Cofree f a)
+\end{code}
+In the keys library, |Key (Cofree f a) = Seq a|, but |[a]| seems more suitable to me.
+I can of course define my own version.
+It does define |type instance Key (Map k) = k|.
+}
 
 \workingHere
 
@@ -1578,7 +1591,7 @@ one  = pure mempty
 Immediate from the instance definitions.
 \end{proof}
 
-\sectionl{The free semimodule monad}
+\sectionl{The Free Semimodule Monad}
 
 Where there's an applicative, there's often a compatible monad.
 For |b <-- a|, the monad is known as the ``free semimodule monad'' (or sometimes the ``free \emph{vector space} monad'') \needcite{}.
@@ -1602,7 +1615,7 @@ liftA2 h p q  = p >>= \ u -> fmap (h u) q
 \end{code}
 \end{theorem}
 
-\sectionl{More applications}
+\sectionl{More Applications}
 
 \subsectionl{Polynomials}
 
@@ -1640,7 +1653,7 @@ The function |poly| is a semiring homomorphism when multiplication on |b| commut
 \end{itemize}
 }
 
-\sectionl{Miscellaneous notes}
+\sectionl{Miscellaneous Notes}
 
 \begin{itemize}
 \item |single| as a monoid homomorphism (targeting the product monoid).

@@ -458,7 +458,7 @@ atEps f = f mempty
 
 A useful property of star semirings is that recursive affine equations have solutions:
 \begin{lemma}\lemlabel{affine over semiring}
-The affine equation |p = b + m * p| has solution |p = star m * b| \citep{Dolan2013FunSemi}:
+In a star semiring, the affine equation |p = b + m * p| has solution |p = star m * b| \citep{Dolan2013FunSemi}:
 \end{lemma}
 \begin{code}
     b + m * (star m * b)
@@ -478,7 +478,7 @@ The affine equation |p = b + m * p| has solution |p = star m * b| \citep{Dolan20
 %% and introduce (.>).
 
 As fields are to vector spaces, rings are to modules, and semirings are to \emph{semimodules}.
-For any semiring |s|, a \emph{left |s|-semimodule} |b| is a additive monoid whose values can be multiplied on the left by |s| values.
+For any semiring |s|, a \emph{left |s|-semimodule} |b| is a additive monoid whose values can be multiplied by |s| values on the left.
 Here, |s| plays the role of ``scalars'', while |b| plays the role of ``vectors''.
 \notefoot{Perhaps say just ``semimodule'', and add a remark that I really mean ``left semimodule'' throughout.
 Or start out with ``left'', then make the remark, and then perhaps add an occasional ``(left)''.}
@@ -517,7 +517,7 @@ If we think of |a -> s| as a ``vector'' of |s| values, indexed by |a|, then |s .
 
 %format `scale` = "\mathbin{\hat{".>"}}"
 %format scale = "("`scale`")"
-There's a very important optimization to be made for scaling.
+There is an important optimization to be made for scaling.
 When |s == zero|, |s .> p == zero|, so we can discard |p| entirely.
 This optimization applies quite often in practice, for instance with languages, which tend to be sparse.
 Rather than burden each |LeftSemimodule| instance with this optimization, let's define |(.>)| to apply this optimization on top of a more primitive |scale| method:
@@ -536,7 +536,7 @@ class Semiring a => DetectableZero a where isZero :: a -> Bool
 
 Recursive affine equations in semimodules over star semirings have solutions:
 \begin{lemma}\lemlabel{affine over semimodule}
-The affine equation |q == r <+> s .> q| has solution |q = star s .> r|.
+In a left semimodule over a star semiring, the affine equation |q == r <+> s .> q| has solution |q = star s .> r|.
 \end{lemma}
 \begin{proof}~
 \begin{code}
@@ -1464,6 +1464,38 @@ Is |index| a comonad homomorphism?
 \item Non-scalar domains as in notes from 2019-01-\{28,29\}.
 \end{itemize}
 }
+
+\note{Show that currying commutes with convolution:}
+
+\begin{code}
+f, g :: b <-- u :* v
+
+    curry (f * g)
+==  curry (bigSumPlus ((u,v),(s,t)) (u,s) <> (v,t) +-> f (u,s) <.> g (v,t))
+==  curry (bigSumPlus ((u,v),(s,t)) (u <> v,s <> t) +-> f (u,s) <.> g (v,t))
+==  bigSumPlus ((u,v),(s,t)) u <> v +-> s <> t +-> f (u,s) <.> g (v,t)  -- lemma below
+==  bigSum (u,v) (wrap (bigSum (s,t) u <> v +-> s <> t +-> f (u,s) <.> g (v,t)))
+==  bigSum (u,v) u <> v +-> bigSum (s,t) s <> t +-> f (u,s) <.> g (v,t) -- linearity of |(a NOP +->)| (lemma?)
+==  bigSum (u,v) u <> v +-> bigSum (s,t) s <> t +-> curry f u s <.> curry g v t
+==  bigSum (u,v) u <> v +-> curry f u <.> curry g v
+==  curry f * curry g
+\end{code}
+
+Lemma:
+\begin{code}
+(a +-> b +-> c) == curry ((a,b) +-> c)
+\end{code}
+
+\note{Also that |curry one == one|:}
+\begin{code}
+    curry one
+==  curry (mempty +-> one)
+==  curry ((mempty,mempty) +-> one)
+==  mempty +-> mempty +-> one
+==  mempty +-> one
+==  one
+\end{code}
+
 
 \sectionl{Beyond Convolution}
 

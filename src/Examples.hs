@@ -8,19 +8,21 @@ module Examples where
 
 import Semi
 
-sa, sb, pink, pig :: (HasSingle String b x, Semiring b) => x
+type Stringy h = (Key h ~ String, HasSingle h)
+
+sa, sb, pink, pig :: (Stringy h, Semiring b) => h b
 sa   = single "a"
 sb   = single "b"
 pink = single "pink"
 pig  = single "pig"
 
-pp :: (HasSingle String b x, Semiring b, Additive x) => x
+pp :: (Stringy h, Additive1 h, Semiring b) => h b
 pp   = pink <+> pig
 
-as, ass, pps :: (HasSingle String b x, Semiring b, StarSemiring x) => x
+as, ass, pps :: (Stringy h, Additive1 h, StarSemiring1 h, StarSemiring b) => h b
 as  = star sa
 ass = star as
 pps = star pp
 
-anbn :: (HasSingle String b x, Semiring b, Semiring x) => x
+anbn :: (Stringy h, Semiring1 h, Semiring b, Semiring b) => h b
 anbn  = one <+> (sa <.> anbn <.> sb)

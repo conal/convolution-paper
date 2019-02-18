@@ -11,11 +11,10 @@ import GHC.Natural (Natural)
 import Data.Functor.Identity (Identity(..))
 import GHC.Exts (Coercible,coerce,Constraint)
 
-import Data.Set (Set)
 import Data.Map (Map)
-
-import qualified Data.Set as S
 import qualified Data.Map as M
+-- import Data.Set (Set)
+-- import qualified Data.Set as S
 
 import Misc
 import Constrained
@@ -25,6 +24,16 @@ import Constrained
 {--------------------------------------------------------------------
     Classes
 --------------------------------------------------------------------}
+
+-- Inspired by Indexable from Data.Key in the keys library.
+class Indexable h where
+  type Key h
+  infixl 9 !
+  (!) :: Additive a => h a -> Key h -> a
+
+instance Indexable ((->) a) where
+  type Key ((->) a) = a
+  f ! k = f k
 
 -- | Commutative monoid
 class Additive b where
@@ -68,31 +77,32 @@ s .> b | isZero s  = zero
        | otherwise = s `scale` b
 {-# INLINE (.>) #-}
 
-type Additive1 = Con1 Additive
-type Semiring1 = Con1 Semiring
+type Additive1     = Con1 Additive
+type Semiring1     = Con1 Semiring
+type StarSemiring1 = Con1 StarSemiring
 
 {--------------------------------------------------------------------
     Singletons
 --------------------------------------------------------------------}
 
-class HasSingle a b x | x -> a b where
+class Indexable h => HasSingle h where
   infixr 2 +->
-  (+->) :: a -> b -> x
+  (+->) :: Additive b => Key h -> b -> h b
 
-single :: (HasSingle a b x, Semiring b) => a -> x
+single :: (HasSingle h, Semiring b) => Key h -> h b
 single a = a +-> one
 
-value :: (HasSingle a b x, Monoid a) => b -> x
+value :: (HasSingle h, Monoid (Key h), Additive b) => b -> h b
 value b = mempty +-> b
 
-instance (Eq a, Additive b) => HasSingle a b (a -> b) where
+instance Eq a => HasSingle ((->) a) where
   a +-> b = \ a' -> if a == a' then b else zero
 
-instance HasSingle a Bool [a] where
-  a +-> b = if b then [a] else []
+-- instance HasSingle a Bool [a] where
+--   a +-> b = if b then [a] else []
 
-instance HasSingle a Bool (Set a) where
-  a +-> b = if b then S.singleton a else S.empty
+-- instance HasSingle Set where
+--   a +-> b = if b then S.singleton a else S.empty
 
 {--------------------------------------------------------------------
     Instances
@@ -123,23 +133,27 @@ ApplSemi((->) a)
 -- etc
 
 ApplMono([])
-ApplMono(Set)
+-- ApplMono(Set)
 -- etc
 
 infixr 0 ->*
 type (->*) = Map
 
-instance HasSingle a b (a ->* b) where (+->) = M.singleton
+instance Ord a => Indexable ((->*) a) where
+  type Key ((->*) a) = a
+  m ! a = M.findWithDefault zero a m
 
 instance (Ord a, Additive b) => Additive (a ->* b) where
   zero = M.empty
   (<+>) = M.unionWith (<+>)
 
--- NullZero(Map a)
+-- NullZero((->*) a)
 
 instance (Ord a, Additive b) => DetectableZero (a ->* b) where isZero = M.null
 
-FunctorSemimodule(Map a)
+FunctorSemimodule((->*) a)
+
+instance Ord a => HasSingle ((->*) a) where (+->) = M.singleton
 
 instance (Ord a, Monoid a, Semiring b) => Semiring (a ->* b) where
   one = mempty +-> one
@@ -217,58 +231,3 @@ type Z = Sum Integer
 instance Splittable N where
   isEmpty n = n == 0
   splits n = [(i, n-i) | i <- [0 .. n]]
-
-#if 1
-
-{--------------------------------------------------------------------
-    Indexable functors
---------------------------------------------------------------------}
-
--- Inspired by Indexable from Data.Key in the keys library.
-
-class Indexable h where
-  type Key h
-  infixl 9 !
-  (!) :: Additive a => h a -> Key h -> a
-
-instance Indexable ((->) a) where
-  type Key ((->) a) = a
-  f ! k = f k
-
-instance Ord a => Indexable (Map a) where
-  type Key (Map a) = a
-  m ! a = M.findWithDefault zero a m
-
-#else
-
-{--------------------------------------------------------------------
-    Indexing with zero default
---------------------------------------------------------------------}
-
-class Indexable k v p | p -> k v where
-  infixl 9 !
-  (!) :: p -> k -> v
-
-instance Indexable k v (k -> v) where
-  f ! k = f k
-
-instance (Ord k, Additive v) => Indexable k v (Map k v) where
-  m ! k = M.findWithDefault zero k m
-
--- The unique 'Semiring' homomorphism from 'Bool'.
-fromBool :: Semiring s => Bool -> s
-fromBool False = zero
-fromBool True  = one
-
--- TODO: Map, N -> b
-
--- | Derivative of a language w.r.t a string
-derivs :: (Decomposable b h x, Indexable c x (h x)) => x -> [c] -> x
--- derivs = foldl ((!) . deriv)
-derivs = foldl (\ p c -> deriv p ! c)
-
-accept :: (Decomposable b h x, Indexable c x (h x)) => x -> [c] -> b
--- accept x w = atEps (derivs x w)
-accept x cs = atEps (foldl (\ p c -> deriv p ! c) x cs)
-
-#endif

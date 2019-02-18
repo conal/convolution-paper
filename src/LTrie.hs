@@ -71,10 +71,8 @@ instance (DetectableZero b, DetectableOne b) => DetectableOne (LTrie h b) where
 instance (StarSemiring b, DetectableZero b) => StarSemiring (LTrie h b) where
   star (a :< dp) = q where q = star a .> (one :< fmap (<.> q) dp)
 
--- TODO: Fix HasSingle, and retry.
-
--- instance Additive b => HasSingle [Key h] b (LTrie h b) where
---   w +-> b = foldr (\ c t -> zero :< c +-> t) (b :< zero) w
+instance HasSingle (LTrie h) where
+  w +-> b = foldr (\ c t -> zero :< c +-> t) (b :< zero) w
 
 -- | Trim to a finite depth, for examination.
 trimT :: (Additive b, DetectableZero b) => Int -> LTrie h b -> LTrie h b

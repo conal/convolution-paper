@@ -424,6 +424,9 @@ In a star semiring, the affine equation |p = b + m * p| has solution |p = star m
 
 \subsectionl{Semimodules}
 
+\note{I think I can remove semimodules from the discussion and use |fmap (s *)| in place of |(scale s)|.
+If so, do it.}
+
 %format .> = "\cdot"
 
 %% Temporary deception. Later change scale's formatting back to the usual,
@@ -504,6 +507,8 @@ The proof closely resembles that of \lemref{affine over semiring}, using the lef
 %endif
 
 \subsectionl{Singletons}
+
+\note{Consider moving this section elsewhere.}
 
 We now have a fair amount of vocabulary for combining values.
 We'll also want an operation that constructs a ``vector'' with a single non-zero component:

@@ -161,6 +161,7 @@ All of the algorithms in the paper follow from very simple specifications in the
 %format bigUnion (lim) = "\bigOp\bigcup{" lim "}{0}"
 %format bigSum (lim) = "\bigOp\sum{" lim "}{0}"
 %format bigSumQ (lim) = "\bigOp\sum{" lim "}{1}"
+%format bigSumKeys (lim) = "\bigOp\sum{" lim "}{2}"
 
 %format bigOr (lim) = "\bigOp\bigvee{" lim "}{0}"
 %format bigOrQ (lim) = "\bigOp\bigvee{" lim "}{1.5}"
@@ -173,7 +174,6 @@ All of the algorithms in the paper follow from very simple specifications in the
 \sectionl{Introduction}
 
 \note{Trim the abstract, moving some content here and expanding. Contributions.}
-
 
 \sectionl{Monoids, Semirings and Semimodules}
 
@@ -506,17 +506,29 @@ The proof closely resembles that of \lemref{affine over semiring}, using the lef
 \end{proof}
 %endif
 
-\subsectionl{Singletons}
+\subsectionl{Function-like Types and Singletons}
 
 \note{Consider moving this section elsewhere.}
 
-We now have a fair amount of vocabulary for combining values.
-We'll also want an operation that constructs a ``vector'' with a single non-zero component:
+Most of the representations used in this paper are functions or are types that behave like functions.
+It will be useful to use a standard vocabulary for the latter.
+An ``indexable'' functor |h| is such that |h b| represent |a -> b| for a some type |a| of ``keys'' and for any additive monoid |b|.
+\begin{code}
+class Indexable h where
+  type Key h
+  infixl 9 NOP !
+  (!) :: Additive b => h b -> Key h -> b
+\end{code}
+The |Additive b| constraint here allows |(!)| definitions to fill in zero for missing keys.
+\notefoot{Perhaps describe alternatives: (a) one method that returns |Maybe b| (as in |Lookup| from |Data.Key|) and an |Additive|-dependent method that substitutes zero for |Nothing|, or (b) adding |b| as a parameter to |Indexable| and |HasSingle|. The latter strategy led to many required constraints.}
+
+\secref{Monoids, Semirings and Semimodules} provides a fair amount of vocabulary for combining values.
+We'll also want an operation that constructs a ``vector'' (e.g., language or function) with a single non-zero component:
 %format +-> = "\mapsto"
 \begin{code}
-class HasSingle a b x | x -> a b where
+class Indexable h => HasSingle h where
   infixr 2 +->
-  (+->) :: a -> b -> x
+  (+->) :: Additive b => Key h -> b -> h b
 \end{code}
 Two specializations of |a +-> b| will come in handy: one for |a = mempty|, and one for |b = one|.
 \begin{code}
@@ -529,7 +541,7 @@ value b = mempty +-> b
 In particular, |mempty +-> one == single mempty == value one|.
 As a first example, we have functions:
 \begin{code}
-instance (Eq a, Additive b) => HasSingle a b (a -> b) where
+instance Eq a => HasSingle ((->) a) where
   a +-> b = \ a' -> if a == a' then b else zero
 \end{code}
 
@@ -676,7 +688,7 @@ A bit of reasoning shows that all of the semiring laws would hold as well:
 Moreover, all we needed from strings is that they form a monoid, so we may as well generalize:
 \begin{code}
 instance Monoid a => Semiring (P a) where
-  one = set mempty -- |== mempty +-> one == single mempty == value one| (\secref{Singletons})
+  one = set mempty -- |== mempty +-> one == single mempty == value one| (\secref{Function-like Types and Singletons})
   p * q = set (u <> v # u <# p && v <# q)
 
 instance StarSemiring (Pow a) -- use default |star| definition (\secref{Star Semirings}).
@@ -752,30 +764,28 @@ To model \emph{total} functions instead, we can treat unassigned keys as denotin
 Conversely, merging two finite maps can yield a key collision, which can be resolved by addition.
 Both interpretations require |b| to be an additive monoid.
 
-Because we will encounter more representations of functions, let's use a common operation name for ``indexing'', or equivalently for interpreting as a function.
-\begin{code}
-class Indexable k v p | p -> k v where
-  infixl 9 !
-  (!) :: p -> k -> v
-\end{code}
-Given the definitions in \figrefdef{Map}{Finite maps as |a -> b|}{
+Given the definitions in \figrefdef{Map}{Finite maps}{
 \begin{code}
 infixr 0 ->*
-type a ->* b = Map a b
+type (->*) = Map
 
-instance (Ord a, Additive b) => Indexable a b (a ->* b) where
-  m ! k = M.findWithDefault zero k m
+instance Ord a => Indexable ((->*) a) where
+  type Key ((->*) a) = a
+  m ! a = M.findWithDefault zero a m
+
+instance Ord a => HasSingle ((->*) a) where (+->) = M.singleton
 
 instance (Ord a, Additive b) => Additive (a ->* b) where
   zero = M.empty
   (<+>) = M.unionWith (<+>)
 
-instance Ord a => LeftSemimodule (a ->* b) where
-  s `scale` m = fmap (s NOP <.>) m
-
 instance (Ord a, Additive b) => DetectableZero (a ->* b) where isZero = M.null
 
-instance HasSingle a b (a ->* b) where (+->) = M.singleton
+instance Semiring b => LeftSemimodule b (a ->* b) where scale b = fmap (b <.>)
+
+instance (Ord a, Monoid a, Semiring b) => Semiring (a ->* b) where
+  one = mempty +-> one
+  p <.> q = sum [u <> v +-> p!u <.> q!v | u <- M.keys p, v <- M.keys q]
 \end{code}
 \vspace{-4ex}
 }, |(!)| is a homomorphism with respect to each instantiated class.%
@@ -783,29 +793,6 @@ instance HasSingle a b (a ->* b) where (+->) = M.singleton
 \notefoot{Do I want a theorem and proof here?
 I think so, though I'll have to make a few assumptions about finite maps.
 On the other hand, those assumptions don't differ much from the homomorphism properties I'm claiming to hold.}
-A semantically suitable |p <.> q| could be defined by assigning key |k| to |p ! k <.> q ! k| for keys defined in \emph{both} |p| and |q| and discarding the rest, which would otherwise multiply to zero.
-On the other hand, a valid |one| for finite maps would have to assign |one| to \emph{every} key, of which there may well be infinitely many.
-
-We can wrap |a ->* b| into a new type that does have a |Semiring| instance homomorphic to (and very closely resembling) that of |b <-- a| from \secref{Languages and the Monoid Semiring}, as shown in \figrefdef{*<-}{Finite maps as |b <-- a|}{
-%format bigSumKeys (lim) = "\bigOp\sum{" lim "}{2}"
-\begin{code}
-infixl 0 *<-
-newtype b *<- a = M (a ->* b) deriving (Additive, DetectableZero, HasSingle a b, LeftSemimodule b, Indexable a b)
-
-instance (Ord a, Monoid a, Semiring b) => Semiring (b *<- a) where
-  one = single mempty
-  M p <.> M q = bigSumKeys (u <# M.keys p BR v <# M.keys q) u <> v +-> p!u <.> q!v
-\end{code}
-\vspace{-4ex}
-}.
-%format !^ = "\hat{"!"}"
-The finiteness of finite maps, however, interferes with giving a useful |StarSemiring| instance.
-Given the definitions in \figref{*<-}, |(!^)| is a homomorphism with respect to each instantiated class, where |(!^)| interprets a representation as |b <-- a| instead of |a -> b|:
-\begin{code}
-(!^) :: Indexable a b z => z -> (b <-- a)
-(!^) = F . (!)
-\end{code}
-
 
 \sectionl{Decomposing Functions from Lists}
 
@@ -1358,7 +1345,6 @@ Lemma:
 ==  one
 \end{code}
 
-
 \sectionl{Beyond Convolution}
 
 %format Fin (m) = Fin "_{" m "}"
@@ -1439,7 +1425,6 @@ lift0 b  = b +-> one
 The signatures of |lift2|, |lift1|, and |lift0| generalize to those of |liftA2|, |fmap|, and |pure| from the |Functor| and |Applicative| type classes \needcite, so let's replace the specialized operations with standard ones.
 An enhanced version of these classes appear in \figrefdef{FunApp}{|Functor| and |Applicative| classes and some instances}{
 \begin{code}
-
 class FunctorC f where
   type Ok f a :: Constraint
   type Ok f a = ()

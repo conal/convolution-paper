@@ -142,10 +142,6 @@ ApplMono([])
 infixr 0 ->*
 type (->*) = Map
 
-instance Ord a => Indexable ((->*) a) where
-  type Key ((->*) a) = a
-  m ! a = M.findWithDefault zero a m
-
 instance (Ord a, Additive b) => Additive (a ->* b) where
   zero = M.empty
   (<+>) = M.unionWith (<+>)
@@ -154,13 +150,19 @@ instance (Ord a, Additive b) => Additive (a ->* b) where
 
 instance (Ord a, Additive b) => DetectableZero (a ->* b) where isZero = M.null
 
-FunctorSemimodule((->*) a)
+-- FunctorSemimodule((->*) a)
 
-instance Ord a => HasSingle ((->*) a) where (+->) = M.singleton
+instance Semiring b => LeftSemimodule b (a ->* b) where scale b = fmap (b <.>)
 
 instance (Ord a, Monoid a, Semiring b) => Semiring (a ->* b) where
   one = mempty +-> one
   p <.> q = sum [u <> v +-> p!u <.> q!v | u <- M.keys p, v <- M.keys q]
+
+instance Ord a => Indexable ((->*) a) where
+  type Key ((->*) a) = a
+  m ! a = M.findWithDefault zero a m
+
+instance Ord a => HasSingle ((->*) a) where (+->) = M.singleton
 
 #if 0
 

@@ -213,7 +213,7 @@ These two monoids are related via the function |length :: [a] -> N|, which not o
 ==  length u <> length v  -- |(<>)| on |N|
 \end{code}
 This pattern is common and useful enough to have a name:
-\begin{definition} \deflabel{monoid homomorphism}
+\begin{definition}\deflabel{monoid homomorphism}
 A function |h| from one monoid to another is called a \emph{monoid homomorphism} when it satisfies the following properties:
 \begin{code}
 h mempty == mempty
@@ -291,7 +291,7 @@ instance Additive b => Additive (a -> b) where
 
 \noindent
 Additive monoids have their form of homomorphism:
-\begin{definition} \deflabel{additive monoid homomorphism}
+\begin{definition}\deflabel{additive monoid homomorphism}
 A function |h| from one additive monoid to another is an \emph{additive monoid homomorphism} if it satisfies the following properties:
 \begin{code}
 h zero == zero
@@ -1351,7 +1351,7 @@ deriv :: (b <-- N) -> (b <-- N)
 deriv (F f) = F (\ n -> f (n + 1))
 \end{code}
 Then for all |f :: b <-- N|, |f == atEps f <: deriv f|.
-\lemlabel{deriv b <-- [c]} specializes for |b <-- N| as follows:
+\lemref{deriv b <-- [c]} specializes for |b <-- N| as follows:
 %format foldN = fold "_{" N "}"
 \begin{spacing}{1.4}
 \begin{code}

@@ -29,7 +29,7 @@ import Constrained
 class Indexable h where
   type Key h
   infixl 9 !
-  (!) :: Additive a => h a -> Key h -> a
+  (!) :: Additive b => h b -> Key h -> b
 
 instance Indexable ((->) a) where
   type Key ((->) a) = a

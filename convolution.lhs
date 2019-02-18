@@ -759,7 +759,7 @@ Note that the left |s|-semimodule laws specialized to |s=Bool| require |True| (|
 
 \note{Demonstrate that homomorphic specifications also guarantee that laws hold, assuming that equality is consistent with homomorphism.}
 
-\sectionl{Languages and the monoid semiring}
+\sectionl{Languages and the Monoid Semiring}
 
 A ``language'' is a set of strings over some alphabet, so the |Additive|, |Semiring|, and |LeftSemimodule| instances for sets given above apply directly to languages.
 Other than |(.>)| and |star|, all of the operations provided by these instances correspond to common and useful building blocks of languages.
@@ -863,10 +863,17 @@ Examples of splittable monoids include natural numbers and lists:
 instance Splittable N where
   splits n = [(i, n-i) | i <- [0 .. n]]
 
-instance Splittable [a] where
+instance Splittable [c] where
   splits []      = [([],[])]
-  splits (a:as)  = ([],a:as) : [((a:l),r) | (l,r) <- splits as]
+  splits (c:cs)  = ([],c:cs) : [((c:l),r) | (l,r) <- splits cs]
 \end{code}
+
+While simple, general, and (assuming |Splittable| domain) computable, the definitions of |(<+>)| and |(<.>)| above for the monoid semiring make for quite inefficient implementations, primarily due to naive backtracking.
+As a simple example, consider the language |single "pickles" + single "pickled"|, and suppose we want to test the word ``pickling'' for membership.
+The |(<+>)| implementation above will first try ``pickles'', fail near the end, and then backtrack all the way to the beginning to try ``pickled''.
+The second attempt redundantly discovers that the prefix ``pickl'' is also a prefix of the candidate word and that ``pickle'' is not.
+Next consider the language |single "ca" <.> single "ts" <.> single "up"|, and suppose we want to test ``catsup'' for membership.
+The |(<.>)| implementation above will try all possible three-way splittings of the test string.
 
 \sectionl{Finite maps}
 
@@ -920,7 +927,7 @@ On the other hand, those assumptions don't differ much from the homomorphism pro
 A semantically suitable |p <.> q| could be defined by assigning key |k| to |p ! k <.> q ! k| for keys defined in \emph{both} |p| and |q| and discarding the rest, which would otherwise multiply to zero.
 On the other hand, a valid |one| for finite maps would have to assign |one| to \emph{every} key, of which there may well be infinitely many.
 
-We can wrap |a ->* b| into a new type that does have a |Semiring| instance homomorphic to (and very closely resembling) that of |b <-- a| from \secref{Languages and the monoid semiring}, as shown in \figrefdef{*<-}{Finite maps as |b <-- a|}{
+We can wrap |a ->* b| into a new type that does have a |Semiring| instance homomorphic to (and very closely resembling) that of |b <-- a| from \secref{Languages and the Monoid Semiring}, as shown in \figrefdef{*<-}{Finite maps as |b <-- a|}{
 %format bigSumKeys (lim) = "\bigOp\sum{" lim "}{2}"
 \begin{code}
 infixl 0 *<-
@@ -1028,8 +1035,6 @@ foldl h e []      = e
 foldl h e (c:cs)  = foldl h (h e c) cs
 \end{code}
 
-\workingHere
-
 Understanding how |atEps| and |deriv| relate to the semiring vocabulary will help us develop efficient implementations in later sections.
 
 \begin{lemma}[\provedIn{lemma:atEps b <-- [c]}]\lemlabel{atEps b <-- [c]}
@@ -1125,8 +1130,6 @@ For any |Decomposable a h s| (satisfying the laws), if the equations of \thmref{
 
 \sectionl{Regular Expressions}
 
-\note{A sort of ``free'' variant of functions. Easy to derive homomorphically. Corresponds to \citet{Brzozowski64} and other work on recognizing and parsing by derivatives.}
-
 \lemreftwo{atEps b <-- [c]}{deriv b <-- [c]} generalize and were inspired by a technique of \citet{Brzozowski64} for recognizing regular languages.
 \figrefdef{RegExpFun}{Semiring-generalized regular expressions}{
 %format :<+> = "\mathbin{:\!\!+}"
@@ -1196,14 +1199,13 @@ Next, we will see one such semiring that eliminates the syntactic overhead of re
 
 \sectionl{Tries}
 
-\secref{Languages and the monoid semiring} gives an implementation of language recognition and its generalization to the monoid semiring |b <-- a|, packaged as instances of a few common algebraic abstractions (|Additive| etc).
-While simple and correct, these implementations are quite inefficient, primarily due to naive backtracking.
-As a simple example, consider the language |single "pickles" + single "pickled"|, and suppose we want to test the word ``pickling'' for membership.
-The simple implementations above will first try ``pickles'', fail near the end, and then backtrack all the way to the beginning to try ``pickled''.
-The second attempt redundantly discovers that the prefix ``pickl'' is also a prefix of the candidate word.
-\note{Also mention nondeterministic splitting (|(<>)| inversion) for |(*)|, and clearly articulate how to avoid it. This explanation is less clear to me.}
+\secref{Languages and the Monoid Semiring} gave an implementation of language recognition and its generalization to the monoid semiring |b <-- a|, packaged as instances of a few common algebraic abstractions (|Additive| etc).
+While simple and correct, these implementations are quite inefficient, primarily due to naive backtracking and redundant comparison.
+\secref{Decomposing Functions from Lists} explored the nature of functions on lists, identifying a decomposition principle and its relationship to the vocabulary of semirings and related algebraic abstractions.
+Applying this principle to a generalized form of regular expressions led to Brzozowski's algorithm, generalized from sets to functions in \secref{Regular Expressions}, providing an alternative to naive backtracking but still involving extensive syntactic manipulation as each candidate string is matched.
+Nevertheless, with some syntactic optimizations and memoization, recognition speed with this technique can be fairly good \needcite{}.
 
-This problem of redundant comparison is solved elegantly by the classic trie (``prefix tree'') data structure \needcite{}.
+As an alternative to regular expression differentiation, note that the problem of redundant comparison is solved elegantly by the classic trie (``prefix tree'') data structure \needcite{}.
 This data structure was later generalized to arbitrary (regular) algebraic data types \needcite{} and then from sets to functions \needcite{}.
 We'll explore the data type generalization later.\notefoot{Add a forward pointer, or remove the promise.}
 Restricting our attention to functions of lists (``strings'' over some alphabet), we can formulate a simple trie data type as follows:
@@ -1265,12 +1267,16 @@ instance (Ord c, StarSemiring b, DetectableZero b) => StarSemiring (LTrie' b c) 
 Its definition uses safe, zero-cost coercions \cite{Breitner2016SZC} between |c ->* LTrie c b| and |c ->* LTrie' b c|.}
 \end{theorem}
 
+Although the |(<:)| decomposition in \secref{Decomposing Functions from Lists} was inspired by wanting to understand the essence of regular expression derivatives, the application to tries is in retrospect more straightforward, since the representation directly mirrors the decomposition.
+Pleasantly, this trie data structure is a classic, though perhaps not in its lazy infinite form for use as a language representation.
+
+Moreover, applying the |(<:)| decomposition to tries appears to be more streamlined than the application to regular expressions.
+During matching, the next character in the candidate string is used to directly index to the relevant derivative (sub-trie), efficiently bypassing all other paths.
+Since the derivative collections are represented by a data structure (finite map in this case) rather than a function, it is automatically reused rather than recomputed (in a lazy functional implementation), while the regular expression implementation needs additional memoization for efficiency \needcite{}.
+
 \note{To reduce conceptual clutter, consider dropping the |LTrie|/|LTrie'| distinction, keeping the latter semantics and former name.
 Same for |RegExp|.
 How far back could I remove the distinction?}
-
-\workingHere
-
 
 \sectionl{Convolution}
 
@@ -1279,7 +1285,7 @@ Eliding |F| constructors for now,
 \begin{code}
 f * g  = bigSum (u,v) u <> v +-> f u <.> g v
 \end{code}
-Specializing the \emph{codomain} to |Bool|, we get
+As in \secref{Languages and the Monoid Semiring}, specializing the \emph{codomain} to |Bool|, we get
 
 >   f <.> g = bigOr (u,v) u <> v +-> f u && g v
 
@@ -1287,7 +1293,7 @@ Using the set/predicate isomorphism from \secref{Calculating Instances from Homo
 
 >   f <.> g = set (u <> v | u <# f && v <# g)
 
-which is the definition of the concatenation of two languages from  \secref{Languages and the monoid semiring}.
+which is the definition of the concatenation of two languages from  \secref{Languages and the Monoid Semiring}.
 
 By specializing the \emph{domain} of the functions to sequences (from general monoids), we got efficient matching of semiring-generalized ``languages'', as in \secreftwo{Decomposing Functions from Lists}{Tries}, which translates to regular expressions (\secref{Regular Expressions}), generalizing work of \citet{Brzozowski64}\note{, while apparently improving performance.
 \notefoot{Measure and compare in \secref{Regular Expressions}.}}
@@ -1319,7 +1325,7 @@ Alternatively, curry, convolve, and uncurry, exploiting the fact that |curry| is
 \notefoot{Have I stated and proved the relevant lemma for currying and uncurrying with the \emph{monoid semiring}? \thmreftwo{curry additive}{curry semiring} are for |a -> b|, not |b <-- a|.}
 \notefoot{Mention the connection between generalized tries and currying.}
 \begin{theorem}[\provedIn{theorem:Fourier}]\thmlabel{Fourier}
-The Fourier transform is a semiring homomorphism from |b <- a| to |a -> b|.
+The Fourier transform is a semiring and left semimodule homomorphism from |b <- a| to |a -> b|.
 \end{theorem}
 
 \note{Maybe give some convolution examples.}

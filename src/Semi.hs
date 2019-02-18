@@ -139,30 +139,30 @@ ApplMono([])
 -- ApplMono(Set)
 -- etc
 
-infixr 0 ->*
-type (->*) = Map
+-- infixr 0 ->*
+-- type (->*) = Map
 
-instance (Ord a, Additive b) => Additive (a ->* b) where
+instance (Ord a, Additive b) => Additive (Map a b) where
   zero = M.empty
   (<+>) = M.unionWith (<+>)
 
 -- NullZero((->*) a)
 
-instance (Ord a, Additive b) => DetectableZero (a ->* b) where isZero = M.null
+instance (Ord a, Additive b) => DetectableZero (Map a b) where isZero = M.null
 
--- FunctorSemimodule((->*) a)
+-- FunctorSemimodule(Map a)
 
-instance Semiring b => LeftSemimodule b (a ->* b) where scale b = fmap (b <.>)
+instance Semiring b => LeftSemimodule b (Map a b) where scale b = fmap (b <.>)
 
-instance (Ord a, Monoid a, Semiring b) => Semiring (a ->* b) where
+instance (Ord a, Monoid a, Semiring b) => Semiring (Map a b) where
   one = mempty +-> one
   p <.> q = sum [u <> v +-> p!u <.> q!v | u <- M.keys p, v <- M.keys q]
 
-instance Ord a => Indexable ((->*) a) where
-  type Key ((->*) a) = a
+instance Ord a => Indexable (Map a) where
+  type Key (Map a) = a
   m ! a = M.findWithDefault zero a m
 
-instance Ord a => HasSingle ((->*) a) where (+->) = M.singleton
+instance Ord a => HasSingle (Map a) where (+->) = M.singleton
 
 #if 0
 

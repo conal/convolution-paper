@@ -754,36 +754,28 @@ The |(<.>)| implementation above will try all possible three-way splittings of t
 
 \sectionl{Finite maps}
 
-\nc\mapSym{{}_{\scriptscriptstyle\mathit{m}}}
-%format ->* = "\overset{\mapSym\:}{"->"}"
-%format *<- = "\overset{\:\mapSym}{"<--"}"
-%% TODO: remove *<-
-
-One representation of \emph{partial} functions is the type of finite maps, |a ->* b| from keys of type |a| to values of type |b|, represented is a key-ordered balanced tree \citep{Adams1993Sets,Straka2012ATR,Nievergelt1973BST}.
+One representation of \emph{partial} functions is the type of finite maps, |Map a b| from keys of type |a| to values of type |b|, represented is a key-ordered balanced tree \citep{Adams1993Sets,Straka2012ATR,Nievergelt1973BST}.
 To model \emph{total} functions instead, we can treat unassigned keys as denoting zero.
 Conversely, merging two finite maps can yield a key collision, which can be resolved by addition.
 Both interpretations require |b| to be an additive monoid.
 
 Given the definitions in \figrefdef{Map}{Finite maps}{
 \begin{code}
-infixr 0 ->*
-type (->*) = Map
-
-instance Ord a => Indexable ((->*) a) where
-  type Key ((->*) a) = a
+instance Ord a => Indexable (Map a) where
+  type Key (Map a) = a
   m ! a = M.findWithDefault zero a m
 
-instance Ord a => HasSingle ((->*) a) where (+->) = M.singleton
+instance Ord a => HasSingle (Map a) where (+->) = M.singleton
 
-instance (Ord a, Additive b) => Additive (a ->* b) where
+instance (Ord a, Additive b) => Additive (Map a b) where
   zero = M.empty
   (<+>) = M.unionWith (<+>)
 
-instance (Ord a, Additive b) => DetectableZero (a ->* b) where isZero = M.null
+instance (Ord a, Additive b) => DetectableZero (Map a b) where isZero = M.null
 
-instance Semiring b => LeftSemimodule b (a ->* b) where scale b = fmap (b <.>)
+instance Semiring b => LeftSemimodule b (Map a b) where scale b = fmap (b <.>)
 
-instance (Ord a, Monoid a, Semiring b) => Semiring (a ->* b) where
+instance (Ord a, Monoid a, Semiring b) => Semiring (Map a b) where
   one = mempty +-> one
   p <.> q = sum [u <> v +-> p!u <.> q!v | u <- M.keys p, v <- M.keys q]
 \end{code}
@@ -1067,7 +1059,7 @@ infix 1 :<
 data LTrie c b = b :< (c ->* LTrie c b)
 \end{code}
 The similarity between the |LTrie| type and the function decomposition from \secref{Decomposing Functions from Lists} (motivating the constructor's name) makes for easy instance calculation.
-As with |Pow a| and |a ->* b|, we can define a trie counterpart to the monoid semiring, here |b <-- [c]|.
+As with |Pow a| and |Map a b|, we can define a trie counterpart to the monoid semiring, here |b <-- [c]|.
 \begin{theorem}[\provedIn{theorem:LTrie}]\thmlabel{LTrie}
 Given the definitions in \figrefdef{LTrie}{Tries as |[c] -> b| and as |b <-- [c]|}{
 %format :<: = "\mathrel{\Varid{:\!\!\triangleleft\!:}}"

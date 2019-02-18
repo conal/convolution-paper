@@ -4,6 +4,8 @@
 
 module Semi where
 
+import Prelude hiding (sum,product)
+
 -- import Control.Applicative (liftA2)
 import GHC.Natural (Natural)
 import Data.Functor.Identity (Identity(..))
@@ -15,7 +17,7 @@ import Data.Map (Map)
 import qualified Data.Set as S
 import qualified Data.Map as M
 
-import Misc ((:*),Con1,Con2)
+import Misc
 import Constrained
 
 #include "GenInstances.inc"
@@ -66,6 +68,9 @@ s .> b | isZero s  = zero
        | otherwise = s `scale` b
 {-# INLINE (.>) #-}
 
+type Additive1 = Con1 Additive
+type Semiring1 = Con1 Semiring
+
 {--------------------------------------------------------------------
     Singletons
 --------------------------------------------------------------------}
@@ -80,9 +85,7 @@ single a = a +-> one
 value :: (HasSingle a b x, Monoid a) => b -> x
 value b = mempty +-> b
 
--- Suitable?
 instance (Eq a, Additive b) => HasSingle a b (a -> b) where
-  -- (+->) = equal'
   a +-> b = \ a' -> if a == a' then b else zero
 
 instance HasSingle a Bool [a] where
@@ -90,11 +93,6 @@ instance HasSingle a Bool [a] where
 
 instance HasSingle a Bool (Set a) where
   a +-> b = if b then S.singleton a else S.empty
-
-infixr 0 ->*
-type a ->* b = Map a b
-
-instance HasSingle a b (a ->* b) where (+->) = M.singleton
 
 {--------------------------------------------------------------------
     Instances
@@ -128,6 +126,11 @@ ApplMono([])
 ApplMono(Set)
 -- etc
 
+infixr 0 ->*
+type (->*) = Map
+
+instance HasSingle a b (a ->* b) where (+->) = M.singleton
+
 instance (Ord a, Additive b) => Additive (a ->* b) where
   zero = M.empty
   (<+>) = M.unionWith (<+>)
@@ -138,9 +141,9 @@ instance (Ord a, Additive b) => DetectableZero (a ->* b) where isZero = M.null
 
 FunctorSemimodule(Map a)
 
--- Do I want Semiring (a ->* b)? If so, should it agree with a -> b. Oops! We'd
--- need one to map all domain values to one. I could do it with a total map, but
--- I think things then get complicated with different defaults.
+instance (Ord a, Monoid a, Semiring b) => Semiring (a ->* b) where
+  one = mempty +-> one
+  p <.> q = sum [u <> v +-> p!u <.> q!v | u <- M.keys p, v <- M.keys q]
 
 #if 0
 
@@ -211,6 +214,33 @@ type N = Sum Natural
 
 type Z = Sum Integer
 
+instance Splittable N where
+  isEmpty n = n == 0
+  splits n = [(i, n-i) | i <- [0 .. n]]
+
+#if 1
+
+{--------------------------------------------------------------------
+    Indexable functors
+--------------------------------------------------------------------}
+
+-- Inspired by Indexable from Data.Key in the keys library.
+
+class Indexable h where
+  type Key h
+  infixl 9 !
+  (!) :: Additive a => h a -> Key h -> a
+
+instance Indexable ((->) a) where
+  type Key ((->) a) = a
+  f ! k = f k
+
+instance Ord a => Indexable (Map a) where
+  type Key (Map a) = a
+  m ! a = M.findWithDefault zero a m
+
+#else
+
 {--------------------------------------------------------------------
     Indexing with zero default
 --------------------------------------------------------------------}
@@ -224,47 +254,6 @@ instance Indexable k v (k -> v) where
 
 instance (Ord k, Additive v) => Indexable k v (Map k v) where
   m ! k = M.findWithDefault zero k m
-
-{--------------------------------------------------------------------
-    Decomposition (move elsewhere?)
---------------------------------------------------------------------}
-
-type CoercibleF = Con2 Coercible
-
-class (Functor h, CoercibleF h) => Decomposable b h x | x -> h b where
-  infix 1 <:
-  (<:)  :: b -> h x -> x
-  decomp  :: x -> b :* h x
-  atEps :: x -> b
-  deriv :: x -> h x
-  atEps = fst . decomp
-  deriv = snd . decomp
-  decomp x = (atEps x, deriv x)
-  {-# MINIMAL (<:), ((deriv , atEps) | decomp) #-}
-
-instance Semiring b => Decomposable b Identity (N -> b) where
-  b <: Identity f = \ i -> if i == 0 then b else f (i - 1)
-  atEps f = f 0
-  deriv f = Identity (f . (1 +))
-
-instance Decomposable b ((->) c) ([c] -> b) where
-  (b <: _) [] = b
-  (_ <: h) (c:cs) = h c cs
-  decomp f = (f [], \ c cs -> f (c : cs))
- -- {-# COMPLETE (:<:) :: [c] -> b #-} -- won't parse
-
--- I probably don't need and can't benefit from these COMPLETE pragmas, since
--- I'm using the general Convo type. For the same reason, I don't think I'm
--- benefiting from the polymorphic :<: pattern anyway, since it's only used for
--- Convo.
--- 
--- TODO: specialize the (:<:) pattern's type to Convo. Perhaps wait to see
--- whether Convo really handles everything.
-
-instance Ord c => Decomposable Bool (Map c) (Set [c]) where
-  e <: d  = fromBool e <+> S.unions [ S.map (c:) css | (c,css) <- M.toList d ]
-  atEps p = [] `S.member` p
-  deriv p = M.fromListWith (<+>) [(c, S.singleton cs) | c:cs <- S.toList p]
 
 -- The unique 'Semiring' homomorphism from 'Bool'.
 fromBool :: Semiring s => Bool -> s
@@ -282,65 +271,4 @@ accept :: (Decomposable b h x, Indexable c x (h x)) => x -> [c] -> b
 -- accept x w = atEps (derivs x w)
 accept x cs = atEps (foldl (\ p c -> deriv p ! c) x cs)
 
-
-{--------------------------------------------------------------------
-    Another experiment: Decomposables
---------------------------------------------------------------------}
-
-newtype Decomp x = D x deriving (Show)
-
-deriving instance Decomposable b h x => Decomposable b h (Decomp x)
-
-infix 1 :<:
-pattern (:<:) :: Decomposable b h x => b -> h (Decomp x) -> Decomp x
-pattern b :<: as <- (decomp -> (b,as)) where b :<: as = b <: as
-{-# COMPLETE (:<:) :: Decomp #-}
-
-type AdditiveF  = Con1 Additive
-
-instance (Decomposable b h x, AdditiveF h, Additive b) => Additive (Decomp x) where
-  zero = zero :<: zero
-  (a :<: dp) <+> (b :<: dq) = a <+> b  :<:  dp <+> dq
-
-type DetectableZeroF = Con1 DetectableZero
-type DetectableOneF  = Con1 DetectableOne
-
-instance ( Decomposable b h x, AdditiveF h, DetectableZeroF h
-         , Additive b, DetectableZero b )
-      => DetectableZero (Decomp x) where
-  isZero (a :<: dp) = isZero a && isZero dp
-
-instance ( Decomposable b h x, AdditiveF h, DetectableZeroF h
-         , DetectableZero b, DetectableOne b, Semiring b )
-      => DetectableOne (Decomp x) where
-  isOne (a :<: dp) = isOne a && isZero dp
-
-instance (Decomposable b h x, Semiring b) => LeftSemimodule b (Decomp x) where
-  s `scale` (b :<: dp) = s <.> b :<: fmap (s `scale`) dp
-
-instance (Decomposable b h x, AdditiveF h, Semiring b, DetectableZero b)
-      => Semiring (Decomp x) where
-  one = one :<: zero
-  (a :<: dp) <.> q = a .> q <+> (zero :<: fmap (<.> q) dp)
-
-instance (Decomposable b h x, AdditiveF h, StarSemiring b, DetectableZero b)
-      => StarSemiring (Decomp x) where
-  star (a :<: dp) = q where q = star a .> (one :<: fmap (<.> q) dp)
-
-instance (Decomposable b h x, Indexable c (Decomp x) (h (Decomp x)))
-      => Indexable [c] b (Decomp x) where
-  -- (b :<: dp) ! w = case w of { [] -> b ; c:cs -> dp ! c ! cs }
-  (!) = accept
-
--- deriving instance (Decomposable b h x, HasSingle a b x) => HasSingle a b (Decomp x)
-
-instance ( Decomposable b h x, Indexable c (Decomp x) (h (Decomp x)), AdditiveF h
-         , HasSingle c (Decomp x) (h (Decomp x)), Additive b )
-      => HasSingle [c] b (Decomp x) where
-  w +-> b = foldr (\ c t -> zero :<: c +-> t) (b :<: zero) w
-
--- | Trim to a finite depth, for examination.
-trimD :: (Decomposable b h x, AdditiveF h, Additive b) => Int -> Decomp x -> Decomp x
-trimD 0 _ = zero
-trimD n (b :<: ts) = b :<: fmap (trimD (n-1)) ts
--- trimD n (b :<: ts) = b :<: M.filter (not . isZero) (fmap (trimD (n-1)) ts)
+#endif

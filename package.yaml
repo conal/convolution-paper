@@ -49,7 +49,7 @@ library:
     # - distributive
     # - adjunctions
     # - comonad
-    - semiring-num
+    # - semiring-num
     # - newtype-generics
   other-modules: []
   include-dirs: src
@@ -59,17 +59,17 @@ library:
     - Misc
     - Constrained
     - Semi
-    - Language
-    - Decomp
-    - Stream
-    - LTrie
-    - RegExp
-    - Map
+    # - Map
+    # - Language
+    # - Decomp
+    # - Stream
+    # - LTrie
+    # - RegExp
     - Examples
     # To abandon
-    - DLTrie
-    - Convo
-    - CLTrie
+    # - DLTrie
+    # - Convo
+    # - CLTrie
     # - Set
     # - Fun
 

@@ -8,13 +8,14 @@ module LTrie where
 
 import Prelude hiding (sum,product)
 
+import Data.Functor.Classes (Show1(..))
 import GHC.Exts (coerce)
 import Data.Map (Map)
 import qualified Data.Map as M
 
+import Misc
 import Constrained
-import Semi hiding (pattern (:<:))
-import Language
+import Semi
 
 #ifdef EXAMPLES
 import Examples
@@ -22,65 +23,66 @@ import Examples
 
 -- #include "GenInstances.inc"
 
+-- TODO: maybe rename LTrie to "Cofree". I'd use Ed's Cofree from the "free" library,
+-- but he defined Key (Cofree f) = Seq (Key f), and I want [Key f]. Oh well.
+
 -- | List trie, denoting '[c] -> b'"
 infix 1 :<
-data LTrie c b = b :< (c ->* LTrie c b) -- deriving Show
+data LTrie h b = b :< h (LTrie h b) -- deriving Show
 
-instance (Show c, Show b) => Show (LTrie c b) where
-  showsPrec p (a :< dp) = showParen (p >= 1) $ showsPrec 2 a . showString " :< " . showsPrec 2 (M.toList dp)
+instance Functor h => Functor (LTrie h) where
+  fmap f = go where go (a :< dp) = f a :< fmap go dp
+  -- fmap f (a :< dp) = f a :< (fmap.fmap) f dp
+  -- fmap f (a :< dp) = f a :< fmap (fmap f) dp
 
--- instance Functor (LTrie c) where
---   fmap f = go where go (a :< dp) = f a :< fmap go dp
---   -- fmap f (a :< dp) = f a :< (fmap.fmap) f dp
---   -- fmap f (a :< dp) = f a :< fmap (fmap f) dp
+-- TODO: I probably want FunctorC h, and inherit Ok.
+instance Functor h => FunctorC (LTrie h)
 
--- instance FunctorC (LTrie c)
-
-instance (Ord c, Additive b) => Indexable [c] b (LTrie c b) where
+instance (Indexable h, Additive1 h) => Indexable (LTrie h) where
+  type instance Key (LTrie h) = [Key h]
+  -- (b :< _ ) ! [] = b
+  -- (_ :< ts) ! (k:ks) = ts ! k ! ks
   (b :< dp) ! w = case w of { [] -> b ; c:cs -> dp ! c ! cs }
-  -- (a :< _ ) ! [] = a
-  -- (_ :< dp) ! (c:cs) = (dp ! c) ! cs
-  -- (!) (a :< dp) = a <: (!) . (dp !)
 
-instance (Ord c, Additive b) => Additive (LTrie c b) where
+instance (Additive1 h, Additive b) => Additive (LTrie h b) where
   zero = zero :< zero
   (a :< dp) <+> (b :< dq) = a <+> b  :<  dp <+> dq
 
--- FunctorSemimodule(LTrie c)
+-- FunctorSemimodule(LTrie h)
 
--- instance (Ord c, Semiring b) => LeftSemimodule b (LTrie c b) where scale s = fmap (s <.>)
+-- instance (Functor h, Semiring b) => LeftSemimodule b (LTrie h b) where scale s = fmap (s <.>)
 
--- instance (Ord c, Semiring b) => LeftSemimodule b (LTrie c b) where
+-- instance (Functor h, Semiring b) => LeftSemimodule b (LTrie h b) where
 --   s `scale` (b :< dp) = s <.> b :< fmap (s `scale`) dp
 
-instance (Ord c, Semiring b) => LeftSemimodule b (LTrie c b) where
+instance Semiring b => LeftSemimodule b (LTrie h b) where
   scale s = go where go (b :< dp) = s <.> b :< fmap go dp
 
-instance (Ord c, Additive b, DetectableZero b) => DetectableZero (LTrie c b) where
+instance (Additive1 h, DetectableZero b) => DetectableZero (LTrie h b) where
   isZero (a :< dp) = isZero a && isZero dp
 
-instance (Ord c, Semiring b, DetectableZero b) => Semiring (LTrie c b) where
+instance (Semiring b, DetectableZero b) => Semiring (LTrie h b) where
   one = one :< zero
   (a :< dp) <.> q = a .> q <+> (zero :< fmap (<.> q) dp)
 
-instance (Ord c, Additive b, DetectableZero b, DetectableOne b) => DetectableOne (LTrie c b) where
+instance (DetectableZero b, DetectableOne b) => DetectableOne (LTrie h b) where
   isOne (a :< dp) = isOne a && isZero dp
 
-instance (Ord c, StarSemiring b, DetectableZero b) => StarSemiring (LTrie c b) where
+instance (StarSemiring b, DetectableZero b) => StarSemiring (LTrie h b) where
   star (a :< dp) = q where q = star a .> (one :< fmap (<.> q) dp)
 
-instance (Ord c, Additive b) => HasSingle [c] b (LTrie c b) where
-  w +-> b = foldr (\ c t -> zero :< c +-> t) (b :< zero) w
+-- TODO: Fix HasSingle, and retry.
+
+-- instance Additive b => HasSingle [Key h] b (LTrie h b) where
+--   w +-> b = foldr (\ c t -> zero :< c +-> t) (b :< zero) w
 
 -- | Trim to a finite depth, for examination.
-trimT :: (Ord c, Additive b, DetectableZero b) => Int -> LTrie c b -> LTrie c b
+trimT :: (Additive b, DetectableZero b) => Int -> LTrie h b -> LTrie h b
 trimT 0 _ = zero
 trimT n (c :< ts) = c :< M.filter (not . isZero) (fmap (trimT (n-1)) ts)
 -- trimT n (c :< ts) = c :< fmap (trimT (n-1)) ts
 
-instance Decomposable b (Map c) (LTrie c b) where
-  (<:) = (:<)
-  decomp (b :< dp) = (b, dp)
+#if 0
 
 #ifdef EXAMPLES
 
@@ -118,3 +120,4 @@ type L  = LTrie  Char Bool
 
 #endif
 
+#endif

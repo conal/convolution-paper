@@ -1411,7 +1411,11 @@ Given the definitions in \figref{Stream}, |(!^)| is a homomorphism with respect 
 Specialization of \thmref{LTrie}.
 \end{proof}
 
-\note{A much simpler alternative is to replace |Map ()| by |Identity| in |LTrie (Map ())|.
+\workingHere
+
+\note{Thoughts:}
+
+A much simpler alternative is to replace |Map ()| by |Identity| in |LTrie (Map ())|.
 I should probably generalize |LTrie| to take a functor parameter.
 I don't quite need |Representable|, but I can use something from the |keys| library.
 Oh, funny. I think I want this one:
@@ -1424,6 +1428,7 @@ class Lookup f where
 
 type family Key (f :: * -> *)
 \end{code}
+
 Maybe use the cofree comonad:
 \begin{code}
 infixr 5 :<
@@ -1432,7 +1437,21 @@ data Cofree f a = a :< f (Cofree f a)
 In the keys library, |Key (Cofree f a) = Seq a|, but |[a]| seems more suitable to me.
 I can of course define my own version.
 It does define |type instance Key (Map k) = k|.
-}
+
+Parametrize |RegExp| over a functor as well.
+Experiment with different functor choices to see what terminates for what examples.
+Note that |(->) c| is \emph{also} a functor with key |c| and doesn't memoize.
+
+Can I use Ed Kmett's |Indexable| instead of mine?
+It's specifically for functors, whereas mine is for types.
+Oh yeah.
+When I introduce the free semimodule monad, I'll need to reorder type parameters.
+I've been leaning toward postponing distinguishing between |a -> b| and |b <- a| to eliminate a lot of detail.
+After developing most of the paper, I can introduce the applicative, noting that the parameter order must change.
+
+The cofree comonad perspective is probably quite relevant, since the denotation as a function from lists crucially uses |coreturn| and |cojoin|.
+Oh! Examine |coreturn| and |cojoin| on |Cofree f|.
+Is |index| a comonad homomorphism?
 
 \workingHere
 

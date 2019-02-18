@@ -55,30 +55,29 @@ instance (Additive1 h, Additive b) => Additive (LTrie h b) where
 -- instance (Functor h, Semiring b) => LeftSemimodule b (LTrie h b) where
 --   s `scale` (b :< dp) = s <.> b :< fmap (s `scale`) dp
 
-instance Semiring b => LeftSemimodule b (LTrie h b) where
+instance (Functor h, Semiring b) => LeftSemimodule b (LTrie h b) where
   scale s = go where go (b :< dp) = s <.> b :< fmap go dp
 
-instance (Additive1 h, DetectableZero b) => DetectableZero (LTrie h b) where
+instance (Additive1 h, DetectableZero (h (LTrie h b)), DetectableZero b) => DetectableZero (LTrie h b) where
   isZero (a :< dp) = isZero a && isZero dp
 
-instance (Semiring b, DetectableZero b) => Semiring (LTrie h b) where
+instance (Functor h, Additive1 h, Semiring b, DetectableZero b) => Semiring (LTrie h b) where
   one = one :< zero
   (a :< dp) <.> q = a .> q <+> (zero :< fmap (<.> q) dp)
 
-instance (DetectableZero b, DetectableOne b) => DetectableOne (LTrie h b) where
+instance (Functor h, Additive1 h, DetectableZero1 h, DetectableZero b, DetectableOne b) => DetectableOne (LTrie h b) where
   isOne (a :< dp) = isOne a && isZero dp
 
-instance (StarSemiring b, DetectableZero b) => StarSemiring (LTrie h b) where
+instance (Functor h, Additive1 h, StarSemiring b, DetectableZero b) => StarSemiring (LTrie h b) where
   star (a :< dp) = q where q = star a .> (one :< fmap (<.> q) dp)
 
-instance HasSingle (LTrie h) where
+instance (HasSingle h, Additive1 h) => HasSingle (LTrie h) where
   w +-> b = foldr (\ c t -> zero :< c +-> t) (b :< zero) w
 
 -- | Trim to a finite depth, for examination.
-trimT :: (Additive b, DetectableZero b) => Int -> LTrie h b -> LTrie h b
+trimT :: (Functor h, Additive1 h, Additive b, DetectableZero b) => Int -> LTrie h b -> LTrie h b
 trimT 0 _ = zero
-trimT n (c :< ts) = c :< M.filter (not . isZero) (fmap (trimT (n-1)) ts)
--- trimT n (c :< ts) = c :< fmap (trimT (n-1)) ts
+trimT n (c :< ts) = c :< fmap (trimT (n-1)) ts
 
 #if 0
 

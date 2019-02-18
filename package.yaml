@@ -63,7 +63,7 @@ library:
     # - Language
     # - Decomp
     # - Stream
-    # - LTrie
+    - LTrie
     # - RegExp
     - Examples
     # To abandon

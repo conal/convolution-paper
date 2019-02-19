@@ -574,7 +574,7 @@ Singletons also curry handily and provide another useful homomorphism:
 \end{code}
 \vspace{-4ex}
 \end{lemma}
-\begin{lemma}
+\begin{lemma} \lemlabel{+-> homomorphism}
 In the monoid semiring, partial applications |(a NOP +->)| are left semi-module (and hence additive) homomorphisms.
 Moreover, |single == (mempty NOP +->)| is a semiring homomorphism.
 \end{lemma}
@@ -1514,7 +1514,7 @@ For |f, g :: u :* v -> b|,
 ==  curry (bigSumPlus ((u,v),(s,t)) (u <> v,s <> t) +-> f (u,s) <.> g (v,t))      -- |(<>)| on pairs
 ==  bigSumPlus ((u,v),(s,t)) u <> v +-> s <> t +-> f (u,s) <.> g (v,t)            -- \lemref{curry +->}
 ==  bigSum (u,v) (wrap (bigSum (s,t) u <> v +-> s <> t +-> f (u,s) <.> g (v,t)))  -- summation mechanics
-==  bigSum (u,v) u <> v +-> bigSum (s,t) s <> t +-> f (u,s) <.> g (v,t)           -- \lemref{(a +->) homomorphism}
+==  bigSum (u,v) u <> v +-> bigSum (s,t) s <> t +-> f (u,s) <.> g (v,t)           -- \lemref{+-> homomorphism}
 ==  bigSum (u,v) u <> v +-> bigSum (s,t) s <> t +-> curry f u s <.> curry g v t   -- |curry| definition
 ==  bigSum (u,v) u <> v +-> curry f u <.> curry g v                               -- |(+->)| on functions
 ==  curry f * curry g                                                             -- |(+->)| on functions
@@ -1531,6 +1531,17 @@ For |f, g :: u :* v -> b|,
 \end{code}
 
 \subsection{\lemref{curry +->}}\prooflabel{lemma:curry +->}
+
+\begin{code}
+    curry ((a,b) +-> c)
+==  curry (\ (u,v) -> if (u,v) == (a,b) then c else zero)                -- |(+->)| on functions
+==  curry (\ (u,v) -> if u == a && v == b then c else zero)              -- pairing is injective
+==  \ u -> \ v -> if u == a && v == b then c else zero                   -- |curry| definition
+==  \ u -> \ v -> if u == a then (if v == b then c else zero) else zero  -- property of |if| and |(&&)|
+==  \ u -> if u == a then (\ v -> if v == b then c else zero) else zero  -- |(u == a)| is independent of |v|
+==  \ u -> if u == a then b +-> c else zero                              -- |(+->)| on functions
+==  a +-> b +-> c                                                        -- |(+->)| on functions
+\end{code}
 
 \subsection{\thmref{Semiring (b <-- a)}}\prooflabel{theorem:Semiring (b <-- a)}
 

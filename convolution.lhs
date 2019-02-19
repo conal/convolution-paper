@@ -1058,7 +1058,7 @@ I might want yet another pair for generalized tries.}
 %format :< = "\mathrel{\Varid{:\!\!\triangleleft}}"
 \begin{code}
 infix 1 :<
-data LTrie h b = b :< h (LTrie h b)
+data LTrie h b = b :< h (LTrie h b) deriving Functor
 \end{code}
 where |h| is an indexable functor whose associated key type is the type of list elements (``characters'').
 The similarity between the |LTrie| type and the function decomposition from \secref{Decomposing Functions from Lists} (motivating the constructor's name) makes for easy instance calculation.
@@ -1185,16 +1185,16 @@ instance Indexable Identity b where
   type Key Identity = ()
   Identity a ! () = a
 \end{code}
+The type |LTrie Identity| is isomorphic to \emph{streams} (infinite-only lists).
 All of the needed classes instances are derived automatically.
-Customary inlining and simplification can then eliminate all of the run-time overhead of introducing the identity functor.
+Inlining and simplification during compilation can then eliminate all of the run-time overhead of introducing the identity functor.
+Alternatively, one could hand-optimize for streams.
 
 \workingHere
 
 \noindent
 \note{Next:
 \begin{itemize}
-\item Discuss how |Stream b| is much more efficient than |N -> b|.
-\item Somewhere I think I should be showing and using the |Splittable N| instance. See previous note.
 \item Lists (finite) instead of streams (infinite), with a semantic function that zero-pads.
 \item Non-scalar domains as in notes from 2019-01-\{28,29\}.
 \end{itemize}
@@ -1206,7 +1206,7 @@ Customary inlining and simplification can then eliminate all of the run-time ove
 %format Fin (m) = Fin "_{" m "}"
 %format Array (m) = Array "_{" m "}"
 
-Some uses of convolution (including convolutional neural networks \needcite{}) involve functions having finite support, i.e., non-zero on only a finite subset of their domains.
+Many uses of discrete convolution (including convolutional neural networks \needcite{}) involve functions having finite support, i.e., non-zero on only a finite subset of their domains.
 \notefoot{First suggest finite maps, using instances from \figref{*<-}. Then intervals/arrays.}
 In many cases, these domain subsets may be defined by finite \emph{intervals}.
 For instance, such a 2D operation would be given by intervals in each dimension, together specifying lower left and upper right corners of a 2D interval (rectangle) outside of which the functions are guaranteed to be zero.
@@ -1220,7 +1220,7 @@ For instance, a 1D convolution might have the following type:
 \end{code}
 Unfortunately, this signature is incompatible with the general type of |(*)|, in which arguments and result all have the same type.
 
-From the perspective of functions, an array of size |n| is a memoized function from |Fin n|, which represents the finite set |set (0, ..., n-1)|.
+From the perspective of functions, an array of size |n| is a memoized function from |Fin n|, a type representing the finite set |set (0, ..., n-1)|.
 Although we can still define a convolution-like operation in terms of index addition, indices no longer form a monoid, simply due to the non-uniformity of types.
 %format lift0
 %format lift1
@@ -1928,7 +1928,7 @@ First consider |fmap|, as defined in \figref{FunApp}.
 ==  bigSum u h u +-> f u          -- definition of |fmap| on |(<--) b|
 ==  bigSum u f u .> single (h u)  -- definition of |(+->)|
 ==  bigSum u f u .> pure (h u)    -- |single = pure|
-==  f >>= pure . h              -- definition of |(>>=)|
+==  f >>= pure . h                -- definition of |(>>=)|
 \end{code}
 \noindent
 Similarly for |liftA2|:

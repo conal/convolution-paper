@@ -1625,31 +1625,38 @@ For the other two equations:
 
 \begin{code}
     atEps zero
-==  atEps (F (\ a -> zero))  -- |zero| on |b <-- a|
-==  (\ a -> zero) []         -- |atEps| definition
-==  zero                     -- $\beta$ reduction
+==  atEps (\ a -> zero)  -- |zero| on functions
+==  (\ a -> zero) []     -- |atEps| definition
+==  zero                 -- $\beta$ reduction
 \end{code}
+
 \begin{code}
     atEps one
-==  atEps (F (equal mempty))  -- |one| on |b <-- a|
-==  equal mempty mempty       -- |atEps| definition            
-==  one                       -- |equal| definition
+==  atEps (mempty +-> one)                              -- |one| on functions
+==  atEps (\ b -> if b == mempty then one else zero)    -- |(+->)| on functions
+==  atEps (\ b -> if b == mempty then True else False)  -- |one| and |zero| on |Bool|
+==  atEps (\ b -> b == mempty)                          -- property of |if|
+==  mempty == mempty                                    -- |atEps| definition            
+==  one
 \end{code}
+
 \begin{code}
     atEps (f <+> g)
-==  atEps (F (\ a -> f a <+> g a))      -- |(<+>)| on |b <-- a|
-==  (\ a -> f a <+> g a) []             -- |atEps| definition
-==  f [] <+> g []                       -- $\beta$ reduction
+==  atEps (\ a -> f a <+> g a)  -- |(<+>)| on functions
+==  (\ a -> f a <+> g a) []     -- |atEps| definition
+==  f [] <+> g []               -- $\beta$ reduction
 ==  atEps f <+> atEps g         -- |atEps| definition
 \end{code}
+
 \begin{code}
     atEps (f <.> g)
-==  atEps (bigSum (u,v) u <> v +-> f u <.> g v)               -- |(<.>)| on |b <-- a|
+==  atEps (bigSum (u,v) u <> v +-> f u <.> g v)               -- |(<.>)| on functions
 ==  atEps (\ w -> bigSumQ (u,v BR u <> v == []) f u <.> g v)  -- alternative definition from \figref{monoid semiring}
 ==  bigSumKeys (u,v BR u == [] && v == []) NOP f u <.> g v    -- |u <> v == [] <=> u == [] && v == []| 
 ==  f [] <.> g []                                             -- singleton sum
-==  atEps f <.> atEps g                               -- |atEps| definition
+==  atEps f <.> atEps g                                       -- |atEps| definition
 \end{code}
+
 \begin{code}
     atEps (star p)
 ==  atEps (one <+> p <.> star p)        -- defining property of |star|
@@ -1657,35 +1664,39 @@ For the other two equations:
 ==  one <+> atEps p <.> star (atEps p)  -- \note{coinduction?}
 ==  star (atEps p)                      -- defining property of |star|
 \end{code}
+
 \begin{code}
     atEps (s .> f)
-==  atEps (F (\ a -> s * f a))  -- |(.>)| on |b <-- a|
-==  (\ a -> s * f a) []         -- |atEps| definition
-==  s * f []                    -- $\beta$ reduction
+==  atEps (\ a -> s * f a)  -- |(.>)| on functions
+==  (\ a -> s * f a) []     -- |atEps| definition
+==  s * f []                -- $\beta$ reduction
 ==  s * atEps f             -- |atEps| definition
 \end{code}
+
 %if False
 \begin{code}
     atEps (w +-> b)
-==  atEps (F (\ w' -> if w' == w then b else zero))  -- |(+->)| on |[c] -> b|
-==  (\ w' -> if w' == w then b else zero) []         -- |atEps| definition
-==  if [] == w then b else zero                      -- $\beta$ reduction
-==  if null w then b else zero                       -- |null| definition
+==  atEps (\ w' -> if w' == w then b else zero)  -- |(+->)| on |[c] -> b|
+==  (\ w' -> if w' == w then b else zero) []     -- |atEps| definition
+==  if [] == w then b else zero                  -- $\beta$ reduction
+==  if null w then b else zero                   -- |null| definition
 \end{code}
 %else
+
 \begin{code}
     atEps ([] +-> b)
-==  atEps (F (\ w -> if w == [] then b else zero))      -- |(+->)| on |[c] -> b|
-==  (\ w -> if w == [] then b else zero) []             -- |atEps| definition
-==  if [] == [] then b else zero                        -- $\beta$ reduction
-==  b                                                   -- |if True|
-
+==  atEps (\ w -> if w == [] then b else zero)      -- |(+->)| on |[c] -> b|
+==  (\ w -> if w == [] then b else zero) []         -- |atEps| definition
+==  if [] == [] then b else zero                    -- $\beta$ reduction
+==  b                                               -- |if True|
+    
     atEps (c':cs' +-> b)
-==  atEps (F (\ w -> if w == c':cs' then b else zero))  -- |(+->)| on |[c] -> b|
-==  (\ w -> if w == c':cs' then b else zero) []         -- |atEps| definition
-==  if [] == c':cs' then b else zero                    -- $\beta$ reduction
-==  zero                                                -- |if False|
+==  atEps (\ w -> if w == c':cs' then b else zero)  -- |(+->)| on |[c] -> b|
+==  (\ w -> if w == c':cs' then b else zero) []     -- |atEps| definition
+==  if [] == c':cs' then b else zero                -- $\beta$ reduction
+==  zero                                            -- |if False|
 \end{code}
+
 %endif
 
 \note{For the |star p| proof, maybe instead show inductively that |atEps (pow p n) == pow (atEps p) n| for all |n >= 0|, and then appeal to the summation definition of |star p|.}
@@ -1694,36 +1705,38 @@ For the other two equations:
 
 \begin{code}
     deriv zero
-==  deriv (F (\ w -> zero))                  -- |zero| on |b <-- a|
-==  \ c -> F (\ cs -> (\ w -> zero) (c:cs))  -- |deriv| on |b <-- a|
-==  \ c -> F (\ cs -> zero)                  -- $\beta$ reduction
-==  \ c -> zero                              -- |zero| on |b <-- a|
-==  zero                                     -- |zero| on |a -> b|
+==  deriv (\ w -> zero)                  -- |zero| on functions
+==  \ c -> \ cs -> (\ w -> zero) (c:cs)  -- |deriv| on functions
+==  \ c -> \ cs -> zero                  -- $\beta$ reduction
+==  \ c -> zero                          -- |zero| on functions
+==  zero                                 -- |zero| on |a -> b|
 \end{code}
 \vspace{-3ex}
+
 \begin{code}
     deriv one
-==  deriv (single mempty)                   -- |one| on |b <-- a|
-==  deriv (F (equal mempty))                -- |single| on |b <-- a|
-==  \ c -> F (\ cs -> equal mempty (c:cs))  -- |deriv| on |b <-- a|
-==  \ c -> F (\ cs -> zero)                 -- |c:cs /= mempty|
-==  \ c -> zero                             -- |zero| on |b <-- a|
-==  zero                                    -- |zero| on |a -> b|
+==  deriv (single mempty)                -- |one| on functions
+==  \ c -> \ cs -> single mempty (c:cs)  -- |deriv| on functions
+==  \ c -> \ cs -> zero                  -- |c:cs /= mempty|
+==  \ c -> zero                          -- |zero| on functions
+==  zero                                 -- |zero| on |a -> b|
 \end{code}
 \vspace{-3ex}
+
 \begin{code}
     deriv (f <+> g)
-==  deriv (F (\ w -> f w <+> g w))                        -- |(<+>)| on |b <-- a|
-==  \ c -> F (\ cs -> (\ w -> f w <+> g w) (c:cs))        -- |deriv| on |b <-- a|
-==  \ c -> F (\ cs -> f (c:cs) <+> g (c:cs))              -- $\beta$ reduction
-==  \ c -> F (\ cs -> f (c:cs)) <+> F (\ cs -> g (c:cs))  -- |(<+>)| on |b <-- a|
-==  \ c -> deriv f c <+> deriv g c                -- |deriv| on |b <-- a|
-==  deriv f <+> deriv g                           -- |(<+>)| on |a -> b|
+==  deriv (\ w -> f w <+> g w)                        -- |(<+>)| on functions
+==  \ c -> \ cs -> (\ w -> f w <+> g w) (c:cs)        -- |deriv| on functions
+==  \ c -> \ cs -> f (c:cs) <+> g (c:cs)              -- $\beta$ reduction
+==  \ c -> (\ cs -> f (c:cs)) <+> (\ cs -> g (c:cs))  -- |(<+>)| on functions
+==  \ c -> deriv f c <+> deriv g c                    -- |deriv| on functions
+==  deriv f <+> deriv g                               -- |(<+>)| on |a -> b|
 \end{code}
+
 %format bigSumA (lim) = "\bigOp\sum{" lim "}{1}"
 \begin{code}
     deriv (f <.> g)
-==  deriv (bigSum (u,v) u <> v +-> f u <.> g v)                                                                             -- |(<.>)| on |b <-- a|
+==  deriv (bigSum (u,v) u <> v +-> f u <.> g v)                                                                             -- |(<.>)| on functions
 ==  deriv (bigSum v (mempty <> v +-> f mempty <.> g v) <+> bigSumQ (c',u',v) ((c':u') <> v +-> f (c':u') <.> g v))          -- empty vs nonempty |u|
 ==  deriv (bigSum v (mempty <> v +-> f mempty <.> g v)) <+> deriv (bigSumA (c',u',v) ((c':u') <> v +-> f (c':u') <.> g v))  -- additivity of |deriv| (above)
 \end{code}
@@ -1734,9 +1747,9 @@ First addend:
 ==  deriv (f mempty .> bigSum v (v +-> g v))           -- distributivity (semiring law)
 ==  \ c -> deriv (f mempty .> bigSum v (v +-> g v)) c  -- $\eta$ expansion
 ==  \ c -> f mempty .> deriv (bigSum v v +-> g v) c    -- additivity of |deriv| (above)
-==  \ c -> f mempty .> deriv g c                   -- \lemref{decomp +->}
-==  \ c -> atEps f .> deriv g                  -- |atEps| on |b <-- a|
-==  fmap (atEps f NOP .>) (deriv g c)          -- |fmap| on functions
+==  \ c -> f mempty .> deriv g c                       -- \lemref{decomp +->}
+==  \ c -> atEps f .> deriv g                          -- |atEps| on functions
+==  fmap (atEps f NOP .>) (deriv g c)                  -- |fmap| on functions
 \end{code}
 Second addend:
 \begin{code}
@@ -1745,9 +1758,9 @@ Second addend:
 ==  bigSumA (c',u',v) deriv (c' : (u' <> v) +-> f (c':u') <.> g v)  -- |(<>)| on lists
 ==  \ c -> bigSum (u',v) u' <> v +-> f (c:u') <.> g v               -- \lemref{deriv +->} below
 ==  \ c -> bigSum (u',v) u' <> v +-> (\ cs -> f (c:cs)) u' <.> g v  -- $\beta$ expansion
-==  \ c -> F (\ cs -> f (c:cs)) <.> g                             -- |(<.>)| on |b <-- a|
-==  \ c -> deriv f c <.> g                                    -- |deriv| on |b <-- a|
-==  fmap (<.> g) (deriv f)                                    -- |fmap| on functions
+==  \ c -> \ cs -> f (c:cs) <.> g                                   -- |(<.>)| on functions
+==  \ c -> deriv f c <.> g                                          -- |deriv| on functions
+==  fmap (<.> g) (deriv f)                                          -- |fmap| on functions
 \end{code}
 Combining addends,
 \begin{code}
@@ -1767,31 +1780,31 @@ Continuing with the other equations in \lemref{deriv [c] -> b},
 
 \begin{code}
     deriv (s .> f)
-==  deriv (F (\ w -> s * f w))                  -- |(.>)| on |b <-- a|
-==  \ c -> F (\ cs -> (\ w -> s * f w) (c:cs))  -- |deriv| definition
-==  \ c -> F (\ cs -> s * f (c:cs))             -- $\beta$ reduction
-==  \ c -> s .> F (\ cs -> f (c:cs))            -- |(.>)| on |b <-- a|
+==  deriv (\ w -> s * f w)                  -- |(.>)| on functions
+==  \ c -> \ cs -> (\ w -> s * f w) (c:cs)  -- |deriv| definition
+==  \ c -> \ cs -> s * f (c:cs)             -- $\beta$ reduction
+==  \ c -> s .> (\ cs -> f (c:cs))          -- |(.>)| on functions
 ==  \ c -> s .> deriv f c                   -- |deriv| definition
 ==  fmap (s NOP .>) (deriv f)               -- |fmap| on functions
 \end{code}
 
 \begin{code}
     deriv ([] +-> b) c
-==  deriv (F (\ w -> if w == [] then b else zero))           -- |(+->)| on |b <-- a|
-==  F (\ cs -> (\ w -> if w == [] then b else zero) (c:cs))  -- |deriv| definition
-==  F (\ cs -> if c:cs == [] then b else zero)               -- $\beta$ reduction
-==  F (\ cs -> zero)                                         -- |c:cs /= []|
-==  zero                                                     -- |zero| on |b <-- a|
+==  deriv (\ w -> if w == [] then b else zero)           -- |(+->)| on functions
+==  \ cs -> (\ w -> if w == [] then b else zero) (c:cs)  -- |deriv| definition
+==  \ cs -> if c:cs == [] then b else zero               -- $\beta$ reduction
+==  \ cs -> zero                                         -- |c:cs /= []|
+==  zero                                                 -- |zero| on functions
 
     deriv (c':cs' +-> b)
-==  deriv (F (\ w -> if w == c':cs' then b else zero))                            -- |(+->)| on |b <-- a|
-==  \ c -> F (\ cs -> (\ w -> if w == c':cs' then b else zero) (c:cs))            -- |(+->)| on |b <-- a|
-==  \ c -> F (\ cs -> if c:cs == c':cs' then b else zero)                         -- $\beta$ reduction
-==  \ c -> F (\ cs -> if c == c' && cs == cs' then b else zero)                   -- |(:)| injectivity
-==  \ c -> F (\ cs -> if c == c' then (if cs == cs' then b else zero) else zero)  -- property of |if| and |(&&)|
-==  \ c -> if c == c' then (F (\ cs -> if cs == cs' then b else zero) else zero)  -- property of |if|
-==  \ c -> if c == c' then cs' +-> b else zero                                    -- |(+->)| on |b <-- a|
-==  c' +-> cs' +-> b                                                              -- |(+->)| on |s -> t|
+==  deriv (\ w -> if w == c':cs' then b else zero)                            -- |(+->)| on functions
+==  \ c -> \ cs -> (\ w -> if w == c':cs' then b else zero) (c:cs)            -- |(+->)| on functions
+==  \ c -> \ cs -> if c:cs == c':cs' then b else zero                         -- $\beta$ reduction
+==  \ c -> \ cs -> if c == c' && cs == cs' then b else zero                   -- |(:)| injectivity
+==  \ c -> \ cs -> if c == c' then (if cs == cs' then b else zero) else zero  -- property of |if| and |(&&)|
+==  \ c -> if c == c' then (\ cs -> if cs == cs' then b else zero else zero)  -- property of |if|
+==  \ c -> if c == c' then cs' +-> b else zero                                -- |(+->)| on functions
+==  c' +-> cs' +-> b                                                          -- |(+->)| on |s -> t|
 
 \end{code}
 
@@ -1807,20 +1820,20 @@ deriv (c' : w +-> b) c == if c' == c then w +-> b else zero
 \begin{code}
     deriv (mempty +-> b) c
 ==  deriv (F (\ w -> if w == mempty then b else zero)) c         -- |(+->)| defining
-==  F (\ cs -> (\ w -> if w == mempty then b else zero) (c:cs))  -- |deriv| on |b <-- a|
+==  F (\ cs -> (\ w -> if w == mempty then b else zero) (c:cs))  -- |deriv| on functions
 ==  F (\ cs -> if c:cs == mempty then b else zero)               -- $\beta$ reduction
 ==  F (\ cs -> if False then b else zero)                        -- |c:cs /== mempty|
 ==  F (\ cs -> zero)                                             -- |if-then-else| definition
-==  zero                                                         -- |zero| on |b <-- a|
+==  zero                                                         -- |zero| on functions
 \end{code}
 \begin{code}
     deriv (c' : w +-> b) c
 ==  deriv (F (\ a -> if a == c':w then b else zero)) c               -- |(+->)| definition
-==  F (\ cs -> (\ a -> if a == c':w then b else zero) (c:cs))        -- |deriv| on |b <-- a|
+==  F (\ cs -> (\ a -> if a == c':w then b else zero) (c:cs))        -- |deriv| on functions
 ==  F (\ cs -> if c:cs == c':w then b else zero)                     -- $\beta$ reduction
 ==  F (\ cs -> if c==c' && cs == w then b else zero)                 -- injectivity of |(:)|
 ==  if c==c' then F (\ cs -> if cs == w then b else zero) else zero  -- property of |if-then-else|
-==  if c==c' then w +-> b else zero                                  -- |(+->)| on |b <-- a|
+==  if c==c' then w +-> b else zero                                  -- |(+->)| on functions
 \end{code}
 \end{proof}
 \vspace{-2ex}
@@ -1954,28 +1967,28 @@ Substitute into \lemreftwo{atEps [c] -> b}{deriv [c] -> b}, and simplify, using 
 
 \begin{code}
     deriv zero
-==  deriv (F (\ i -> zero))        -- |zero| on |b <-- a|
+==  deriv (F (\ i -> zero))        -- |zero| on functions
 ==  F ((\ i -> zero) . (+ NOP 1))  -- |deriv| definition
 ==  F (\ i -> zero)                -- $\beta$ reduction
-==  zero                           -- |zero| on |b <-- a|
+==  zero                           -- |zero| on functions
 \end{code}
 \begin{code}
     deriv one
-==  deriv (F (\ i -> if i == 0 then one else zero))   -- |one| on |b <-- a|
+==  deriv (F (\ i -> if i == 0 then one else zero))   -- |one| on functions
 ==  F (\ i -> if i+1 == 0 then one else zero)         -- |deriv| definition
 ==  F (\ i -> zero)                                   -- |i+1 /= 0|
-==  zero                                              -- |zero| on |b <-- a|
+==  zero                                              -- |zero| on functions
 \end{code}
 \begin{code}
     deriv (f <+> g)
-==  deriv (F (\ i -> f i <+> g i))             -- |(<+>)| on |b <-- a|
+==  deriv (F (\ i -> f i <+> g i))             -- |(<+>)| on functions
 ==  F (\ i -> f (i+1) <+> g (i+1))             -- |deriv| definition; $\beta$ reduction
-==  F (\ i -> f (i+1)) <+> F (\ i -> g (i+1))  -- |(<+>)| on |b <-- a|
+==  F (\ i -> f (i+1)) <+> F (\ i -> g (i+1))  -- |(<+>)| on functions
 ==  deriv f <+> deriv g                -- |deriv| definition
 \end{code}
 \begin{code}
     deriv (f <.> g)
-==  deriv (bigSum (u,v)  u + v +-> f u <.> g v)                 -- |(<.>)| on |b <-- a|
+==  deriv (bigSum (u,v)  u + v +-> f u <.> g v)                 -- |(<.>)| on functions
 ==  bigSum (u,v)  deriv (u + v +-> f u <.> g v)                 -- |deriv| additivity (previous property)
 ==  (bigSum v  deriv (0 + v +-> f 0 <.> g v)) <+>
     (bigSum (u',v)  deriv (1 + u' + v +-> f (1 + u') <.> g v))  -- case split |u|
@@ -1991,8 +2004,8 @@ Second addend:
 \begin{code}
     bigSum (u',v)  deriv (1 + u' + v +-> f (1 + u') <.> g v)
 ==  bigSum (u',v)  u' + v +-> f (1 + u') <.> g v                -- \lemref{deriv +-> Nat} below
-==  F (f . (1 NOP +)) <.> g                                   -- |(<.>)| on |b <-- a|
-==  deriv f <.> g                                         -- |deriv| on |b <-- a|
+==  F (f . (1 NOP +)) <.> g                                   -- |(<.>)| on functions
+==  deriv f <.> g                                         -- |deriv| on functions
 \end{code}
 Combining results:
 \begin{code}
@@ -2013,13 +2026,13 @@ Differentiation on |N -> b| satisfies the following properties on singletons:
 ==  deriv (F (\ j -> if j == 0 then b else zero))    -- |(+->)| definition
 ==  F (\ j -> if j+1 == 0 then b else zero)          -- |deriv| on |N -> b|
 ==  F (\ j -> zero)                                  -- |j+1 /= 0| (for |N|)
-==  zero                                             -- |zero| on |b <-- a|
+==  zero                                             -- |zero| on functions
 
     deriv (i+1 +-> b)
 ==  deriv (F (\ j -> if j == i+1 then b else zero))  -- |(+->)| definition   
 ==  F (\ j -> if j+1 == i+1 then b else zero)        -- |deriv| on |N -> b| 
 ==  F (\ j -> if j == i then b else zero)            -- |(+ NOP 1)| is injective
-==  i +-> b                                          -- |zero| on |b <-- a|  
+==  i +-> b                                          -- |zero| on functions  
 \end{code}
 \end{lemma}
 
@@ -2075,7 +2088,7 @@ poly (\ i -> if i == n then b else zero)                  -- |(+->)| definition
 Homomorphism proofs for \thmref{poly fun}:
 \begin{code}
     poly zero
-==  poly (F (\ i -> zero))             -- |zero| on |b <-- a|
+==  poly (F (\ i -> zero))             -- |zero| on functions
 ==  \ x -> bigSum i  zero <.> pow x i  -- |poly| definition
 ==  \ x -> bigSum i  zero              -- |zero| as annihilator
 ==  \ x -> zero                        -- |zero| as additive identity
@@ -2084,7 +2097,7 @@ Homomorphism proofs for \thmref{poly fun}:
 
 \begin{code}
     poly one
-==  poly (F (\ i -> if i == mempty then one else zero))             -- |one| on |b <-- a|
+==  poly (F (\ i -> if i == mempty then one else zero))             -- |one| on functions
 ==  poly (F (\ i -> if i == Sum 0 then one else zero))              -- |mempty| on |N|
 ==  \ x -> bigSum i (if i == Sum 0 then one else zero) <.> pow x i  -- |poly| definition
 ==  \ x -> bigSum i (if i == Sum 0 then pow x i else zero)          -- simplify
@@ -2095,7 +2108,7 @@ Homomorphism proofs for \thmref{poly fun}:
 
 \begin{code}
     poly (f <+> g)
-==  poly (F (\ i -> f i <+> g i))                                       -- |(<+>)| on |b <-- a|
+==  poly (F (\ i -> f i <+> g i))                                       -- |(<+>)| on functions
 ==  \ x -> bigSum i  (f i <+> g i) <.> pow x i                          -- |poly| definition
 ==  \ x -> bigSum i  f i <.> pow x i <+> g i <.> pow x i                -- distributivity
 ==  \ x -> (bigSum i  f i <.> pow x i) <+> (bigSum i  g i <.> pow x i)  -- summation property
@@ -2105,7 +2118,7 @@ Homomorphism proofs for \thmref{poly fun}:
 
 \begin{code}
     poly (f <.> g)
-==  poly (bigSum (i,j)  i + j +-> f i <.> g j)                          -- |(<.>)| on |b <-- a|
+==  poly (bigSum (i,j)  i + j +-> f i <.> g j)                          -- |(<.>)| on functions
 ==  bigSum (i,j)  poly (i + j +-> f i <.> g j)                          -- additivity of |poly| (previous property)
 ==  bigSum (i,j) (\ x -> (f i <.> g j) <.> pow x (i + j))               -- \lemref{poly +->}
 ==  \ x -> bigSum (i,j) (f i <.> g j) <.> pow x (i + j)                 -- |(<+>)| on functions

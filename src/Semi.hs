@@ -161,15 +161,26 @@ instance (Ord a, Additive b) => Indexable (Map a) b where
 
 instance (Ord a, Additive b) => HasSingle (Map a) b where (+->) = M.singleton
 
-#if 0
+-- newtype Identity b = Identity b
 
-deriving instance Additive b       => Additive (Identity b)
-deriving instance DetectableZero b => DetectableZero (Identity b)
-deriving instance DetectableOne b  => DetectableOne (Identity b)
-deriving instance LeftSemimodule s b   => LeftSemimodule s (Identity b)
-deriving instance Semiring b       => Semiring (Identity b)
+instance Indexable Identity b where
+  type Key Identity = ()
+  Identity a ! () = a
 
-#endif
+deriving instance Additive b         => Additive (Identity b)
+deriving instance DetectableZero b   => DetectableZero (Identity b)
+deriving instance DetectableOne b    => DetectableOne (Identity b)
+deriving instance LeftSemimodule s b => LeftSemimodule s (Identity b)
+deriving instance Semiring b         => Semiring (Identity b)
+
+-- For the paper:
+
+newtype Id b = Id b deriving 
+ (Additive, DetectableZero, DetectableOne, LeftSemimodule s, Semiring)
+
+instance Indexable Id b where
+  type Key Id = ()
+  Id a ! () = a
 
 {--------------------------------------------------------------------
     Sum and product monoids

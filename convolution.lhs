@@ -1607,18 +1607,17 @@ Thus, for \emph{all} |w :: [c]|, |f w == (atEps f <: deriv f) w|, from which the
 For the other two equations:
 \begin{code}
     atEps (b <: h)
-==  atEps (F (\ NOP case {NOP [] -> b NOP ; NOP c:cs -> h c cs NOP}))                  -- |(<:)| definition
-==  (\ NOP case {NOP [] -> b NOP ; NOP c:cs -> h c cs NOP}) []                         -- |atEps| definition
-==  b                                                                                  -- semantics of |case|
+==  atEps (\ NOP case {NOP [] -> b NOP ; NOP c:cs -> h c cs NOP})  -- |(<:)| definition
+==  (\ NOP case {NOP [] -> b NOP ; NOP c:cs -> h c cs NOP}) []     -- |atEps| definition
+==  b                                                              -- semantics of |case|
 \end{code}
+\vspace{-4ex}
 \begin{code}
     deriv (b <: h)
-==  deriv (F (\ NOP case {NOP [] -> b NOP ; NOP c:cs -> h c cs NOP}))                  -- |(<:)| definition
-==  \ c -> F (\ cs -> (\ NOP case {NOP [] -> b NOP ; NOP c:cs -> h c cs NOP}) (c:cs))  -- |deriv| definition
-==  \ c -> F (\ cs -> unF (h c) cs)                                                    -- semantics of |case|
-==  \ c -> F (unF (h c))                                                               -- $\eta$ reduction
-==  \ c -> h c                                                                         -- |F . unF == id|
-==  h                                                                                  -- $\eta$ reduction
+==  deriv (\ NOP case {NOP [] -> b NOP ; NOP c:cs -> h c cs NOP})                  -- |(<:)| definition
+==  \ c -> \ cs -> (\ NOP case {NOP [] -> b NOP ; NOP c:cs -> h c cs NOP}) (c:cs)  -- |deriv| definition
+==  \ c -> \ cs -> h c cs                                                          -- semantics of |case|
+==  h                                                                              -- $\eta$ reduction (twice)
 \end{code}
 \end{proof}
 

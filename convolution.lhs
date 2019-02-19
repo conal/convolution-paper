@@ -512,12 +512,17 @@ The proof closely resembles that of \lemref{affine over semiring}, using the lef
 
 Most of the representations used in this paper are functions or are types that behave like functions.
 It will be useful to use a standard vocabulary for the latter.
-An ``indexable'' functor |h| is such that |h b| represent |a -> b| for a some type |a| of ``keys'' and for any additive monoid |b|.
+An ``indexable'' functor |h| is such that |h b| represent |a -> b| for a some type |a| of ``keys''.
+We'll need to restrict |b| in some cases.
 \begin{code}
-class Indexable h where
+class Functor h => Indexable h b where
   type Key h
-  infixl 9 NOP !
-  (!) :: Additive b => h b -> Key h -> b
+  infixl 9 !
+  (!) :: h b -> Key h -> b
+
+instance Indexable ((->) a) b where
+  type Key ((->) a) = a
+  f ! k = f k
 \end{code}
 The |Additive b| constraint here allows |(!)| definitions to fill in zero for missing keys.
 \notefoot{Perhaps describe alternatives: (a) one method that returns |Maybe b| (as in |Lookup| from |Data.Key|) and an |Additive|-dependent method that substitutes zero for |Nothing|, or (b) adding |b| as a parameter to |Indexable| and |HasSingle|. The latter strategy led to many required constraints.}
@@ -526,24 +531,22 @@ The |Additive b| constraint here allows |(!)| definitions to fill in zero for mi
 We'll also want an operation that constructs a ``vector'' (e.g., language or function) with a single non-zero component:
 %format +-> = "\mapsto"
 \begin{code}
-class Indexable h => HasSingle h where
+class Indexable h b => HasSingle h b where
   infixr 2 +->
-  (+->) :: Additive b => Key h -> b -> h b
+  (+->) :: Key h -> b -> h b
+
+instance (Eq a, Additive b) => HasSingle ((->) a) b where
+  a +-> b = \ a' -> if a == a' then b else zero
 \end{code}
 Two specializations of |a +-> b| will come in handy: one for |a = mempty|, and one for |b = one|.
 \begin{code}
-single :: (HasSingle a b x, Semiring b) => a -> x
+single :: (HasSingle h b, Semiring b) => Key h -> h b
 single a = a +-> one
 
-value :: (HasSingle a b x, Monoid a) => b -> x
+value :: (HasSingle h b, Monoid (Key h)) => b -> h b
 value b = mempty +-> b
 \end{code}
 In particular, |mempty +-> one == single mempty == value one|.
-As a first example, we have functions:
-\begin{code}
-instance Eq a => HasSingle ((->) a) where
-  a +-> b = \ a' -> if a == a' then b else zero
-\end{code}
 
 \noindent
 The |(+->)| operation gives a way to decompose arbitrary functions:
@@ -762,11 +765,11 @@ Conversely, merging two finite maps can yield a key collision, which can be reso
 Both interpretations require |b| to be an additive monoid.
 Given the definitions in \figrefdef{Map}{Finite maps}{
 \begin{code}
-instance Ord a => Indexable (Map a) where
+instance (Ord a, Additive b) => Indexable (Map a) b where
   type Key (Map a) = a
   m ! a = M.findWithDefault zero a m
 
-instance Ord a => HasSingle (Map a) where (+->) = M.singleton
+instance (Ord a, Additive b) => HasSingle (Map a) b where (+->) = M.singleton
 
 instance (Ord a, Additive b) => Additive (Map a b) where
   zero = M.empty
@@ -898,6 +901,7 @@ atEps (c  :  cs  +-> b) == zero
 \begin{lemma}[\provedIn{lemma:deriv [c] -> b}, generalizing Lemma 3.1 of \citet{Brzozowski64}]\lemlabel{deriv [c] -> b}
 Differentiation has the following properties:
 \notefoot{If I replace application to |c| by indexing by |c| (i.e., |(! NOP c)|), will this lemma hold for all of the representations? I suspect so. Idea: Define $\derivOp_c\,p = \derivOp\,p\:!\:c$.}
+\notefoot{I may rewrite the |(*)|, |star|, and |(.>)| cases in terms of functors instead of functions for use in \figref{RegExp}.}
 \begin{spacing}{1.4}
 \begin{code}
 deriv zero  == zero
@@ -933,71 +937,104 @@ w +-> b = foldr (\ c t -> zero <: c +-> t) (b <: zero) w
 \sectionl{Regular Expressions}
 
 \lemreftwo{atEps [c] -> b}{deriv [c] -> b} generalize and were inspired by a technique of \citet{Brzozowski64} for recognizing regular languages.
-\figrefdef{RegExpFun}{Semiring-generalized regular expressions}{
+\figrefdef{RegExp}{Semiring-generalized regular expressions}{
 %format :<+> = "\mathbin{:\!\!+}"
 %format :<.> = "\mathbin{:\!\!\conv}"
 \begin{code}
-infixl 6                  :<+>
-infixl 7                  :<.>
+data RegExp h b           =  Char (Key h)
+                          |  Value b
+                          |  RegExp h b  :<+>  RegExp h b
+                          |  RegExp h b  :<.>  RegExp h b
+                          |  Star (RegExp h b)
 
-data RegExp c s             =  Char c
-                            |  Value s
-                            |  RegExp c s  :<+>  RegExp c s
-                            |  RegExp c s  :<.>  RegExp c s
-                            |  Star (RegExp c s)
-
-instance Additive b => Additive (RegExp c b) where
+instance (Additive b) => Additive (RegExp h b) where
   zero  = Value zero
   (<+>) = (:<+>)
 
-instance Semiring b => LeftSemimodule b (RegExp c b) where
+instance Semiring b => LeftSemimodule b (RegExp h b) where
   b `scale` e = Value b <.> e
 
-instance Semiring b => Semiring (RegExp c b) where
+instance Semiring b => Semiring (RegExp h b) where
   one   = Value one
   (<.>) = (:<.>)
 
-instance Semiring b => StarSemiring (RegExp c b) where
-  star e = Star e
+instance Semiring b => StarSemiring (RegExp h b) where
+  star = Star
 
-instance (DetectableZero b, Semiring b) => HasSingle [c] b (RegExp c b) where
+instance (StarSemiring b, DetectableZero b, Eq (Key h)) => Indexable (RegExp h) b where
+  type Key (RegExp h) = [Key h]
+  e ! w = atEps (foldl deriv e w)
+
+instance (StarSemiring b, DetectableZero b, Eq (Key h)) => HasSingle (RegExp h) b where
   w +-> b = b .> product (map Char w)
 
-atEps :: StarSemiring b => RegExp c b -> b
-atEps (Char _)        = zero
-atEps (Value b)       = b
-atEps (p   :<+>  q)   = atEps p    <+>  atEps q
-atEps (p   :<.>  q)   = atEps p    <.>  atEps q
-atEps (Star p)        = star (atEps p)
+atEps :: StarSemiring b => RegExp h b -> b
+atEps (Char _)       = zero
+atEps (Value b)      = b
+atEps (p  :<+>  q)   = atEps p <+> atEps q
+atEps (p  :<.>  q)   = atEps p <.> atEps q
+atEps (Star p)       = star (atEps p)
 
-deriv :: (StarSemiring b, DetectableZero b, Eq c) => RegExp c b -> c -> RegExp c b
-deriv (Char c)       = single c
-deriv (Value _)      = zero
-deriv (p  :<+>  q)   = deriv p <+> deriv q
-deriv (p  :<.>  q)   = \ c -> atEps p .> deriv q c <+> deriv p c <.> q
-deriv (Star p)       = \ c -> star (atEps p) .> deriv p c <.> star p
+deriv :: (StarSemiring b, DetectableZero b, Eq (Key h)) => RegExp h b -> Key h -> RegExp h b
+deriv  (Char c)       = single c
+deriv  (Value _)      = zero
+deriv  (p  :<+>  q)   = deriv p <+> deriv q
+deriv  (p  :<.>  q)   = \ c -> atEps p .> deriv q c <+> deriv p c <.> q
+deriv  (Star p)       = \ c -> star (atEps p) .> deriv p c <.> star p
 
-instance (StarSemiring b, Ord c, DetectableZero b) => Indexable [c] b (RegExp c b) where
-  e ! w = atEps (foldl deriv e w)
 \end{code}
 \vspace{-4ex}
 } generalizes regular expressions in the same way that |a -> b| generalizes |Pow a|, to yield a value of type |b| (a star semiring).
 The constructor |Value b| generalizes |zero| and |one| to yield a semiring value.
-\begin{theorem}\thmlabel{RegExpFun}
-Given the definitions in \figref{RegExpFun}, |regexp| and |(!)| are homomorphisms with respect to each instantiated class.
+\begin{theorem}\thmlabel{RegExp}
+Given the definitions in \figref{RegExp}, |regexp| and |(!)| are homomorphisms with respect to each instantiated class.
+\note{I'll have to add some conditions on |h|}
 \end{theorem}
 
-Note that the definition of |e ! w| in \figref{RegExpFun} is exactly |atEps (derivs e w)|, which performs repeated syntactic transformation with respect to successive characters in |w|, successively performing syntactic differentiation, with |atEps| applied to the final resulting regular expression.
+Note that the definition of |e ! w| in \figref{RegExp} is exactly |atEps (derivs e w)|, which performs repeated syntactic transformation with respect to successive characters in |w|, successively performing syntactic differentiation, with |atEps| applied to the final resulting regular expression.
+
+\workingHere
+
+\note{Improve performance by memoizing. Easily done, by having |deriv| generate |h (RegExp h b)| instead of |Key h -> RegExp h b|.}
+
+\begin{code}
+
+type FR h b = (Functor h, Additive (h (RegExp h b)), HasSingle h (RegExp h b))
+
+instance (FR h b, StarSemiring b, DetectableZero b, Eq (Key h)) => Indexable (RegExp h) b where
+  type Key (RegExp h) = [Key h]
+  e ! w = atEps (foldl ((!) . deriv) e w)
+
+instance (FR h b, Indexable h (RegExp h b), StarSemiring b, DetectableZero b, Eq (Key h)) => HasSingle (RegExp h) b where
+  w +-> b = b .> product (map Char w)
+
+atEps :: StarSemiring b => RegExp h b -> b
+atEps (Char _)      = zero
+atEps (Value b)     = b
+atEps (p  :<+>  q)  = atEps p  <+>  atEps q
+atEps (p  :<.>  q)  = atEps p  <.>  atEps q
+atEps (Star p)      = star (atEps p)
+
+deriv :: (FR h b, StarSemiring b, DetectableZero b, Eq (Key h)) => RegExp h b -> h (RegExp h b)
+deriv  (Char c)       = single c
+deriv  (Value _)      = zero
+deriv  (p  :<+>  q)   = deriv p <+> deriv q
+deriv  (p  :<.>  q)   = fmap (atEps p .>) (deriv q) <+> fmap (<.> q) (deriv p)
+deriv  (Star p)       = fmap (\ d -> star (atEps p) .> d <.> Star p) (deriv p)
+
+\end{code}
+
 Alternatively, we can re-interpret the original (syntactic) regular expression in another semiring as follows:
 \begin{code}
-regexp :: (StarSemiring x, LeftSemimodule b x, HasSingle [c] b x, Semiring b) => RegExp c b -> x
-regexp (Char c)         = single [c]
-regexp (Value b)        = value b
-regexp (u   :<+>  v)    = regexp u  <+>  regexp v
-regexp (u   :<.>  v)    = regexp u  <.>  regexp v
-regexp (Star u)         = star (regexp u)
+regexp :: (StarSemiring (f b), HasSingle f b, Semiring b, Key f ~ [Key h]) => RegExp h b -> f b
+regexp (Char c)      = single [c]
+regexp (Value b)     = value b
+regexp (u  :<+>  v)  = regexp u  <+>  regexp v
+regexp (u  :<.>  v)  = regexp u  <.>  regexp v
+regexp (Star u)      = star (regexp u)
 \end{code}
 Next, we will see one such semiring that eliminates the syntactic overhead of repeatedly transforming regular expressions.
+
 
 
 \sectionl{Tries}

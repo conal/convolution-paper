@@ -91,7 +91,8 @@ instance (FR h b, StarSemiring b, DetectableZero b, Eq (Key h)) => Indexable (Re
   type Key (RegExp h) = [Key h]
   e ! w = atEps (foldl ((!) . deriv) e w)
 
-instance (FR h b, Indexable h (RegExp h b), StarSemiring b, DetectableZero b, Eq (Key h)) => HasSingle (RegExp h) b where
+instance (FR h b, StarSemiring b, DetectableZero b, Eq (Key h))
+      => HasSingle (RegExp h) b where
   w +-> b = b .> product (map Char w)
 
 atEps :: StarSemiring b => RegExp h b -> b
@@ -101,14 +102,13 @@ atEps (p :<+> q) = atEps p <+> atEps q
 atEps (p :<.> q) = atEps p <.> atEps q
 atEps (Star p)   = star (atEps p)
 
-deriv :: (FR h b, StarSemiring b, DetectableZero b, Eq (Key h)) => RegExp h b -> h (RegExp h b)
+deriv :: (FR h b, StarSemiring b, DetectableZero b, Eq (Key h))
+      => RegExp h b -> h (RegExp h b)
 deriv (Char c)   = single c
 deriv (Value _)  = zero
 deriv (p :<+> q) = deriv p <+> deriv q
-deriv (p :<.> q) = -- \ c -> atEps p .> deriv q c <+> deriv p c <.> q
-                   fmap (atEps p .>) (deriv q) <+> fmap (<.> q) (deriv p)
-deriv (Star p)   = -- \ c -> star (atEps p) .> deriv p c <.> star p
-                   fmap (\ d -> star (atEps p) .> d <.> Star p) (deriv p)
+deriv (p :<.> q) = fmap (atEps p .>) (deriv q) <+> fmap (<.> q) (deriv p)
+deriv (Star p)   = fmap (\ d -> star (atEps p) .> d <.> Star p) (deriv p)
 
 -- | Interpret a regular expression
 regexp :: (StarSemiring (f b), HasSingle f b, Semiring b, Key f ~ [Key h])

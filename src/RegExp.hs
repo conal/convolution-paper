@@ -85,7 +85,7 @@ instance (D0 b, D1 b, Semiring b) => Semiring (RegExp h b) where
 instance (D0 b, D1 b, Semiring b) => StarSemiring (RegExp h b) where
   star = Star
 
-type FR h b = (Functor h, Additive1 h, HasSingle h (RegExp h b))
+type FR h b = (Functor h, Additive (h (RegExp h b)), HasSingle h (RegExp h b))
 
 instance (FR h b, StarSemiring b, DetectableZero b, Eq (Key h)) => Indexable (RegExp h) b where
   type Key (RegExp h) = [Key h]

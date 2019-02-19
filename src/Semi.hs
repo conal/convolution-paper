@@ -92,14 +92,14 @@ class Indexable h b => HasSingle h b where
   infixr 2 +->
   (+->) :: Key h -> b -> h b
 
+instance (Eq a, Additive b) => HasSingle ((->) a) b where
+  a +-> b = \ a' -> if a == a' then b else zero
+
 single :: (HasSingle h b, Semiring b) => Key h -> h b
 single a = a +-> one
 
 value :: (HasSingle h b, Monoid (Key h)) => b -> h b
 value b = mempty +-> b
-
-instance (Eq a, Additive b) => HasSingle ((->) a) b where
-  a +-> b = \ a' -> if a == a' then b else zero
 
 -- instance HasSingle a Bool [a] where
 --   a +-> b = if b then [a] else []
@@ -138,9 +138,6 @@ ApplSemi((->) a)
 ApplMono([])
 -- ApplMono(Set)
 -- etc
-
--- infixr 0 ->*
--- type (->*) = Map
 
 instance (Ord a, Additive b) => Additive (Map a b) where
   zero = M.empty

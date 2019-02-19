@@ -721,6 +721,7 @@ instance StarSemiring (Pow a) -- use default |star| definition (\secref{Star Sem
 %% I'm postponing introduction of <--. For now, flag uses visibly.
 %format <-- = "\note{\underset{\scriptscriptstyle \text{oops}}{\leftarrow}}"
 %format F = "\note{\Varid{F}}"
+%format L = "\note{\Varid{L}}"
 \noindent
 These new instances indeed satisfy the laws for additive monoids, semimodules, semirings, and star semirings.
 They seem to spring from nothing, however, which is a bit disappointing compared with the way the |Additive| and |LeftSemimodule| instances for sets follow inevitably from the requirement that |setPred| be a homomorphism for those classes (\secref{Calculating Instances from Homomorphisms}).
@@ -740,8 +741,8 @@ instance (Semiring b, Monoid a)  => StarSemiring (a -> b)  -- default |star|
 }.
 With this instance, |a -> b| type is known as ``the monoid semiring'', and its |(*)| operation as ``convolution'' \citep{golan2013semirings,wilding2015linear}.
 
-\begin{theorem}[\provedIn{theorem:Semiring (b <-- a)}]\thmlabel{Semiring (b <-- a)}
-Given the instances for |a -> b| above, |setPred| is a homomorphism with respect to each instantiated class.
+\begin{theorem}[\provedIn{theorem:semiring hom ->}]\thmlabel{semiring hom ->}
+Given the instance definitions in \figref{monoid semiring}, |setPred| is a star semiring homomorphism.
 \end{theorem}
 
 %% %format splits = split
@@ -1543,71 +1544,34 @@ For |f, g :: u :* v -> b|,
 ==  a +-> b +-> c                                                        -- |(+->)| on functions
 \end{code}
 
-\subsection{\thmref{Semiring (b <-- a)}}\prooflabel{theorem:Semiring (b <-- a)}
+\subsection{\thmref{semiring hom ->}}\prooflabel{theorem:semiring hom ->}
 
-There are three parts to the homomorphism requirements (\defreftwo{star semiring homomorphism}{left semimodule homomorphism}):
-\begin{enumerate}
-
-\item From |Additive|, |LeftSemimodule|, and |HasSingle|:
 \begin{code}
-recogLang zero == zero
-recogLang (p + q) == recogLang p + recogLang q
-
-recogLang (s .> p) == s .> recogLang p
-
-recogLang (a +-> b) == a +-> b
-\end{code}
-These three equations hold due to the |deriving| clause in the |Language| definition above.
-For instance,
-\begin{code}
-    recogLang (f + g)
-==  recogLang (F (f + g))              -- |(+)| on |b <-- a| (derived)
-==  L (predSet (f + g))                -- |recogLang| definition
-==  L (predSet f + predSet g)          -- |predSet| is an |Additive| homomorphism
-==  L (predSet f) + L (predSet g)      -- |(+)| on |Language a| (derived)
-==  recogLang f + recogLang g  -- |recogLang| definition
+    setPred one
+==  setPred (set mempty)                        -- |one| on sets
+==  \ w -> w <# set mempty                      -- |setPred| definition
+==  \ w -> w == mempty                          -- property of sets
+==  \ w -> if w == mempty then True else False  -- property of |if|
+==  \ w -> if w == mempty then one else zero    -- |one| and |zero| on |Bool|
+==  mempty +-> one                              -- |(+->)| definition
+==  one                                         -- |one| on functions
 \end{code}
 
-\item From |Semiring|:
+
 \begin{code}
-recogLang one == one
-recogLang (p * q) = recogLang p * recogLang q
-\end{code}
-Equivalently, applying |langRecog| to both sides and replacing |p| and |q| by |f| and |g|,
-\begin{code}
-one == langRecog one
-f * g == langRecog (recogLang f * recogLang g)
-\end{code}
-Simplify, and generalize the domain |b| from |Bool| to an arbitrary semiring:
-\begin{code}
-    langRecog one
-==  langRecog (L (set mempty))                                       -- |one| on |Language a|
-==  F (setPred (set mempty))                                         -- |langRecog| definition
-==  F (\ w -> w <# set mempty)                                       -- |pred| definition
-==  F (\ w -> w == mempty)                                           -- property of sets
-==  F (mempty +-> one)                                               -- generalize |False|/|True| to |zero|/|one|
-    
-    langRecog (recogLang f * recogLang g)
-==  langRecog (L (predSet f) * L (predSet g))                        -- |recogLang| definition (twice)
-==  langRecog (L (set (u <> v # u <# predSet f && v <# predSet g)))  -- |(*)| on |Language a|
-==  langRecog (L (set (u <> v # f u && g v)))                        -- |predSet| definition (twice)
-==  F (setPred (set (u <> v # f u && g v)))                          -- |langRecog| definition
-==  F (\ w -> w <# set (u <> v # f u && g v))                        -- |setPred| definition
-==  F (\ w -> bigOrQ (u,v BR u <> v == w) f u && g v)                -- property of sets
-==  F (\ w -> bigSumQ (u,v BR u <> v == w) f u * g v)                -- generalize |(||||)|/|(&&)| to |(+)|/|(*)|
-==  F (\ w -> bigSum (u,v) if u <> v == w then f u * g v else zero)  -- summation property
-==  F (bigSum (u,v) u <> v +-> f u * g v)                            -- |(+->)| on |a -> b|
-==  bigSum (u,v) F (u <> v +-> f u * g v)                            -- |(+)| on |b <-- a| (derived)
-==  bigSum (u,v) u <> v +-> f u * g v                                -- |(+->)| on |b <-- a| (derived)
+
+    predSet (setPred p * setPred q)
+==  predSet (\ w -> bigSumQ (u,v BR w == u <> v) setPred p u * setPred q v)  -- |(*)| on functions
+==  predSet (\ w -> bigSumQ (u,v BR w == u <> v) (u <# p) * (v <# q))        -- |setPred| definition (twice)
+==  predSet (\ w -> bigOrQ (u,v BR w == u <> v) u <# p && v <# q)            -- |(+)| and |(*)| on |Bool|
+==  set (w # bigOr (u,v) w == u <> v && u <# p && v <# q)                    -- |predSet| definition
+==  set (u <> v # u <# p && v <# q)                                          -- set notation
+==  p * q                                                                    -- |(*)| on sets
+
 \end{code}
 
-\note{Redo this proof, aiming at the |(+->)| form first, which more closely resembles the set version.
-Then simplify to the lambda/sum form.}
-
-\item For |StarSemiring| the default recursive definition embodies the star semiring law.
+For |StarSemiring| the default recursive definition embodies the star semiring law.
 \note{Hm. Assuming not bottom?}
-
-\end{enumerate}
 
 %% \subsection{\thmref{Map}}\prooflabel{theorem:Map}
 

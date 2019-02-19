@@ -50,7 +50,7 @@ Conal Elliott
 \let\cite=\citep
 
 \title\tit
-\date{Early draft of \today{} \currenttime}
+\date{Draft of \today{} \currenttime}
 
 \setlength{\blanklineskip}{2ex} % blank lines in code environment
 
@@ -295,7 +295,7 @@ h (u + v) == h u + h v
 \end{code}
 \end{definition}
 \noindent
-Curried functions of \emph{any number} of arguments (and additive result type) are additive, thanks to repeated application of this instance.
+Curried function types of \emph{any number} of arguments (and additive result type) are additive, thanks to repeated application of this instance.
 In fact,
 \begin{theorem}[\provedIn{theorem:curry additive}]\thmlabel{curry additive}
 Currying and uncurrying are additive monoid homomorphisms.
@@ -1417,15 +1417,21 @@ The function |poly| is a semiring homomorphism when multiplication on |b| commut
 }
 
 
+\sectionl{The Comonad Connection}
+
+\note{Move relevant remarks here, and expand on them.}
+
+
 \sectionl{Miscellaneous Notes}
 
 \begin{itemize}
+\item From sets to relations via currying or the pair monoid.
 \item |single| as a monoid homomorphism (targeting the product monoid).
 \item
   Homomorphisms:
   \begin{itemize}
   \item
-    Definitions
+    Homomorphisms as specifications
   \item
     Examples:
     \begin{itemize}
@@ -1437,21 +1443,7 @@ The function |poly| is a semiring homomorphism when multiplication on |b| commut
       Multisets to sets (cf natural numbers to booleans)
     \item
       Regular expressions to sets
-    \item
-      Contains |mempty| (|hasEps|)
     \end{itemize}
-  \item
-    Homomorphisms as specifications
-  \end{itemize}
-\item
-  Language ``derivatives'':
-  \begin{itemize}
-  \item
-    I'm unsure where to place this section.
-  \item
-    Briefly present Brzozowski's method (for recognizing regular languages).
-  \item
-    Context-free languages
   \end{itemize}
 \item
   Unsorted:
@@ -1459,27 +1451,13 @@ The function |poly| is a semiring homomorphism when multiplication on |b| commut
   \item
     Relate Brzozowski derivatives to the derivatives of residual functions, as in the notes below.
   \item
-    Currying and convolution.
-    Is currying a (star) semiring homomorphism?
-  \item
-    I think I want to say and demonstrate that Brzozowski's derivatives are not about regular expressions, grammars, or languages, so much as functions from lists and types that can be interpreted as functions from lists and a decomposition principle for such functions.
-    Application of this principle to tries than to regular expressions is more natural and yields a more efficient implementation.
-  \item
     The trie perspective naturally leads to generalizing from lists to arbitrary (regular?) algebraic data types.
     I'm less confident about this generalization claim, since I think we need a suitable monoid.
     I think there's an underlying generic monad that specializes to lists and other algebraic data types, with monadic bind specializing to |mappend|.
     On the other hand, with multiple substitution sites, inverting |mappend| seems tricky.
     Does it give a useful form of constrained or context-sensitive grammars?
-  \item
-    Convolution is a special case of the free semimodule applicative/monad.
-  \item
-    Since |N =~ [()]|, the technique specializes to 1D discrete convolution.
-    We can increase the dimension for the general and special case via currying, which also corresponds to tries over higher-D indices.
   \end{itemize}
 \end{itemize}
-
-\note{I might next consider possibilities for sets as a semiring. One tempting possibility is to use ``nondeterministic'' addition and multiplication, but distributivity fails.
-For instance, |(set 3 + set 5) * {0,...,10}| vs |set 3 * {0,...,10} + set 5 * {0,...,10}|, as the latter has many more values than the former.}
 
 
 \appendix

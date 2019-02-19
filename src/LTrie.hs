@@ -26,7 +26,7 @@ import Examples
 -- TODO: maybe rename LTrie to "Cofree". I'd use Ed's Cofree from the "free" library,
 -- but he defined Key (Cofree f) = Seq (Key f), and I want [Key f]. Oh well.
 
--- | List trie, denoting '[c] -> b'"
+-- | List trie, denoting '[c] -> b'
 infix 1 :<
 data LTrie h b = b :< h (LTrie h b) -- deriving Show
 
@@ -38,7 +38,7 @@ instance Functor h => Functor (LTrie h) where
 -- TODO: I probably want FunctorC h, and inherit Ok.
 instance Functor h => FunctorC (LTrie h)
 
-instance (Indexable h, Additive1 h) => Indexable (LTrie h) where
+instance (Indexable h (LTrie h b), Additive1 h) => Indexable (LTrie h) b where
   type instance Key (LTrie h) = [Key h]
   -- (b :< _ ) ! [] = b
   -- (_ :< ts) ! (k:ks) = ts ! k ! ks
@@ -71,7 +71,7 @@ instance (Functor h, Additive1 h, DetectableZero1 h, DetectableZero b, Detectabl
 instance (Functor h, Additive1 h, StarSemiring b, DetectableZero b) => StarSemiring (LTrie h b) where
   star (a :< dp) = q where q = star a .> (one :< fmap (<.> q) dp)
 
-instance (HasSingle h, Additive1 h) => HasSingle (LTrie h) where
+instance (HasSingle h (LTrie h b), Additive1 h, Additive b) => HasSingle (LTrie h) b where
   w +-> b = foldr (\ c t -> zero :< c +-> t) (b :< zero) w
 
 -- | Trim to a finite depth, for examination.

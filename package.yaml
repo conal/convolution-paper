@@ -64,7 +64,7 @@ library:
     # - Decomp
     # - Stream
     - LTrie
-    # - RegExp
+    - RegExp
     - Examples
     # To abandon
     # - DLTrie

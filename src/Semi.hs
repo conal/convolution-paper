@@ -26,12 +26,12 @@ import Constrained
 --------------------------------------------------------------------}
 
 -- Inspired by Indexable from Data.Key in the keys library.
-class Indexable h where
+class Indexable h b where
   type Key h
   infixl 9 !
-  (!) :: Additive b => h b -> Key h -> b
+  (!) :: h b -> Key h -> b
 
-instance Indexable ((->) a) where
+instance Indexable ((->) a) b where
   type Key ((->) a) = a
   f ! k = f k
 
@@ -88,17 +88,17 @@ type DetectableOne1  = Con1 DetectableOne
     Singletons
 --------------------------------------------------------------------}
 
-class Indexable h => HasSingle h where
+class Indexable h b => HasSingle h b where
   infixr 2 +->
-  (+->) :: Additive b => Key h -> b -> h b
+  (+->) :: Key h -> b -> h b
 
-single :: (HasSingle h, Semiring b) => Key h -> h b
+single :: (HasSingle h b, Semiring b) => Key h -> h b
 single a = a +-> one
 
-value :: (HasSingle h, Monoid (Key h), Additive b) => b -> h b
+value :: (HasSingle h b, Monoid (Key h)) => b -> h b
 value b = mempty +-> b
 
-instance Eq a => HasSingle ((->) a) where
+instance (Eq a, Additive b) => HasSingle ((->) a) b where
   a +-> b = \ a' -> if a == a' then b else zero
 
 -- instance HasSingle a Bool [a] where
@@ -158,11 +158,11 @@ instance (Ord a, Monoid a, Semiring b) => Semiring (Map a b) where
   one = mempty +-> one
   p <.> q = sum [u <> v +-> p!u <.> q!v | u <- M.keys p, v <- M.keys q]
 
-instance Ord a => Indexable (Map a) where
+instance (Ord a, Additive b) => Indexable (Map a) b where
   type Key (Map a) = a
   m ! a = M.findWithDefault zero a m
 
-instance Ord a => HasSingle (Map a) where (+->) = M.singleton
+instance (Ord a, Additive b) => HasSingle (Map a) b where (+->) = M.singleton
 
 #if 0
 

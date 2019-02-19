@@ -1391,6 +1391,7 @@ Looking more closely, univariate polynomials (and even power series) can be repr
 For a polynomial in a variable |x|, an association of coefficient |c| with exponent |i| represents the monomial (polynomial term) |c * pow x i|.
 One can use a variety of representations for these indexed collections.
 We'll consider efficient representations below, but let's begin as |N -> b| along with a denotation as |b -> b|:
+\notefoot{Should I use |b <-- N| instead?}
 %% Elide the Sum isomorphism
 % type N = Sum Natural
 \begin{code}
@@ -1958,6 +1959,11 @@ Similarly for |liftA2|:
 
 \subsection{\thmref{poly fun}}\prooflabel{theorem:poly fun}
 
+%% Should I use |b <-- N|? For now, keep the |F| constructors in the proofs,
+%% but hide them during rendering.
+
+%format F (e) = e
+
 The semantics as polynomial functions:
 \begin{code}
 poly :: Semiring b => (N -> b) -> (b -> b)
@@ -1986,7 +1992,7 @@ Homomorphism proofs for \thmref{poly fun}:
 ==  \ x -> bigSum i  zero <.> pow x i  -- |poly| definition
 ==  \ x -> bigSum i  zero              -- |zero| as annihilator
 ==  \ x -> zero                        -- |zero| as additive identity
-==  zero                               -- |zero| on |a -> b|
+==  zero                               -- |zero| on functions
 \end{code}
 
 \begin{code}
@@ -2006,8 +2012,8 @@ Homomorphism proofs for \thmref{poly fun}:
 ==  \ x -> bigSum i  (f i <+> g i) <.> pow x i                          -- |poly| definition
 ==  \ x -> bigSum i  f i <.> pow x i <+> g i <.> pow x i                -- distributivity
 ==  \ x -> (bigSum i  f i <.> pow x i) <+> (bigSum i  g i <.> pow x i)  -- summation property
-==  \ x -> poly f x <+> poly g x                                -- |poly| definition
-==  poly f <+> poly g                                           -- |(<+>)| on |a -> b|
+==  \ x -> poly f x <+> poly g x                                        -- |poly| definition
+==  poly f <+> poly g                                                   -- |(<+>)| on |a -> b|
 \end{code}
 
 \begin{code}
@@ -2019,11 +2025,12 @@ Homomorphism proofs for \thmref{poly fun}:
 ==  \ x -> bigSum (i,j) (f i <.> g j) <.> (pow x i <.> pow x j)         -- exponentiation property
 ==  \ x -> bigSum (i,j) (f i <.> pow x i) <.> (g j <.> pow x j)         -- commutativity assumption
 ==  \ x -> (bigSum i  f i <.> pow x i) <.> (bigSum j  g j <.> pow x j)  -- summation property
-==  \ x -> poly f x <.> poly g x                                -- |poly| definition
-==  poly f <.> poly g                                           -- |(<.>)| on functions
+==  \ x -> poly f x <.> poly g x                                        -- |poly| definition
+==  poly f <.> poly g                                                   -- |(<.>)| on functions
 \end{code}
 
-\note{The sum and product derivations might read more easily in reverse.}
+
+%% \note{The sum and product derivations might read more easily in reverse.}
 
 \bibliography{bib}
 

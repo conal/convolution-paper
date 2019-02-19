@@ -1047,7 +1047,7 @@ I might want yet another pair for generalized tries.}
 infix 1 :<
 data LTrie h b = b :< h (LTrie h b)
 \end{code}
-where |h| is an |Indexable| functor whose associated key type is the type of list elements (``characters'').
+where |h| is an indexable functor whose associated key type is the type of list elements (``characters'').
 The similarity between the |LTrie| type and the function decomposition from \secref{Decomposing Functions from Lists} (motivating the constructor's name) makes for easy instance calculation.
 As with |Pow a| and |Map a b|, we can define a trie counterpart to the monoid semiring, here |[c] -> b|.
 \begin{theorem}[\provedIn{theorem:LTrie}]\thmlabel{LTrie}
@@ -1083,9 +1083,7 @@ instance (HasSingle h (LTrie h b), Additive (h (LTrie h b)), Additive b) => HasS
 
 \end{code}
 \vspace{-4ex}
-}, |(!)| is a homomorphism with respect to each class instantiated for |LTrie|, and |(!)| is a homomorphism with respect to each class instantiated for |LTrie'|.%
-\footnote{The pattern synonym \citep{Pickering2016PS} |(:<:)| enables matching and constructing |LTrie'| values as if they were defined as |data LTrie' b c = b :<: (c ->* LTrie' c b)|.
-Its definition uses safe, zero-cost coercions \cite{Breitner2016SZC} between |c ->* LTrie c b| and |c ->* LTrie' b c|.}
+}, |(!)| is a homomorphism with respect to each instantiated class.
 \end{theorem}
 
 Although the |(<:)| decomposition in \secref{Decomposing Functions from Lists} was inspired by wanting to understand the essence of regular expression derivatives, the application to tries is in retrospect more straightforward, since the representation directly mirrors the decomposition.
@@ -1094,10 +1092,6 @@ Pleasantly, this trie data structure is a classic, though perhaps not in its laz
 Moreover, applying the |(<:)| decomposition to tries appears to be more streamlined than the application to regular expressions.
 During matching, the next character in the candidate string is used to directly index to the relevant derivative (sub-trie), efficiently bypassing all other paths.
 Since the derivative collections are represented by a data structure (finite map in this case) rather than a function, it is automatically reused rather than recomputed (in a lazy functional implementation), while the regular expression implementation needs additional memoization for efficiency \needcite{}.
-
-\note{To reduce conceptual clutter, consider dropping the |LTrie|/|LTrie'| distinction, keeping the latter semantics and former name.
-Same for |RegExp|.
-How far back could I remove the distinction?}
 
 
 \sectionl{Convolution}

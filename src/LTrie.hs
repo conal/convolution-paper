@@ -79,15 +79,20 @@ trimT :: (Functor h, Additive (h (LTrie h b)), Additive b, DetectableZero b) => 
 trimT 0 _ = zero
 trimT n (c :< ts) = c :< fmap (trimT (n-1)) ts
 
-#if 0
-
 #ifdef EXAMPLES
 
 {--------------------------------------------------------------------
     Examples
 --------------------------------------------------------------------}
 
-type L  = LTrie  Char Bool
+type L  = LTrie (Map Char) Bool
+
+-- >>> pig :: L
+-- False :< [('p',False :< [('i',False :< [('g',True :< [])])])]
+-- >>> pink :: L
+-- False :< [('p',False :< [('i',False :< [('n',False :< [('k',True :< [])])])])]
+-- >>> pp :: L
+-- False :< [('p',False :< [('i',False :< [('g',True :< []),('n',False :< [('k',True :< [])])])])]
 
 -- >>> pig :: L
 -- False :< [('p',False :< [('i',False :< [('g',True :< [])])])]
@@ -104,6 +109,15 @@ type L  = LTrie  Char Bool
 -- >>> trimT 7 anbn :: L
 -- True :< [('a',False :< [('a',False :< [('a',False :< [('b',False :< [('b',False :< [('b',True :< [])])])]),('b',False :< [('b',True :< [])])]),('b',True :< [])])]
 
+-- >>> (pig :: L) ! ""
+-- False
+-- >>> (pig :: L) ! "pi"
+-- False
+-- >>> (pig :: L) ! "pig"
+-- True
+-- >>> (pig :: L) ! "piggy"
+-- False
+
 -- >>> (anbn :: L) ! ""
 -- True
 -- >>> (anbn :: L) ! "a"
@@ -114,7 +128,5 @@ type L  = LTrie  Char Bool
 -- True
 -- >>> (anbn :: L) ! "aaaaabbbbb"
 -- True
-
-#endif
 
 #endif

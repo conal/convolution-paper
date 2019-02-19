@@ -16,13 +16,13 @@ sb   = single "b"
 pink = single "pink"
 pig  = single "pig"
 
-pp :: (Stringy h b, Additive1 h, Semiring b) => h b
+pp :: (Stringy h b, Additive (h b), Semiring b) => h b
 pp   = pink <+> pig
 
-as, ass, pps :: (Stringy h b, Additive1 h, StarSemiring1 h, StarSemiring b) => h b
+as, ass, pps :: (Stringy h b, Additive (h b), StarSemiring (h b), StarSemiring b) => h b
 as  = star sa
 ass = star as
 pps = star pp
 
-anbn :: (Stringy h b, Semiring1 h, Semiring b, Semiring b) => h b
+anbn :: (Stringy h b, Semiring (h b), Semiring b, Semiring b) => h b
 anbn  = one <+> (sa <.> anbn <.> sb)

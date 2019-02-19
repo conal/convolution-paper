@@ -485,6 +485,8 @@ s .> b  | isZero s   = zero
         | otherwise  = s `scale` b
 \end{code}
 The |DetectableZero| class \citep{semiring-num}:
+\notefoot{Maybe define and use |DetectableOne| as well here.}
+\notefoot{Maybe use semiring-num again.}
 \begin{code}
 class Semiring a => DetectableZero a where isZero :: a -> Bool
 \end{code}
@@ -870,6 +872,8 @@ foldl h e []      = e
 foldl h e (c:cs)  = foldl h (h e c) cs
 \end{code}
 
+\note{Consider generalize |deriv| from functions to indexable functors.}
+
 Understanding how |atEps| and |deriv| relate to the semiring vocabulary will help us develop efficient implementations in later sections.
 
 \begin{lemma}[\provedIn{lemma:atEps [c] -> b}]\lemlabel{atEps [c] -> b}
@@ -902,14 +906,14 @@ atEps (c  :  cs  +-> b) == zero
 Differentiation has the following properties:
 \notefoot{If I replace application to |c| by indexing by |c| (i.e., |(! NOP c)|), will this lemma hold for all of the representations? I suspect so. Idea: Define $\derivOp_c\,p = \derivOp\,p\:!\:c$.}
 \notefoot{I may rewrite the |(*)|, |star|, and |(.>)| cases in terms of functors instead of functions for use in \figref{RegExp}.}
-\begin{spacing}{1.4}
+\begin{spacing}{1.3}
 \begin{code}
 deriv zero  == zero
 deriv one   == zero
-deriv (p  <+>  q) == deriv p <+> deriv q
-deriv (p  <.>  q) == fmap (atEps p NOP .>) (deriv q) <+> fmap (<.> q) (deriv p)
-deriv (Star p) == fmap (\ d -> star (atEps p) .> d <.> Star p) (deriv p)
-deriv (s .> p) == fmap (s NOP .>) (deriv p)
+deriv (p  <+>  q)  == deriv p <+> deriv q
+deriv (p  <.>  q)  == fmap (atEps p NOP .>) (deriv q) <+> fmap (<.> q) (deriv p)
+deriv (Star p)     == fmap (\ d -> star (atEps p) .> d <.> Star p) (deriv p)
+deriv (s .> p)     == fmap (s NOP .>) (deriv p)
 
 deriv (    []     +-> b) == zero
 deriv (c   :  cs  +-> b) == c +-> cs +-> b
@@ -1010,6 +1014,8 @@ deriv :: (FR h b, StarSemiring b, DetectableZero b, Eq (Key h)) => RegExp h b ->
 
 \end{code}
 
+\note{Say something about how |h| must behave so that it is consistent with functions, including addition.}
+
 As an alternative to successive syntactic differentiation, we can re-interpret the original (syntactic) regular expression in another semiring as follows:
 \begin{code}
 regexp :: (StarSemiring (f b), HasSingle f b, Semiring b, Key f ~ [Key h]) => RegExp h b -> f b
@@ -1039,8 +1045,9 @@ I might want yet another pair for generalized tries.}
 %format :< = "\mathrel{\Varid{:\!\!\triangleleft}}"
 \begin{code}
 infix 1 :<
-data LTrie c b = b :< (c ->* LTrie c b)
+data LTrie h b = b :< h (LTrie h b)
 \end{code}
+where |h| is an |Indexable| functor whose associated key type is the type of list elements (``characters'').
 The similarity between the |LTrie| type and the function decomposition from \secref{Decomposing Functions from Lists} (motivating the constructor's name) makes for easy instance calculation.
 As with |Pow a| and |Map a b|, we can define a trie counterpart to the monoid semiring, here |[c] -> b|.
 \begin{theorem}[\provedIn{theorem:LTrie}]\thmlabel{LTrie}
@@ -1048,43 +1055,32 @@ Given the definitions in \figrefdef{LTrie}{Tries as |[c] -> b|}{
 %format :<: = "\mathrel{\Varid{:\!\!\triangleleft\!:}}"
 \begin{code}
 infix 1 :<
-data LTrie c b = b :< (c ->* LTrie c b)
+data LTrie h b = b :< h (LTrie h b) -- deriving Show
 
-instance Decomposable b (Map c) (LTrie c b) where
-  (<:) = (:<)
-  atEps (b :< _) = b
-  deriv (_ :< d) = d
+instance Indexable h (LTrie h b) => Indexable (LTrie h) b where
+  type instance Key (LTrie h) = [Key h]
+  (b :< dp) ! w = case w of { [] -> b ; c:cs -> dp ! c ! cs }
 
-instance (Ord c, Additive b) => Indexable [c] b (LTrie c b) where
-  (b :< dp) ! w = case w of {NOP [] -> b NOP;NOP c:cs -> dp ! c ! cs NOP}
-
-instance (Ord c, Additive b) => Additive (LTrie c b) where
+instance (Additive (h (LTrie h b)), Additive b) => Additive (LTrie h b) where
   zero = zero :< zero
   (a :< dp) <+> (b :< dq) = a <+> b  :<  dp <+> dq
 
-instance (Ord c, Semiring b) => LeftSemimodule b (LTrie c b) where
-  s `scale` (b :< dp) = s <.> b :< fmap (s NOP `scale`) dp
+instance (Functor h, Semiring b) => LeftSemimodule b (LTrie h b) where
+  scale s = go where go (b :< dp) = s <.> b :< fmap go dp
 
-instance (Ord c, Additive b, DetectableZero b) => DetectableZero (LTrie c b) where
+instance (Additive (h (LTrie h b)), DetectableZero (h (LTrie h b)), DetectableZero b) => DetectableZero (LTrie h b) where
   isZero (a :< dp) = isZero a && isZero dp
 
-instance (Ord c, Additive b) => HasSingle [c] b (LTrie c b) where
+instance (Functor h, Additive (h (LTrie h b)), Semiring b, DetectableZero b) => Semiring (LTrie h b) where
+  one = one :< zero
+  (a :< dp) <.> q = a .> q <+> (zero :< fmap (<.> NOP q) dp)
+
+instance (Functor h, Additive (h (LTrie h b)), StarSemiring b, DetectableZero b) => StarSemiring (LTrie h b) where
+  star (a :< dp) = q where q = star a .> (one :< fmap (<.> NOP q) dp)
+
+instance (HasSingle h (LTrie h b), Additive (h (LTrie h b)), Additive b) => HasSingle (LTrie h) b where
   w +-> b = foldr (\ c t -> zero :< c +-> t) (b :< zero) w
 
-NOP
-newtype LTrie' b c = L (LTrie c b) deriving
-  (Additive, DetectableZero, HasSingle [c] b, LeftSemimodule b, Indexable [c] b)
-
-infix 1 :<:
-pattern (:<:) :: b -> (c ->* LTrie' b c) -> LTrie' b c
-pattern b :<: d <- L (b :< (coerce -> d)) where b :<: d = L (b :< coerce d)
-
-instance (Ord c, Semiring b, DetectableZero b) => Semiring (LTrie' b c) where
-  one = one :<: zero
-  (a :<: dp) <.> q = a .> q <+> (zero :<: fmap (<.> NOP q) dp)
-
-instance (Ord c, StarSemiring b, DetectableZero b) => StarSemiring (LTrie' b c) where
-  star (a :<: dp) = q where q = star a .> (one :<: fmap (<.> NOP q) dp)
 \end{code}
 \vspace{-4ex}
 }, |(!)| is a homomorphism with respect to each class instantiated for |LTrie|, and |(!)| is a homomorphism with respect to each class instantiated for |LTrie'|.%

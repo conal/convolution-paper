@@ -907,9 +907,9 @@ Differentiation has the following properties:
 deriv zero  == zero
 deriv one   == zero
 deriv (p  <+>  q) == deriv p <+> deriv q
-deriv (p  <.>  q) == \ c -> atEps p .> deriv q c <+> deriv p c <.> q
-deriv (star p) == \ c -> star (atEps p) .> deriv p c * star p
-deriv (s .> p) == \ c -> s .> deriv p c
+deriv (p  <.>  q) == fmap (atEps p NOP .>) (deriv q) <+> fmap (<.> q) (deriv p)
+deriv (Star p) == fmap (\ d -> star (atEps p) .> d <.> Star p) (deriv p)
+deriv (s .> p) == fmap (s NOP .>) (deriv p)
 
 deriv (    []     +-> b) == zero
 deriv (c   :  cs  +-> b) == c +-> cs +-> b
@@ -959,7 +959,7 @@ instance Semiring b => Semiring (RegExp h b) where
   (<.>) = (:<.>)
 
 instance Semiring b => StarSemiring (RegExp h b) where
-  star = Star
+  star e = Star e
 
 instance (StarSemiring b, DetectableZero b, Eq (Key h)) => Indexable (RegExp h) b where
   type Key (RegExp h) = [Key h]
@@ -979,8 +979,8 @@ deriv :: (StarSemiring b, DetectableZero b, Eq (Key h)) => RegExp h b -> Key h -
 deriv  (Char c)       = single c
 deriv  (Value _)      = zero
 deriv  (p  :<+>  q)   = deriv p <+> deriv q
-deriv  (p  :<.>  q)   = \ c -> atEps p .> deriv q c <+> deriv p c <.> q
-deriv  (Star p)       = \ c -> star (atEps p) .> deriv p c <.> star p
+deriv  (p :<.> q)     = fmap (atEps p NOP .>) (deriv q) <+> fmap (<.> NOP q) (deriv p)
+deriv  (Star p)       = fmap (\ d -> star (atEps p) .> d <.> Star p) (deriv p)
 
 \end{code}
 \vspace{-4ex}
@@ -990,13 +990,11 @@ The constructor |Value b| generalizes |zero| and |one| to yield a semiring value
 Given the definitions in \figref{RegExp}, |regexp| and |(!)| are homomorphisms with respect to each instantiated class.
 \note{I'll have to add some conditions on |h|}
 \end{theorem}
-
 Note that the definition of |e ! w| in \figref{RegExp} is exactly |atEps (derivs e w)|, which performs repeated syntactic transformation with respect to successive characters in |w|, successively performing syntactic differentiation, with |atEps| applied to the final resulting regular expression.
-
-\workingHere
-
-\note{Improve performance by memoizing. Easily done, by having |deriv| generate |h (RegExp h b)| instead of |Key h -> RegExp h b|.}
-
+The implementation in \figref{RegExp} generalizes the regular expression matching algorithm of \citet{Brzozowski64}, but it lacks more recent optimizations \citep{Might2010YaccID,Adams2016CPP}.
+In particular, it lacks memoization, and so performs a fair amount of redundant computation.
+Fortunately, it is quite easy to memoize by having |deriv| generate |h (RegExp h b)| instead of |Key h -> RegExp h b| and choosing something like |Map c| for |h| for a type of ``characters'' |c|.
+We will have to generalize the top of |deriv|, and slightly alter the definition of |(!)|, as shown below:
 \begin{code}
 
 type FR h b = (Functor h, Additive (h (RegExp h b)), HasSingle h (RegExp h b))
@@ -1008,23 +1006,11 @@ instance (FR h b, StarSemiring b, DetectableZero b, Eq (Key h)) => Indexable (Re
 instance (FR h b, Indexable h (RegExp h b), StarSemiring b, DetectableZero b, Eq (Key h)) => HasSingle (RegExp h) b where
   w +-> b = b .> product (map Char w)
 
-atEps :: StarSemiring b => RegExp h b -> b
-atEps (Char _)      = zero
-atEps (Value b)     = b
-atEps (p  :<+>  q)  = atEps p  <+>  atEps q
-atEps (p  :<.>  q)  = atEps p  <.>  atEps q
-atEps (Star p)      = star (atEps p)
-
 deriv :: (FR h b, StarSemiring b, DetectableZero b, Eq (Key h)) => RegExp h b -> h (RegExp h b)
-deriv  (Char c)       = single c
-deriv  (Value _)      = zero
-deriv  (p  :<+>  q)   = deriv p <+> deriv q
-deriv  (p  :<.>  q)   = fmap (atEps p .>) (deriv q) <+> fmap (<.> q) (deriv p)
-deriv  (Star p)       = fmap (\ d -> star (atEps p) .> d <.> Star p) (deriv p)
 
 \end{code}
 
-Alternatively, we can re-interpret the original (syntactic) regular expression in another semiring as follows:
+As an alternative to successive syntactic differentiation, we can re-interpret the original (syntactic) regular expression in another semiring as follows:
 \begin{code}
 regexp :: (StarSemiring (f b), HasSingle f b, Semiring b, Key f ~ [Key h]) => RegExp h b -> f b
 regexp (Char c)      = single [c]
@@ -1033,8 +1019,7 @@ regexp (u  :<+>  v)  = regexp u  <+>  regexp v
 regexp (u  :<.>  v)  = regexp u  <.>  regexp v
 regexp (Star u)      = star (regexp u)
 \end{code}
-Next, we will see one such semiring that eliminates the syntactic overhead of repeatedly transforming regular expressions.
-
+Next, we will see one such choice of |f| that eliminates the syntactic overhead of repeatedly transforming regular expressions.
 
 
 \sectionl{Tries}
@@ -1059,7 +1044,7 @@ data LTrie c b = b :< (c ->* LTrie c b)
 The similarity between the |LTrie| type and the function decomposition from \secref{Decomposing Functions from Lists} (motivating the constructor's name) makes for easy instance calculation.
 As with |Pow a| and |Map a b|, we can define a trie counterpart to the monoid semiring, here |[c] -> b|.
 \begin{theorem}[\provedIn{theorem:LTrie}]\thmlabel{LTrie}
-Given the definitions in \figrefdef{LTrie}{Tries as |[c] -> b| and as |[c] -> b|}{
+Given the definitions in \figrefdef{LTrie}{Tries as |[c] -> b|}{
 %format :<: = "\mathrel{\Varid{:\!\!\triangleleft\!:}}"
 \begin{code}
 infix 1 :<
@@ -1866,11 +1851,13 @@ For the other two equations:
 First addend:
 \begin{code}
     deriv (bigSum v (mempty <> v +-> f mempty <.> g v))
-==  deriv (bigSum v (v +-> f mempty <.> g v))  -- monoid law
-==  deriv (f mempty .> bigSum v (v +-> g v))   -- distributivity (semiring law)
-==  f mempty .> deriv (bigSum v v +-> g v)     -- additivity of |deriv| (above)
-==  f mempty .> deriv (F g)                    -- \lemref{decomp +->}
-==  atEps (F f) .> deriv (F g)                 -- |atEps| on |b <-- a|
+==  deriv (bigSum v (v +-> f mempty <.> g v))          -- monoid law
+==  deriv (f mempty .> bigSum v (v +-> g v))           -- distributivity (semiring law)
+==  \ c -> deriv (f mempty .> bigSum v (v +-> g v)) c  -- $\eta$ expansion
+==  \ c -> f mempty .> deriv (bigSum v v +-> g v) c    -- additivity of |deriv| (above)
+==  \ c -> f mempty .> deriv (F g) c                   -- \lemref{decomp +->}
+==  \ c -> atEps (F f) .> deriv (F g)                  -- |atEps| on |b <-- a|
+==  fmap (atEps (F f) NOP .>) (deriv (F g) c)          -- |fmap| on functions
 \end{code}
 Second addend:
 \begin{code}
@@ -1881,15 +1868,14 @@ Second addend:
 ==  \ c -> bigSum (u',v) u' <> v +-> (\ cs -> f (c:cs)) u' <.> g v  -- $\beta$ expansion
 ==  \ c -> F (\ cs -> f (c:cs)) <.> F g                             -- |(<.>)| on |b <-- a|
 ==  \ c -> deriv (F f) c <.> F g                                    -- |deriv| on |b <-- a|
+==  fmap (<.> F g) (deriv (F f))                                    -- |fmap| on functions
 \end{code}
 Combining addends,
 \begin{code}
-deriv (F f <.> F g) c == atEps (F f) .> deriv (F g) c <+> deriv (F f) c <.> F g
+deriv (F f <.> F g) == fmap (atEps (F f) NOP) (deriv (F g)) <+> fmap (<.> F g) (deriv (F f))
 \end{code}
-
 \noindent
 Continuing with the other equations in \lemref{deriv [c] -> b},
-
 \begin{code}
     deriv (star p)
 ==  deriv (one <+> p <.> star p)                                 -- star semiring law
@@ -1897,6 +1883,7 @@ Continuing with the other equations in \lemref{deriv [c] -> b},
 ==  deriv (p <.> star p)                                         -- |deriv one == zero| (above)
 ==  \ c -> atEps p .> deriv (star p) c <+> deriv p c <.> star p  -- |deriv (p * q)| above
 ==  \ c -> star (atEps p) .> deriv p c <.> star p                -- \lemref{affine over semimodule}
+==  fmap (\ d -> star (atEps p) .> d <.> Star p) (deriv p)       -- |fmap| on functions
 \end{code}
 
 \begin{code}
@@ -1906,6 +1893,7 @@ Continuing with the other equations in \lemref{deriv [c] -> b},
 ==  \ c -> F (\ cs -> s * f (c:cs))             -- $\beta$ reduction
 ==  \ c -> s .> F (\ cs -> f (c:cs))            -- |(.>)| on |b <-- a|
 ==  \ c -> s .> deriv (F f) c                   -- |deriv| definition
+==  fmap (s NOP .>) (deriv (F f))               -- |fmap| on functions
 \end{code}
 
 \begin{code}

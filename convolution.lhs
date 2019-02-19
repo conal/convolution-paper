@@ -1557,9 +1557,9 @@ For |f, g :: u :* v -> b|,
 ==  one                                         -- |one| on functions
 \end{code}
 
+%if True
 
 \begin{code}
-
     predSet (setPred p * setPred q)
 ==  predSet (\ w -> bigSumQ (u,v BR w == u <> v) setPred p u * setPred q v)  -- |(*)| on functions
 ==  predSet (\ w -> bigSumQ (u,v BR w == u <> v) (u <# p) * (v <# q))        -- |setPred| definition (twice)
@@ -1567,8 +1567,21 @@ For |f, g :: u :* v -> b|,
 ==  set (w # bigOr (u,v) w == u <> v && u <# p && v <# q)                    -- |predSet| definition
 ==  set (u <> v # u <# p && v <# q)                                          -- set notation
 ==  p * q                                                                    -- |(*)| on sets
-
 \end{code}
+
+%else
+
+%% Try again in a different style:
+
+\begin{code}
+    predSet (setPred p * setPred q)
+==  predSet (bigSum (u,v) u <> v +-> setPred p u * setPred q v)  -- |(*)| on functions
+==  predSet (bigUnion (u,v) u <> v +-> u <# p && v <# q)         -- |setPred| definition
+==  set (u <> v # u <# p && v <# q)                              -- |predSet| definition and simplification
+==  p * q
+\end{code}
+
+%endif
 
 For |StarSemiring| the default recursive definition embodies the star semiring law.
 \note{Hm. Assuming not bottom?}

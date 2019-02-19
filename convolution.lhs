@@ -1104,6 +1104,8 @@ Pleasantly, this trie data structure is a classic, though perhaps not in its laz
 Applying the |(<:)| decomposition to tries also appears to be more streamlined than the application to regular expressions.
 During matching, the next character in the candidate string is used to directly index to the relevant derivative (sub-trie), efficiently bypassing all other paths.
 
+\workingHere
+
 \note{Thoughts:}
 
 Maybe explicitly use the cofree comonad:
@@ -1760,11 +1762,11 @@ Second addend:
 ==  \ c -> bigSum (u',v) u' <> v +-> (\ cs -> f (c:cs)) u' <.> g v  -- $\beta$ expansion
 ==  \ c -> \ cs -> f (c:cs) <.> g                                   -- |(<.>)| on functions
 ==  \ c -> deriv f c <.> g                                          -- |deriv| on functions
-==  fmap (<.> g) (deriv f)                                          -- |fmap| on functions
+==  fmap (<.> NOP g) (deriv f)                                      -- |fmap| on functions
 \end{code}
 Combining addends,
 \begin{code}
-deriv (f <.> g) == fmap (atEps f NOP) (deriv g) <+> fmap (<.> g) (deriv f)
+deriv (f <.> g) == fmap (atEps f NOP) (deriv g) <+> fmap (<.> NOP g) (deriv f)
 \end{code}
 \noindent
 Continuing with the other equations in \lemref{deriv [c] -> b},
@@ -1917,91 +1919,6 @@ Substitute into \lemreftwo{atEps [c] -> b}{deriv [c] -> b}, and simplify, using 
 
 %format T = "\mathcal F"
 \note{Additivity of |T|, and the convolution theorem. What about |star p| and |single w|?}
-
-\subsection{\thmref{decomp (N -> b)}}\prooflabel{theorem:decomp (N -> b)}
-
-\begin{code}
-    atEps f <: deriv f
-==  f 0 <: I (F (f . (1 NOP +)))                                -- |atEps| and |deriv| on |N -> b|
-==  F (\ i -> if i == 0 then f 0 else (f . (1 NOP +)) (i - 1))  -- |(<:)| on |N -> b|
-==  F (\ i -> if i == 0 then f 0 else f (1 + (i - 1)))          -- |(.)| definition
-==  F (\ i -> if i == 0 then f 0 else f i)                      -- arithmetic
-==  F (\ i -> if i == 0 then f i else f i)                      -- |i == 0| in |then| branch
-==  f                                                         -- property of conditional
-\end{code}
-
-\subsection{\lemref{deriv (N -> b)}}\prooflabel{lemma:deriv (N -> b)}
-
-\begin{code}
-    deriv zero
-==  deriv (F (\ i -> zero))        -- |zero| on functions
-==  F ((\ i -> zero) . (+ NOP 1))  -- |deriv| definition
-==  F (\ i -> zero)                -- $\beta$ reduction
-==  zero                           -- |zero| on functions
-\end{code}
-\begin{code}
-    deriv one
-==  deriv (F (\ i -> if i == 0 then one else zero))   -- |one| on functions
-==  F (\ i -> if i+1 == 0 then one else zero)         -- |deriv| definition
-==  F (\ i -> zero)                                   -- |i+1 /= 0|
-==  zero                                              -- |zero| on functions
-\end{code}
-\begin{code}
-    deriv (f <+> g)
-==  deriv (F (\ i -> f i <+> g i))             -- |(<+>)| on functions
-==  F (\ i -> f (i+1) <+> g (i+1))             -- |deriv| definition; $\beta$ reduction
-==  F (\ i -> f (i+1)) <+> F (\ i -> g (i+1))  -- |(<+>)| on functions
-==  deriv f <+> deriv g                -- |deriv| definition
-\end{code}
-\begin{code}
-    deriv (f <.> g)
-==  deriv (bigSum (u,v)  u + v +-> f u <.> g v)                 -- |(<.>)| on functions
-==  bigSum (u,v)  deriv (u + v +-> f u <.> g v)                 -- |deriv| additivity (previous property)
-==  (bigSum v  deriv (0 + v +-> f 0 <.> g v)) <+>
-    (bigSum (u',v)  deriv (1 + u' + v +-> f (1 + u') <.> g v))  -- case split |u|
-\end{code}
-First addend:
-\begin{code}
-    bigSum v  deriv (0 + v +-> f 0 <.> g v)
-==  f 0 .> (bigSum v  deriv (v +-> g v))                        -- linearity
-==  f 0 .> deriv (bigSum v  (v +-> g v))                        -- additivity
-==  f 0 .> deriv g                                          -- \lemref{decomp +->}
-\end{code}
-Second addend:
-\begin{code}
-    bigSum (u',v)  deriv (1 + u' + v +-> f (1 + u') <.> g v)
-==  bigSum (u',v)  u' + v +-> f (1 + u') <.> g v                -- \lemref{deriv +-> Nat} below
-==  F (f . (1 NOP +)) <.> g                                   -- |(<.>)| on functions
-==  deriv f <.> g                                         -- |deriv| on functions
-\end{code}
-Combining results:
-\begin{code}
-deriv (f <.> g) == f 0 .> deriv g <+> deriv f <.> g
-\end{code}
-i.e.,
-\begin{code}
-deriv (p <.> q) == atEps p .> deriv q <+> deriv p <.> q
-\end{code}
-
-\noindent
-\note{Next, derivations for |star p| and either |single n| or |n +-> b|.}
-
-\begin{lemma}\lemlabel{deriv +-> Nat}
-Differentiation on |N -> b| satisfies the following properties on singletons:
-\begin{code}
-    deriv (0 +-> b)
-==  deriv (F (\ j -> if j == 0 then b else zero))    -- |(+->)| definition
-==  F (\ j -> if j+1 == 0 then b else zero)          -- |deriv| on |N -> b|
-==  F (\ j -> zero)                                  -- |j+1 /= 0| (for |N|)
-==  zero                                             -- |zero| on functions
-
-    deriv (i+1 +-> b)
-==  deriv (F (\ j -> if j == i+1 then b else zero))  -- |(+->)| definition   
-==  F (\ j -> if j+1 == i+1 then b else zero)        -- |deriv| on |N -> b| 
-==  F (\ j -> if j == i then b else zero)            -- |(+ NOP 1)| is injective
-==  i +-> b                                          -- |zero| on functions  
-\end{code}
-\end{lemma}
 
 \subsection{\thmref{standard FunApp}}\prooflabel{theorem:standard FunApp}
 

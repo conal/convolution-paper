@@ -1207,7 +1207,7 @@ Alternatively, one could hand-optimize for streams.
 %format Array (m) = Array "_{" m "}"
 
 Many uses of discrete convolution (including convolutional neural networks \needcite{}) involve functions having finite support, i.e., non-zero on only a finite subset of their domains.
-\notefoot{First suggest finite maps, using instances from \figref{*<-}. Then intervals/arrays.}
+\notefoot{First suggest finite maps, using instances from \figref{Map}. Then intervals/arrays.}
 In many cases, these domain subsets may be defined by finite \emph{intervals}.
 For instance, such a 2D operation would be given by intervals in each dimension, together specifying lower left and upper right corners of a 2D interval (rectangle) outside of which the functions are guaranteed to be zero.
 The two input intervals needn't have the same size, and the result's interval of support is larger than both inputs, with size equaling the sum of the sizes in each dimension (minus one for the discrete case).
@@ -1240,9 +1240,8 @@ where now
 \end{code}
 Fortunately, this monoid expectation can be dropped by generalizing from monoidal combination to an \emph{arbitrary} binary operation |h :: a -> b -> c|.
 For now, let's call this more general operation ``|lift2 h|''.
-\notefoot{Maybe remark on the mixture of ``|->|'' and ``|<--|''.}
 \begin{code}
-lift2 :: Semiring s => (a -> b -> c) -> (s <-- a) -> (s <-- b) -> (s <-- c)
+lift2 :: Semiring s => (a -> b -> c) -> (a -> s) -> (b -> s) -> (c -> s)
 lift2 h f g = \ w -> bigSum (u,v) h u v +-> f u <.> g v
 \end{code}
 We can similarly lift functions of \emph{any} arity:
@@ -1253,16 +1252,16 @@ We can similarly lift functions of \emph{any} arity:
 %format u1
 %format un = u "_n"
 \begin{code}
-liftn :: Semiring s => (a1 -> ... -> an -> b) -> (s <-- a1) -> ... -> (s <-- an) -> (s <-- b)
+liftn :: Semiring s => (a1 -> ... -> an -> b) -> (a1 -> s) -> ... -> (an -> s) -> (b -> s)
 liftn h f1 ... fn = bigSumQ (u1, ..., un) h u1 cdots un +-> f1 u1 <.> cdots <.> fn un
 \end{code}
 Here we are summing over the set-valued \emph{preimage} of |w| under |h|.
 Now consider two specific cases of |liftn|:
 \begin{code}
-lift1 :: Semiring s => (a -> b) -> (s <-- a) -> (s <-- b)
+lift1 :: Semiring s => (a -> b) -> (a -> s) -> (b -> s)
 lift1 h f = bigSum u h u +-> f u
 
-lift0 :: Semiring s => b -> (s <-- b)
+lift0 :: Semiring s => b -> (b -> s)
 lift0 b  = b +-> one
          = single b
 \end{code}
@@ -1277,8 +1276,16 @@ lift0 b  = b +-> one
 %format SRM = DetectableZero
 %% %format keys p = p
 \noindent
-The signatures of |lift2|, |lift1|, and |lift0| generalize to those of |liftA2|, |fmap|, and |pure| from the |Functor| and |Applicative| type classes \needcite, so let's replace the specialized operations with standard ones.
-An enhanced version of these classes appear in \figrefdef{FunApp}{|Functor| and |Applicative| classes and some instances}{
+The signatures of |lift2|, |lift1|, and |lift0| \emph{almost} generalize to those of |liftA2|, |fmap|, and |pure| from the |Functor| and |Applicative| type classes \needcite.
+In type systems like Haskell's, however, |a -> s| is the functor |(a ->)| applied to |s|, while we would need it to be |(-> s)| applied to |a|.
+To fix this problem, define a type wrapper:
+\begin{code}
+newtype s <-- a = F (a -> s)
+\end{code}
+The use of |s <-- a| as an alternative to |a -> s| allows us to give instances for both and to stay within Haskell's type system (and ability to infer types via first-order unification).
+
+With this change, we can replace the specialized |liftn| operations with standard ones.
+An enhanced version of the |Functor| and |Applicative| classes appear in \figrefdef{FunApp}{|Functor| and |Applicative| classes and some instances}{
 \begin{code}
 class FunctorC f where
   type Ok f a :: Constraint
@@ -1301,36 +1308,24 @@ instance Semiring b => Applicative ((<--) b) where
   pure a = single a
   liftA2 h f g = bigSum (u,v) h u v +-> f u <.> g v
 
-instance DetectableZero b => FunctorC ((*<-) b) where
-  type Ok ((*<-) b) a = (Ord a, Monoid a)
+newtype Map' b a = M (Map a b)
+
+instance DetectableZero b => FunctorC (Map' b) where
+  type Ok (Map' b) a = (Ord a, Monoid a)
   fmapC h (M p) = bigSumKeys (a <# M.keys p) h a +-> p ! a
 
-instance DetectableZero b => ApplicativeC ((*<-) b) where
+instance DetectableZero b => ApplicativeC (Map' b) where
   pureC a = single a
   liftA2C h (M p) (M q) = bigSumKeys (a <# M.keys p BR b <# M.keys q) h a b +-> (p!a) <.> (q!b)
-
 \end{code}
 \vspace{-3ex}
-}, along with instances for some of the language representations we've considered so far.%
+}, along with instances for functions and finite maps.%
+Other representations such as tries would need similar reversal of type arguments.
 \footnote{The enhancement is the associated constraint \citep{Bolingbroke2011CK} |Ok|, limiting the types that the class methods must support. The line ``|type Ok f a = ()|'' means that the constraint on |a| defaults to |()|, which holds vacuously for all |a|.}%
-\footnote{Originally, |Applicative| had a |(<*>)| method from which one can easily define |liftA2|. Since the base library version 4.10 \needcite, |liftA2| was added as a method (along with a default definition of |(<*>)|) to allow for more efficient implementation. \note{Cite \href{https://ghc.haskell.org/trac/ghc/ticket/13191}{GHC ticket 13191} if I can't find a better reference.}}%
-%if False
-\footnote{The methods on |(*<-) b| (finite maps to |b|) are written in straight Haskell as follows:
-\vspace{-0.5ex}
-\begin{code}
-  fmapC h (M p) = sum [ h a +-> s | (a,s) <- toList p ]
-
-  liftA2C h (M p) (M q) = sum [ h a b +-> s <.> t | (a,s) <- toList p, (b,t) <- toList q]
-\end{code}
-\vspace{-3ex}
-}%
-%endif
-\notefoot{The |Monoid a| requirement for |(*<-) b| and |(<--) b| is due to the corresponding |Semiring| instances, but really just for
-|one| and |(<.>)|, which we're not using. To do: factor |Additive| out of |Semiring|, and drop the |Monoid a| requirements here. I'll have to return to defining my own classes. If I make this change, then give an |Additive| instance for |Map| and use it for |(*<-)|. Similarly for lists and streams consistently with their denotation as |N -> b|. Wrap for |N -> b|.}
+\footnote{Originally, |Applicative| had a |(<*>)| method from which one can easily define |liftA2|. Since the base library version 4.10 \needcite, |liftA2| was added as a method (along with a default definition of |(<*>)|) to allow for more efficient implementation. \note{Cite \href{https://ghc.haskell.org/trac/ghc/ticket/13191}{GHC ticket 13191} if I can't find a better reference.}}
 Higher-arity liftings can be defined via these three.
 (Exercise.)
-The use of |s <-- t| as an alternative to |t -> s| allows us to give instances for both and to stay within Haskell's type system (and ability to infer types via first-order unification).
-For |b <-- a|, these definitions are not really executable code, since they involve summations are over potentially infinite ranges (as with our semiring instances for |b <-- a| in \figref{monoid semiring}).
+For |b <-- a|, these definitions are not really executable code, since they involve summations are over potentially infinite ranges (as with our semiring instances for |a -> b| in \figref{monoid semiring}).
 \begin{theorem}
 For each instance defined in \figref{FunApp}, the following equalities hold:
 \notefoot{Probe more into the pattern of |single = pure|, |one = single mempty| and |(*) = liftA2 (<>)|.
@@ -1344,6 +1339,8 @@ one  = pure mempty
 Immediate from the instance definitions.
 \end{proof}
 
+\note{Once we've made the type distinction between |a -> b| and |b <-- a|, we may want to change the |Semiring (a -> b)| instance ....}
+
 
 \sectionl{The Free Semimodule Monad}
 
@@ -1356,9 +1353,9 @@ The monad instance is defined as follows:\footnote{The |return| method does not 
 \begin{code}
 instance Semiring s => Monad ((<--) s) where
   (>>=) :: (s <-- a) -> (a -> (s <-- b))) -> (s <-- b)
-  f >>= h = bigSum a f a .> h a
+  F f >>= h = bigSum a f a .> h a
 \end{code}
-\vspace{-4ex}
+\vspace{-2ex}
 \begin{theorem}[\provedIn{theorem:standard FunApp}]\thmlabel{standard FunApp}
 The definitions of |fmap| and |liftA2| on |((<--) b)| in \figref{FunApp} satisfy the following standard equations for monads:
 \begin{code}

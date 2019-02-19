@@ -38,13 +38,13 @@ instance Functor h => Functor (LTrie h) where
 -- TODO: I probably want FunctorC h, and inherit Ok.
 instance Functor h => FunctorC (LTrie h)
 
-instance (Indexable h (LTrie h b), Additive1 h) => Indexable (LTrie h) b where
+instance Indexable h (LTrie h b) => Indexable (LTrie h) b where
   type instance Key (LTrie h) = [Key h]
   -- (b :< _ ) ! [] = b
   -- (_ :< ts) ! (k:ks) = ts ! k ! ks
   (b :< dp) ! w = case w of { [] -> b ; c:cs -> dp ! c ! cs }
 
-instance (Additive1 h, Additive b) => Additive (LTrie h b) where
+instance (Additive (h (LTrie h b)), Additive b) => Additive (LTrie h b) where
   zero = zero :< zero
   (a :< dp) <+> (b :< dq) = a <+> b  :<  dp <+> dq
 
@@ -58,24 +58,24 @@ instance (Additive1 h, Additive b) => Additive (LTrie h b) where
 instance (Functor h, Semiring b) => LeftSemimodule b (LTrie h b) where
   scale s = go where go (b :< dp) = s <.> b :< fmap go dp
 
-instance (Additive1 h, DetectableZero (h (LTrie h b)), DetectableZero b) => DetectableZero (LTrie h b) where
+instance (Additive (h (LTrie h b)), DetectableZero1 h, DetectableZero b) => DetectableZero (LTrie h b) where
   isZero (a :< dp) = isZero a && isZero dp
 
-instance (Functor h, Additive1 h, Semiring b, DetectableZero b) => Semiring (LTrie h b) where
+instance (Functor h, Additive (h (LTrie h b)), Semiring b, DetectableZero b) => Semiring (LTrie h b) where
   one = one :< zero
   (a :< dp) <.> q = a .> q <+> (zero :< fmap (<.> q) dp)
 
-instance (Functor h, Additive1 h, DetectableZero1 h, DetectableZero b, DetectableOne b) => DetectableOne (LTrie h b) where
+instance (Functor h, Additive (h (LTrie h b)), DetectableZero1 h, DetectableZero b, DetectableOne b) => DetectableOne (LTrie h b) where
   isOne (a :< dp) = isOne a && isZero dp
 
-instance (Functor h, Additive1 h, StarSemiring b, DetectableZero b) => StarSemiring (LTrie h b) where
+instance (Functor h, Additive (h (LTrie h b)), StarSemiring b, DetectableZero b) => StarSemiring (LTrie h b) where
   star (a :< dp) = q where q = star a .> (one :< fmap (<.> q) dp)
 
-instance (HasSingle h (LTrie h b), Additive1 h, Additive b) => HasSingle (LTrie h) b where
+instance (HasSingle h (LTrie h b), Additive (h (LTrie h b)), Additive b) => HasSingle (LTrie h) b where
   w +-> b = foldr (\ c t -> zero :< c +-> t) (b :< zero) w
 
 -- | Trim to a finite depth, for examination.
-trimT :: (Functor h, Additive1 h, Additive b, DetectableZero b) => Int -> LTrie h b -> LTrie h b
+trimT :: (Functor h, Additive (h (LTrie h b)), Additive b, DetectableZero b) => Int -> LTrie h b -> LTrie h b
 trimT 0 _ = zero
 trimT n (c :< ts) = c :< fmap (trimT (n-1)) ts
 

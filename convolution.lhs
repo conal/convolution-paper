@@ -815,7 +815,7 @@ deriv f = \ c cs -> f (c:cs)
 
 infix 1 <:
 (<:) :: b -> (c -> ([c] -> b)) -> ([c] -> b)
-b <: h = F (\ NOP case {NOP [] -> b NOP;NOP c:cs  -> h c cs NOP})
+b <: h = \ NOP case {NOP [] -> b NOP;NOP c:cs  -> h c cs NOP}
 \end{code}
 \vspace{-3ex}
 \end{lemma}
@@ -929,37 +929,6 @@ w +-> b = foldr (\ c t -> zero <: c +-> t) (b <: zero) w
 \end{spacing}
 \end{theorem}
 
-%if False
-
-\note{Introduce decomposition first on |[c] -> b|, skipping |Semiring| and |StarSemiring|.
-Then note that we'll want to generalize the decomposition, so define the |Decomposable| class.
-Work out what laws I need for |Decomposable| in order to give one |Semiring| and one |StarSemiring| instance that covers various cases, even beyond lists.
-I think I'll want to redefine |(<--)|, |LTrie'|, and |RegExp'|.}
-
-\noindent
-To make use of these insights, it will be convenient to generalize the decomposition to other representations:
-\begin{code}
-class Decomposable a h s | a -> h s where
-  infix 1 <:
-  (<:)   :: s -> h a -> a
-  atEps  :: a -> s
-  deriv  :: a -> h a
-\end{code}
-Further, as |Decomposable| laws, require the equations in \lemref{decomp ([c] -> b)} relating |(<:)|, |atEps|, and |deriv|, together with the following properties of |h|:
-\begin{itemize}
-\item |forall a NOP.NOP Additive a => Additive (h a)|
-\item |forall a b NOP.NOP Indexable a b (h b)|
-\item |(!^)| is an additive homomorphism
-\item \note{Maybe a few more. Proof details in progress. See journal notes 2018-01-15.} 
-\end{itemize}
-The definitions of |(<:)|, |atEps|, and |deriv| given above correspond to an instance |Semiring b => Decomposable ([c] -> b) ((->) c) b|.
-
-\begin{theorem}[\provedIn{theorem:semiring decomp generalized}]\thmlabel{semiring decomp generalized}
-For any |Decomposable a h s| (satisfying the laws), if the equations of \thmref{semiring decomp [c] -> b} hold, then |(!^)| is a |StarSemiring|, |Semimodule|, and |HasSingle| homomorphism.
-\end{theorem}
-
-%endif
-
 
 \sectionl{Regular Expressions}
 
@@ -1012,10 +981,10 @@ instance (StarSemiring b, Ord c, DetectableZero b) => Indexable [c] b (RegExp c 
   e ! w = atEps (foldl deriv e w)
 \end{code}
 \vspace{-4ex}
-} generalizes regular expressions in the same way that |b <-- a| generalizes |Pow a|, to yield a value of type |b| (a star semiring).
+} generalizes regular expressions in the same way that |a -> b| generalizes |Pow a|, to yield a value of type |b| (a star semiring).
 The constructor |Value b| generalizes |zero| and |one| to yield a semiring value.
 \begin{theorem}\thmlabel{RegExpFun}
-Given the definitions in \figref{RegExpFun}, |regexp| and |(!^)| are homomorphisms with respect to each instantiated class.
+Given the definitions in \figref{RegExpFun}, |regexp| and |(!)| are homomorphisms with respect to each instantiated class.
 \end{theorem}
 
 Note that the definition of |e ! w| in \figref{RegExpFun} is exactly |atEps (derivs e w)|, which performs repeated syntactic transformation with respect to successive characters in |w|, successively performing syntactic differentiation, with |atEps| applied to the final resulting regular expression.
@@ -1033,7 +1002,7 @@ Next, we will see one such semiring that eliminates the syntactic overhead of re
 
 \sectionl{Tries}
 
-\secref{Languages and the Monoid Semiring} gave an implementation of language recognition and its generalization to the monoid semiring |b <-- a|, packaged as instances of a few common algebraic abstractions (|Additive| etc).
+\secref{Languages and the Monoid Semiring} gave an implementation of language recognition and its generalization to the monoid semiring (|a -> b| for monoid |a| and semiring |b|), packaged as instances of a few common algebraic abstractions (|Additive| etc).
 While simple and correct, these implementations are quite inefficient, primarily due to naive backtracking and redundant comparison.
 \secref{Decomposing Functions from Lists} explored the nature of functions on lists, identifying a decomposition principle and its relationship to the vocabulary of semirings and related algebraic abstractions.
 Applying this principle to a generalized form of regular expressions led to Brzozowski's algorithm, generalized from sets to functions in \secref{Regular Expressions}, providing an alternative to naive backtracking but still involving extensive syntactic manipulation as each candidate string is matched.
@@ -1096,7 +1065,7 @@ instance (Ord c, StarSemiring b, DetectableZero b) => StarSemiring (LTrie' b c) 
   star (a :<: dp) = q where q = star a .> (one :<: fmap (<.> NOP q) dp)
 \end{code}
 \vspace{-4ex}
-}, |(!)| is a homomorphism with respect to each class instantiated for |LTrie|, and |(!^)| is a homomorphism with respect to each class instantiated for |LTrie'|.%
+}, |(!)| is a homomorphism with respect to each class instantiated for |LTrie|, and |(!)| is a homomorphism with respect to each class instantiated for |LTrie'|.%
 \footnote{The pattern synonym \citep{Pickering2016PS} |(:<:)| enables matching and constructing |LTrie'| values as if they were defined as |data LTrie' b c = b :<: (c ->* LTrie' c b)|.
 Its definition uses safe, zero-cost coercions \cite{Breitner2016SZC} between |c ->* LTrie c b| and |c ->* LTrie' b c|.}
 \end{theorem}
@@ -1115,7 +1084,7 @@ How far back could I remove the distinction?}
 
 \sectionl{Convolution}
 
-Consider again the definition of multiplication in the monoid semiring, on |f,g :: b <-- a| from \figref{<--}.
+Consider again the definition of multiplication in the monoid semiring, on |f,g :: a -> b| from \figref{<--}.
 Eliding |F| constructors for now,
 \begin{code}
 f * g  = bigSum (u,v) u <> v +-> f u <.> g v
@@ -1238,7 +1207,7 @@ instance Indexable N b (Stream b) where
 \vspace{-6ex}
 }.
 \begin{theorem}\thmlabel{Stream}
-Given the definitions in \figref{Stream}, |(!^)| is a homomorphism with respect to each instantiated class.
+Given the definitions in \figref{Stream}, |(!)| is a homomorphism with respect to each instantiated class.
 \end{theorem}
 \begin{proof}
 Specialization of \thmref{LTrie}.

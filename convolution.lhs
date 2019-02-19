@@ -582,6 +582,16 @@ Moreover, |single == (mempty NOP +->)| is a semiring homomorphism.
 Straightforward from the definition of |(+->)|.
 \end{proof}
 
+%if False
+Just as we defined |single b = mempty +-> b|, we can sometimes also define |(+->)| via |single|:
+\begin{lemma}\lemlabel{(+->) via single}
+In a semimodule, |a +-> b == b .> single a|.
+\end{lemma}
+\begin{proof}
+Immediate from the definitions of |(+->)| and |(.>)|.
+\end{proof}
+%endif
+
 \sectionl{Calculating Instances from Homomorphisms}
 
 So far, we've started with instance definitions and then noted and proved homomorphisms where they arise.
@@ -1302,11 +1312,11 @@ class ApplicativeC f => MonadC f where
 
 instance Semiring b => Functor ((<--) b) where
   type Ok ((<--) b) a = (Eq a, Monoid a)
-  fmap h f = bigSum u h u +-> f u
+  fmap h (F f) = bigSum u h u +-> f u
 
 instance Semiring b => Applicative ((<--) b) where
   pure a = single a
-  liftA2 h f g = bigSum (u,v) h u v +-> f u <.> g v
+  liftA2 h (F f) (F g) = bigSum (u,v) h u v +-> f u <.> g v
 
 newtype Map' b a = M (Map a b)
 
@@ -1921,25 +1931,28 @@ Substitute into \lemreftwo{atEps [c] -> b}{deriv [c] -> b}, and simplify, using 
 
 First consider |fmap|, as defined in \figref{FunApp}.
 \begin{code}
-    fmap h f
+    fmap h (F f)
 ==  bigSum u h u +-> f u          -- definition of |fmap| on |(<--) b|
-==  bigSum u f u .> single (h u)  -- definition of |(+->)|
+==  bigSum u h u +-> f u * one    -- multiplicative identity
+==  bigSum u f u .> (h u +-> one) -- \lemref{+-> homomorphism}
+==  bigSum u f u .> single (h u)  -- definition of |single|
 ==  bigSum u f u .> pure (h u)    -- |single = pure|
-==  f >>= pure . h                -- definition of |(>>=)|
+==  F f >>= pure . h              -- definition of |(>>=)|
 \end{code}
 \noindent
 Similarly for |liftA2|:
 \vspace{-1ex}
 \begin{spacing}{1.5}
 \begin{code}
-    liftA2 h f g
+    liftA2 h (F f) (F g)
 ==  bigSum (u,v) h u v +-> f u <.> g v              -- definition of |liftA2|
-==  bigSum (u,v) (f u * g v) .> single (h u v)      -- definition of |(+->)|
+==  bigSum (u,v) (f u * g v) .> single (h u v)      -- as above
 ==  bigSum (u,v) f u .> (g v .> single (h u v))     -- associativity
 ==  bigSum u f u .> bigSum v g v .> single (h u v)  -- linearity
-==  bigSum u f u .> bigSum v h u v +-> g v          -- definition of |(+->)|
-==  bigSum u f u .> fmap (h u) g                -- definition of |fmap|
-==  f >>= \ u -> fmap (h u) g                   -- definition of |(>>=)|
+==  bigSum u f u .> bigSum v h u v +-> g v          -- as above
+==  bigSum u f u .> fmap (h u) (F g)                -- definition of |fmap|
+==  F f >>= \ u -> fmap (h u) (F g)                 -- definition of |(>>=)|
+==  F f >>= \ u -> F g >>= \ v -> pure (h u v)      -- above
 \end{code}
 \end{spacing}
 

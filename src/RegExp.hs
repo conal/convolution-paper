@@ -20,14 +20,13 @@ infixl 6 :<+>
 infixl 7 :<.>
 
 -- | Regular expression
-data RegExp h b =
-    Char (Key h)
-  | Value b
-  | RegExp h b :<+> RegExp h b
-  | RegExp h b :<.> RegExp h b
-  | Star (RegExp h b)
- -- deriving (Show,Eq)
-
+data RegExp h b = Char (Key h)
+                | Value b
+                | RegExp h b :<+> RegExp h b
+                | RegExp h b :<.> RegExp h b
+                | Star (RegExp h b)
+               -- deriving (Show,Eq)
+              
 -- #define OPTIMIZE
 
 #ifdef OPTIMIZE

@@ -58,7 +58,7 @@ instance (Additive (h (LTrie h b)), Additive b) => Additive (LTrie h b) where
 instance (Functor h, Semiring b) => LeftSemimodule b (LTrie h b) where
   scale s = go where go (b :< dp) = s <.> b :< fmap go dp
 
-instance (Additive (h (LTrie h b)), DetectableZero1 h, DetectableZero b) => DetectableZero (LTrie h b) where
+instance (Additive (h (LTrie h b)), DetectableZero (h (LTrie h b)), DetectableZero b) => DetectableZero (LTrie h b) where
   isZero (a :< dp) = isZero a && isZero dp
 
 instance (Functor h, Additive (h (LTrie h b)), Semiring b, DetectableZero b) => Semiring (LTrie h b) where

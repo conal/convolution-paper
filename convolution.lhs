@@ -872,8 +872,6 @@ foldl h e []      = e
 foldl h e (c:cs)  = foldl h (h e c) cs
 \end{code}
 
-\note{Consider generalize |deriv| from functions to indexable functors.}
-
 Understanding how |atEps| and |deriv| relate to the semiring vocabulary will help us develop efficient implementations in later sections.
 
 \begin{lemma}[\provedIn{lemma:atEps [c] -> b}]\lemlabel{atEps [c] -> b}
@@ -908,21 +906,37 @@ Differentiation has the following properties:
 \notefoot{I may rewrite the |(*)|, |star|, and |(.>)| cases in terms of functors instead of functions for use in \figref{RegExp}.}
 \begin{spacing}{1.3}
 \begin{code}
-deriv zero  == zero
-deriv one   == zero
-deriv (p  <+>  q)  == deriv p <+> deriv q
-deriv (p  <.>  q)  == fmap (atEps p NOP .>) (deriv q) <+> fmap (<.> q) (deriv p)
-deriv (Star p)     == fmap (\ d -> star (atEps p) .> d <.> Star p) (deriv p)
-deriv (s .> p)     == fmap (s NOP .>) (deriv p)
+deriv zero   c == zero
+deriv one    c == zero
+deriv (p  <+>  q) c  == deriv p c <+> deriv q c
+deriv (p  <.>  q) c  == atEps p .> deriv q c <+> deriv p c <.> q
+deriv (star p) c == star (atEps p) .> deriv p c * star p
+deriv (s .> p) c == s .> deriv p c
 
-deriv (    []     +-> b) == zero
-deriv (c   :  cs  +-> b) == c +-> cs +-> b
+deriv (     []      +-> b) == \c -> zero
+deriv (c'   :  cs'  +-> b) == c' +-> cs' +-> b
 \end{code}
 \end{spacing}
 \vspace{-2ex}
 \end{lemma}
+Although |deriv p| is defined as a \emph{function} from leading symbols, it could instead be another representation with function-like semantics, namely an indexable functor |h|.
+Generalizing in this way (recalling that functions themselves are a special case) enables convenient memoization, which has been found to be quite useful in practice \citep{Might2010YaccID}.
+A few generalizations to the equations \lemref{deriv [c] -> b} suffice to generalize from |c -> ([c] -> b)| to |h ([c] -> b)| (with details in \proofref{lemma:deriv [c] -> b}).
+We must assume that |Key h = c| and that |h| is an ``additive functor'', i.e., |forall b. NOP Additive b => Additive (h b)| with |(!)| for |h| being an additive monoid homomorphism.
+\begin{code}
+deriv zero  == zero
+deriv one   == zero
+deriv (p  <+>  q) == deriv p <+> deriv q
+deriv (p  <.>  q) == fmap (atEps p NOP .>) (deriv q) <+> fmap (<.> q) (deriv p)
+deriv (star p) == fmap (\ d -> star (atEps p) .> d <.> Star p) (deriv p)
+deriv (s .> p) == fmap (s NOP .>) (deriv p)
+
+deriv (    []     +-> b) == zero
+deriv (c   :  cs  +-> b) == c +-> cs +-> b
+\end{code}
+
 \begin{theorem}[\provedIn{theorem:semiring decomp [c] -> b}]\thmlabel{semiring decomp [c] -> b}
-The following properties hold:
+The following properties hold (in the generalized setting of indexable |h|):
 \begin{spacing}{1.4}
 \begin{code}
 zero  == zero  <: zero
@@ -936,7 +950,6 @@ w +-> b = foldr (\ c t -> zero <: c +-> t) (b <: zero) w
 \vspace{-6ex}
 \end{spacing}
 \end{theorem}
-
 
 \sectionl{Regular Expressions}
 
@@ -965,11 +978,13 @@ instance Semiring b => Semiring (RegExp h b) where
 instance Semiring b => StarSemiring (RegExp h b) where
   star e = Star e
 
-instance (StarSemiring b, DetectableZero b, Eq (Key h)) => Indexable (RegExp h) b where
-  type Key (RegExp h) = [Key h]
-  e ! w = atEps (foldl deriv e w)
+type FR h b = (Functor h, Additive (h (RegExp h b)), HasSingle h (RegExp h b))
 
-instance (StarSemiring b, DetectableZero b, Eq (Key h)) => HasSingle (RegExp h) b where
+instance (FR h b, StarSemiring b, DetectableZero b, Eq (Key h)) => Indexable (RegExp h) b where
+  type Key (RegExp h) = [Key h]
+  e ! w = atEps (foldl ((!) . deriv) e w)
+
+instance (FR h b, StarSemiring b, DetectableZero b, Eq (Key h)) => HasSingle (RegExp h) b where
   w +-> b = b .> product (map Char w)
 
 atEps :: StarSemiring b => RegExp h b -> b
@@ -979,7 +994,7 @@ atEps (p  :<+>  q)   = atEps p <+> atEps q
 atEps (p  :<.>  q)   = atEps p <.> atEps q
 atEps (Star p)       = star (atEps p)
 
-deriv :: (StarSemiring b, DetectableZero b, Eq (Key h)) => RegExp h b -> Key h -> RegExp h b
+deriv :: (FR h b, StarSemiring b, DetectableZero b, Eq (Key h)) => RegExp h b -> h (RegExp h b)
 deriv  (Char c)       = single c
 deriv  (Value _)      = zero
 deriv  (p  :<+>  q)   = deriv p <+> deriv q
@@ -992,29 +1007,9 @@ deriv  (Star p)       = fmap (\ d -> star (atEps p) .> d <.> Star p) (deriv p)
 The constructor |Value b| generalizes |zero| and |one| to yield a semiring value.
 \begin{theorem}\thmlabel{RegExp}
 Given the definitions in \figref{RegExp}, |regexp| and |(!)| are homomorphisms with respect to each instantiated class.
-\note{I'll have to add some conditions on |h|}
 \end{theorem}
-Note that the definition of |e ! w| in \figref{RegExp} is exactly |atEps (derivs e w)|, which performs repeated syntactic transformation with respect to successive characters in |w|, successively performing syntactic differentiation, with |atEps| applied to the final resulting regular expression.
-The implementation in \figref{RegExp} generalizes the regular expression matching algorithm of \citet{Brzozowski64}, but it lacks more recent optimizations \citep{Might2010YaccID,Adams2016CPP}.
-In particular, it lacks memoization, and so performs a fair amount of redundant computation.
-Fortunately, it is quite easy to memoize by having |deriv| generate |h (RegExp h b)| instead of |Key h -> RegExp h b| and choosing something like |Map c| for |h| for a type of ``characters'' |c|.
-We will have to generalize the top of |deriv|, and slightly alter the definition of |(!)|, as shown below:
-\begin{code}
-
-type FR h b = (Functor h, Additive (h (RegExp h b)), HasSingle h (RegExp h b))
-
-instance (FR h b, StarSemiring b, DetectableZero b, Eq (Key h)) => Indexable (RegExp h) b where
-  type Key (RegExp h) = [Key h]
-  e ! w = atEps (foldl ((!) . deriv) e w)
-
-instance (FR h b, Indexable h (RegExp h b), StarSemiring b, DetectableZero b, Eq (Key h)) => HasSingle (RegExp h) b where
-  w +-> b = b .> product (map Char w)
-
-deriv :: (FR h b, StarSemiring b, DetectableZero b, Eq (Key h)) => RegExp h b -> h (RegExp h b)
-
-\end{code}
-
-\note{Say something about how |h| must behave so that it is consistent with functions, including addition.}
+Note that the definition of |e ! w| in \figref{RegExp} is exactly |atEps (derivs e w)| generalized to indexable |h|, which performs repeated syntactic transformation with respect to successive characters in |w|, successively performing syntactic differentiation, with |atEps| applied to the final resulting regular expression.
+The implementation in \figref{RegExp} generalizes the regular expression matching algorithm of \citet{Brzozowski64}, adding customizable memoization, depending on choice of the indexable functor |h|.
 
 As an alternative to successive syntactic differentiation, we can re-interpret the original (syntactic) regular expression in another semiring as follows:
 \begin{code}
@@ -1025,7 +1020,7 @@ regexp (u  :<+>  v)  = regexp u  <+>  regexp v
 regexp (u  :<.>  v)  = regexp u  <.>  regexp v
 regexp (Star u)      = star (regexp u)
 \end{code}
-Next, we will see one such choice of |f| that eliminates the syntactic overhead of repeatedly transforming regular expressions.
+Next, we will see one such choice of |f| that eliminates the syntactic overhead of repeatedly transforming syntactic representations.
 
 
 \sectionl{Tries}
@@ -1088,10 +1083,8 @@ instance (HasSingle h (LTrie h b), Additive (h (LTrie h b)), Additive b) => HasS
 
 Although the |(<:)| decomposition in \secref{Decomposing Functions from Lists} was inspired by wanting to understand the essence of regular expression derivatives, the application to tries is in retrospect more straightforward, since the representation directly mirrors the decomposition.
 Pleasantly, this trie data structure is a classic, though perhaps not in its lazy infinite form for use as a language representation.
-
-Moreover, applying the |(<:)| decomposition to tries appears to be more streamlined than the application to regular expressions.
+Applying the |(<:)| decomposition to tries also appears to be more streamlined than the application to regular expressions.
 During matching, the next character in the candidate string is used to directly index to the relevant derivative (sub-trie), efficiently bypassing all other paths.
-Since the derivative collections are represented by a data structure (finite map in this case) rather than a function, it is automatically reused rather than recomputed (in a lazy functional implementation), while the regular expression implementation needs additional memoization for efficiency \needcite{}.
 
 
 \sectionl{Convolution}

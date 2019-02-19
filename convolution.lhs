@@ -1756,7 +1756,7 @@ Second addend:
     deriv (bigSumA (c',u',v) ((c':u') <> v +-> f (c':u') <.> g v))
 ==  bigSumA (c',u',v) deriv ((c':u') <> v +-> f (c':u') <.> g v)    -- additivity of |deriv|
 ==  bigSumA (c',u',v) deriv (c' : (u' <> v) +-> f (c':u') <.> g v)  -- |(<>)| on lists
-==  \ c -> bigSum (u',v) u' <> v +-> f (c:u') <.> g v               -- \lemref{deriv +->} below
+==  \ c -> bigSum (u',v) u' <> v +-> f (c:u') <.> g v               -- |deriv| on |(+->)| below
 ==  \ c -> bigSum (u',v) u' <> v +-> (\ cs -> f (c:cs)) u' <.> g v  -- $\beta$ expansion
 ==  \ c -> \ cs -> f (c:cs) <.> g                                   -- |(<.>)| on functions
 ==  \ c -> deriv f c <.> g                                          -- |deriv| on functions
@@ -1808,40 +1808,7 @@ Continuing with the other equations in \lemref{deriv [c] -> b},
 
 \end{code}
 
-\begin{lemma}\lemlabel{deriv +->}
-Differentiation and |(+->)| satisfy the following relationships:
-\begin{code}
-deriv (mempty +-> b) c == zero
-
-deriv (c' : w +-> b) c == if c' == c then w +-> b else zero
-\end{code}
-\end{lemma}
-\begin{proof}~
-\begin{code}
-    deriv (mempty +-> b) c
-==  deriv (F (\ w -> if w == mempty then b else zero)) c         -- |(+->)| defining
-==  F (\ cs -> (\ w -> if w == mempty then b else zero) (c:cs))  -- |deriv| on functions
-==  F (\ cs -> if c:cs == mempty then b else zero)               -- $\beta$ reduction
-==  F (\ cs -> if False then b else zero)                        -- |c:cs /== mempty|
-==  F (\ cs -> zero)                                             -- |if-then-else| definition
-==  zero                                                         -- |zero| on functions
-\end{code}
-\begin{code}
-    deriv (c' : w +-> b) c
-==  deriv (F (\ a -> if a == c':w then b else zero)) c               -- |(+->)| definition
-==  F (\ cs -> (\ a -> if a == c':w then b else zero) (c:cs))        -- |deriv| on functions
-==  F (\ cs -> if c:cs == c':w then b else zero)                     -- $\beta$ reduction
-==  F (\ cs -> if c==c' && cs == w then b else zero)                 -- injectivity of |(:)|
-==  if c==c' then F (\ cs -> if cs == w then b else zero) else zero  -- property of |if-then-else|
-==  if c==c' then w +-> b else zero                                  -- |(+->)| on functions
-\end{code}
-\end{proof}
-\vspace{-2ex}
-
 \subsection{\thmref{semiring decomp [c] -> b}}\prooflabel{theorem:semiring decomp [c] -> b}
-
-\note{Maybe not worth spelling out.
-I could say ``Proof: Immediate from \lemrefthree{decomp ([c] -> b)}{atEps [c] -> b}{deriv [c] -> b}''.}
 
 \begin{code}
     zero

@@ -11,6 +11,8 @@
 
 module Main where
 
+import Data.Map (Map)
+
 import Data.ByteString.Lazy.Char8 (pack)
 import Data.Semigroup ((<>))
 import Test.Tasty (defaultMain, TestTree, testGroup)
@@ -20,8 +22,8 @@ import Test.Tasty.Golden
 -- import qualified Fun as F
 
 import Semi
-import Language
-import Decomp
+-- import Language
+-- import Decomp
 import RegExp
 import LTrie
 
@@ -32,20 +34,10 @@ main = do
 basicTests :: TestTree
 basicTests = testGroup "Various representations"
   [ testGroup "" []
-  -- , tests @(S.Pred String      ) "Pred"
-  -- , tests @(S.Decomp  Char     ) "SetDecomp"
-  -- , tests @(S.RegExp  Char     ) "SetRegExp"
-  -- , tests @(S.Trie    Char     ) "SetTrie"
-
-  -- , tests @(Convo (String -> Bool)) "F"  -- works
-  -- , tests @(Convo (Decomp  Char Bool)) "FunDecomp" -- works
-
-  -- , tests @(RegExp  Char Bool) "MapRegExp"  -- use with MAPS defined in RegExp
-
-  , tests @(RegExp  Char Bool) "FunRegExp"
-
-  -- , tests @(Convo (RegExp  Char Bool)) "FunRegExp" -- hangs on as-a
-  -- , tests @(Convo (LTrie    Char Bool)) "FunTrie" -- works
+  , tests @(RegExp ((->) Char)) @Bool "FunRegExp"
+  , tests @(LTrie  ((->) Char)) @Bool "FunTrie"
+  , tests @(RegExp (Map Char)) @Bool "MapRegExp"
+  , tests @(LTrie  (Map Char)) @Bool "MapTrie"
 
   ]
 
@@ -57,9 +49,8 @@ basicTests = testGroup "Various representations"
 -- tests' :: forall x. Semiring x => String -> TestTree
 -- tests' = undefined
 
-tests :: forall x b.
-  ( HasSingle String b x, Indexable String b x
-  , StarSemiring x, Show x, Semiring b, Show b )
+tests :: forall f b.
+  ( HasSingle f b, Key f ~ String, StarSemiring (f b), Semiring b, Show b )
   => String -> TestTree
 tests group = testGroup group
   [ testGroup "" []
@@ -96,8 +87,7 @@ tests group = testGroup group
 
   ]
  where
-   sing :: String -> x
-   sing = single
+   sing = single @f @b
    a = sing "a"
    b = sing "b"
    as = star a

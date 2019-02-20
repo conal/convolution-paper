@@ -81,6 +81,7 @@ tests:
     dependencies:
     - base
     - Cabal >= 1.24.0.0
+    - containers
     - bytestring
     - tasty
     - tasty-golden

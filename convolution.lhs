@@ -629,7 +629,7 @@ Singletons also curry handily and provide another useful homomorphism:
 \vspace{-4ex}
 \end{lemma}
 \begin{lemma} \lemlabel{+-> homomorphism}
-In the monoid semiring, partial applications |(a NOP +->)| are left semi-module (and hence additive) homomorphisms.
+For |(->) a|, partial applications |(a NOP +->)| are left semi-module (and hence additive) homomorphisms.
 Moreover, |single == (mempty NOP +->)| is a semiring homomorphism.
 \end{lemma}
 \begin{proof}

@@ -1,26 +1,22 @@
-outdir=out
-
 paper = convolution
+
+outdir=out
 
 icfp = $(outdir)/$(paper)-icfp
 extended = $(outdir)/$(paper)-extended
 extended-anon = $(outdir)/$(paper)-extended-anon
 
-all: $(extended).pdf
-all: $(icfp).pdf
-all: $(extended-anon).pdf
+pdf: $(extended).pdf
+# pdf: $(icfp).pdf
+# pdf: $(extended-anon).pdf
+
+see: $(extended).see
+# see: $(icfp).see
+# see: $(extended-anon).see
 
 icfp: $(icfp).pdf
 extended: $(extended).pdf
 extended-anon: $(extended-anon).pdf
-
-# all += $(icfp).pdf
-# all += $(extended).pdf
-# all += $(extended-anon).pdf
-
-all: $(all)
-
-# opaper = $(outdir)/$(paper)
 
 # # Doesn't work
 # .PRECIOUS: $(outdir)/%.tex $(outdir)/%.pdf
@@ -65,8 +61,6 @@ showpdf=skim
 
 %.see: %.pdf
 	${showpdf} $<
-
-see: $(extended).see
 
 SHELL = bash
 

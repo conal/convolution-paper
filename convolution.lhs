@@ -1,7 +1,7 @@
 % -*- latex -*-
 
 %% Temporary title
-\def\tit{Efficient language recognition and generalized convolution}
+\def\tit{Efficient Language Recognition and Generalized Convolution}
 
 %% Used in bib.bib
 %if anonymous

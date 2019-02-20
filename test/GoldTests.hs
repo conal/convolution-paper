@@ -11,15 +11,20 @@
 
 module Main where
 
-import Data.Map (Map)
+import Data.Map.Lazy (Map)
+import qualified Data.Map.Lazy as Map
+
+import Data.IntMap.Lazy (IntMap)
+import qualified Data.IntMap.Lazy as IntMap
+
+-- TODO: try strict variants also
 
 import Data.ByteString.Lazy.Char8 (pack)
 import Data.Semigroup ((<>))
 import Test.Tasty (defaultMain, TestTree, testGroup)
 import Test.Tasty.Golden
 
--- import qualified Set as S
--- import qualified Fun as F
+-- import Data.MemoTrie
 
 import Semi
 -- import Language
@@ -35,14 +40,11 @@ basicTests :: TestTree
 basicTests = testGroup "Various representations"
   [ testGroup "" []
   , tests @(RegExp ((->) Char)) @Bool "FunRegExp"
+  , tests @(RegExp (Map  Char)) @Bool "MapRegExp"
   , tests @(LTrie  ((->) Char)) @Bool "FunTrie"
-  , tests @(RegExp (Map Char)) @Bool "MapRegExp"
-  , tests @(LTrie  (Map Char)) @Bool "MapTrie"
-
+  , tests @(LTrie  (Map  Char)) @Bool "MapTrie"
+  , tests @(LTrie  CharMap) @Bool "IMapTrie"
   ]
-
--- Idea: use a single output directory instead of many, for comparison across
--- representations.
 
 -- TODO: some tests with s other than Bool.
 
@@ -103,7 +105,29 @@ tests group = testGroup group
    gold :: Show z => String -> z -> TestTree
    gold nm = -- TODO: make directory if missing 
              goldenVsString nm
-                ("test/gold/" <> group <> "/" <> nm <> ".txt")
+                ("test/gold/" <> nm <> ".txt")
              . pure . pack . show
 
 -- I'd like to use definitions from Examples. How to establish the types?
+
+-- -- Orphan
+-- instance Indexable ((:->:) Char) b where
+--   type Key ((:->:) Char) = Char
+--   (!) = untrie
+
+-- instance HasSingle ((:->:) Char) b where
+
+-- TODO: generalize to other Integral or Enum types and add to Semi
+newtype CharMap b = CharMap (IntMap b) deriving Functor
+
+instance Additive b => Indexable CharMap b where
+  type Key CharMap = Char
+  CharMap m ! a = IntMap.findWithDefault zero (fromEnum a) m
+
+instance Additive b => HasSingle CharMap b where a +-> b = CharMap (IntMap.singleton (fromEnum a) b)
+
+instance Additive b => Additive (CharMap b) where
+  zero = CharMap IntMap.empty
+  CharMap u <+> CharMap v = CharMap (IntMap.unionWith (<+>) u v)
+
+instance Additive b => DetectableZero (CharMap b) where isZero (CharMap m) = IntMap.null m

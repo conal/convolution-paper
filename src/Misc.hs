@@ -23,6 +23,9 @@ class    (forall u v. con u v => con (h u) (h v)) => Con2 con h
 instance (forall u v. con u v => con (h u) (h v)) => Con2 con h
 
 
+cats :: Monoid a => Int -> a -> a
+cats n a = mconcat (replicate n a)
+
 {--------------------------------------------------------------------
     Invertible monoids
 --------------------------------------------------------------------}

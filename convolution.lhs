@@ -1,24 +1,74 @@
 % -*- latex -*-
 
+%% Temporary title
+\def\tit{Efficient language recognition and generalized convolution}
+
+%% Determined by Makefile
+%% %let extended = False
+
+%% %let draft = True
+
+%let indexed = True
+
+%if icfp
+
+\documentclass[acmsmall=true,screen
+%,authorversion
+%if anonymous
+,anonymous,review
+%endif
+]{acmart}
+%% \settopmatter{printfolios=true,printccs=false,printacmref=false}
+
+\author{Conal Elliott}
+\email{conal@@conal.net}
+\affiliation{%
+  \institution{Target}
+  % \city{Sunnyvale}
+  % \state{California}
+  \country{USA}
+}
+
+%% How do I get the Creative Commons logo as ACM did?
+\setcopyright{rightsretained}
+\acmPrice{}
+\acmDOI{10.1145/3236765}
+\acmYear{2018}
+\copyrightyear{2018}
+\acmJournal{PACMPL}
+\acmVolume{2}
+\acmNumber{ICFP}
+\acmArticle{70}
+\acmMonth{9}
+
+\bibliographystyle{ACM-Reference-Format}
+
+%% Copyright information
+%% Supplied to authors (based on authors' rights management selection;
+%% see authors.acm.org) by publisher for camera-ready submission;
+%% use 'none' for review submission.
+\setcopyright{rightsretained}
+
+%else
+
 %% While editing/previewing, use 12pt and tiny margin.
 \documentclass[hidelinks,twoside]{article}  % fleqn,
 
 \usepackage[margin=0.12in]{geometry}  % 0.12in, 0.9in, 1in
 
 %% \geometry{paperwidth=6.75in}  % for iPad portrait preview
-
 %% \geometry{paperheight=9in} % for 2-up on big monitor, larger text
-
 %% \geometry{paperwidth=10.5in} % 2-up big monitor, smaller text
 
-%% \documentclass{article}
-%% \usepackage{fullpage}
+\usepackage[square]{natbib}
+\bibliographystyle{plainnat}
 
-\usepackage[us,12hr]{datetime}
-\usepackage{setspace}
-
-%% Temporary title
-\def\tit{Efficient language recognition and generalized convolution}
+%% TODO: try the anonymous acmart option. See template.
+%if anonymous
+\author{Anonymous \\[1.5ex](supplement to ICFP 2018 submission)}
+%else
+\author{Conal Elliott \\[1.5ex]Target\\[1.5ex]conal@@conal.net}
+%endif
 
 \author{Conal Elliott}
 
@@ -32,6 +82,8 @@ Conal Elliott
 \fancyhead[LE,RO]{\thepage}
 % \rnc{\headrulewidth}{0pt}
 
+%endif
+
 %include polycode.fmt
 %include forall.fmt
 %include greek.fmt
@@ -40,9 +92,6 @@ Conal Elliott
 \input{macros}
 
 \calculationcomments
-
-\usepackage[square]{natbib}
-\bibliographystyle{plainnat}
 
 %% % author-date form
 %% \usepackage[]{natbib}

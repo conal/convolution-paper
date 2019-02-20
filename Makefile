@@ -1,9 +1,18 @@
-
 outdir=out
 
-targ = convolution
+paper = convolution
 
-otarg = $(outdir)/$(targ)
+short = $(outdir)/$(paper)-short
+long  = $(outdir)/$(paper)-long
+icfp  = $(outdir)/$(paper)-icfp
+
+all += $(short).pdf
+all += $(long).pdf
+all += $(icfp).pdf
+
+all: $(all)
+
+# opaper = $(outdir)/$(paper)
 
 # # Doesn't work
 # .PRECIOUS: $(outdir)/%.tex $(outdir)/%.pdf
@@ -12,8 +21,11 @@ otarg = $(outdir)/$(targ)
 .PRECIOUS: out/was1.tex out/was1.pdf
 .PRECIOUS: out/was2.tex out/was2.pdf
 .PRECIOUS: out/was3.tex out/was3.pdf
+.PRECIOUS: $(short).tex $(short).pdf
+.PRECIOUS: $(long).tex $(long).pdf
+.PRECIOUS: $(short).tex $(short).pdf
 
-default: $(otarg).pdf
+# default: $(opaper).pdf
 
 # dots = $(wildcard figures/*.dot)
 # figures = $(addsuffix .pdf, $(basename $(dots)))
@@ -31,8 +43,20 @@ latex+= -halt-on-error
 
 figures: $(figures)
 
-$(outdir)/%.tex: %.lhs macros.tex formatting.fmt Makefile
-	lhs2TeX -o $@ $*.lhs
+texdeps = formatting.fmt makefile
+
+$(short).tex: $(paper).lhs $(texdeps)
+	lhs2tex -o $*.tex $(paper).lhs
+
+$(long).tex: $(paper).lhs $(texdeps)
+	lhs2tex --set=extended --set=long -o $*.tex $(paper).lhs
+## Extended vs long? Try consolidating
+
+$(icfp).tex: $(paper).lhs $(texdeps)
+	lhs2tex --set=icfp -o $*.tex $(paper).lhs
+
+# $(outdir)/%.tex: %.lhs macros.tex formatting.fmt Makefile
+# 	lhs2TeX -o $@ $*.lhs
 
 # # Figure generation. Cap the size so that LaTeX doesn't choke.
 # %.pdf: %.dot # Makefile
@@ -40,18 +64,18 @@ $(outdir)/%.tex: %.lhs macros.tex formatting.fmt Makefile
 
 showpdf=skim
 
-%.see: $(outdir)/%.pdf
+%.see: %.pdf
 	${showpdf} $<
 
-see: $(targ).see
+see: $(long).see
 
-# see: $(targ).pdf
-# 	${showpdf} $(targ).pdf
+# see: $(paper).pdf
+# 	${showpdf} $(paper).pdf
 
 SHELL = bash
 
 # clean:
-# 	rm -f {$(targ),was1}.{tex,dvi,pdf,aux,bbl,blg,out,log,ptb,fdb_latexmk,fls}
+# 	rm -f {$(paper),was1}.{tex,dvi,pdf,aux,bbl,blg,out,log,ptb,fdb_latexmk,fls}
 
 clean:
 	rm -f ${outdir}/*
@@ -61,6 +85,6 @@ TAGS: *.tex *.lhs *.bib src/*.hs src/*.inc
 
 web: web-token
 
-web-token: $(otarg).pdf
-	scp $< conal@conal.net:/home/conal/domains/conal/htdocs/papers/$(targ)
+web-token: $(short).pdf $(long).pdf
+	scp $< conal@conal.net:/home/conal/domains/conal/htdocs/papers/$(paper)
 	touch web-token

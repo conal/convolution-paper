@@ -1,7 +1,10 @@
 \newcommand\nc\newcommand
 \nc\rnc\renewcommand
 
-\usepackage[utf8]{inputenc}
+%% https://www.conference-publishing.com/Help.php
+\usepackage[utf8]{inputenc} 
+\usepackage[T1]{fontenc}
+\usepackage{microtype}
 
 \usepackage{epsfig}
 \usepackage{latexsym}
@@ -10,6 +13,9 @@
 \usepackage{color}
 
 \usepackage{subcaption}
+
+\usepackage[us,12hr]{datetime}
+\usepackage{setspace}
 
 % bottom prevents floats (figures) below footnotes, while hang & flushmargin
 % avoids indentation.

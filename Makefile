@@ -2,13 +2,21 @@ outdir=out
 
 paper = convolution
 
-short = $(outdir)/$(paper)-short
-long  = $(outdir)/$(paper)-long
-icfp  = $(outdir)/$(paper)-icfp
+icfp = $(outdir)/$(paper)-icfp
+extended = $(outdir)/$(paper)-extended
+extended-anon = $(outdir)/$(paper)-extended-anon
 
-all += $(short).pdf
-all += $(long).pdf
-all += $(icfp).pdf
+all: $(extended).pdf
+all: $(icfp).pdf
+all: $(extended-anon).pdf
+
+icfp: $(icfp).pdf
+extended: $(extended).pdf
+extended-anon: $(extended-anon).pdf
+
+# all += $(icfp).pdf
+# all += $(extended).pdf
+# all += $(extended-anon).pdf
 
 all: $(all)
 
@@ -21,16 +29,10 @@ all: $(all)
 .PRECIOUS: out/was1.tex out/was1.pdf
 .PRECIOUS: out/was2.tex out/was2.pdf
 .PRECIOUS: out/was3.tex out/was3.pdf
-.PRECIOUS: $(short).tex $(short).pdf
-.PRECIOUS: $(long).tex $(long).pdf
-.PRECIOUS: $(short).tex $(short).pdf
+.PRECIOUS: $(icfp).tex $(icfp).pdf
+.PRECIOUS: $(extended).tex $(extended).pdf
+.PRECIOUS: $(extended-anon).tex $(extended-anon).pdf
 
-# default: $(opaper).pdf
-
-# dots = $(wildcard figures/*.dot)
-# figures = $(addsuffix .pdf, $(basename $(dots)))
-
-#latex=pdflatex
 latex=latexmk -pdf
 latex+= -outdir=${outdir}
 # latex+= -synctex=1
@@ -38,44 +40,35 @@ latex+= -halt-on-error
 # # Preview continuously
 # latex+= -pvc
 
-%.pdf: %.tex bib.bib $(figures) Makefile
+%.pdf: %.tex bib.bib Makefile
 	$(latex) $*.tex
+	touch $@
+
+# The previous rule always ran, and I didn't know why. Passing "-d" (debug) to
+# make, I see that it's because the PDFs are not getting updated by latexmk,
+# so their prerequisites stay newer. Workaround: touch the PDF.
 
 figures: $(figures)
 
-texdeps = formatting.fmt makefile
-
-$(short).tex: $(paper).lhs $(texdeps)
-	lhs2tex -o $*.tex $(paper).lhs
-
-$(long).tex: $(paper).lhs $(texdeps)
-	lhs2tex --set=extended --set=long -o $*.tex $(paper).lhs
-## Extended vs long? Try consolidating
+texdeps = formatting.fmt Makefile
 
 $(icfp).tex: $(paper).lhs $(texdeps)
-	lhs2tex --set=icfp -o $*.tex $(paper).lhs
+	lhs2tex --set=icfp --set=anonymous -o $*.tex $(paper).lhs
 
-# $(outdir)/%.tex: %.lhs macros.tex formatting.fmt Makefile
-# 	lhs2TeX -o $@ $*.lhs
+$(extended).tex: $(paper).lhs $(texdeps)
+	lhs2tex --set=extended -o $*.tex $(paper).lhs
 
-# # Figure generation. Cap the size so that LaTeX doesn't choke.
-# %.pdf: %.dot # Makefile
-# 	dot -Tpdf -Gmargin=0 -Gsize=10,10 $< -o $@
+$(extended-anon).tex: $(paper).lhs $(texdeps)
+	lhs2tex --set=extended --set=anonymous -o $*.tex $(paper).lhs
 
 showpdf=skim
 
 %.see: %.pdf
 	${showpdf} $<
 
-see: $(long).see
-
-# see: $(paper).pdf
-# 	${showpdf} $(paper).pdf
+see: $(extended).see
 
 SHELL = bash
-
-# clean:
-# 	rm -f {$(paper),was1}.{tex,dvi,pdf,aux,bbl,blg,out,log,ptb,fdb_latexmk,fls}
 
 clean:
 	rm -f ${outdir}/*
@@ -85,6 +78,6 @@ TAGS: *.tex *.lhs *.bib src/*.hs src/*.inc
 
 web: web-token
 
-web-token: $(short).pdf $(long).pdf
+web-token: $(short).pdf $(extended).pdf
 	scp $< conal@conal.net:/home/conal/domains/conal/htdocs/papers/$(paper)
 	touch web-token

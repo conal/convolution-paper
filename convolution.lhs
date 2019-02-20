@@ -3,12 +3,16 @@
 %% Temporary title
 \def\tit{Efficient language recognition and generalized convolution}
 
-%% Determined by Makefile
-%% %let extended = False
+%% Used in bib.bib
+%if anonymous
+\newcommand\auth{Anonymous}
+%else
+\newcommand\auth{Conal Elliott}
+%endif
 
 %% %let draft = True
 
-%let indexed = True
+%let short = not extended
 
 %if icfp
 
@@ -28,18 +32,6 @@
   % \state{California}
   \country{USA}
 }
-
-%% How do I get the Creative Commons logo as ACM did?
-\setcopyright{rightsretained}
-\acmPrice{}
-\acmDOI{10.1145/3236765}
-\acmYear{2018}
-\copyrightyear{2018}
-\acmJournal{PACMPL}
-\acmVolume{2}
-\acmNumber{ICFP}
-\acmArticle{70}
-\acmMonth{9}
 
 \bibliographystyle{ACM-Reference-Format}
 
@@ -63,21 +55,22 @@
 \usepackage[square]{natbib}
 \bibliographystyle{plainnat}
 
-%% TODO: try the anonymous acmart option. See template.
+\author{\auth \\[1.5ex]
 %if anonymous
-\author{Anonymous \\[1.5ex](supplement to ICFP 2018 submission)}
+(supplement to ICFP 2019 submission)
 %else
-\author{Conal Elliott \\[1.5ex]Target\\[1.5ex]conal@@conal.net}
+Target\\[1.5ex]conal@@conal.net
 %endif
+}
 
-\author{Conal Elliott}
+%% TODO: experiment with the anonymous acmart option. See template.
 
 \usepackage{fancyhdr}
 \pagestyle{fancy}
 \fancyhf{}
 \fancyhead[LO]\tit
 \fancyhead[RE]{%
-Conal Elliott
+\auth
 }
 \fancyhead[LE,RO]{\thepage}
 % \rnc{\headrulewidth}{0pt}
@@ -90,6 +83,10 @@ Conal Elliott
 %include formatting.fmt
 
 \input{macros}
+
+%if not draft
+\rnc\indraft[1]{}
+%endif
 
 \calculationcomments
 
@@ -104,10 +101,10 @@ Conal Elliott
 \setlength{\blanklineskip}{2ex} % blank lines in code environment
 
 \nc\prooflabel[1]{\label{proof:#1}}
-%if short
-\nc\proofref[1]{proof in \citep[Appendix C]{Elliott-2019-convolution-extended}}
-%else
+%if extended
 \nc\proofref[1]{Appendix \ref{proof:#1}}
+%else
+\nc\proofref[1]{proof in \citep[Appendix C]{Elliott2019-convolution-extended}}
 %endif
 \nc\provedIn[1]{\textnormal{Proved in \proofref{#1}}}
 
@@ -1511,6 +1508,8 @@ The function |poly| is a semiring homomorphism when multiplication on |b| commut
 \end{itemize}
 
 
+%if extended
+
 \appendix
 
 
@@ -2058,8 +2057,9 @@ Homomorphism proofs for \thmref{poly fun}:
 ==  poly f <.> poly g                                                   -- |(<.>)| on functions
 \end{code}
 
-
 %% \note{The sum and product derivations might read more easily in reverse.}
+
+%endif extended
 
 \bibliography{bib}
 

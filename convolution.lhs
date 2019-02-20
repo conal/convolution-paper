@@ -726,12 +726,6 @@ instance Monoid a => Semiring (P a) where
 instance StarSemiring (Pow a) -- use default |star| definition (\secref{Star Semirings}).
 \end{code}
 
-%% %format <-- = "\leftarrow"
-
-%% I'm postponing introduction of <--. For now, flag uses visibly.
-%format <-- = "\note{\underset{\scriptscriptstyle \text{oops}}{\leftarrow}}"
-%format F = "\note{\Varid{F}}"
-%format L = "\note{\Varid{L}}"
 \noindent
 These new instances indeed satisfy the laws for additive monoids, semimodules, semirings, and star semirings.
 They seem to spring from nothing, however, which is a bit disappointing compared with the way the |Additive| and |LeftSemimodule| instances for sets follow inevitably from the requirement that |setPred| be a homomorphism for those classes (\secref{Calculating Instances from Homomorphisms}).
@@ -1174,8 +1168,7 @@ Additionally, for multi-dimensional (discrete or continuous) convolution, we can
 \notefoot{More generally, cartesian products of monoids are also monoids.
 Consider multi-dimensional convolution in which different dimensions have different types, even mixing discrete and continuous, and maybe even sequences and numbers.
 At the least, it's useful to combine finite dimensions of different sizes.}
-Alternatively, curry, convolve, and uncurry, exploiting the fact that |curry| is a semiring homomorphism.
-\notefoot{Have I stated and proved the relevant lemma for currying and uncurrying with the \emph{monoid semiring}? \thmreftwo{curry additive}{curry semiring} are for |a -> b|, not |b <-- a|.}
+Alternatively, curry, convolve, and uncurry, exploiting the fact that |curry| is a semiring homomorphism (\thmref{curry semiring}).
 \notefoot{Mention the connection between generalized tries and currying.}
 \begin{theorem}[\provedIn{theorem:Fourier}]\thmlabel{Fourier}
 The Fourier transform is a semiring and left semimodule homomorphism from |b <- a| to |a -> b|.
@@ -1276,6 +1269,7 @@ lift0 b  = b +-> one
          = single b
 \end{code}
 
+%format <-- = "\leftarrow"
 %format FunctorC = Functor
 %format ApplicativeC = Applicative
 %format MonadC = Monad
@@ -1283,7 +1277,6 @@ lift0 b  = b +-> one
 %format pureC = pure
 %format liftA2C = liftA2
 %format >>== = >>=
-%format SRM = DetectableZero
 %% %format keys p = p
 \noindent
 The signatures of |lift2|, |lift1|, and |lift0| \emph{almost} generalize to those of |liftA2|, |fmap|, and |pure| from the |Functor| and |Applicative| type classes \needcite.

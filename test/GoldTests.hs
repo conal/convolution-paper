@@ -39,11 +39,12 @@ main = do
 basicTests :: TestTree
 basicTests = testGroup "Various representations"
   [ testGroup "" []
-  , tests @(RegExp ((->) Char)) @Bool "FunRegExp"
-  , tests @(RegExp (Map  Char)) @Bool "MapRegExp"
-  , tests @(LTrie  ((->) Char)) @Bool "FunTrie"
-  , tests @(LTrie  (Map  Char)) @Bool "MapTrie"
-  , tests @(LTrie  CharMap) @Bool "IMapTrie"
+  , tests @(RegExp ((->) Char)) @Bool "RegExpFun"
+  , tests @(RegExp (Map  Char)) @Bool "RegExpMap"
+  , tests @(RegExp CharMap    ) @Bool "RegExpIntMap"
+  , tests @(LTrie  ((->) Char)) @Bool "TrieFun"
+  , tests @(LTrie  (Map  Char)) @Bool "TrieMap"
+  , tests @(LTrie  CharMap    ) @Bool "TrieIntMap"
   ]
 
 -- TODO: some tests with s other than Bool.
@@ -60,8 +61,7 @@ tests group = testGroup group
   , gold "as-eps"                $ as ! ""
   , gold "as-a"                  $ as ! "a"
   , gold "ass-eps"               $ ass ! ""
-  , groupNot ["Pred","F"] $
-    gold "ass-a"                 $ ass ! "a"
+  , gold "ass-a"                 $ ass ! "a"
 
   , gold "pp-pi"                 $ pp ! "pi"
   , gold "pp-pig"                $ pp ! "pig"
@@ -75,8 +75,7 @@ tests group = testGroup group
   , gold "pps-pigping"           $ pps ! "pigping"
   , gold "pps-pinkpigpinkpigpig" $ pps ! "pinkpigpinkpigpig"
 
-  -- These recursive examples are challenging.
-  , groupNot ["MapRegExp"] $
+  , groupNot ["RegExpMap","RegExpIntMap"] $
     testGroup "anbn"
     [ gold "anbn-eps"              $ anbn ! ""
     , gold "anbn-ab"               $ anbn ! "ab"
@@ -109,13 +108,6 @@ tests group = testGroup group
              . pure . pack . show
 
 -- I'd like to use definitions from Examples. How to establish the types?
-
--- -- Orphan
--- instance Indexable ((:->:) Char) b where
---   type Key ((:->:) Char) = Char
---   (!) = untrie
-
--- instance HasSingle ((:->:) Char) b where
 
 -- TODO: generalize to other Integral or Enum types and add to Semi
 newtype CharMap b = CharMap (IntMap b) deriving Functor

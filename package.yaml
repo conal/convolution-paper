@@ -12,6 +12,7 @@ category:            language, math
 description:         Please see the README on GitHub at <https://github.com/conal/convolution-paper#readme>
 
 default-extensions:
+  - AllowAmbiguousTypes
   - CPP
   - ConstraintKinds
   - DefaultSignatures
@@ -75,8 +76,8 @@ library:
 
 tests:
   test:
-    main:                GoldTests.hs
     source-dirs:         test
+    main:                GoldTests.hs
     other-modules: []
     dependencies:
     - base
@@ -88,3 +89,19 @@ tests:
     # - semiring-num
     # - MemoTrie
     - paper
+
+benchmarks:
+  bench:
+    source-dirs:         test
+    main:                Benchmark.hs
+    other-modules: []
+    dependencies:
+    - base
+    - Cabal >= 1.24.0.0
+    - containers
+    - criterion
+    - deepseq
+    - paper
+  # ghc-options: -O
+
+# stack bench --benchmark-arguments '--output bench.html'

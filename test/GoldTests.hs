@@ -1,15 +1,8 @@
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE MonoLocalBinds #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
-
-{-# OPTIONS_GHC -Wall #-}
-{-# OPTIONS_GHC -Wno-unused-binds -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-binds -Wno-unused-imports #-}  -- TEMP
 
 module Main where
+
+import Prelude hiding (sum,product,(^))
 
 import Data.Map.Lazy (Map)
 import qualified Data.Map.Lazy as Map
@@ -26,11 +19,12 @@ import Test.Tasty.Golden
 
 -- import Data.MemoTrie
 
+import Misc   (cats)
 import Semi
--- import Language
--- import Decomp
-import RegExp
-import LTrie
+import RegExp (RegExp)
+import LTrie  (LTrie)
+
+import qualified Examples as X
 
 main :: IO ()
 main = do
@@ -39,12 +33,17 @@ main = do
 basicTests :: TestTree
 basicTests = testGroup "Various representations"
   [ testGroup "" []
+
+  , tests @((->) String)        @Bool "Function"
+
   , tests @(RegExp ((->) Char)) @Bool "RegExpFun"
   , tests @(RegExp (Map  Char)) @Bool "RegExpMap"
   , tests @(RegExp CharMap    ) @Bool "RegExpIntMap"
+
   , tests @(LTrie  ((->) Char)) @Bool "TrieFun"
   , tests @(LTrie  (Map  Char)) @Bool "TrieMap"
   , tests @(LTrie  CharMap    ) @Bool "TrieIntMap"
+
   ]
 
 -- TODO: some tests with s other than Bool.
@@ -53,7 +52,7 @@ basicTests = testGroup "Various representations"
 -- tests' = undefined
 
 tests :: forall f b.
-  ( HasSingle f b, Key f ~ String, StarSemiring (f b), Semiring b, Show b )
+  (HasSingle f b, Key f ~ String, StarSemiring (f b), Semiring b, Show b)
   => String -> TestTree
 tests group = testGroup group
   [ testGroup "" []
@@ -61,7 +60,8 @@ tests group = testGroup group
   , gold "as-eps"                $ as ! ""
   , gold "as-a"                  $ as ! "a"
   , gold "ass-eps"               $ ass ! ""
-  , gold "ass-a"                 $ ass ! "a"
+  , groupNot ["Function"] $
+    gold "ass-a"               $ ass ! "a"
 
   , gold "pp-pi"                 $ pp ! "pi"
   , gold "pp-pig"                $ pp ! "pig"
@@ -74,6 +74,10 @@ tests group = testGroup group
   , gold "pps-pigpig"            $ pps ! "pigpig"
   , gold "pps-pigping"           $ pps ! "pigping"
   , gold "pps-pinkpigpinkpigpig" $ pps ! "pinkpigpinkpigpig"
+
+  , gold "letters as0df"         $ letters ! "as0df"
+  , gold "letters asdf"          $ letters ! "asdf"
+  , gold "letters asdf 40"       $ letters ! cats 40 "asdf"
 
   , groupNot ["RegExpMap","RegExpIntMap"] $
     testGroup "anbn"
@@ -98,6 +102,7 @@ tests group = testGroup group
    pp = pink <+> pig
    pps   = star pp
    anbn  = one <+> (a <.> anbn <.> b)
+   letters = star (X.letter @f @b)
    groupNot :: [String] -> TestTree -> TestTree
    groupNot gs | group `elem` gs = const (testGroup "" [])
                | otherwise       = id
@@ -107,7 +112,7 @@ tests group = testGroup group
                 ("test/gold/" <> nm <> ".txt")
              . pure . pack . show
 
--- I'd like to use definitions from Examples. How to establish the types?
+-- TODO: Get more of the examples from X
 
 -- TODO: generalize to other Integral or Enum types and add to Semi
 newtype CharMap b = CharMap (IntMap b) deriving Functor

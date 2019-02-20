@@ -1,10 +1,12 @@
-{-# LANGUAGE RankNTypes #-}
-
--- {-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
+{-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
 
 -- | Some polymorphic language examples
 
 module Examples where
+
+import Prelude hiding (sum,product)
+
+import Data.Char (toUpper)
 
 import Semi
 
@@ -26,3 +28,13 @@ pps = star pp
 
 anbn :: (Stringy h b, Semiring (h b), Semiring b, Semiring b) => h b
 anbn  = one <+> (sa <.> anbn <.> sb)
+
+sumSingle :: (HasSingle h b, Semiring b, Additive (h b), Key h ~ [a]) => [a] -> h b
+sumSingle bs = sum [single [c] | c <- bs]
+
+char, letterL, letterU, letter, digit :: (Stringy h b, Semiring (h b), Semiring b) => h b
+char    = sumSingle [' ' .. '~']
+letterL = sumSingle ['a' .. 'z']
+letterU = sumSingle ['A' .. 'Z']
+letter  = letterL <+> letterU
+digit   = sumSingle ['0' .. '9']

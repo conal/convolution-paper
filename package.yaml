@@ -85,6 +85,6 @@ tests:
     - bytestring
     - tasty
     - tasty-golden
-    - semiring-num
+    # - semiring-num
+    # - MemoTrie
     - paper
-

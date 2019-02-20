@@ -4,9 +4,9 @@
 
 module Semi where
 
-import Prelude hiding (sum,product)
+import Prelude hiding (sum,product,(^))
 
--- import Control.Applicative (liftA2)
+import Control.Applicative (liftA2)
 import GHC.Natural (Natural)
 import Data.Functor.Identity (Identity(..))
 import GHC.Exts (Coercible,coerce,Constraint)
@@ -30,10 +30,6 @@ class Indexable h b where
   type Key h
   infixl 9 !
   (!) :: h b -> Key h -> b
-
-instance Indexable ((->) a) b where
-  type Key ((->) a) = a
-  f ! k = f k
 
 -- | Commutative monoid
 class Additive b where
@@ -92,9 +88,6 @@ class Indexable h b => HasSingle h b where
   infixr 2 +->
   (+->) :: Key h -> b -> h b
 
-instance (Eq a, Additive b) => HasSingle ((->) a) b where
-  a +-> b = \ a' -> if a == a' then b else zero
-
 single :: (HasSingle h b, Semiring b) => Key h -> h b
 single a = a +-> one
 
@@ -132,18 +125,35 @@ Nums(Float)
 Nums(Double)
 -- etc
 
-ApplSemi((->) a)
+-- ApplSemi((->) a)  -- use monoid semiring instead for now
 -- etc
 
 ApplMono([])
 -- ApplMono(Set)
 -- etc
 
+instance Indexable ((->) a) b where
+  type Key ((->) a) = a
+  f ! k = f k
+
+instance (Eq a, Additive b) => HasSingle ((->) a) b where
+  a +-> b = \ a' -> if a == a' then b else zero
+
+instance Additive b => Additive (a -> b) where
+  zero = pure zero
+  (<+>) = liftA2 (<+>)
+  -- zero = \ _ -> zero
+  -- f <+> g  = \ a -> f a <+> g a
+
+instance (Monoid a, Eq a, Splittable a, Semiring b) => Semiring (a -> b) where
+  one = single mempty
+  f <.> g = \ w -> sum [f u <.> g v | (u,v) <- splits w]
+
+instance (Monoid a, Eq a, Splittable a, Semiring b) => StarSemiring (a -> b)
+
 instance (Ord a, Additive b) => Additive (Map a b) where
   zero = M.empty
   (<+>) = M.unionWith (<+>)
-
--- NullZero((->*) a)
 
 instance (Ord a, Additive b) => DetectableZero (Map a b) where isZero = M.null
 
@@ -194,13 +204,13 @@ newtype Sum a = Sum a deriving (Eq,Show)
 getSum :: Sum a -> a
 getSum (Sum a) = a
 
-instance Semiring a => Semigroup (Sum a) where
+instance Additive a => Semigroup (Sum a) where
   Sum a <> Sum b = Sum (a <+> b)
 
-instance Semiring a => Monoid (Sum a) where
+instance Additive a => Monoid (Sum a) where
   mempty = Sum zero
 
-sum :: (Foldable f, Semiring a) => f a -> a
+sum :: (Foldable f, Additive a) => f a -> a
 sum = getSum . foldMap Sum
 
 -- Handy for eliding the Sum Natural vs Natural distinction in the paper.
@@ -236,6 +246,10 @@ instance Semiring a => Monoid (Product a) where
 
 product :: (Foldable f, Semiring a) => f a -> a
 product = getProduct . foldMap Product
+
+infixr 8 ^
+(^) :: Semiring a => a -> Int -> a
+a ^ n = product (replicate n a)
 
 type N = Sum Natural
 

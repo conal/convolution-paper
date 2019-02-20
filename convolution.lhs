@@ -355,7 +355,7 @@ positive n = n > 0
 \end{code}
 Then |positive| is a semiring homomorphism, i.e., the following properties hold for |m,n :: N|:%
 \footnote{\emph{Exercise:} What goes wrong if we replace natural numbers by integers?}
-\begin{spacing}{1.5}
+\begin{spacing}{1.2}
 \begin{code}
 positive zero  ==  False  == zero
 positive one   ==  True   == one
@@ -365,6 +365,7 @@ positive (m  *  n) == positive m  &&  positive n == positive m  *  positive n
 %% \vspace{-4ex}
 \end{spacing}
 
+\noindent
 There is a more fundamental example we will have use for later:
 \begin{theorem}[\provedIn{theorem:curry semiring}]\thmlabel{curry semiring}
 Currying and uncurrying are semiring homomorphisms.
@@ -430,7 +431,7 @@ In a star semiring, the affine equation |p = b + m * p| has solution |p = star m
 
 \subsectionl{Semimodules}
 
-\note{I think I can remove semimodules from the discussion and use |fmap (s *)| in place of |(scale s)|.
+\note{I think I can remove semimodules from the discussion and use |fmap (s NOP *)| in place of |(scale s)|.
 If so, do it.}
 
 %format .> = "\cdot"
@@ -491,7 +492,14 @@ s .> b  | isZero s   = zero
         | otherwise  = s `scale` b
 \end{code}
 The |DetectableZero| class \citep{semiring-num}:
-\notefoot{Maybe define and use |DetectableOne| as well here.}
+\notefoot{Maybe define and use |DetectableOne| as well here:
+\begin{code}
+(.>) :: (Semiring b, Scalable b s, DetectableZero s, DetectableOne s) => s -> b -> b
+s .> b  | isZero s   = zero
+        | isOne s    = b
+        | otherwise  = s `scale` b
+\end{code}
+\vspace{-4ex}}
 \notefoot{Maybe use semiring-num again.}
 \begin{code}
 class Semiring a => DetectableZero a where isZero :: a -> Bool
@@ -618,11 +626,12 @@ This pair of functions forms an isomorphism, i.e., |predSet . setPred == id| and
 Moreover, for sets |p| and |q|, |p == q <=> setPred p == setPred q|, by the \emph{extensionality} axiom of sets and of functions.
 Let's also require that |setPred| be an \emph{additive monoid homomorphism}.
 The required homomorphism properties:
+\begin{spacing}{1.2}
 \begin{code}
 setPred zero == zero
-
 setPred (p + q) == setPred p + setPred q
 \end{code}
+\end{spacing}\noindent
 We already know definitions of |setPred| as well as the function versions of |zero| and |(+)| (on the RHS) but not yet the set versions of |zero| and |(+)| (on the LHS).
 We thus have two algebra problems in two unknowns.
 Since only one unknown appears in each homomorphism equation, we can solve them independently.

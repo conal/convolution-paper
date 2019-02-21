@@ -21,6 +21,7 @@ default-extensions:
   - FlexibleContexts
   - FlexibleInstances
   - FunctionalDependencies
+  - GADTs
   - GeneralizedNewtypeDeriving
   - LambdaCase
   - MultiParamTypeClasses
@@ -104,4 +105,4 @@ benchmarks:
     - paper
   # ghc-options: -O
 
-# stack bench --benchmark-arguments '--output bench.html'
+# stack bench

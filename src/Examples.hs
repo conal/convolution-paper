@@ -10,29 +10,29 @@ import Data.Char (toUpper)
 
 import Semi
 
-type Stringy h b = (Key h ~ String, HasSingle h b)
+type Stringy f b = (Key f ~ String, HasSingle f b)
 
-sa, sb, pink, pig :: (Stringy h b, Semiring b) => h b
+sa, sb, pink, pig :: (Stringy f b, Semiring b) => f b
 sa   = single "a"
 sb   = single "b"
 pink = single "pink"
 pig  = single "pig"
 
-pp :: (Stringy h b, Additive (h b), Semiring b) => h b
+pp :: (Stringy f b, Additive (f b), Semiring b) => f b
 pp   = pink <+> pig
 
-as, ass, pps :: (Stringy h b, StarSemiring (h b), StarSemiring b) => h b
+as, ass, pps :: (Stringy f b, StarSemiring (f b), StarSemiring b) => f b
 as  = star sa
 ass = star as
 pps = star pp
 
-anbn :: (Stringy h b, Semiring (h b), Semiring b) => h b
+anbn :: (Stringy f b, Semiring (f b), Semiring b) => f b
 anbn  = one <+> (sa <.> anbn <.> sb)
 
-sumSingle :: (HasSingle h b, Semiring b, Additive (h b), Key h ~ [a]) => [a] -> h b
+sumSingle :: (HasSingle f b, Semiring b, Additive (f b), Key f ~ [a]) => [a] -> f b
 sumSingle bs = sum [single [c] | c <- bs]
 
-char, letterL, letterU, letter, digit :: (Stringy h b, Semiring (h b), Semiring b) => h b
+char, letterL, letterU, letter, digit :: (Stringy f b, Semiring (f b), Semiring b) => f b
 char    = sumSingle [' ' .. '~']
 letterL = sumSingle ['a' .. 'z']
 letterU = sumSingle ['A' .. 'Z']
@@ -40,7 +40,7 @@ letter  = letterL <+> letterU
 digit   = sumSingle ['0' .. '9']
 
 -- Balanced brackets <https://en.wikipedia.org/wiki/Dyck_language>
-dyck :: (Stringy h b, Semiring (h b), Semiring b) => h b
+dyck :: (Stringy f b, Semiring (f b), Semiring b) => f b
 dyck = one <+> single "[" <.> dyck <.> single "]" <.> dyck
 
 -- Will dyck get repeatedly reconstructed, considering polymorphism?

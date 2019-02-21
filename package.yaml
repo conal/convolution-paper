@@ -101,6 +101,7 @@ benchmarks:
     - Cabal >= 1.24.0.0
     - containers
     - criterion
+    - directory
     - deepseq
     - paper
   # ghc-options: -O

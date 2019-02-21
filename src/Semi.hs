@@ -13,6 +13,8 @@ import GHC.Exts (Coercible,coerce,Constraint)
 
 import Data.Map (Map)
 import qualified Data.Map as M
+import Data.IntMap.Lazy (IntMap)
+import qualified Data.IntMap.Lazy as IntMap
 -- import Data.Set (Set)
 -- import qualified Data.Set as S
 
@@ -258,3 +260,22 @@ type Z = Sum Integer
 instance Splittable N where
   isEmpty n = n == 0
   splits n = [(i, n-i) | i <- [0 .. n]]
+
+{--------------------------------------------------------------------
+    Misc
+--------------------------------------------------------------------}
+
+-- TODO: generalize to other Integral or Enum types and add to Semi
+newtype CharMap b = CharMap (IntMap b) deriving Functor
+
+instance Additive b => Indexable CharMap b where
+  type Key CharMap = Char
+  CharMap m ! a = IntMap.findWithDefault zero (fromEnum a) m
+
+instance Additive b => HasSingle CharMap b where a +-> b = CharMap (IntMap.singleton (fromEnum a) b)
+
+instance Additive b => Additive (CharMap b) where
+  zero = CharMap IntMap.empty
+  CharMap u <+> CharMap v = CharMap (IntMap.unionWith (<+>) u v)
+
+instance Additive b => DetectableZero (CharMap b) where isZero (CharMap m) = IntMap.null m

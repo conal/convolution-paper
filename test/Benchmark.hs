@@ -5,9 +5,9 @@
 module Main where
 
 import Control.DeepSeq (NFData)
-import qualified Data.Map.Lazy   as LM
-import qualified Data.Map.Strict as SM
+import Data.Map (Map)
 import Criterion.Main
+import Criterion.Types (Config(..),Verbosity(..))
 
 import Misc (cats)
 import Semi
@@ -17,43 +17,65 @@ import LTrie
 import Examples
 
 config :: Config
-config = defaultConfig {
-               reportFile = "crunch.html"  -- for example
-           }
+config = defaultConfig
+  {
+    reportFile = Just "crunch.html"  -- for example
+  , timeLimit  = 1  -- 5
+  -- , verbosity  = Quiet  -- Normal
+  }
 
 main :: IO ()
-main = defaultMainWith 
+main = defaultMainWith config
   [ bgroup "" []
 
   , matchers @((->) String       )      @Bool "Function"
 
   , bgroup "RegExp"
     [ matchers @(RegExp ((->) Char)   ) @Bool "Function"
-    -- , matchers @(RegExp (LM.Map  Char)) @Bool "LazyMap"
-    -- , matchers @(RegExp (SM.Map  Char)) @Bool "StrictMap"
+    -- , matchers @(RegExp (M.Map  Char)) @Bool "Map"
     ]
 
   , bgroup "Trie"
-    [ matchers @(LTrie  ((->) Char)   ) @Bool "Function"
-    , matchers @(LTrie  (LM.Map  Char)) @Bool "LazyMap"
-    , matchers @(LTrie  (SM.Map  Char)) @Bool "StrictMap"
+    [ bgroup "" []
+    -- , matchers @(LTrie  ((->) Char)  ) @Bool "Function"
+    , matchers @(LTrie  (Map Char)) @Bool "Map"
+    , matchers @(LTrie  CharMap   ) @Bool "IntMap"
     ]
   ]
+
+bg :: Benchmark
+bg = bgroup "" []
 
 matchers :: forall f b. (HasSingle f b, Key f ~ String, StarSemiring (f b), StarSemiring b, NFData b)
          => String -> Benchmark
 matchers group =
   bgroup group
-    [ bgroup "letters"
-       [ bgroup "" []
-       -- , bench "asdf-50"  $ star letter # cats 50  "asdf"
-       , bgroup "dyck"
-         [ bench "a" $ dyck # "[]"
-         , bench "b" $ dyck # "[[]]"
-         , bench "c" $ dyck # "[[a]]"
-         , bench "d" $ dyck # "[[]][]"
-         ]
+    [ bg
+
+    , bgroup "letters"
+       [ bg
+       , bgroup "" []
+       , bench "asdf-50"  $ star letter # cats 50  "asdf"
        ]
+
+    , bgroup "dyck"
+      [ bg
+      , bench "1" $ dyck # "[]"
+      , bench "2" $ dyck # "[[]]"
+      , bench "3" $ dyck # "[[a]]"
+      , bench "4" $ dyck # "[[]][]"
+      ]
+
+    , bgroup "anbn"
+      [ bg
+      , bench "anbn-eps"     $ anbn # ""
+      , bench "anbn-ab"      $ anbn # "ab"
+      , bench "anbn-ba"      $ anbn # "ba"
+      , bench "anbn-aabb"    $ anbn # "aabb"
+      , bench "anbn-aacbb"   $ anbn # "aacbb"
+      , bench "anbn-aaabbb"  $ anbn # "aaabbb"
+      , bench "anbn-aaabbbb" $ anbn # "aaabbbb"
+      ]
     ]
  where
    infixl 2 #

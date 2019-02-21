@@ -6,6 +6,7 @@ module Main where
 
 import Control.DeepSeq (NFData)
 import Data.Map (Map)
+import System.Directory (createDirectoryIfMissing)
 import Criterion.Main
 import Criterion.Types (Config(..),Verbosity(..))
 
@@ -17,47 +18,55 @@ import LTrie
 import Examples
 
 main :: IO ()
-main = do 
+main = do
+  putChar '\n'
+  createDirectoryIfMissing True outDir
 
-  group "letters" (star letter)
-    [ ("asdf", cats 5 "asdf") ]
+  group "letters" (star letter) []
+    [ ("asdf-50", cats 50 "asdf") ]
 
-  group "dyck" dyck
-    [ ("1", "[]")
-    , ("2", "[[]]")
-    , ("3", "[[a]]")
-    , ("4", "[[]][]")
-    ]
+  group "dyck" dyck ["RegExp Map","RegExp IntMap"] $
+    dups [ "[]","[[]]","[[a]]","[[]][]" ]
 
-  group "anbn" anbn
-    [ ("eps"     , "")
-    , ("ab"      , "ab")
-    , ("ba"      , "ba")
-    , ("aabb"    , "aabb")
-    , ("aacbb"   , "aacbb")
-    , ("aaabbb"  , "aaabbb")
-    , ("aaabbbb" , "aaabbbb")
-    ]
+  group "anbn" anbn ["RegExp Map","RegExp IntMap"] $
+    [ ("eps"     , "") ]
+    ++ dups ["ab","ba","aabb","aacbb","aaabbb","aaabbbb"]
 
+ where
+   dups = map (\ a -> (a,a))
+
+outDir :: FilePath
+outDir = "test/Benchmarks"
 
 type Ok f b = (HasSingle f b, StarSemiring (f b), StarSemiring b, NFData b, Key f ~ String)
 
-group :: String -> (forall f b. Ok f b => f b) -> [(String,String)] -> IO ()
-group groupName example dats =
-  do putStrLn ("Group " ++ show groupName)
+group :: String -> (forall f b. Ok f b => f b) -> [String] -> [(String,String)] -> IO ()
+group groupName example omit dats =
+  do putStrLn ("# Group " ++ show groupName ++ "\n")
      defaultMainWith config (dat <$> dats)
  where
    config = defaultConfig
-     { reportFile = Just ("test/Benchmarks/" ++ groupName ++ ".html")
+     { reportFile = Just (outDir ++ "/" ++ groupName ++ ".html")
      , timeLimit  = 1 -- 5
      }
    dat :: (String,String) -> Benchmark
    dat (dname,str) =
      bgroup dname
-       [ style @(LTrie  ((->) Char)) @Bool "Function"
-       , style @(LTrie  (Map  Char)) @Bool "Map"
-       , style @(LTrie  CharMap    ) @Bool "IntMap"
+       [ bgroup "" []
+
+       , style @(LTrie  ((->) Char)) @Bool "LTrie/Function"
+       , style @(LTrie  (Map  Char)) @Bool "LTrie/Map"
+       , style @(LTrie  CharMap    ) @Bool "LTrie/IntMap"
+
+       -- , style @(RegExp ((->) Char)) @Bool "RegExp/Function"
+       -- , style @(RegExp (Map  Char)) @Bool "RegExp/Map"
+       -- , style @(RegExp CharMap    ) @Bool "RegExp/IntMap"
+
        ]
     where
       style :: forall f b. Ok f b => String -> Benchmark
-      style s = bench s (nf (example @f @b !) str)
+      style s | s `elem` omit = bgroup "" []
+              | otherwise     = bench s (nf (example @f @b !) str)
+
+-- TODO: Generate the style name from the type via TypeRep.
+

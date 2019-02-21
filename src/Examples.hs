@@ -27,7 +27,7 @@ ass = star as
 pps = star pp
 
 anbn :: (Stringy f b, Semiring (f b), Semiring b) => f b
-anbn  = one <+> (sa <.> anbn <.> sb)
+anbn = one <+> (sa <.> anbn <.> sb)
 
 sumSingle :: (HasSingle f b, Semiring b, Additive (f b), Key f ~ [a]) => [a] -> f b
 sumSingle bs = sum [single [c] | c <- bs]

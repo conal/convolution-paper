@@ -57,37 +57,45 @@ tests :: forall f b.
 tests group = testGroup group
   [ testGroup "" []
 
-  , gold "as-eps"                $ as ! ""
-  , gold "as-a"                  $ as ! "a"
-  , gold "ass-eps"               $ ass ! ""
-  , groupNot ["Function"] $
-    gold "ass-a"               $ ass ! "a"
+  -- , gold "as-eps"                $ as ! ""
+  -- , gold "as-a"                  $ as ! "a"
+  -- , gold "ass-eps"               $ ass ! ""
+  -- , groupNot ["Function"] $
+  --   gold "ass-a"                 $ ass ! "a"
 
-  , gold "pp-pi"                 $ pp ! "pi"
-  , gold "pp-pig"                $ pp ! "pig"
-  , gold "pp-pig"                $ pp ! "pig"
-  , gold "pp-pink"               $ pp ! "pink"
-  , gold "pp-ping"               $ pp ! "ping"
+  -- , gold "pp-pi"                 $ pp ! "pi"
+  -- , gold "pp-pig"                $ pp ! "pig"
+  -- , gold "pp-pig"                $ pp ! "pig"
+  -- , gold "pp-pink"               $ pp ! "pink"
+  -- , gold "pp-ping"               $ pp ! "ping"
 
-  , gold "pps-q"                 $ pps ! "q"
-  , gold "pps-pig"               $ pps ! "pig"
-  , gold "pps-pigpig"            $ pps ! "pigpig"
-  , gold "pps-pigping"           $ pps ! "pigping"
-  , gold "pps-pinkpigpinkpigpig" $ pps ! "pinkpigpinkpigpig"
+  -- , gold "pps-q"                 $ pps ! "q"
+  -- , gold "pps-pig"               $ pps ! "pig"
+  -- , gold "pps-pigpig"            $ pps ! "pigpig"
+  -- , gold "pps-pigping"           $ pps ! "pigping"
+  -- , gold "pps-pinkpigpinkpigpig" $ pps ! "pinkpigpinkpigpig"
 
-  , gold "letters as0df"         $ letters ! "as0df"
-  , gold "letters asdf"          $ letters ! "asdf"
-  , gold "letters asdf 40"       $ letters ! cats 40 "asdf"
+  -- , gold "letters as0df"         $ letters ! "as0df"
+  -- , gold "letters asdf"          $ letters ! "asdf"
+  -- , gold "letters asdf 40"       $ letters ! cats 40 "asdf"
+
+  -- , groupNot ["RegExpMap","RegExpIntMap"] $
+  --   testGroup "anbn"
+  --   [ gold "anbn-eps"              $ anbn ! ""
+  --   , gold "anbn-ab"               $ anbn ! "ab"
+  --   , gold "anbn-ba"               $ anbn ! "ba"
+  --   , gold "anbn-aabb"             $ anbn ! "aabb"
+  --   , gold "anbn-aacbb"            $ anbn ! "aacbb"
+  --   , gold "anbn-aaabbb"           $ anbn ! "aaabbb"
+  --   , gold "anbn-aaabbbb"          $ anbn ! "aaabbbb"
+  --   ]
 
   , groupNot ["RegExpMap","RegExpIntMap"] $
-    testGroup "anbn"
-    [ gold "anbn-eps"              $ anbn ! ""
-    , gold "anbn-ab"               $ anbn ! "ab"
-    , gold "anbn-ba"               $ anbn ! "ba"
-    , gold "anbn-aabb"             $ anbn ! "aabb"
-    , gold "anbn-aacbb"            $ anbn ! "aacbb"
-    , gold "anbn-aaabbb"           $ anbn ! "aaabbb"
-    , gold "anbn-aaabbbb"          $ anbn ! "aaabbbb"
+    testGroup "dyck"
+    [ gold "dyck-a" $ dyck ! "[]"
+    , gold "dyck-b" $ dyck ! "[[]]"
+    , gold "dyck-c" $ dyck ! "[[a]]"
+    , gold "dyck-d" $ dyck ! "[[]][]"
     ]
 
   ]
@@ -106,6 +114,7 @@ tests group = testGroup group
    groupNot :: [String] -> TestTree -> TestTree
    groupNot gs | group `elem` gs = const (testGroup "" [])
                | otherwise       = id
+   dyck = X.dyck @f @b
    gold :: Show z => String -> z -> TestTree
    gold nm = -- TODO: make directory if missing 
              goldenVsString nm

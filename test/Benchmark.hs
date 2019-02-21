@@ -16,22 +16,25 @@ import LTrie
 
 import Examples
 
-main :: IO ()
--- main = return ()
+config :: Config
+config = defaultConfig {
+               reportFile = "crunch.html"  -- for example
+           }
 
-main = defaultMain
+main :: IO ()
+main = defaultMainWith 
   [ bgroup "" []
 
   , matchers @((->) String       )      @Bool "Function"
 
   , bgroup "RegExp"
-    [ matchers @(RegExp ((->) Char)   ) @Bool "Fun"
-    , matchers @(RegExp (LM.Map  Char)) @Bool "LazyMap"
-    , matchers @(RegExp (SM.Map  Char)) @Bool "StrictMap"
+    [ matchers @(RegExp ((->) Char)   ) @Bool "Function"
+    -- , matchers @(RegExp (LM.Map  Char)) @Bool "LazyMap"
+    -- , matchers @(RegExp (SM.Map  Char)) @Bool "StrictMap"
     ]
 
   , bgroup "Trie"
-    [ matchers @(LTrie  ((->) Char)   ) @Bool "Fun"
+    [ matchers @(LTrie  ((->) Char)   ) @Bool "Function"
     , matchers @(LTrie  (LM.Map  Char)) @Bool "LazyMap"
     , matchers @(LTrie  (SM.Map  Char)) @Bool "StrictMap"
     ]
@@ -42,7 +45,14 @@ matchers :: forall f b. (HasSingle f b, Key f ~ String, StarSemiring (f b), Star
 matchers group =
   bgroup group
     [ bgroup "letters"
-       [ bench "asdf 50"  $ star letter # cats 50  "asdf"
+       [ bgroup "" []
+       -- , bench "asdf-50"  $ star letter # cats 50  "asdf"
+       , bgroup "dyck"
+         [ bench "a" $ dyck # "[]"
+         , bench "b" $ dyck # "[[]]"
+         , bench "c" $ dyck # "[[a]]"
+         , bench "d" $ dyck # "[[]][]"
+         ]
        ]
     ]
  where

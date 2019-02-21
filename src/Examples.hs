@@ -21,12 +21,12 @@ pig  = single "pig"
 pp :: (Stringy h b, Additive (h b), Semiring b) => h b
 pp   = pink <+> pig
 
-as, ass, pps :: (Stringy h b, Additive (h b), StarSemiring (h b), StarSemiring b) => h b
+as, ass, pps :: (Stringy h b, StarSemiring (h b), StarSemiring b) => h b
 as  = star sa
 ass = star as
 pps = star pp
 
-anbn :: (Stringy h b, Semiring (h b), Semiring b, Semiring b) => h b
+anbn :: (Stringy h b, Semiring (h b), Semiring b) => h b
 anbn  = one <+> (sa <.> anbn <.> sb)
 
 sumSingle :: (HasSingle h b, Semiring b, Additive (h b), Key h ~ [a]) => [a] -> h b
@@ -38,3 +38,11 @@ letterL = sumSingle ['a' .. 'z']
 letterU = sumSingle ['A' .. 'Z']
 letter  = letterL <+> letterU
 digit   = sumSingle ['0' .. '9']
+
+-- Balanced brackets <https://en.wikipedia.org/wiki/Dyck_language>
+dyck :: (Stringy h b, Semiring (h b), Semiring b) => h b
+dyck = one <+> single "[" <.> dyck <.> single "]" <.> dyck
+
+-- Will dyck get repeatedly reconstructed, considering polymorphism?
+
+-- TODO: try other formulations, including an explicit local recursion and star.

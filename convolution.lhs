@@ -2148,7 +2148,7 @@ Homomorphism proofs for \thmref{poly hom}:
 
 %% \note{The sum and product derivations might read more easily in reverse.}
 
-\subsection{\thmref{^ hom}}\prooflabel{lemma:^ hom}
+\subsection{\lemref{^ hom}}\prooflabel{lemma:^ hom}
 
 \begin{code}
     x ^ zero

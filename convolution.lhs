@@ -10,7 +10,7 @@
 \newcommand\auth{Conal Elliott}
 %endif
 
-%% %let draft = True
+%let draft = not icfp
 
 %let short = not extended
 
@@ -49,8 +49,8 @@
 \usepackage[margin=0.12in]{geometry}  % 0.12in, 0.9in, 1in
 
 %% \geometry{paperwidth=6.75in}  % for iPad portrait preview
-%% \geometry{paperheight=9in} % for 2-up on big monitor, larger text
-%% \geometry{paperwidth=10.5in} % 2-up big monitor, smaller text
+\geometry{paperheight=9.3in} % for 2-up on big monitor, larger text
+%% \geometry{paperwidth=10in} % 2-up big monitor, smaller text
 
 \usepackage[square]{natbib}
 \bibliographystyle{plainnat}
@@ -162,10 +162,12 @@ Since tries generalize elegantly from sets to functions and from strings to alge
 Underlying these variations is a notion of generalized \emph{convolution}, which itself (along with probabilistic computation) generalizes to the free semimodule monad.
 This paper shows how to perform (generalized) convolution efficiently and easily, in one dimension or many, on time or space and on languages.
 Aside from applications in image processing and machine learning, a simple and direct application of convolution is multiplication of polynomials, again in one or many dimensions (i.e., univariate or multivariate).
-Along the way, we will the question of whether language ``derivatives'' are indeed derivatives, and in particular, of what functions.
+%if False
+Along the way, we will address the question of whether language ``derivatives'' are indeed derivatives, and in particular, of what functions.
 The (affirmative) answer to this question draws a lovely path from a simple, well-known, and highly inefficient parsing technique based on backtracking to efficient, backtracking-free parsing.
+%endif
 
-All of the algorithms in the paper follow from very simple specifications in the form of homomorphisms that relate different representations to each other.
+All of the algorithms in the paper follow from simple specifications in the form of homomorphisms that relate different representations to each other.
 
 \end{abstract}
 
@@ -570,8 +572,6 @@ The proof closely resembles that of \lemref{affine over semiring}, using the lef
 
 \subsectionl{Function-like Types and Singletons}
 
-\note{Consider moving this section elsewhere.}
-
 Most of the representations used in this paper are functions or are types that behave like functions.
 It will be useful to use a standard vocabulary for the latter.
 An ``indexable'' functor |h| is such that |h b| represent |a -> b| for a some type |a| of ``keys''.
@@ -836,7 +836,7 @@ The |(<.>)| implementation above will try all possible three-way splittings of t
 
 \sectionl{Finite maps}
 
-\note{I don't think finite maps need their section. Look for another home. Maybe with |LTrie| as a suggested functor.}
+\note{I don't think finite maps need their own section. Look for another home. Maybe with |LTrie| as a suggested functor.}
 
 One representation of \emph{partial} functions is the type of finite maps, |Map a b| from keys of type |a| to values of type |b|, represented is a key-ordered balanced tree \citep{Adams1993Sets,Straka2012ATR,Nievergelt1973BST}.
 To model \emph{total} functions instead, we can treat unassigned keys as denoting zero.
@@ -980,7 +980,6 @@ atEps (c  :  cs  +-> b) == zero
 \begin{lemma}[\provedIn{lemma:deriv [c] -> b}, generalizing Lemma 3.1 of \citet{Brzozowski64}]\lemlabel{deriv [c] -> b}
 Differentiation has the following properties:
 \notefoot{If I replace application to |c| by indexing by |c| (i.e., |(! NOP c)|), will this lemma hold for all of the representations? I suspect so. Idea: Define $\derivOp_c\,p = \derivOp\,p\:!\:c$.}
-\notefoot{I may rewrite the |(*)|, |star|, and |(.>)| cases in terms of functors instead of functions for use in \figref{RegExp}.}
 \begin{spacing}{1.3}
 \begin{code}
 deriv zero   c == zero
@@ -1083,7 +1082,7 @@ deriv  (Star p)       = fmap (\ d -> star (atEps p) .> d <.> Star p) (deriv p)
 } generalizes regular expressions in the same way that |a -> b| generalizes |Pow a|, to yield a value of type |b| (a star semiring).
 The constructor |Value b| generalizes |zero| and |one| to yield a semiring value.
 \begin{theorem}\thmlabel{RegExp}
-Given the definitions in \figref{RegExp}, |regexp| and |(!)| are homomorphisms with respect to each instantiated class.
+Given the definitions in \figref{RegExp} |(!)| is a homomorphism with respect to each instantiated class.
 \end{theorem}
 Note that the definition of |e ! w| in \figref{RegExp} is exactly |atEps (derivs e w)| generalized to indexable |h|, which performs repeated syntactic transformation with respect to successive characters in |w|, successively performing syntactic differentiation, with |atEps| applied to the final resulting regular expression.
 The implementation in \figref{RegExp} generalizes the regular expression matching algorithm of \citet{Brzozowski64}, adding customizable memoization, depending on choice of the indexable functor |h|.
@@ -1176,8 +1175,6 @@ In the keys library, |Key (Cofree f a) = Seq a|, but |[a]| seems more suitable t
 I can of course define my own version.
 It does define |type instance Key (Map k) = k|.
 
-Parametrize |RegExp| over a functor as well.
-
 The cofree comonad perspective is probably quite relevant, since the denotation as a function from lists crucially uses |coreturn| and |cojoin|.
 Oh! Examine |coreturn| and |cojoin| on |Cofree f|. Sure enough, |(!)| is a comonad homomorphism.
 
@@ -1197,8 +1194,7 @@ Using the set/predicate isomorphism from \secref{Calculating Instances from Homo
 
 which is the definition of the concatenation of two languages from  \secref{Languages and the Monoid Semiring}.
 
-By specializing the \emph{domain} of the functions to sequences (from general monoids), we got efficient matching of semiring-generalized ``languages'', as in \secreftwo{Decomposing Functions from Lists}{Tries}, which translates to regular expressions (\secref{Regular Expressions}), generalizing work of \citet{Brzozowski64}\note{, while apparently improving performance.
-\notefoot{Measure and compare in \secref{Regular Expressions} and \secref{Tries}.}}
+By specializing the \emph{domain} of the functions to sequences (from general monoids), we got efficient matching of semiring-generalized ``languages'', as in \secreftwo{Decomposing Functions from Lists}{Tries}, which translates to regular expressions (\secref{Regular Expressions}), generalizing work of \citet{Brzozowski64}.
 
 %format R = "\mathbb R"
 %format C = "\mathbb C"
@@ -1438,7 +1434,7 @@ Perhaps less known is that this trick extends naturally to multivariate polynomi
 Looking more closely, univariate polynomials (and even power series) can be represented by a collection of coefficients indexed by exponents, or conversely as a collection of exponents weighted by coefficients.
 For a polynomial in a variable |x|, an association of coefficient |c| with exponent |i| represents the monomial (polynomial term) |c * pow x i|.
 One can use a variety of representations for these indexed collections.
-We'll consider efficient representations below, but let's begin as |N -> b| along with a denotation as |b -> b|:
+We'll consider efficient representations below, but let's begin as |N -> b| along with a denotation as a (polynomial) function of type |b -> b|:
 \notefoot{Should I use |b <-- N| instead?}
 %% Elide the Sum isomorphism
 % type N = Sum Natural
@@ -1451,6 +1447,23 @@ Polynomial multiplication via convolution follows from the following property:
 The function |poly| is a semiring homomorphism when multiplication on |b| commutes.
 \end{theorem}
 
+What about multivariate polynomials, i.e., polynomial functions over higher-dimensional domains?
+Consider a 2D domain:
+%format poly2
+\begin{code}
+poly2 :: Semiring c => (N -> N -> c) -> (c -> c -> c)
+poly2 f = \ x y -> bigSum (i,j) f i j * pow x i * pow y j
+\end{code}
+Then
+\begin{code}
+    poly2 f x y
+==  bigSum (i,j) f i j * pow x i * pow y j         -- |poly2| definition
+==  bigSum i (bigSum j f i j * pow y j) * pow x i  -- linearity and commutativity assumption
+==  bigSum i (poly (f i) y) * pow x i              -- |poly| definition
+==  poly (\ i -> poly (f i) y) x                   -- |poly| definition
+\end{code}
+
+\vspace{15ex}
 \workingHere
 
 \noindent
@@ -1464,11 +1477,20 @@ The function |poly| is a semiring homomorphism when multiplication on |b| commut
 \end{itemize}
 }
 
-
 \sectionl{The Comonad Connection}
 
 \note{Move relevant remarks here, and expand on them.}
 
+\sectionl{Conclusions and Future Work}
+
+\note{
+Future work:
+\begin{itemize}
+\item More careful performance testing, analysis, and optimization.
+\item Explore Brzozowski derivatives as actual derivatives of residual functions, as in my journal notes from 2019-02-08.
+\item Generalization from lists to other data types.
+\end{itemize}
+}
 
 \sectionl{Miscellaneous Notes}
 

@@ -7,18 +7,20 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 
 ### Major
 
-*   Benchmarking at least of regexp vs tries.
-    Last I checked, my regexp implementations fail to terminate on $a^n n^bn$.
+*   See also the Future Work section.
+*   Introduction, including contributions.
 *   Related work. Lots of references below.
-*   Explore Brzozowski derivatives as actual derivatives of residual functions, as in my journal notes from 2019-02-08.
-*   Generalization from lists to arbitrary regular algebraic data types.
+*   Benchmarking results
+*   The comonad connection.
+*   Probabilistic computation.
+*   Lots of needed references (`\\needcite`).
 *   Sets are to languages as binary relations are to what?
     Currying gets us to `String -> String -> Bool` (for sets).
     Is there anything interesting and/or useful here?
     Note that a (generalized) trie from pairs of strings is going to look like a curried trie anyway.
 *   Super-memoization.
     See notes from 2018-12-02 and 2018-12-05.
-*   The comonad connection.
+
 
 ### Misc
 
@@ -103,6 +105,8 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 
 ## Did
 
+*   Benchmarking at least of regexp vs tries.
+    Last I checked, my regexp implementations fail to terminate on $a^n n^bn$.
 *   Convolution commutes with currying and with uncurrying.
     So do addition, zero, and one, but `single` is different.
     See 2019-01-28 notes.

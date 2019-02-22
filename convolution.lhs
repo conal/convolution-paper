@@ -49,7 +49,7 @@
 \usepackage[margin=0.12in]{geometry}  % 0.12in, 0.9in, 1in
 
 %% \geometry{paperwidth=6.5in,paperheight=8in}  % for iPad portrait preview
-\geometry{paperwidth=5in,paperheight=50in}  % experiment
+\geometry{paperwidth=5.2in,paperheight=6.5in}  % same but easier on the eyes
 %% \geometry{paperheight=9.3in} % for 2-up on big monitor, larger text
 %% \geometry{paperwidth=10in} % 2-up big monitor, smaller text
 
@@ -1424,7 +1424,7 @@ The latter property is known as ``the convolution theorem'' \citep[Chapter 6]{Br
 Where there's an applicative, there's often a compatible monad.
 For |b <-- a|, the monad is known as the ``free semimodule monad'' (or sometimes the ``free \emph{vector space} monad'') \needcite{}.
 The dimension of the semimodule is the cardinality of |a|.
-Basis vectors have the form |single u| for some |u :: a|, mapping |u| to |one| and everything else to |zero| as in \figref{monoid semiring}.
+Basis vectors have the form |single u = u +-> one| for some |u :: a| (mapping |u| to |one| and every other value to |zero| as in \figref{monoid semiring}).
 
 The monad instance is defined as follows:\footnote{The |return| method does not appear here, since it is equivalent to |pure| from |Applicative|.}
 \begin{code}
@@ -1487,46 +1487,49 @@ Then
 The essential idea here is that a polynomial with a pair-valued domain can be viewed as a polynomial over polynomials.
 
 We can do much better, however, generalizing from two dimensions to |n| dimensions for any |n|:
-%% %format ^ = "\hspace{-0.9pt}\string^\hspace{-1.5pt}"
 %format ^ = "\string^"
+
+%format pows a (b) = a "\!{\string^}^{\hspace{-1pt}" b "}"
+%% %format pows a (b) = pow a (^b)
+
 %format sub u (v) = u "_" v
 %format bigProd (lim) = "\bigOp\prod{" lim "}{0}"
 %% %format bigProdQ (lim) = "\bigOp\prod{" lim "}{1}"
 \begin{code}
 poly :: (b <-- pow N n) -> (pow b n -> b)
-poly (F f) (x :: pow b n) = bigSum (p :: pow N n)  f p * x ^ p
+poly (F f) (x :: pow b n) = bigSum (p :: pow N n)  f p * pows x p
 
 infixr 8 NOP ^
 (^) :: pow b n -> pow N n -> b
-x ^ p = bigProd (i < n) (wrap (pow (wrap (sub x i)) (sub p i)))
+pows x p = bigProd (i < n) (wrap (pow (wrap (sub x i)) (sub p i)))
 \end{code}
-For instance, for |n=3|, |(x,y,z)^(i,j,k) = pow x i * pow y j * pow z k|.
+For instance, for |n=3|, |pows (x,y,z) ((i,j,k)) = pow x i * pow y j * pow z k|.
 Generalizing further, rather than taking |n| here to be a natural number, let |n| be any type of countable size, and interpret |pow b n| and |pow N n| as |n -> b| and |n -> N|:
 \begin{code}
 poly :: (b <-- (n -> N)) -> ((n -> b) -> b)
-poly (F f) (x :: n -> b) = bigSumQ (p :: n -> N)  f p * x ^ p
+poly (F f) (x :: n -> b) = bigSumQ (p :: n -> N)  f p * pows x p
 
 infixr 8 NOP ^
 (^) :: (n -> b) -> (n -> N) -> b
-x ^ p = bigProd (i :: n) (wrap (pow (x i) ((p i))))
+pows x p = bigProd i (wrap (pow (x i) ((p i))))
 \end{code}
 The value of this second generalization is that the result also applies to \emph{indexable functors} (indexed by |n|), since they represent functions via |(!)| (\secref{Function-like Types and Singletons}).
 
-This |(^)| operation behaves like exponentiation:
-\begin{lemma}[\provedIn{lemma:^ hom}]\lemlabel{^ hom}
-When |(*)| commutes, the following laws hold forall |x, p, q|, 
+\begin{lemma}[\provedIn{lemma:pows hom}]\lemlabel{pows hom}
+When |(*)| commutes, |(^)| satisfies the following exponentiation laws:
+\notefoot{Maybe also |pows (pows x p) q == pows x (p * q)|. Hunch: I'd have to generalize regular exponentiation and make |(^)| a special case. Handily, I could then drop the carrot symbol.}
 \begin{code}
-x ^ zero == one
-x ^ (p + q) == x^p * x^q
+pows x zero == one
+pows x (p + q) == pows x p * pows x q
 \end{code}
-In other words, |(x NOP^)| is a (commutative) monoid homomorphism from the sum monoid to the product monoid.
+In other words, |pows x| is a (commutative) monoid homomorphism from the sum monoid to the product monoid.
 \end{lemma}
 
 \begin{theorem}\thmlabel{generalized poly hom}
 The generalized |poly| function is a semiring homomorphism when multiplication on |b| commutes.
 \end{theorem}
 \begin{proof}
-Just like the proof of \thmref{poly hom} in \proofref{theorem:poly hom}, given \lemref{^ hom}.
+Just like the proof of \thmref{poly hom} in \proofref{theorem:poly hom}, given \lemref{pows hom}.
 \end{proof}
 Pragmatically, \thmref{generalized poly hom} says that the |b <-- (n -> N)| semiring (in which |(*)| is higher-dimensional convolution) correctly implements |zero|, |one|, |(+)| and |(*)| on multivariate polynomials.
 
@@ -2148,10 +2151,10 @@ Homomorphism proofs for \thmref{poly hom}:
 
 %% \note{The sum and product derivations might read more easily in reverse.}
 
-\subsection{\lemref{^ hom}}\prooflabel{lemma:^ hom}
+\subsection{\lemref{pows hom}}\prooflabel{lemma:pows hom}
 
 \begin{code}
-    x ^ zero
+    pows x zero
 ==  bigProd i (wrap (pow (x i) (zero i)))  -- |(^)| definition
 ==  bigProd i (wrap (pow (x i) zero))      -- |zero| on functions
 ==  bigProd i one                          -- exponentiation law
@@ -2159,12 +2162,12 @@ Homomorphism proofs for \thmref{poly hom}:
 \end{code}
 
 \begin{code}
-    x ^ (p + q)
+    pows x (p + q)
 ==  bigProd i (wrap (pow (x i) ((p + q) i)))                                                 -- |(^)| definition
 ==  bigProd i (wrap (pow (x i) (p i + q i)))                                                 -- |(+)| on functions
 ==  bigProd i (paren (pow (x i) (p i) * pow (x i) (q i)))                                    -- exponentiation law (with commutative |(*)|)
 ==  paren (bigProd i (wrap (pow (x i) (p i)))) * paren (bigProd i (wrap (pow (x i) (q i))))  -- product property (with commutative |(*)|)
-==  x^p * x^q                                                                                -- |(^)| definition
+==  pows x p * pows x q                                                                      -- |(^)| definition
 \end{code}
 
 %endif extended

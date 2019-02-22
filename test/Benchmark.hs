@@ -6,6 +6,7 @@ module Main where
 
 import Control.DeepSeq (NFData)
 import Data.Map (Map)
+import Data.MemoTrie ((:->:))
 import System.Directory (createDirectoryIfMissing)
 import Criterion.Main
 import Criterion.Types (Config(..),Verbosity(..))
@@ -22,18 +23,24 @@ main = do
   putChar '\n'
   createDirectoryIfMissing True outDir
 
-  group "letters" (star letter) []
-    [ ("asdf-50", cats 50 "asdf") ]
+  -- group "star-a" (star (single "a")) [] [dup "a"]
 
-  group "dyck" dyck ["RegExp Map","RegExp IntMap"] $
-    dups [ "[]","[[]]","[[a]]","[[]][]" ]
+  -- group "starR-a" (starR (single "a")) [] [("a50", replicate 50 'a')]
 
-  group "anbn" anbn ["RegExp Map","RegExp IntMap"] $
-    [ ("eps"     , "") ]
-    ++ dups ["ab","ba","aabb","aacbb","aaabbb","aaabbbb"]
+  -- group "starL-a" (starL (single "a")) [] [("a50", replicate 50 'a')]
 
- where
-   dups = map (\ a -> (a,a))
+  -- group "letters" (star letter) []
+  --   [ ("asdf-50", cats 50 "asdf") ]
+
+  -- group "dyck" dyck ["RegExp:Map","RegExp:IntMap"] $
+  --   dup <$> [ "[]","[[]]","[[a]]","[[]][]" ]
+
+  group "anbn" anbn ["RegExp:Map","RegExp:IntMap"] $
+    map dup [] -- ["","ab","aacbb","aaabbb","aaabbbb"]
+    ++ [("300",replicate 300 'a' ++ replicate 300 'b')]
+
+dup :: a -> (a,a)
+dup a = (a,a)
 
 outDir :: FilePath
 outDir = "test/Benchmarks"
@@ -47,20 +54,22 @@ group groupName example omit dats =
  where
    config = defaultConfig
      { reportFile = Just (outDir ++ "/" ++ groupName ++ ".html")
-     , timeLimit  = 1 -- 5
+     , timeLimit  = 2 -- 5
      }
    dat :: (String,String) -> Benchmark
    dat (dname,str) =
      bgroup dname
        [ bgroup "" []
 
-       , style @(LTrie  ((->) Char)) @Bool "LTrie/Function"
-       , style @(LTrie  (Map  Char)) @Bool "LTrie/Map"
-       , style @(LTrie  CharMap    ) @Bool "LTrie/IntMap"
+       , style @(RegExp ((->)   Char)) @Bool "RegExp:Function"
+       , style @(RegExp (Map    Char)) @Bool "RegExp:Map"
+       , style @(RegExp CharMap      ) @Bool "RegExp:IntMap"
+       -- , style @(RegExp ((:->:) Char)) @Bool "RegExp:Memo"
 
-       -- , style @(RegExp ((->) Char)) @Bool "RegExp/Function"
-       -- , style @(RegExp (Map  Char)) @Bool "RegExp/Map"
-       -- , style @(RegExp CharMap    ) @Bool "RegExp/IntMap"
+       , style @(LTrie  ((->)   Char)) @Bool "LTrie:Function"
+       -- , style @(LTrie  (Map    Char)) @Bool "LTrie:Map"
+       , style @(LTrie  CharMap      ) @Bool "LTrie:IntMap"
+       -- , style @(LTrie  ((:->:) Char)) @Bool "LTrie:Memo"
 
        ]
     where
@@ -70,3 +79,5 @@ group groupName example omit dats =
 
 -- TODO: Generate the style name from the type via TypeRep.
 
+
+-- For starL, nothing terminates.

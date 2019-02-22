@@ -12,8 +12,13 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 *   Related work. Lots of references below.
 *   Explore Brzozowski derivatives as actual derivatives of residual functions, as in my journal notes from 2019-02-08.
 *   Generalization from lists to arbitrary regular algebraic data types.
+*   Sets are to languages as binary relations are to what?
+    Currying gets us to `String -> String -> Bool` (for sets).
+    Is there anything interesting and/or useful here?
+    Note that a (generalized) trie from pairs of strings is going to look like a curried trie anyway.
 *   Super-memoization.
     See notes from 2018-12-02 and 2018-12-05.
+*   The comonad connection.
 
 ### Misc
 
@@ -29,13 +34,6 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
     Graphics has a similar issue!
     Spatial transformations may be one-to-many, especially if non-projective.
 *   [Free semirings](http://hackage.haskell.org/package/semiring-num-1.6.0.1/docs/Data-Semiring-Free.html)
-*   Convolution commutes with currying and with uncurrying.
-    So do addition, zero, and one, but `single` is different.
-    See 2019-01-28 notes.
-*   Sets are to languages as binary relations are to what?
-    Currying gets us to `String -> String -> Bool` (for sets).
-    Is there anything interesting and/or useful here?
-    Note that a (generalized) trie from pairs of strings is going to look like a curried trie anyway.
 *   Generalize lists to end with a value, where the usual lists end with unit.
     Then monadic bind generalizes appending, i.e., `(++) = (>>)`.
     Now generalize from the unary/sequential nature of lists, and we get monadic bind as "substitution".
@@ -105,6 +103,9 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 
 ## Did
 
+*   Convolution commutes with currying and with uncurrying.
+    So do addition, zero, and one, but `single` is different.
+    See 2019-01-28 notes.
 *   Generalize decomposition-based semirings, and streamline the special cases.
 *   Consider again removing the types that behave like `a -> b` instead of `b <-- a`.
     I don't know how I could then get the functor/applicative/monad instances I want, since the type parameters would be in the wrong order.

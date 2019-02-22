@@ -46,3 +46,9 @@ dyck = one <+> single "[" <.> dyck <.> single "]" <.> dyck
 -- Will dyck get repeatedly reconstructed, considering polymorphism?
 
 -- TODO: try other formulations, including an explicit local recursion and star.
+
+starL :: Semiring b => b -> b
+starL b = one <+> starL b <.> b
+
+starR :: Semiring b => b -> b
+starR b = one <+> b <.> starR b

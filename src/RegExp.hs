@@ -9,6 +9,7 @@ module RegExp where
 import Prelude hiding (sum,product)
 
 import Data.Map (Map,keys)
+import Data.MemoTrie ((:->:))
 
 import Semi
 
@@ -25,9 +26,30 @@ data RegExp h b = Char (Key h)
                 | RegExp h b :<+> RegExp h b
                 | RegExp h b :<.> RegExp h b
                 | Star (RegExp h b)
-               -- deriving (Show,Eq)
-              
--- #define OPTIMIZE
+
+deriving instance (Show (Key h), Show b) => Show (RegExp h b)
+deriving instance (Eq   (Key h), Eq   b) => Eq   (RegExp h b)
+
+#if 0
+
+infixr 5 :^:
+data Tree a =  Leaf a  |  Tree a :^: Tree a
+
+instance (Show a) => Show (Tree a) where
+
+       showsPrec d (Leaf m) = showParen (d > app_prec) $
+            showString "Leaf " . showsPrec (app_prec+1) m
+         where app_prec = 10
+
+       showsPrec d (u :^: v) = showParen (d > up_prec) $
+            showsPrec (up_prec+1) u .
+            showString " :^: "      .
+            showsPrec (up_prec+1) v
+         where up_prec = 5
+
+#endif
+
+#define OPTIMIZE
 
 #ifdef OPTIMIZE
 
@@ -52,8 +74,8 @@ type D1 b = (() ~ ())
 instance (D0 b, Additive b) => Additive (RegExp h b) where
   zero  = Value zero
 #ifdef OPTIMIZE
-  p <+> q | isZero q  = p
-          | isZero p  = q
+  p <+> q | isZero p  = q
+          | isZero q  = p
           | otherwise = p :<+> q
 #else
   (<+>) = (:<+>)
@@ -75,8 +97,10 @@ instance (Semiring b, D0 b, D1 b) => LeftSemimodule b (RegExp h b) where
 instance (D0 b, D1 b, Semiring b) => Semiring (RegExp h b) where
   one   = Value one
 #ifdef OPTIMIZE
-  p <.> q | isOne q   = p
-          | isOne p   = q
+  p <.> q | isZero p = zero
+          | isOne  p = q
+          -- | isZero q  = zero
+          -- | isOne  q  = p
           | otherwise = p :<.> q
 #else
   (<.>) = (:<.>)
@@ -87,11 +111,11 @@ instance (D0 b, D1 b, Semiring b) => StarSemiring (RegExp h b) where
 
 type FR h b = (Functor h, Additive (h (RegExp h b)), HasSingle h (RegExp h b))
 
-instance (FR h b, StarSemiring b, DetectableZero b, Eq (Key h)) => Indexable (RegExp h) b where
+instance (FR h b, StarSemiring b, DetectableZero b, Eq (Key h), D1 b) => Indexable (RegExp h) b where
   type Key (RegExp h) = [Key h]
   e ! w = atEps (foldl ((!) . deriv) e w)
 
-instance (FR h b, StarSemiring b, DetectableZero b, Eq (Key h))
+instance (FR h b, StarSemiring b, DetectableZero b, Eq (Key h), D1 b)
       => HasSingle (RegExp h) b where
   w +-> b = b .> product (map Char w)
 
@@ -102,12 +126,13 @@ atEps (p :<+> q) = atEps p <+> atEps q
 atEps (p :<.> q) = atEps p <.> atEps q
 atEps (Star p)   = star (atEps p)
 
-deriv :: (FR h b, StarSemiring b, DetectableZero b, Eq (Key h))
+deriv :: (FR h b, StarSemiring b, DetectableZero b, Eq (Key h), D1 b)
       => RegExp h b -> h (RegExp h b)
 deriv (Char c)   = single c
 deriv (Value _)  = zero
 deriv (p :<+> q) = deriv p <+> deriv q
-deriv (p :<.> q) = fmap (atEps p .>) (deriv q) <+> fmap (<.> q) (deriv p)
+deriv (p :<.> q) = fmap (<.> q) (deriv p) <+> fmap (atEps p .>) (deriv q)
+                   -- fmap (atEps p .>) (deriv q) <+> fmap (<.> q) (deriv p)
 deriv (Star p)   = fmap (\ d -> star (atEps p) .> d <.> Star p) (deriv p)
 
 -- | Interpret a regular expression
@@ -128,8 +153,20 @@ regexp (Star u)   = star (regexp u)
     Examples
 --------------------------------------------------------------------}
 
-type L  = RegExp (Map Char) Bool
--- type L' = Convo L
+-- type L = RegExp (Map Char) Bool
+type L = RegExp ((:->:) Char) Bool
+
+star1 :: Semiring b => b -> b
+star1 b = one <+> b <.> star1 b
+
+star2 :: L -> L
+star2 b = one <+> b <.> star2 b
+
+star3 :: L -> L
+star3 b = Value True <+> b <.> star3 b
+
+x1 :: L
+x1 = star1 (single "a")
 
 -- Non-recursive examples are tidier with OPTIMIZE
 

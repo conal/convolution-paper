@@ -17,6 +17,7 @@ import Data.IntMap.Lazy (IntMap)
 import qualified Data.IntMap.Lazy as IntMap
 -- import Data.Set (Set)
 -- import qualified Data.Set as S
+import Data.MemoTrie
 
 import Misc
 import Constrained
@@ -279,3 +280,19 @@ instance Additive b => Additive (CharMap b) where
   CharMap u <+> CharMap v = CharMap (IntMap.unionWith (<+>) u v)
 
 instance Additive b => DetectableZero (CharMap b) where isZero (CharMap m) = IntMap.null m
+
+
+instance HasTrie a => Indexable ((:->:) a) b where
+  type Key ((:->:) a) = a
+  (!) = untrie
+
+instance (HasTrie a, Eq a, Additive b) => HasSingle ((:->:) a) b where
+  a +-> b = trie (a +-> b)
+
+instance (HasTrie a, Additive b) => Additive (a :->: b) where
+  zero = trie zero
+  u <+> v = trie (untrie u <+> untrie v)
+
+-- False negatives are okay. Only used for optimization
+instance (HasTrie a, Additive b) => DetectableZero (a :->: b) where isZero _ = False
+-- instance Additive b => DetectableOne  (a :->: b) where isOne  _ = False

@@ -1221,9 +1221,6 @@ Consider multi-dimensional convolution in which different dimensions have differ
 At the least, it's useful to combine finite dimensions of different sizes.}
 Alternatively, curry, convolve, and uncurry, exploiting the fact that |curry| is a semiring homomorphism (\thmref{curry semiring}).
 \notefoot{Mention the connection between generalized tries and currying.}
-\begin{theorem}[\provedIn{theorem:Fourier}]\thmlabel{Fourier}
-The Fourier transform is a semiring and left semimodule homomorphism from |b <- a| to |a -> b|.
-\end{theorem}
 
 \note{Maybe give some convolution examples.}
 
@@ -1393,7 +1390,32 @@ one  = pure mempty
 Immediate from the instance definitions.
 \end{proof}
 
-\note{Once we've made the type distinction between |a -> b| and |b <-- a|, we may want to change the |Semiring (a -> b)| instance ....}
+Given the type distinction between |a -> b| and |b <-- a|, let's now reconsider the |Semiring| instance for functions in \figref{monoid semiring}.
+There is an alternative choice that is in some ways more compelling, as shown in \figrefdef{-> and <-- semirings}{The |a -> b| and |b <-- a| semirings}{
+\begin{code}
+instance Semiring b => Semiring (a -> b) where
+  one = pure one    -- i.e., |one = \ a -> one|
+  (*) = liftA2 (*)  -- i.e., |f * g = \ a -> f a * g a|
+
+newtype b <-- a = F (a -> b) deriving (Additive, HasSingle a b, LeftSemimodule b, Indexable a b)
+
+instance (Semiring b, Monoid a) => Semiring (b <-- a) where
+  one = pure mempty
+  (*) = liftA2 (<>)
+\end{code}
+}, along with a the old |a -> b| instance re-assigned to |b <-- a|.
+Just as the |Bool <-- a| gives us two important operations on languages, now so does |a -> Bool|, namely the set of all ``strings'' and the \emph{intersection} of languages.
+These two semirings share several instances in common, which are expressed in \figref{-> and <-- semirings} via GHC-Haskell's \verb|GeneralizedNewtypeDeriving| language extension (present since GHC 6.8.1 and later made safe \citep{Breitner2016SZC}).
+As with |Additive|, this |Semiring| instance implies that curried functions (of any number and type of arguments and with semiring result type) are semirings, with |curry| and |uncurry| being semiring homomorphisms.
+(The proof is very similar to that of \thmref{curry additive} in \proofref{theorem:curry additive}.)
+
+The |a -> b| and |b <-- a| semirings have another deep relationship:
+%format Fourier = "\mathcal F"
+\begin{theorem}\thmlabel{Fourier}
+The Fourier transform is a semiring and left semimodule homomorphism from |b <- a| to |a -> b|.
+\end{theorem}
+This theorem is more often expressed by saying that (a) the Fourier transform is linear (i.e., an additive monoid and left semimodule homomorphism), and (b) the Fourier transform of a convolution (i.e., |(*)| on |b <-- a|) of two functions is the pointwise product (i.e., |(*)| on |a -> b|) of the Fourier transforms of the two functions.
+The latter property is known as ``the convolution theorem'' \citep[Chapter 6]{Bracewell2000Fourier}.
 
 
 \sectionl{The Free Semimodule Monad}
@@ -1420,7 +1442,6 @@ liftA2 h p q  = p >>= \ u -> fmap (h u) q
 \end{code}
 \end{theorem}
 
-
 \sectionl{More Applications}
 
 \subsectionl{Polynomials}
@@ -1434,13 +1455,12 @@ Perhaps less known is that this trick extends naturally to multivariate polynomi
 Looking more closely, univariate polynomials (and even power series) can be represented by a collection of coefficients indexed by exponents, or conversely as a collection of exponents weighted by coefficients.
 For a polynomial in a variable |x|, an association of coefficient |c| with exponent |i| represents the monomial (polynomial term) |c * pow x i|.
 One can use a variety of representations for these indexed collections.
-We'll consider efficient representations below, but let's begin as |N -> b| along with a denotation as a (polynomial) function of type |b -> b|:
-\notefoot{Should I use |b <-- N| instead?}
+We'll consider efficient representations below, but let's begin as |b <-- N| along with a denotation as a (polynomial) function of type |b -> b|:
 %% Elide the Sum isomorphism
 % type N = Sum Natural
 \begin{code}
-poly :: Semiring b => (N -> b) -> (b -> b)
-poly f = \ x -> bigSum i  f i * pow x i
+poly :: Semiring b => (b <-- N) -> (b -> b)
+poly (F f) = \ x -> bigSum i  f i * pow x i
 \end{code}
 Polynomial multiplication via convolution follows from the following property:
 \begin{theorem}[\provedIn{theorem:poly fun}]\thmlabel{poly fun}
@@ -1451,22 +1471,26 @@ What about multivariate polynomials, i.e., polynomial functions over higher-dime
 Consider a 2D domain:
 %format poly2
 \begin{code}
-poly2 :: Semiring c => (N -> N -> c) -> (c -> c -> c)
-poly2 f = \ x y -> bigSum (i,j) f i j * pow x i * pow y j
+poly2 :: Semiring c => (c <-- N :* N) -> (c * c -> c)
+poly2 (F f) = \ (x,y) -> bigSum (i,j) f (i,j) * pow x i * pow y j
 \end{code}
 Then
 \begin{code}
-    poly2 f x y
-==  bigSum (i,j) f i j * pow x i * pow y j         -- |poly2| definition
-==  bigSum i (bigSum j f i j * pow y j) * pow x i  -- linearity and commutativity assumption
-==  bigSum i (poly (f i) y) * pow x i              -- |poly| definition
-==  poly (\ i -> poly (f i) y) x                   -- |poly| definition
+    poly2 f (x,y)
+==  bigSum (i,j) f (i,j) * pow x i * pow y j             -- |poly2| definition
+==  bigSum (i,j) curry f i j * pow x i * pow y j         -- |curry| definition
+==  bigSum i (bigSum j curry f i j * pow y j) * pow x i  -- linearity and commutativity assumption
+==  bigSum i poly (curry f i) y * pow x i                -- |poly| definition
+==  poly (\ i -> poly (curry f i) y) x                   -- |poly| definition
 \end{code}
 
-\vspace{15ex}
 \workingHere
 
-\noindent
+\note{I'm looking for a generalized specification for |poly :: (Monoid a, Semiring b) => (a -> b) -> (b -> b)|, with perhaps more constraints on |a|.
+My intuition is that there's a generalized monoidal scan involved.
+See my journal notes from 2019-01-\{28,29\}, including the observation that |pow x| is a monoid homomorphism targeting the product monoid.
+}
+
 \note{Next:
 \begin{itemize}\itemsep0ex
 \item Generalize via monoidal scan
@@ -1973,10 +1997,12 @@ Substitute into \lemreftwo{atEps [c] -> b}{deriv [c] -> b}, and simplify, using 
 
 \note{Coinduction?}
 
+%if False
 \subsection{\thmref{Fourier}}\prooflabel{theorem:Fourier}
 
 %format T = "\mathcal F"
 \note{Additivity of |T|, and the convolution theorem. What about |star p| and |single w|?}
+%endif
 
 \subsection{\thmref{standard FunApp}}\prooflabel{theorem:standard FunApp}
 
@@ -2009,15 +2035,10 @@ Similarly for |liftA2|:
 
 \subsection{\thmref{poly fun}}\prooflabel{theorem:poly fun}
 
-%% Should I use |b <-- N|? For now, keep the |F| constructors in the proofs,
-%% but hide them during rendering.
-
-%format F (e) = e
-
 The semantics as polynomial functions:
 \begin{code}
 poly :: Semiring b => (N -> b) -> (b -> b)
-poly f = \ x -> bigSum i  f i <.> pow x i
+poly (F f) = \ x -> bigSum i  f i <.> pow x i
 \end{code}
 Monomials are especially simple:
 \begin{lemma}\lemlabel{poly +->}
@@ -2028,7 +2049,7 @@ poly (n +-> b) = \ x -> b * pow x n
 \begin{proof}~
 \begin{code}
 poly (n +-> b)
-poly (\ i -> if i == n then b else zero)                  -- |(+->)| definition
+poly (F (\ i -> if i == n then b else zero))              -- |(+->)| on |b <-- a| (derived)
 \ x -> bigSum i (if i == n then b else zero) <.> pow x n  -- |poly| definition
 \ x -> b * pow x n                                        -- other terms vanish
 \end{code}
@@ -2038,7 +2059,7 @@ poly (\ i -> if i == n then b else zero)                  -- |(+->)| definition
 Homomorphism proofs for \thmref{poly fun}:
 \begin{code}
     poly zero
-==  poly (F (\ i -> zero))             -- |zero| on functions
+==  poly (F (\ i -> zero))             -- |zero| on |b <-- a| (derived)
 ==  \ x -> bigSum i  zero <.> pow x i  -- |poly| definition
 ==  \ x -> bigSum i  zero              -- |zero| as annihilator
 ==  \ x -> zero                        -- |zero| as additive identity
@@ -2047,7 +2068,8 @@ Homomorphism proofs for \thmref{poly fun}:
 
 \begin{code}
     poly one
-==  poly (F (\ i -> if i == mempty then one else zero))             -- |one| on functions
+==  poly (pure mempty)                                              -- |one| on |b <-- a|
+==  poly (F (\ i -> if i == mempty then one else zero))             -- |pure| on |(<--) b|
 ==  poly (F (\ i -> if i == Sum 0 then one else zero))              -- |mempty| on |N|
 ==  \ x -> bigSum i (if i == Sum 0 then one else zero) <.> pow x i  -- |poly| definition
 ==  \ x -> bigSum i (if i == Sum 0 then pow x i else zero)          -- simplify
@@ -2057,26 +2079,28 @@ Homomorphism proofs for \thmref{poly fun}:
 \end{code}
 
 \begin{code}
-    poly (f <+> g)
-==  poly (F (\ i -> f i <+> g i))                                       -- |(<+>)| on functions
+    poly (F f <+> F g)
+==  poly (F (\ i -> f i <+> g i))                                       -- |(<+>)| on |b <-- a| (derived)
 ==  \ x -> bigSum i  (f i <+> g i) <.> pow x i                          -- |poly| definition
 ==  \ x -> bigSum i  f i <.> pow x i <+> g i <.> pow x i                -- distributivity
 ==  \ x -> (bigSum i  f i <.> pow x i) <+> (bigSum i  g i <.> pow x i)  -- summation property
-==  \ x -> poly f x <+> poly g x                                        -- |poly| definition
-==  poly f <+> poly g                                                   -- |(<+>)| on |a -> b|
+==  \ x -> poly (F f) x <+> poly (F g) x                                -- |poly| definition
+==  poly (F f) <+> poly (F g)                                           -- |(<+>)| on |a -> b|
 \end{code}
 
 \begin{code}
-    poly (f <.> g)
-==  poly (bigSum (i,j)  i + j +-> f i <.> g j)                          -- |(<.>)| on functions
+    poly (F f <.> F g)
+==  poly (liftA2 (<>) (F f) (F g))                                      -- |(<.>)| on |b <-- a|
+==  poly (bigSum (i,j)  i <> j +-> f i <.> g j)                         -- |liftA2| on |b <-- a|
+==  poly (bigSum (i,j)  i + j +-> f i <.> g j)                          -- |(<>)| on |N|
 ==  bigSum (i,j)  poly (i + j +-> f i <.> g j)                          -- additivity of |poly| (previous property)
 ==  bigSum (i,j) (\ x -> (f i <.> g j) <.> pow x (i + j))               -- \lemref{poly +->}
 ==  \ x -> bigSum (i,j) (f i <.> g j) <.> pow x (i + j)                 -- |(<+>)| on functions
 ==  \ x -> bigSum (i,j) (f i <.> g j) <.> (pow x i <.> pow x j)         -- exponentiation property
 ==  \ x -> bigSum (i,j) (f i <.> pow x i) <.> (g j <.> pow x j)         -- commutativity assumption
 ==  \ x -> (bigSum i  f i <.> pow x i) <.> (bigSum j  g j <.> pow x j)  -- summation property
-==  \ x -> poly f x <.> poly g x                                        -- |poly| definition
-==  poly f <.> poly g                                                   -- |(<.>)| on functions
+==  \ x -> poly (F f) x <.> poly F g) x                                 -- |poly| definition
+==  poly (F f) <.> poly F g)                                            -- |(<.>)| on functions
 \end{code}
 
 %% \note{The sum and product derivations might read more easily in reverse.}

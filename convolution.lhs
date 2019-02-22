@@ -48,8 +48,9 @@
 
 \usepackage[margin=0.12in]{geometry}  % 0.12in, 0.9in, 1in
 
-%% \geometry{paperwidth=6.75in}  % for iPad portrait preview
-\geometry{paperheight=9.3in} % for 2-up on big monitor, larger text
+%% \geometry{paperwidth=6.5in,paperheight=8in}  % for iPad portrait preview
+\geometry{paperwidth=5in,paperheight=50in}  % experiment
+%% \geometry{paperheight=9.3in} % for 2-up on big monitor, larger text
 %% \geometry{paperwidth=10in} % 2-up big monitor, smaller text
 
 \usepackage[square]{natbib}
@@ -1463,7 +1464,7 @@ poly :: Semiring b => (b <-- N) -> (b -> b)
 poly (F f) = \ x -> bigSum i  f i * pow x i
 \end{code}
 Polynomial multiplication via convolution follows from the following property:
-\begin{theorem}[\provedIn{theorem:poly fun}]\thmlabel{poly fun}
+\begin{theorem}[\provedIn{theorem:poly hom}]\thmlabel{poly hom}
 The function |poly| is a semiring homomorphism when multiplication on |b| commutes.
 \end{theorem}
 
@@ -1471,33 +1472,71 @@ What about multivariate polynomials, i.e., polynomial functions over higher-dime
 Consider a 2D domain:
 %format poly2
 \begin{code}
-poly2 :: Semiring c => (c <-- N :* N) -> (c * c -> c)
+poly2 :: Semiring b => (b <-- N :* N) -> (b * b -> b)
 poly2 (F f) = \ (x,y) -> bigSum (i,j) f (i,j) * pow x i * pow y j
 \end{code}
 Then
 \begin{code}
-    poly2 f (x,y)
+    poly2 (F f) (x,y)
 ==  bigSum (i,j) f (i,j) * pow x i * pow y j             -- |poly2| definition
 ==  bigSum (i,j) curry f i j * pow x i * pow y j         -- |curry| definition
 ==  bigSum i (bigSum j curry f i j * pow y j) * pow x i  -- linearity and commutativity assumption
 ==  bigSum i poly (curry f i) y * pow x i                -- |poly| definition
 ==  poly (\ i -> poly (curry f i) y) x                   -- |poly| definition
 \end{code}
+The essential idea here is that a polynomial with a pair-valued domain can be viewed as a polynomial over polynomials.
 
-\workingHere
+We can do much better, however, generalizing from two dimensions to |n| dimensions for any |n|:
+%% %format ^ = "\hspace{-0.9pt}\string^\hspace{-1.5pt}"
+%format ^ = "\string^"
+%format sub u (v) = u "_" v
+%format bigProd (lim) = "\bigOp\prod{" lim "}{0}"
+%% %format bigProdQ (lim) = "\bigOp\prod{" lim "}{1}"
+\begin{code}
+poly :: (b <-- pow N n) -> (pow b n -> b)
+poly (F f) (x :: pow b n) = bigSum (p :: pow N n)  f p * x ^ p
 
-\note{I'm looking for a generalized specification for |poly :: (Monoid a, Semiring b) => (a -> b) -> (b -> b)|, with perhaps more constraints on |a|.
-My intuition is that there's a generalized monoidal scan involved.
-See my journal notes from 2019-01-\{28,29\}, including the observation that |pow x| is a monoid homomorphism targeting the product monoid.
-}
+infixr 8 NOP ^
+(^) :: pow b n -> pow N n -> b
+x ^ p = bigProd (i < n) (wrap (pow (wrap (sub x i)) (sub p i)))
+\end{code}
+For instance, for |n=3|, |(x,y,z)^(i,j,k) = pow x i * pow y j * pow z k|.
+Generalizing further, rather than taking |n| here to be a natural number, let |n| be any type of countable size, and interpret |pow b n| and |pow N n| as |n -> b| and |n -> N|:
+\begin{code}
+poly :: (b <-- (n -> N)) -> ((n -> b) -> b)
+poly (F f) (x :: n -> b) = bigSumQ (p :: n -> N)  f p * x ^ p
+
+infixr 8 NOP ^
+(^) :: (n -> b) -> (n -> N) -> b
+x ^ p = bigProd (i :: n) (wrap (pow (x i) ((p i))))
+\end{code}
+The value of this second generalization is that the result also applies to \emph{indexable functors} (indexed by |n|), since they represent functions via |(!)| (\secref{Function-like Types and Singletons}).
+
+This |(^)| operation behaves like exponentiation:
+\begin{lemma}[\provedIn{lemma:^ hom}]\lemlabel{^ hom}
+When |(*)| commutes, the following laws hold forall |x, p, q|, 
+\begin{code}
+x ^ zero == one
+x ^ (p + q) == x^p * x^q
+\end{code}
+In other words, |(x NOP^)| is a (commutative) monoid homomorphism from the sum monoid to the product monoid.
+\end{lemma}
+
+\begin{theorem}\thmlabel{generalized poly hom}
+The generalized |poly| function is a semiring homomorphism when multiplication on |b| commutes.
+\end{theorem}
+\begin{proof}
+Just like the proof of \thmref{poly hom} in \proofref{theorem:poly hom}, given \lemref{^ hom}.
+\end{proof}
+Pragmatically, \thmref{generalized poly hom} says that the |b <-- (n -> N)| semiring (in which |(*)| is higher-dimensional convolution) correctly implements |zero|, |one|, |(+)| and |(*)| on multivariate polynomials.
 
 \note{Next:
 \begin{itemize}\itemsep0ex
-\item Generalize via monoidal scan
 \item Examples
+\item Should I move multidimensional convolution to \secref{Convolution}?
+\item References on multivariate polynomial multiplication \href{https://www.google.com/search?q=algorithm+for+multiplying+multivariate+polynomials}{(starting here)}
+\item Generalize to $m$-dimensional codomains (and maybe swap roles of $m$ and $n$)
 \item Finite maps
-\item Non-scalar domains (``multivariate'' polynomials) as in notes from 2019-01-\{28,29\}
-\item Non-scalar codomains
 \end{itemize}
 }
 
@@ -1521,6 +1560,8 @@ Future work:
 \begin{itemize}
 \item From sets to relations via currying or the pair monoid.
 \item |single| as a monoid homomorphism (targeting the product monoid).
+\item Require that |(!)| be natural (a functor homomorphism) so that its |Functor| instance is consistent with functions.
+      Ditto for |Applicative|?
 \item
   Homomorphisms:
   \begin{itemize}
@@ -2033,15 +2074,17 @@ Similarly for |liftA2|:
 \end{code}
 \end{spacing}
 
-\subsection{\thmref{poly fun}}\prooflabel{theorem:poly fun}
+\subsection{\thmref{poly hom}}\prooflabel{theorem:poly hom}
+
+\note{Lightly restructure this section to resemble the others: drop the |poly| definition, and move the lemma to after its uses, adding ``(below)'' to its references.}
 
 The semantics as polynomial functions:
 \begin{code}
-poly :: Semiring b => (N -> b) -> (b -> b)
+poly :: Semiring b => (b <-- N) -> (b -> b)
 poly (F f) = \ x -> bigSum i  f i <.> pow x i
 \end{code}
 Monomials are especially simple:
-\begin{lemma}\lemlabel{poly +->}
+\begin{lemma}\lemlabel{poly +->}~
 \begin{code}
 poly (n +-> b) = \ x -> b * pow x n
 \end{code}
@@ -2056,7 +2099,7 @@ poly (F (\ i -> if i == n then b else zero))              -- |(+->)| on |b <-- a
 \end{proof}
 
 \noindent
-Homomorphism proofs for \thmref{poly fun}:
+Homomorphism proofs for \thmref{poly hom}:
 \begin{code}
     poly zero
 ==  poly (F (\ i -> zero))             -- |zero| on |b <-- a| (derived)
@@ -2104,6 +2147,25 @@ Homomorphism proofs for \thmref{poly fun}:
 \end{code}
 
 %% \note{The sum and product derivations might read more easily in reverse.}
+
+\subsection{\thmref{^ hom}}\prooflabel{lemma:^ hom}
+
+\begin{code}
+    x ^ zero
+==  bigProd i (wrap (pow (x i) (zero i)))  -- |(^)| definition
+==  bigProd i (wrap (pow (x i) zero))      -- |zero| on functions
+==  bigProd i one                          -- exponentiation law
+==  one                                    -- multiplicative identity
+\end{code}
+
+\begin{code}
+    x ^ (p + q)
+==  bigProd i (wrap (pow (x i) ((p + q) i)))                                                 -- |(^)| definition
+==  bigProd i (wrap (pow (x i) (p i + q i)))                                                 -- |(+)| on functions
+==  bigProd i (paren (pow (x i) (p i) * pow (x i) (q i)))                                    -- exponentiation law (with commutative |(*)|)
+==  paren (bigProd i (wrap (pow (x i) (p i)))) * paren (bigProd i (wrap (pow (x i) (q i))))  -- product property (with commutative |(*)|)
+==  x^p * x^q                                                                                -- |(^)| definition
+\end{code}
 
 %endif extended
 

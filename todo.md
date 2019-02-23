@@ -7,19 +7,31 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 
 ### Major
 
-*   See also the Future Work section.
 *   Introduction, including contributions.
 *   Related work. Lots of references below.
 *   Benchmarking results
 *   The comonad connection.
 *   Probabilistic computation.
 *   Lots of needed references (`\\needcite`).
+*   Reconsider title after writing the introduction and related work sections.
 *   Sets are to languages as binary relations are to what?
     Currying gets us to `String -> String -> Bool` (for sets).
     Is there anything interesting and/or useful here?
     Note that a (generalized) trie from pairs of strings is going to look like a curried trie anyway.
 *   Super-memoization.
     See notes from 2018-12-02 and 2018-12-05.
+*   Possibly some items in the Future Work section.
+*   Reduce page count in the ICFP submission. Some strategies:
+    *   Move more proofs to the appendix.
+    *   Remove homomorphism examples.
+    *   Drop the whole section "Calculating Instances from Homomorphisms".
+    *   More side-by-side code or derivations.
+    *   Drop some intermediate steps, e.g.,
+        *   `poly2`
+        *   The first generalized `poly`
+    *   Lots of small changes for succinctness or at least fewer lines.
+    *   Drop details for finite maps, leaving a short verbal description and pointer to extended version.
+    *   Tighten some spacing environments.
 
 
 ### Misc
@@ -85,6 +97,9 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
     *   [*Fun with Semirings: A functional pearl on the abuse of linear algebra*]
     *   [*Linear Algebra Over Semirings*]
 *   On semirings and parsing:
+    *   [*Regenerate: a language generator for extended regular expressions*]
+    *   [*A Play on Regular Expressions*] (also targets arbitrary semirings)
+    *   [*Product Rules and Distributive Laws*] ("We give a categorical perspective on various product rules, including Brzozowski’s product rule ...")
     *   [*Parsing Inside-Out*]
     *   [*Semiring Parsing*]
     *   [*Algebraic Foundation of Statistical Parsing: Semiring Parsing*]
@@ -221,3 +236,10 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 [*Some Recent Applications of Semiring Theory*]: http://moonstone.math.ncku.edu.tw/Conferences/BeidarConference/golantalk.pdf "Paper by Jonathan S. Golan (2005)"
 
 [*Linear Algebra Over Semirings*]: https://www.research.manchester.ac.uk/portal/files/54562608/FULL_TEXT.PDF "PhD thesis by David Wilding (2014)"
+
+[*Regenerate: a language generator for extended regular expressions*]: https://hal.archives-ouvertes.fr/hal-01788827/document "Paper by Gabriel Radanne and Peter Thiemann (2018)"
+
+[*A Play on Regular Expressions*]: https://sebfisch.github.io/haskell-regexp/regexp-play.pdf "Paper by Sebastian Fischer, Frank Huch, and
+Thomas Wilke (2010)"
+
+[*Product Rules and Distributive Laws*]: https://www.mimuw.edu.pl/~jwinter/articles/cmcs16.pdf "Paper by Joost Winter"

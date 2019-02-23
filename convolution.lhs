@@ -46,10 +46,10 @@
 %% While editing/previewing, use 12pt and tiny margin.
 \documentclass[hidelinks,twoside]{article}  % fleqn,
 
-\usepackage[margin=0.12in]{geometry}  % 0.12in, 0.9in, 1in
+\usepackage[margin=0.2in]{geometry}  % 0.12in, 0.9in, 1in
 
-%% \geometry{paperwidth=6.5in,paperheight=8in}  % for iPad portrait preview
-\geometry{paperwidth=5.2in,paperheight=6.5in}  % same but easier on the eyes
+\geometry{paperwidth=6.5in,paperheight=8in}  % for iPad portrait preview
+%% \geometry{paperwidth=5.2in,paperheight=6.5in}  % same but easier on the eyes
 %% \geometry{paperheight=9.3in} % for 2-up on big monitor, larger text
 %% \geometry{paperwidth=10in} % 2-up big monitor, smaller text
 
@@ -219,10 +219,27 @@ All of the algorithms in the paper follow from simple specifications in the form
 
 %format (inverse x) = x "^{-1}"
 
+%format <-- = "\leftarrow"
+
 
 \sectionl{Introduction}
 
-\note{Trim the abstract, moving some content here and expanding. Contributions.}
+\note{Trim the abstract, moving some content here and expanding.}
+
+\note{
+Some contributions:
+\begin{itemize}
+\item
+  Generalize Brzozowski's algorithm from (a) regular expressions representing sets of strings to (b) representations of functions from sequences to any semiring, including relations.
+\item
+  Demonstrate that the tricky aspect of Brzozowski's algorithm is an instance of generalized convolution.
+\item
+  Applying the generalized algorithm to tries instead of regular expressions, which is simpler and apparently quite efficient, requiring no construction or manipulation of syntactic representations.
+\item
+  A simple and very general algorithm for multivariate polynomial multiplication.
+  (And infinite series?)
+\end{itemize}
+}
 
 \sectionl{Monoids, Semirings and Semimodules}
 
@@ -481,7 +498,8 @@ In a star semiring, the affine equation |p = b + m * p| has solution |p = star m
 \subsectionl{Semimodules}
 
 \note{I think I can remove semimodules from the discussion and use |fmap (s NOP *)| in place of |(scale s)|.
-If so, do it.}
+If so, do it.
+One serious catch, however: when I introduce |b <-- a|, I'll no longer have a functor in |a|.}
 
 %format .> = "\cdot"
 
@@ -849,7 +867,8 @@ instance (Ord a, Additive b) => Indexable (Map a) b where
   type Key (Map a) = a
   m ! a = M.findWithDefault zero a m
 
-instance (Ord a, Additive b) => HasSingle (Map a) b where (+->) = M.singleton
+instance (Ord a, Additive b) => HasSingle (Map a) b where
+  (+->) = M.singleton
 
 instance (Ord a, Additive b) => Additive (Map a b) where
   zero = M.empty
@@ -857,7 +876,8 @@ instance (Ord a, Additive b) => Additive (Map a b) where
 
 instance (Ord a, Additive b) => DetectableZero (Map a b) where isZero = M.null
 
-instance Semiring b => LeftSemimodule b (Map a b) where scale b = fmap (b <.>)
+instance Semiring b => LeftSemimodule b (Map a b) where
+  scale b = fmap (b NOP <.>)
 
 instance (Ord a, Monoid a, Semiring b) => Semiring (Map a b) where
   one = mempty +-> one
@@ -1318,7 +1338,6 @@ lift0 b  = b +-> one
          = single b
 \end{code}
 
-%format <-- = "\leftarrow"
 %format FunctorC = Functor
 %format ApplicativeC = Applicative
 %format MonadC = Monad
@@ -1377,7 +1396,7 @@ Other representations such as tries would need similar reversal of type argument
 \footnote{Originally, |Applicative| had a |(<*>)| method from which one can easily define |liftA2|. Since the base library version 4.10 \needcite, |liftA2| was added as a method (along with a default definition of |(<*>)|) to allow for more efficient implementation. \note{Cite \href{https://ghc.haskell.org/trac/ghc/ticket/13191}{GHC ticket 13191} if I can't find a better reference.}}
 Higher-arity liftings can be defined via these three.
 (Exercise.)
-For |b <-- a|, these definitions are not really executable code, since they involve summations are over potentially infinite ranges (as with our semiring instances for |a -> b| in \figref{monoid semiring}).
+For |b <-- a|, these definitions are not really executable code, since they involve summations are over potentially infinite ranges, but they serve as specifications for other representations such as finite maps.
 \begin{theorem}
 For each instance defined in \figref{FunApp}, the following equalities hold:
 \notefoot{Probe more into the pattern of |single = pure|, |one = single mempty| and |(*) = liftA2 (<>)|.
@@ -1536,6 +1555,7 @@ Pragmatically, \thmref{generalized poly hom} says that the |b <-- (n -> N)| semi
 \note{Next:
 \begin{itemize}\itemsep0ex
 \item Examples
+\item Double-check that I made the right choice with |n -> b| and |n -> N| instead of |b <-- n| and |N <-- n|.
 \item Should I move multidimensional convolution to \secref{Convolution}?
 \item References on multivariate polynomial multiplication \href{https://www.google.com/search?q=algorithm+for+multiplying+multivariate+polynomials}{(starting here)}
 \item Generalize to $m$-dimensional codomains (and maybe swap roles of $m$ and $n$)

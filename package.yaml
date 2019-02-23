@@ -64,6 +64,7 @@ library:
     - Semi
     - RegExp
     - LTrie
+    - Poly
     - Examples
 
 tests:

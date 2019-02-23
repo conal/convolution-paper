@@ -26,14 +26,26 @@ import Examples
 -- TODO: maybe rename LTrie to "Cofree". I'd use Ed's Cofree from the "free" library,
 -- but he defined Key (Cofree f) = Seq (Key f), and I want [Key f]. Oh well.
 
+-- Move elsewhere
+
+infix 1 <:
+(<:) :: b -> (c -> ([c] -> b)) -> ([c] -> b)
+b <: h = \ case { [] -> b ; c:cs  -> h c cs }
+
+-- -- Experiment
+-- infix 1 <#
+-- (<#) :: (Indexable h ([c] -> b), Key h ~ c)
+--      => b -> h ([c] -> b) -> ([c] -> b)
+-- b <# h = \ case { [] -> b ; c:cs  -> (h ! c) cs }
+
 -- | List trie, denoting '[c] -> b'
 infix 1 :<
-data LTrie h b = b :< h (LTrie h b) -- deriving Show
+data LTrie h b = b :< h (LTrie h b) deriving Functor
 
-instance Functor h => Functor (LTrie h) where
-  fmap f = go where go (a :< dp) = f a :< fmap go dp
-  -- fmap f (a :< dp) = f a :< (fmap.fmap) f dp
-  -- fmap f (a :< dp) = f a :< fmap (fmap f) dp
+-- instance Functor h => Functor (LTrie h) where
+--   fmap f = go where go (a :< dp) = f a :< fmap go dp
+--   -- fmap f (a :< dp) = f a :< (fmap.fmap) f dp
+--   -- fmap f (a :< dp) = f a :< fmap (fmap f) dp
 
 -- TODO: I probably want FunctorC h, and inherit Ok.
 instance Functor h => FunctorC (LTrie h)
@@ -42,7 +54,9 @@ instance Indexable h (LTrie h b) => Indexable (LTrie h) b where
   type instance Key (LTrie h) = [Key h]
   -- (b :< _ ) ! [] = b
   -- (_ :< ts) ! (k:ks) = ts ! k ! ks
-  (b :< dp) ! w = case w of { [] -> b ; c:cs -> dp ! c ! cs }
+  -- (b :< dp) ! w = case w of { [] -> b ; c:cs -> dp ! c ! cs }
+  -- (!) (b :< dp) = b <: (!) (fmap (!) dp)
+  (!) (b :< dp) = b <: (!) . (!) dp
 
 instance (Additive (h (LTrie h b)), Additive b) => Additive (LTrie h b) where
   zero = zero :< zero
@@ -56,7 +70,8 @@ instance (Additive (h (LTrie h b)), Additive b) => Additive (LTrie h b) where
 --   s `scale` (b :< dp) = s <.> b :< fmap (s `scale`) dp
 
 instance (Functor h, Semiring b) => LeftSemimodule b (LTrie h b) where
-  scale s = go where go (b :< dp) = s <.> b :< fmap go dp
+  scale s = fmap (s <.>)
+  -- scale s = go where go (b :< dp) = s <.> b :< fmap go dp
 
 instance (Additive (h (LTrie h b)), DetectableZero (h (LTrie h b)), DetectableZero b) => DetectableZero (LTrie h b) where
   isZero (a :< dp) = isZero a && isZero dp

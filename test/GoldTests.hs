@@ -49,7 +49,7 @@ basicTests = testGroup "Various representations"
 -- tests' = undefined
 
 tests :: forall f b.
-  (HasSingle f b, Key f ~ String, StarSemiring (f b), Semiring b, Show b)
+  (HasSingle b f, Key f ~ String, StarSemiring (f b), StarSemiring b, Show b)
   => String -> TestTree
 tests group = testGroup group
   [ testGroup "" []
@@ -72,9 +72,9 @@ tests group = testGroup group
   , gold "pps-pigping"                    $ pps # "pigping"
   , gold "pps-pinkpigpinkpigpig"          $ pps # "pinkpigpinkpigpig"
 
-  , gold "letters as0df"                  $ letters # "as0df"
-  , gold "letters asdf"                   $ letters # "asdf"
-  , gold "letters asdf 40"                $ letters # cats 40 "asdf"
+  , gold "letters as0df"                  $ star letter # "as0df"
+  , gold "letters asdf"                   $ star letter # "asdf"
+  , gold "letters asdf 40"                $ star letter # cats 40 "asdf"
 
   , groupNot ["RegExpMap","RegExpIntMap"] $
     testGroup "anbn"
@@ -98,8 +98,8 @@ tests group = testGroup group
   ]
  where
    infixl 2 #
-   (#) :: f b -> String -> Benchmarkable
-   x # s = nf (x !) s
+   (#) :: f b -> String -> b
+   x # s = x ! s
    groupNot :: [String] -> TestTree -> TestTree
    groupNot gs | group `elem` gs = const (testGroup "" [])
                | otherwise       = id

@@ -36,8 +36,9 @@ main = do
   --   dup <$> [ "[]","[[]]","[[a]]","[[]][]" ]
 
   group "anbn" anbn ["RegExp:Map","RegExp:IntMap"] $
-    map dup [] -- ["","ab","aacbb","aaabbb","aaabbbb"]
-    ++ [("300",replicate 300 'a' ++ replicate 300 'b')]
+    []
+    -- ++ map dup ["","ab","aacbb","aaabbb","aaabbbb"]
+    ++ [("30",replicate 30 'a' ++ replicate 30 'b')]
 
 dup :: a -> (a,a)
 dup a = (a,a)
@@ -45,7 +46,7 @@ dup a = (a,a)
 outDir :: FilePath
 outDir = "test/Benchmarks"
 
-type Ok f b = (HasSingle f b, StarSemiring (f b), StarSemiring b, NFData b, Key f ~ String)
+type Ok f b = (HasSingle b f, StarSemiring (f b), StarSemiring b, NFData b, Key f ~ String)
 
 group :: String -> (forall f b. Ok f b => f b) -> [String] -> [(String,String)] -> IO ()
 group groupName example omit dats =
@@ -54,7 +55,7 @@ group groupName example omit dats =
  where
    config = defaultConfig
      { reportFile = Just (outDir ++ "/" ++ groupName ++ ".html")
-     , timeLimit  = 2 -- 5
+     , timeLimit  = 1 -- 5
      }
    dat :: (String,String) -> Benchmark
    dat (dname,str) =

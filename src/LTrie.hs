@@ -34,7 +34,7 @@ b <: h = \ case { [] -> b ; c:cs  -> h c cs }
 
 -- -- Experiment
 -- infix 1 <#
--- (<#) :: (Indexable h ([c] -> b), Key h ~ c)
+-- (<#) :: (Indexable ([c] -> b) h, Key h ~ c)
 --      => b -> h ([c] -> b) -> ([c] -> b)
 -- b <# h = \ case { [] -> b ; c:cs  -> (h ! c) cs }
 
@@ -50,7 +50,7 @@ data LTrie h b = b :< h (LTrie h b) deriving Functor
 -- TODO: I probably want FunctorC h, and inherit Ok.
 instance Functor h => FunctorC (LTrie h)
 
-instance Indexable h (LTrie h b) => Indexable (LTrie h) b where
+instance Indexable (LTrie h b) h => Indexable b (LTrie h) where
   type instance Key (LTrie h) = [Key h]
   -- (b :< _ ) ! [] = b
   -- (_ :< ts) ! (k:ks) = ts ! k ! ks
@@ -86,7 +86,7 @@ instance (Functor h, Additive (h (LTrie h b)), DetectableZero1 h, DetectableZero
 instance (Functor h, Additive (h (LTrie h b)), StarSemiring b, DetectableZero b) => StarSemiring (LTrie h b) where
   star (a :< dp) = q where q = star a .> (one :< fmap (<.> q) dp)
 
-instance (HasSingle h (LTrie h b), Additive (h (LTrie h b)), Additive b) => HasSingle (LTrie h) b where
+instance (HasSingle (LTrie h b) h, Additive (h (LTrie h b)), Additive b) => HasSingle b (LTrie h) where
   w +-> b = foldr (\ c t -> zero :< c +-> t) (b :< zero) w
 
 -- | Trim to a finite depth, for examination.

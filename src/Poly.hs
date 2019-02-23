@@ -14,15 +14,16 @@ import Data.List (intercalate)
 import Misc ((:*))
 import Semi
 
-type Poly1 = Map N
+newtype Poly1 b = Poly1 (Map N b) deriving
+  (Additive, Semiring, HasSingle)
 
 eval1 :: Semiring b => Poly1 b -> b -> b
-eval1 m x = sum [b <.> x^i | (i,b) <- M.toList m]
+eval1 (Poly1 m) x = sum [b <.> x^i | (i,b) <- M.toList m]
 
 type P1 = Poly1 Int
 
 showPoly1 :: (DetectableOne b, Show b) => Poly1 b -> String
-showPoly1 m = intercalate " + " (term <$> M.toDescList m)
+showPoly1 (Poly1 m) = intercalate " + " (term <$> M.toDescList m)
  where
    term (Sum i, b)
      | i == 0    = show b
@@ -37,6 +38,7 @@ showPoly1 m = intercalate " + " (term <$> M.toDescList m)
 -- fromList [(Sum 0,3),(Sum 1,1)]
 -- >>> (single 1 <+> value 3)^2 :: P1
 -- fromList [(Sum 0,9),(Sum 1,6),(Sum 2,1)]
+
 -- >>> showPoly1 ((single 1 <+> value 3)^2 :: P1)
 -- "x^2 + 6*x + 9"
 

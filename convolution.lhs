@@ -596,12 +596,12 @@ It will be useful to use a standard vocabulary for the latter.
 An ``indexable'' functor |h| is such that |h b| represent |a -> b| for a some type |a| of ``keys''.
 We'll need to restrict |b| in some cases.
 \begin{code}
-class Functor h => Indexable h b where
+class Functor h => Indexable b h where
   type Key h
   infixl 9 !
   (!) :: h b -> Key h -> b
 
-instance Indexable ((->) a) b where
+instance Indexable b ((->) a) where
   type Key ((->) a) = a
   f ! k = f k
 \end{code}
@@ -615,19 +615,19 @@ Probably also that |h| maps |Additive| to |Additive| and that |(!)| is an |Addit
 We'll also want an operation that constructs a ``vector'' (e.g., language or function) with a single non-zero component:
 %format +-> = "\mapsto"
 \begin{code}
-class Indexable h b => HasSingle h b where
+class Indexable b h => HasSingle b h where
   infixr 2 +->
   (+->) :: Key h -> b -> h b
 
-instance (Eq a, Additive b) => HasSingle ((->) a) b where
+instance (Eq a, Additive b) => HasSingle b ((->) a) where
   a +-> b = \ a' -> if a == a' then b else zero
 \end{code}
 Two specializations of |a +-> b| will come in handy: one for |a = mempty|, and one for |b = one|.
 \begin{code}
-single :: (HasSingle h b, Semiring b) => Key h -> h b
+single :: (HasSingle b h, Semiring b) => Key h -> h b
 single a = a +-> one
 
-value :: (HasSingle h b, Monoid (Key h)) => b -> h b
+value :: (HasSingle b h, Monoid (Key h)) => b -> h b
 value b = mempty +-> b
 \end{code}
 In particular, |mempty +-> one == single mempty == value one|.
@@ -866,11 +866,11 @@ Conversely, merging two finite maps can yield a key collision, which can be reso
 Both interpretations require |b| to be an additive monoid.
 Given the definitions in \figrefdef{Map}{Finite maps}{
 \begin{code}
-instance (Ord a, Additive b) => Indexable (Map a) b where
+instance (Ord a, Additive b) => Indexable b (Map a) where
   type Key (Map a) = a
   m ! a = M.findWithDefault zero a m
 
-instance (Ord a, Additive b) => HasSingle (Map a) b where
+instance (Ord a, Additive b) => HasSingle b (Map a) where
   (+->) = M.singleton
 
 instance (Ord a, Additive b) => Additive (Map a b) where
@@ -1081,13 +1081,13 @@ instance Semiring b => Semiring (RegExp h b) where
 instance Semiring b => StarSemiring (RegExp h b) where
   star e = Star e
 
-type FR h b = (Functor h, Additive (h (RegExp h b)), HasSingle h (RegExp h b))
+type FR h b = (Functor h, Additive (h (RegExp h b)), HasSingle (RegExp h b) h)
 
-instance (FR h b, StarSemiring b, DetectableZero b, Eq (Key h)) => Indexable (RegExp h) b where
+instance (FR h b, StarSemiring b, DetectableZero b, Eq (Key h)) => Indexable b (RegExp h) where
   type Key (RegExp h) = [Key h]
   e ! w = atEps (foldl ((!) . deriv) e w)
 
-instance (FR h b, StarSemiring b, DetectableZero b, Eq (Key h)) => HasSingle (RegExp h) b where
+instance (FR h b, StarSemiring b, DetectableZero b, Eq (Key h)) => HasSingle b (RegExp h) where
   w +-> b = b .> product (map Char w)
 
 atEps :: StarSemiring b => RegExp h b -> b
@@ -1116,7 +1116,7 @@ The implementation in \figref{RegExp} generalizes the regular expression matchin
 
 As an alternative to successive syntactic differentiation, we can re-interpret the original (syntactic) regular expression in another semiring as follows:
 \begin{code}
-regexp :: (StarSemiring (f b), HasSingle f b, Semiring b, Key f ~ [Key h]) => RegExp h b -> f b
+regexp :: (StarSemiring (f b), HasSingle b f, Semiring b, Key f ~ [Key h]) => RegExp h b -> f b
 regexp (Char c)      = single [c]
 regexp (Value b)     = value b
 regexp (u  :<+>  v)  = regexp u  <+>  regexp v
@@ -1155,7 +1155,7 @@ Given the definitions in \figrefdef{LTrie}{Tries as |[c] -> b|}{
 infix 1 :<
 data LTrie h b = b :< h (LTrie h b) -- deriving Show
 
-instance Indexable h (LTrie h b) => Indexable (LTrie h) b where
+instance Indexable (LTrie h b) h => Indexable b (LTrie h) where
   type instance Key (LTrie h) = [Key h]
   (!) (b :< dp) = b <: (!) . (!) dp -- |(b :< dp) ! w = case w of { [] -> b ; c:cs -> dp ! c ! cs }|
 
@@ -1176,7 +1176,7 @@ instance (Functor h, Additive (h (LTrie h b)), Semiring b, DetectableZero b) => 
 instance (Functor h, Additive (h (LTrie h b)), StarSemiring b, DetectableZero b) => StarSemiring (LTrie h b) where
   star (a :< dp) = q where q = star a .> (one :< fmap (<.> NOP q) dp)
 
-instance (HasSingle h (LTrie h b), Additive (h (LTrie h b)), Additive b) => HasSingle (LTrie h) b where
+instance (HasSingle (LTrie h b) h, Additive (h (LTrie h b)), Additive b) => HasSingle b (LTrie h) where
   w +-> b = foldr (\ c t -> zero :< c +-> t) (b :< zero) w
 
 \end{code}
@@ -1259,7 +1259,7 @@ As a suitable indexable functor, we can simply use the identity functor:
 \begin{code}
 newtype Identity b = Identity b
 
-instance Indexable Identity b where
+instance Indexable b Identity where
   type Key Identity = ()
   Identity a ! () = a
 \end{code}
@@ -1423,7 +1423,7 @@ instance Semiring b => Semiring (a -> b) where
   one = pure one    -- i.e., |one = \ a -> one|
   (*) = liftA2 (*)  -- i.e., |f * g = \ a -> f a * g a|
 
-newtype b <-- a = F (a -> b) deriving (Additive, HasSingle a b, LeftSemimodule b, Indexable a b)
+newtype b <-- a = F (a -> b) deriving (Additive, HasSingle b, LeftSemimodule b, Indexable a b)
 
 instance (Semiring b, Monoid a) => Semiring (b <-- a) where
   one = pure mempty

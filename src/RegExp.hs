@@ -93,14 +93,14 @@ instance (D0 b, D1 b, Semiring b) => Semiring (RegExp h b) where
 instance (D0 b, D1 b, Semiring b) => StarSemiring (RegExp h b) where
   star = Star
 
-type FR h b = (Functor h, Additive (h (RegExp h b)), HasSingle h (RegExp h b))
+type FR h b = (Functor h, Additive (h (RegExp h b)), HasSingle (RegExp h b) h)
 
-instance (FR h b, StarSemiring b, DetectableZero b, Eq (Key h), D1 b) => Indexable (RegExp h) b where
+instance (FR h b, StarSemiring b, DetectableZero b, Eq (Key h), D1 b) => Indexable b (RegExp h) where
   type Key (RegExp h) = [Key h]
   e ! w = atEps (foldl ((!) . deriv) e w)
 
 instance (FR h b, StarSemiring b, DetectableZero b, Eq (Key h), D1 b)
-      => HasSingle (RegExp h) b where
+      => HasSingle b (RegExp h) where
   w +-> b = b .> product (map Char w)
 
 atEps :: StarSemiring b => RegExp h b -> b
@@ -120,7 +120,7 @@ deriv (p :<.> q) = fmap (<.> q) (deriv p) <+> fmap (atEps p .>) (deriv q)
 deriv (Star p)   = fmap (\ d -> star (atEps p) .> d <.> Star p) (deriv p)
 
 -- | Interpret a regular expression
-regexp :: (StarSemiring (f b), HasSingle f b, Semiring b, Key f ~ [Key h])
+regexp :: (StarSemiring (f b), HasSingle b f, Semiring b, Key f ~ [Key h])
        => RegExp h b -> f b
 regexp (Char c)   = single [c]
 regexp (Value b)  = value b

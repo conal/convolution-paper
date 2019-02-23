@@ -62,19 +62,9 @@ library:
     - Misc
     - Constrained
     - Semi
-    # - Map
-    # - Language
-    # - Decomp
-    # - Stream
-    - LTrie
     - RegExp
+    - LTrie
     - Examples
-    # To abandon
-    # - DLTrie
-    # - Convo
-    # - CLTrie
-    # - Set
-    # - Fun
 
 tests:
   test:

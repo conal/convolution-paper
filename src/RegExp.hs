@@ -26,28 +26,10 @@ data RegExp h b = Char (Key h)
                 | RegExp h b :<+> RegExp h b
                 | RegExp h b :<.> RegExp h b
                 | Star (RegExp h b)
+ deriving Functor
 
 deriving instance (Show (Key h), Show b) => Show (RegExp h b)
 deriving instance (Eq   (Key h), Eq   b) => Eq   (RegExp h b)
-
-#if 0
-
-infixr 5 :^:
-data Tree a =  Leaf a  |  Tree a :^: Tree a
-
-instance (Show a) => Show (Tree a) where
-
-       showsPrec d (Leaf m) = showParen (d > app_prec) $
-            showString "Leaf " . showsPrec (app_prec+1) m
-         where app_prec = 10
-
-       showsPrec d (u :^: v) = showParen (d > up_prec) $
-            showsPrec (up_prec+1) u .
-            showString " :^: "      .
-            showsPrec (up_prec+1) v
-         where up_prec = 5
-
-#endif
 
 #define OPTIMIZE
 
@@ -83,6 +65,8 @@ instance (D0 b, Additive b) => Additive (RegExp h b) where
 
 instance (Semiring b, D0 b, D1 b) => LeftSemimodule b (RegExp h b) where
 #if 1
+  scale b = fmap (b <.>)
+#elif 1
   b `scale` e = Value b <.> e
 #else
   scale b = go

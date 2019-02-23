@@ -29,10 +29,13 @@ import Constrained
 --------------------------------------------------------------------}
 
 -- Inspired by Indexable from Data.Key in the keys library.
-class Indexable h b where
+class Functor h => Indexable h b where
   type Key h
   infixl 9 !
   (!) :: h b -> Key h -> b
+
+-- TODO: Laws: (!) must be natural; h must presere additivity, and !)| is an
+-- Additive homomorphism.
 
 -- | Commutative monoid
 class Additive b where
@@ -189,7 +192,7 @@ deriving instance Semiring b         => Semiring (Identity b)
 -- For the paper:
 
 newtype Id b = Id b deriving 
- (Additive, DetectableZero, DetectableOne, LeftSemimodule s, Semiring)
+ (Functor, Additive, DetectableZero, DetectableOne, LeftSemimodule s, Semiring)
 
 instance Indexable Id b where
   type Key Id = ()
@@ -202,7 +205,8 @@ instance Indexable Id b where
 -- semiring-num defines 'add' and 'mul' via foldl', but I think I want foldr
 -- instead.
 
-newtype Sum a = Sum a deriving (Eq,Show)
+newtype Sum a = Sum a deriving
+  (Eq,Ord,Show,Num,Real,Integral,Additive,Semiring)
 
 getSum :: Sum a -> a
 getSum (Sum a) = a
@@ -215,16 +219,6 @@ instance Additive a => Monoid (Sum a) where
 
 sum :: (Foldable f, Additive a) => f a -> a
 sum = getSum . foldMap Sum
-
--- Handy for eliding the Sum Natural vs Natural distinction in the paper.
-instance Num a => Num (Sum a) where
-  fromInteger = Sum . fromInteger
-  Sum a + Sum b = Sum (a + b)
-  Sum a - Sum b = Sum (a - b)
-  Sum a * Sum b = Sum (a * b)
-  negate (Sum a) = Sum (negate a)
-  abs    (Sum a) = Sum (abs a)
-  signum (Sum a) = Sum (signum a)
 
 missing :: String -> String -> z
 missing ty op = error ("No " ++ op ++ " method for " ++ ty)
@@ -250,13 +244,13 @@ instance Semiring a => Monoid (Product a) where
 product :: (Foldable f, Semiring a) => f a -> a
 product = getProduct . foldMap Product
 
-infixr 8 ^
-(^) :: Semiring a => a -> Int -> a
-a ^ n = product (replicate n a)
-
 type N = Sum Natural
 
 type Z = Sum Integer
+
+infixr 8 ^
+(^) :: Semiring a => a -> N -> a
+a ^ n = product (replicate (fromIntegral n) a)
 
 instance Splittable N where
   isEmpty n = n == 0

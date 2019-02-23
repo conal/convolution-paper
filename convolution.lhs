@@ -1738,7 +1738,6 @@ For |StarSemiring| the default recursive definition embodies the star semiring l
 
 \subsection{\lemref{decomp ([c] -> b)}}\prooflabel{lemma:decomp ([c] -> b)}
 
-\begin{proof}
 Any argument to |f| must be either |[]| or |c : cs| for some value |c| and list |cs|.
 Consider each case:
 \begin{code}
@@ -1767,7 +1766,6 @@ For the other two equations:
 ==  \ c -> \ cs -> h c cs                                                          -- semantics of |case|
 ==  h                                                                              -- $\eta$ reduction (twice)
 \end{code}
-\end{proof}
 
 \subsection{\lemref{atEps [c] -> b}}\prooflabel{lemma:atEps [c] -> b}
 
@@ -1805,13 +1803,27 @@ For the other two equations:
 ==  atEps f <.> atEps g                                       -- |atEps| definition
 \end{code}
 
+%if False
+
 \begin{code}
     atEps (star p)
 ==  atEps (one <+> p <.> star p)        -- defining property of |star|
-==  one <+> atEps p <.> atEps (star p)  -- |atEps| distributes over |one|, |(<+>)| and |(<.>)|
+==  one <+> atEps p <.> atEps (star p)  -- |atEps| is a semiring homomorphism (above)
 ==  one <+> atEps p <.> star (atEps p)  -- \note{coinduction?}
 ==  star (atEps p)                      -- defining property of |star|
 \end{code}
+
+%else
+%% \note{For the |star p| proof, maybe instead show inductively that |atEps (pow p n) == pow (atEps p) n| for all |n >= 0|, and then appeal to the summation definition of |star p|.}
+
+\begin{code}
+    atEps (star p)
+==  atEps (bigSum i (wrap (pow p i)))  -- alternative |star| formulation
+==  bigSum i (wrap (pow (atEps p) i))  -- |atEps| is a semiring homomorphism (above)
+==  star (atEps p)                     -- defining property of |star|
+\end{code}
+
+%endif
 
 \begin{code}
     atEps (s .> f)
@@ -1846,8 +1858,6 @@ For the other two equations:
 \end{code}
 
 %endif
-
-\note{For the |star p| proof, maybe instead show inductively that |atEps (pow p n) == pow (atEps p) n| for all |n >= 0|, and then appeal to the summation definition of |star p|.}
 
 \subsection{\lemref{deriv [c] -> b}}\prooflabel{lemma:deriv [c] -> b}
 
@@ -2099,30 +2109,6 @@ Similarly for |liftA2|:
 
 \subsection{\thmref{poly hom}}\prooflabel{theorem:poly hom}
 
-\note{Lightly restructure this section to resemble the others: drop the |poly| definition, and move the lemma to after its uses, adding ``(below)'' to its references.}
-
-The semantics as polynomial functions:
-\begin{code}
-poly :: Semiring b => (b <-- N) -> (b -> b)
-poly (F f) = \ x -> bigSum i  f i <.> pow x i
-\end{code}
-Monomials are especially simple:
-\begin{lemma}\lemlabel{poly +->}~
-\begin{code}
-poly (n +-> b) = \ x -> b * pow x n
-\end{code}
-\end{lemma}
-\begin{proof}~
-\begin{code}
-poly (n +-> b)
-poly (F (\ i -> if i == n then b else zero))              -- |(+->)| on |b <-- a| (derived)
-\ x -> bigSum i (if i == n then b else zero) <.> pow x n  -- |poly| definition
-\ x -> b * pow x n                                        -- other terms vanish
-\end{code}
-\end{proof}
-
-\noindent
-Homomorphism proofs for \thmref{poly hom}:
 \begin{code}
     poly zero
 ==  poly (F (\ i -> zero))             -- |zero| on |b <-- a| (derived)
@@ -2160,7 +2146,7 @@ Homomorphism proofs for \thmref{poly hom}:
 ==  poly (bigSum (i,j)  i <> j +-> f i <.> g j)                         -- |liftA2| on |b <-- a|
 ==  poly (bigSum (i,j)  i + j +-> f i <.> g j)                          -- |(<>)| on |N|
 ==  bigSum (i,j)  poly (i + j +-> f i <.> g j)                          -- additivity of |poly| (previous property)
-==  bigSum (i,j) (\ x -> (f i <.> g j) <.> pow x (i + j))               -- \lemref{poly +->}
+==  bigSum (i,j) (\ x -> (f i <.> g j) <.> pow x (i + j))               -- \lemref{poly +->} below
 ==  \ x -> bigSum (i,j) (f i <.> g j) <.> pow x (i + j)                 -- |(<+>)| on functions
 ==  \ x -> bigSum (i,j) (f i <.> g j) <.> (pow x i <.> pow x j)         -- exponentiation property
 ==  \ x -> bigSum (i,j) (f i <.> pow x i) <.> (g j <.> pow x j)         -- commutativity assumption
@@ -2170,6 +2156,20 @@ Homomorphism proofs for \thmref{poly hom}:
 \end{code}
 
 %% \note{The sum and product derivations might read more easily in reverse.}
+
+\begin{lemma}\lemlabel{poly +->}~
+\begin{code}
+poly (n +-> b) = \ x -> b * pow x n
+\end{code}
+\end{lemma}
+\begin{proof}~
+\begin{code}
+poly (n +-> b)
+poly (F (\ i -> if i == n then b else zero))              -- |(+->)| on |b <-- a| (derived)
+\ x -> bigSum i (if i == n then b else zero) <.> pow x n  -- |poly| definition
+\ x -> b * pow x n                                        -- other terms vanish
+\end{code}
+\end{proof}
 
 \subsection{\lemref{pows hom}}\prooflabel{lemma:pows hom}
 

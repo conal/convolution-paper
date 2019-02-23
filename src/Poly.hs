@@ -9,38 +9,37 @@ import Prelude hiding ((^),sum)
 import GHC.Natural (Natural)
 import Data.Map (Map)
 import qualified Data.Map as M
-import Data.List (intercalate)
+import Data.List (intercalate,intersperse)
 
 import Misc ((:*))
 import Semi
 
 newtype Poly1 b = Poly1 (Map N b) deriving
-  (Additive, Semiring, HasSingle)
+  (Additive, Semiring, Functor, Indexable n, HasSingle n)
+
+instance (DetectableOne b, Show b) => Show (Poly1 b) where
+  showsPrec d (Poly1 m) = showParen (d >= 6) $
+     foldr (.) id (intersperse (showString " + ") (term <$> M.toDescList m))
+   where
+     term :: (N,b) -> ShowS
+     term (Sum i, b)
+       | i == 0    = showsPrec 6 b
+       | isOne b   = xs
+       | otherwise = shows b . showString "*" . xs
+      where
+        xs | i == 0    = id
+           | i == 1    = showString "x"
+           | otherwise = showString "x^" . showsPrec 8 i
 
 eval1 :: Semiring b => Poly1 b -> b -> b
 eval1 (Poly1 m) x = sum [b <.> x^i | (i,b) <- M.toList m]
 
 type P1 = Poly1 Int
 
-showPoly1 :: (DetectableOne b, Show b) => Poly1 b -> String
-showPoly1 (Poly1 m) = intercalate " + " (term <$> M.toDescList m)
- where
-   term (Sum i, b)
-     | i == 0    = show b
-     | isOne b   = xs
-     | otherwise = show b ++ "*" ++ xs
-    where
-      xs | i == 0    = ""
-         | i == 1    = "x"
-         | otherwise = "x^" ++ show i
-
 -- >>> single 1 <+> value 3 :: P1  -- x+3
--- fromList [(Sum 0,3),(Sum 1,1)]
+-- x + 3
 -- >>> (single 1 <+> value 3)^2 :: P1
--- fromList [(Sum 0,9),(Sum 1,6),(Sum 2,1)]
-
--- >>> showPoly1 ((single 1 <+> value 3)^2 :: P1)
--- "x^2 + 6*x + 9"
+-- x^2 + 6*x + 9
 
 type P2 = Map (N :* N)
 

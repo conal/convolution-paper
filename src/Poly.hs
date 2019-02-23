@@ -9,23 +9,63 @@ import Prelude hiding ((^),sum)
 import GHC.Natural (Natural)
 import Data.Map (Map)
 import qualified Data.Map as M
+import Data.List (intercalate)
 
+import Misc ((:*))
 import Semi
 
-type Poly1 b = Map N b
+type Poly1 = Map N
 
 eval1 :: Semiring b => Poly1 b -> b -> b
-eval1 m x = sum [c <.> x^i | (i,c) <- M.toList m]
+eval1 m x = sum [b <.> x^i | (i,b) <- M.toList m]
 
-type P = Poly1 Int
+type P1 = Poly1 Int
 
-x1 :: P
-x1 = single 1
+showPoly1 :: (DetectableOne b, Show b) => Poly1 b -> String
+showPoly1 m = intercalate " + " (term <$> M.toDescList m)
+ where
+   term (Sum i, b)
+     | i == 0    = show b
+     | isOne b   = xs
+     | otherwise = show b ++ "*" ++ xs
+    where
+      xs | i == 0    = ""
+         | i == 1    = "x"
+         | otherwise = "x^" ++ show i
 
-xp3 :: P
-xp3 = x1 <+> value 3
+-- >>> single 1 <+> value 3 :: P1  -- x+3
+-- fromList [(Sum 0,3),(Sum 1,1)]
+-- >>> (single 1 <+> value 3)^2 :: P1
+-- fromList [(Sum 0,9),(Sum 1,6),(Sum 2,1)]
+-- >>> showPoly1 ((single 1 <+> value 3)^2 :: P1)
+-- "x^2 + 6*x + 9"
 
-xp3sq :: P
-xp3sq = xp3 <.> xp3
+type P2 = Map (N :* N)
 
--- Next, represent the collection of "variables" as Map String
+x2,y2 :: P2 Int
+x2 = M.singleton (1,0) one
+y2 = M.singleton (0,1) one
+
+-- >>> x2
+-- fromList [((Sum 1,Sum 0),1)]
+-- >>> y2
+-- fromList [((Sum 0,Sum 1),1)]
+-- >>> x2 <+> y2
+-- fromList [((Sum 0,Sum 1),1),((Sum 1,Sum 0),1)]
+-- >>> (x2 <+> y2)^2
+-- fromList [((Sum 0,Sum 2),1),((Sum 1,Sum 1),2),((Sum 2,Sum 0),1)]
+
+type P2' = Map (Map Bool N)
+
+-- showPoly :: Map n String -> Map (Map n N) -> String
+-- showPoly names m = intercalate " + " (term <$> M.toList m)
+--  where
+--    term 
+
+-- Polynomials with named "variables"
+type PolyS = Map String
+
+
+-- type Vars = Map 
+
+-- >>> 

@@ -48,9 +48,9 @@
 
 \usepackage[margin=0.2in]{geometry}  % 0.12in, 0.9in, 1in
 
-\geometry{paperwidth=6.5in,paperheight=8in}  % for iPad portrait preview
+%% \geometry{paperwidth=6.5in,paperheight=8in}  % for iPad portrait preview
 %% \geometry{paperwidth=5.2in,paperheight=6.5in}  % same but easier on the eyes
-%% \geometry{paperheight=9.3in} % for 2-up on big monitor, larger text
+\geometry{paperheight=9.3in} % for 2-up on big monitor, larger text
 %% \geometry{paperwidth=10in} % 2-up big monitor, smaller text
 
 \usepackage[square]{natbib}
@@ -608,6 +608,9 @@ instance Indexable ((->) a) b where
 The |Additive b| constraint here allows |(!)| definitions to fill in zero for missing keys.
 \notefoot{Perhaps describe alternatives: (a) one method that returns |Maybe b| (as in |Lookup| from |Data.Key|) and an |Additive|-dependent method that substitutes zero for |Nothing|, or (b) adding |b| as a parameter to |Indexable| and |HasSingle|. The latter strategy led to many required constraints.}
 
+\note{Add a law for |Indexable|: |(!)| must be natural.
+Probably also that |h| maps |Additive| to |Additive| and that |(!)| is an |Additive| homomorphism.}
+
 \secref{Monoids, Semirings and Semimodules} provides a fair amount of vocabulary for combining values.
 We'll also want an operation that constructs a ``vector'' (e.g., language or function) with a single non-zero component:
 %format +-> = "\mapsto"
@@ -1032,6 +1035,8 @@ deriv (    []     +-> b) == zero
 deriv (c   :  cs  +-> b) == c +-> cs +-> b
 \end{code}
 
+\note{Consider re-expressing \lemref{deriv [c] -> b} in terms of |(!)|. Maybe even generalize |(<:)| to indexable functors.}
+
 \begin{theorem}[\provedIn{theorem:semiring decomp [c] -> b}]\thmlabel{semiring decomp [c] -> b}
 The following properties hold (in the generalized setting of indexable |h|):
 \begin{spacing}{1.4}
@@ -1060,13 +1065,14 @@ data RegExp h b           =  Char (Key h)
                           |  RegExp h b  :<+>  RegExp h b
                           |  RegExp h b  :<.>  RegExp h b
                           |  Star (RegExp h b)
+  deriving Functor
 
 instance (Additive b) => Additive (RegExp h b) where
   zero  = Value zero
   (<+>) = (:<+>)
 
 instance Semiring b => LeftSemimodule b (RegExp h b) where
-  b `scale` e = Value b <.> e
+  scale b = fmap (b NOP <.>)
 
 instance Semiring b => Semiring (RegExp h b) where
   one   = Value one
@@ -1151,14 +1157,14 @@ data LTrie h b = b :< h (LTrie h b) -- deriving Show
 
 instance Indexable h (LTrie h b) => Indexable (LTrie h) b where
   type instance Key (LTrie h) = [Key h]
-  (b :< dp) ! w = case w of { [] -> b ; c:cs -> dp ! c ! cs }
+  (!) (b :< dp) = b <: (!) . (!) dp -- |(b :< dp) ! w = case w of { [] -> b ; c:cs -> dp ! c ! cs }|
 
 instance (Additive (h (LTrie h b)), Additive b) => Additive (LTrie h b) where
   zero = zero :< zero
-  (a :< dp) <+> (b :< dq) = a <+> b  :<  dp <+> dq
+  (a :< dp) <+> (b :< dq) = a <+> b :< dp <+> dq
 
 instance (Functor h, Semiring b) => LeftSemimodule b (LTrie h b) where
-  scale s = go where go (b :< dp) = s <.> b :< fmap go dp
+  scale s = fmap (s NOP <.>)
 
 instance (Additive (h (LTrie h b)), DetectableZero (h (LTrie h b)), DetectableZero b) => DetectableZero (LTrie h b) where
   isZero (a :< dp) = isZero a && isZero dp
@@ -2067,9 +2073,76 @@ Substitute into \lemreftwo{atEps [c] -> b}{deriv [c] -> b}, and simplify, using 
 
 \subsection{\thmref{LTrie}}\prooflabel{theorem:LTrie}
 
+The theorem follows from \thmref{semiring decomp [c] -> b}.
+A few details:
+
+\begin{spacing}{1.2}
+
+\begin{code}
+    (!) zero 
+==  (!) (zero :< zero)      -- |zero| for |LTrie c b|
+==  zero <: (!) . (!) zero  -- |(!)| for |LTrie c b|
+==  zero <: (!) . zero      -- |Indexable| law \note{TODO}
+==  zero <: zero            -- coinduction
+==  zero                    -- \thmref{semiring decomp [c] -> b}
+\end{code}
+
+\begin{code}
+    (!) ((a :< dp) + (b :< dq))
+==  (!) (a + b :< dp + dq)                                  -- |(+)| on |LTrie c b|
+==  a + b <: (!) . (!) (dp + dq)                            -- |(!)| on |LTrie c b|
+==  a + b <: (!) . ((!) dp + (!) dq)                        -- |Indexable| law
+==  a + b <: (!) . (\ cs -> dp ! cs + dq ! cs)              -- |(+)| on functions
+==  a + b <: \ cs -> (!) (dp ! cs + dq ! cs)                -- |(.)| definition
+==  a + b <: \ cs -> (!) (dp ! cs) + (!) (dq ! cs)          -- |Indexable| law
+==  a + b <: \ cs -> ((!) . (!) dp) cs + ((!) . (!) dq) cs  -- |(.)| definition
+==  a + b <: ((!) . (!) dp) + ((!) . (!) dq)                -- |(+)| on functions
+==  (a :< (!) . (!) dp) + (b :< (!) . (!) dq)               -- |(+)| on |LTrie c b|
+==  (!) (a :< dp) + (!) (b :< dq)                           -- |(!)| on |LTrie c b|
+\end{code}
+
+%if True
+
+Similarly for the other
+
+%else
+
+
 \note{Fill in from journal notes of 2019-02-14. It's a straightforward application of \thmref{semiring decomp [c] -> b}.}
 
 \note{Coinduction?}
+
+\workingHere
+
+
+\begin{code}
+    (!) (s .> (a :< dp))
+==  (!) (s * a :< fmap (s NOP .>) dp)        -- |(.>)| and |Functor| (derived) on |LTrie|
+==  s * a <: (!) . (!) (fmap (s NOP .>) dp)  -- |(!)| on |LTrie c b|
+==  s * a <: (!) . (s NOP .>) . (!) dp       -- |Indexable| law
+==  ...
+
+
+
+==  s * a <: (s NOP .>) . ((!) (a <: dp))
+==  s * a <: fmap (s NOP .>) ((!) (a <: dp))
+==  s .> (!) (a <: dp)
+\end{code}
+
+\begin{code}
+    (!) ((a :< dp) * (b :< dq))
+==  (!) (a .> q + (zero :< fmap (<.> NOP q) dp))
+==  (!) (a .> q) + (!) (zero :< fmap (<.> NOP q) dp)
+==  (!) (a .> q) + (zero <: (!) . (!) (fmap (<.> NOP q) dp))
+==  (!) (a .> q) + (zero <: (!) . (<.> NOP q) . (!) dp)
+
+==  ...
+==  (!) (a :< dp) * (!) (b :< dq)
+\end{code}
+
+%endif
+
+\end{spacing}
 
 %if False
 \subsection{\thmref{Fourier}}\prooflabel{theorem:Fourier}

@@ -34,7 +34,7 @@ type Arr m n = Vector m :.: Vector n
 imgToArr :: (KnownNat m, KnownNat n, Fractional a) => DynamicImage -> Arr m n a
 imgToArr im = Comp1 $
   gen "the matrix" height $ \ y ->
-  gen "a row" width $ \ x ->
+  gen "a row"      width  $ \ x ->
   realToFrac $ pixelAt dat x y
   where
     width  = dynamicMap imageWidth  im

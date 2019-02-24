@@ -75,14 +75,14 @@ instance (Functor h, Semiring b) => LeftSemimodule b (LTrie h b) where
 instance (Additive (h (LTrie h b)), DetectableZero (h (LTrie h b)), DetectableZero b) => DetectableZero (LTrie h b) where
   isZero (a :< dp) = isZero a && isZero dp
 
-instance (Functor h, Additive (h (LTrie h b)), Semiring b, DetectableZero b) => Semiring (LTrie h b) where
+instance (Functor h, Additive (h (LTrie h b)), Semiring b, DetectableZero b, DetectableOne b) => Semiring (LTrie h b) where
   one = one :< zero
   (a :< dp) <.> q = a .> q <+> (zero :< fmap (<.> q) dp)
 
 instance (Functor h, Additive (h (LTrie h b)), DetectableZero1 h, DetectableZero b, DetectableOne b) => DetectableOne (LTrie h b) where
   isOne (a :< dp) = isOne a && isZero dp
 
-instance (Functor h, Additive (h (LTrie h b)), StarSemiring b, DetectableZero b) => StarSemiring (LTrie h b) where
+instance (Functor h, Additive (h (LTrie h b)), StarSemiring b, DetectableZero b, DetectableOne b) => StarSemiring (LTrie h b) where
   star (a :< dp) = q where q = star a .> (one :< fmap (<.> q) dp)
 
 instance (HasSingle c (LTrie h b) (h (LTrie h b)), Additive (h (LTrie h b)), Additive b) => HasSingle [c] b (LTrie h b) where

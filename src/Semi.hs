@@ -83,13 +83,14 @@ s .> b | isZero s  = zero
        | otherwise = s `scale` b
 {-# INLINE (.>) #-}
 
-
+#if 0
 type Additive1     = Con1 Additive
 type Semiring1     = Con1 Semiring
 type StarSemiring1 = Con1 StarSemiring
 
 type DetectableZero1 = Con1 DetectableZero
 type DetectableOne1  = Con1 DetectableOne
+#endif
 
 {--------------------------------------------------------------------
     Singletons

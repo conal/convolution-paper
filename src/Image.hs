@@ -23,8 +23,13 @@ import Codec.Picture ( convertRGB8 )
 import Codec.Picture.Types
   (DynamicImage(ImageYF), Image(..), PixelF , dynamicMap, pixelAt, promoteImage , extractLumaPlane)
 
+
 -- | A 2D array represented as a composition of sized vectors.
 type Arr m n = Vector m :.: Vector n
+
+{--------------------------------------------------------------------
+    Conversion between Arr m n a and DynamicImage (JuicyPixels)
+--------------------------------------------------------------------}
 
 imgToArr :: (KnownNat m, KnownNat n, Fractional a) => DynamicImage -> Arr m n a
 imgToArr im = Comp1 $
@@ -47,7 +52,6 @@ arrToImg (Comp1 arr) = ImageYF $ Image
   , imageHeight = int @m
   , imageData   = (convert . fromSized . fmap realToFrac . VS.concatMap id) arr
   }
-
 
 {--------------------------------------------------------------------
     Utilities

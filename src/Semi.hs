@@ -43,7 +43,7 @@ class Indexable a b x | x -> a b where
 class Additive b where
   zero :: b
   (<+>) :: b -> b -> b
-  infixl 6 <+>
+  infixr 6 <+>
 
 class Additive b => DetectableZero b where
   isZero :: b -> Bool
@@ -51,7 +51,7 @@ class Additive b => DetectableZero b where
 class Additive b => Semiring b where
   one :: b
   (<.>) :: b -> b -> b
-  infixl 7 <.>
+  infixr 7 <.>
 
 class Semiring b => DetectableOne b where
   isOne :: b -> Bool
@@ -75,11 +75,14 @@ class {- (Semiring s, Additive b) => -} LeftSemimodule s b | b -> s where
 -- TODO: Add the Semiring superclass, and remove redundant constraints
 -- elsewhere. Search for occurrences of LeftSemimodule.
 
--- | 'scale' optimized for zero scalar
-(.>) :: (Additive b, LeftSemimodule s b, DetectableZero s) => s -> b -> b
+-- | 'scale' optimized for zero or one scalar
+infixr 7 .>
+(.>) :: (Additive b, LeftSemimodule s b, DetectableZero s, DetectableOne s) => s -> b -> b
 s .> b | isZero s  = zero
+       | isOne  s  = b
        | otherwise = s `scale` b
 {-# INLINE (.>) #-}
+
 
 type Additive1     = Con1 Additive
 type Semiring1     = Con1 Semiring

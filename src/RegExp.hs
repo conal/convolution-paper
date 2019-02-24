@@ -21,17 +21,15 @@ infixl 6 :<+>
 infixl 7 :<.>
 
 -- | Regular expression
-data RegExp c b = Char c
+data RegExp h b = Char (Key h)
                 | Value b
-                | RegExp c b :<+> RegExp c b
-                | RegExp c b :<.> RegExp c b
-                | Star (RegExp c b)
+                | RegExp h b :<+> RegExp h b
+                | RegExp h b :<.> RegExp h b
+                | Star (RegExp h b)
  deriving Functor
 
-deriving instance (Show c, Show b) => Show (RegExp c b)
-deriving instance (Eq   c, Eq   b) => Eq   (RegExp c b)
-
-#if 0
+deriving instance (Show (Key h), Show b) => Show (RegExp h b)
+deriving instance (Eq   (Key h), Eq   b) => Eq   (RegExp h b)
 
 #define OPTIMIZE
 
@@ -40,11 +38,11 @@ deriving instance (Eq   c, Eq   b) => Eq   (RegExp c b)
 type D0 b = DetectableZero b
 type D1 b = DetectableOne b
 
-instance DetectableZero b => DetectableZero (RegExp c b) where
+instance DetectableZero b => DetectableZero (RegExp h b) where
   isZero (Value b) = isZero b
   isZero _         = False
 
-instance (DetectableZero b, DetectableOne b) => DetectableOne (RegExp c b) where
+instance (DetectableZero b, DetectableOne b) => DetectableOne (RegExp h b) where
   isOne (Value b) = isOne b
   isOne _         = False
 
@@ -55,7 +53,7 @@ type D1 b = (() ~ ())
 
 #endif
 
-instance (D0 b, Additive b) => Additive (RegExp c b) where
+instance (D0 b, Additive b) => Additive (RegExp h b) where
   zero  = Value zero
 #ifdef OPTIMIZE
   p <+> q | isZero p  = q
@@ -65,7 +63,7 @@ instance (D0 b, Additive b) => Additive (RegExp c b) where
   (<+>) = (:<+>)
 #endif
 
-instance (Semiring b, D0 b, D1 b) => LeftSemimodule b (RegExp c b) where
+instance (Semiring b, D0 b, D1 b) => LeftSemimodule b (RegExp h b) where
 #if 1
   scale b = fmap (b <.>)
 #elif 1
@@ -80,7 +78,7 @@ instance (Semiring b, D0 b, D1 b) => LeftSemimodule b (RegExp c b) where
      go (Star u)   = star (go u)
 #endif
 
-instance (D0 b, D1 b, Semiring b) => Semiring (RegExp c b) where
+instance (D0 b, D1 b, Semiring b) => Semiring (RegExp h b) where
   one   = Value one
 #ifdef OPTIMIZE
   p <.> q | isZero p = zero
@@ -92,29 +90,28 @@ instance (D0 b, D1 b, Semiring b) => Semiring (RegExp c b) where
   (<.>) = (:<.>)
 #endif
 
-instance (D0 b, D1 b, Semiring b) => StarSemiring (RegExp c b) where
+instance (D0 b, D1 b, Semiring b) => StarSemiring (RegExp h b) where
   star = Star
 
-type FR c b h = (HasSingle c (RegExp c b) (h (RegExp c b)))
-                -- (h c ~ h c)
-                -- (Functor h, Additive (h (RegExp c b)), HasSingle c (RegExp c b) (h (RegExp c b)))
+type FR h b = (Functor h, Additive (h (RegExp h b)), HasSingle (Key h) (RegExp h b) (h (RegExp h b)))
 
-instance (FR c b h, StarSemiring b, DetectableZero b, Eq c, D1 b) => Indexable [c] b (RegExp c b) where
+instance (FR h b, StarSemiring b, DetectableZero b, c ~ Key h, Eq c, D1 b)
+      => Indexable [c] b (RegExp h b) where
   e ! w = atEps (foldl ((!) . deriv) e w)
 
-instance (FR c b h, StarSemiring b, DetectableZero b, Eq c, D1 b)
-      => HasSingle c b (RegExp c b) where
+instance (FR h b, StarSemiring b, DetectableZero b, c ~ Key h, Eq c, D1 b)
+      => HasSingle [c] b (RegExp h b) where
   w +-> b = b .> product (map Char w)
 
-atEps :: StarSemiring b => RegExp c b -> b
+atEps :: StarSemiring b => RegExp h b -> b
 atEps (Char _)   = zero
 atEps (Value b)  = b
 atEps (p :<+> q) = atEps p <+> atEps q
 atEps (p :<.> q) = atEps p <.> atEps q
 atEps (Star p)   = star (atEps p)
 
-deriv :: (FR c b h, StarSemiring b, DetectableZero b, Eq c, D1 b)
-      => RegExp c b -> h (RegExp c b)
+deriv :: (FR h b, StarSemiring b, DetectableZero b, D1 b)
+      => RegExp h b -> h (RegExp h b)
 deriv (Char c)   = single c
 deriv (Value _)  = zero
 deriv (p :<+> q) = deriv p <+> deriv q
@@ -123,7 +120,7 @@ deriv (p :<.> q) = fmap (<.> q) (deriv p) <+> fmap (atEps p .>) (deriv q)
 deriv (Star p)   = fmap (\ d -> star (atEps p) .> d <.> Star p) (deriv p)
 
 -- | Interpret a regular expression
-regexp :: (StarSemiring x, HasSingle a b x, Semiring b) => RegExp c b -> x
+regexp :: (StarSemiring x, HasSingle [Key h] b x, Semiring b) => RegExp h b -> x
 regexp (Char c)   = single [c]
 regexp (Value b)  = value b
 regexp (u :<+> v) = regexp u <+> regexp v
@@ -139,8 +136,8 @@ regexp (Star u)   = star (regexp u)
     Examples
 --------------------------------------------------------------------}
 
+type L = RegExp ((->) Char) Bool
 -- type L = RegExp (Map Char) Bool
-type L = RegExp Char Bool
 
 star1 :: Semiring b => b -> b
 star1 b = one <+> b <.> star1 b
@@ -194,4 +191,6 @@ x1 = star1 (single "a")
 
 #endif
 
+
+#if 0
 #endif

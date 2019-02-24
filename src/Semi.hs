@@ -28,6 +28,9 @@ import Misc
     Classes
 --------------------------------------------------------------------}
 
+-- Keyed functors. Useful for memoization in RegExp and maybe elsewhere.
+type family Key (h :: * -> *) :: *
+
 -- Inspired by Indexable from Data.Key in the keys library.
 class Indexable a b x | x -> a b where
   infixl 9 !
@@ -137,6 +140,8 @@ Nums(Double)
 -- ApplMono(Set)
 -- etc
 
+type instance Key ((->) a) = a
+
 instance Indexable a b (a -> b) where
   f ! k = f k
 
@@ -169,12 +174,16 @@ instance (Ord a, Monoid a, Semiring b) => Semiring (Map a b) where
   one = mempty +-> one
   p <.> q = sum [u <> v +-> p!u <.> q!v | u <- M.keys p, v <- M.keys q]
 
+type instance Key (Map  a) = a
+
 instance (Ord a, Additive b) => Indexable a b (Map a b) where
   m ! a = M.findWithDefault zero a m
 
 instance (Ord a, Additive b) => HasSingle a b (Map a b) where (+->) = M.singleton
 
 -- newtype Identity b = Identity b
+
+type instance Key Identity = ()
 
 instance Indexable () b (Identity b) where
   Identity a ! () = a
@@ -189,6 +198,8 @@ deriving instance Semiring b         => Semiring (Identity b)
 
 newtype Id b = Id b deriving 
  (Functor, Additive, DetectableZero, DetectableOne, LeftSemimodule s, Semiring)
+
+type instance Key Id = ()
 
 instance Indexable () b (Id b) where
   Id a ! () = a
@@ -283,6 +294,8 @@ instance Splittable N where
 -- TODO: generalize to other Integral or Enum types and add to Semi
 newtype CharMap b = CharMap (IntMap b) deriving Functor
 
+type instance Key CharMap = Char
+
 instance Additive b => Indexable Char b (CharMap b) where
   CharMap m ! a = IntMap.findWithDefault zero (fromEnum a) m
 
@@ -295,6 +308,7 @@ instance Additive b => Additive (CharMap b) where
 
 instance Additive b => DetectableZero (CharMap b) where isZero (CharMap m) = IntMap.null m
 
+type instance Key ((:->:) a) = a
 
 instance HasTrie a => Indexable a b (a :->: b) where
   (!) = untrie

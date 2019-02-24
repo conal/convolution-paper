@@ -31,15 +31,15 @@ basicTests :: TestTree
 basicTests = testGroup "Various representations"
   [ testGroup "" []
 
-  , tests @((->) String)        @Bool "Function"
+  , tests @(String  ->         Bool) "Function"
 
-  , tests @(RegExp ((->) Char)) @Bool "RegExpFun"
-  , tests @(RegExp (Map  Char)) @Bool "RegExpMap"
-  , tests @(RegExp CharMap    ) @Bool "RegExpIntMap"
+  , tests @(RegExp ((->) Char) Bool) "RegExpFun"
+  , tests @(RegExp (Map  Char) Bool) "RegExpMap"
+  , tests @(RegExp CharMap     Bool) "RegExpIntMap"
 
-  , tests @(LTrie  ((->) Char)) @Bool "TrieFun"
-  , tests @(LTrie  (Map  Char)) @Bool "TrieMap"
-  , tests @(LTrie  CharMap    ) @Bool "TrieIntMap"
+  , tests @(LTrie  ((->) Char) Bool) "TrieFun"
+  , tests @(LTrie  (Map  Char) Bool) "TrieMap"
+  , tests @(LTrie  CharMap     Bool) "TrieIntMap"
 
   ]
 
@@ -48,8 +48,8 @@ basicTests = testGroup "Various representations"
 -- tests' :: forall x. Semiring x => String -> TestTree
 -- tests' = undefined
 
-tests :: forall f b.
-  (HasSingle b f, Key f ~ String, StarSemiring (f b), StarSemiring b, Show b)
+tests :: forall x b.
+  (HasSingle String b x, StarSemiring x, StarSemiring b, Show b)
   => String -> TestTree
 tests group = testGroup group
   [ testGroup "" []
@@ -98,8 +98,8 @@ tests group = testGroup group
   ]
  where
    infixl 2 #
-   (#) :: f b -> String -> b
-   x # s = x ! s
+   (#) :: x -> String -> b
+   (#) = (!)
    groupNot :: [String] -> TestTree -> TestTree
    groupNot gs | group `elem` gs = const (testGroup "" [])
                | otherwise       = id

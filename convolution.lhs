@@ -555,6 +555,10 @@ When |s == zero|, |s .> p == zero|, so we can discard |p| entirely.
 This optimization applies quite often in practice, for instance with languages, which tend to be sparse.
 A less dramatically helpful optimization is |one .> p == p|.
 Rather than burden each |LeftSemimodule| instance with these two optimizations, let's define |(.>)| via a more primitive |scale| method:
+%format DetectableZero = Is"_0"
+%format DetectableOne  = Is"_1"
+%format isZero = is"_0"
+%format isOne  = is"_1"
 \begin{code}
 class (Semiring s, Additive b) => LeftSemimodule s b | b -> s where
   scale :: s -> b -> b
@@ -1177,18 +1181,25 @@ instance (Additive (h (LTrie h b)), Additive b) => Additive (LTrie h b) where
 instance (Functor h, Semiring b) => LeftSemimodule b (LTrie h b) where
   scale s = fmap (s NOP <.>)
 
-instance (Additive (h (LTrie h b)), DetectableZero (h (LTrie h b)), DetectableZero b) => DetectableZero (LTrie h b) where
-  isZero (a :< dp) = isZero a && isZero dp
-
 instance (Functor h, Additive (h (LTrie h b)), Semiring b, DetectableZero b) => Semiring (LTrie h b) where
   one = one :< zero
   (a :< dp) <.> q = a .> q <+> (zero :< fmap (<.> NOP q) dp)
 
-instance (Functor h, Additive (h (LTrie h b)), StarSemiring b, DetectableZero b) => StarSemiring (LTrie h b) where
+instance  (Functor h, Additive (h (LTrie h b)), StarSemiring b, DetectableZero b) =>
+          StarSemiring (LTrie h b) where
   star (a :< dp) = q where q = star a .> (one :< fmap (<.> NOP q) dp)
 
-instance (HasSingle (LTrie h b) h, Additive (h (LTrie h b)), Additive b) => HasSingle b (LTrie h) where
+instance  (HasSingle (LTrie h b) h, Additive (h (LTrie h b)), Additive b) =>
+          HasSingle b (LTrie h) where
   w +-> b = foldr (\ c t -> zero :< c +-> t) (b :< zero) w
+
+instance  (Additive (h (LTrie h b)), DetectableZero (h (LTrie h b)), DetectableZero b) =>
+          DetectableZero (LTrie h b) where
+  isZero (a :< dp) = isZero a && isZero dp
+
+instance  (Functor h, Additive (h (LTrie h b)), DetectableZero b, DetectableZero (h (LTrie h b)), DetectableOne b) =>
+          DetectableOne (LTrie h b) where
+  isOne (a :< dp) = isOne a && isZero dp
 
 \end{code}
 \vspace{-4ex}

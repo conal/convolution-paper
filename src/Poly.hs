@@ -29,21 +29,23 @@ instance (DetectableOne b, Show b) => Show (Poly1 b) where
      term (Sum i, b)
        | i == 0    = showsPrec 6 b
        | isOne b   = xs
-       | otherwise = showsPrec 6 b . {- showString "*" . -} xs
+       | otherwise = showsPrec 6 b . showString "*" . xs
       where
         xs | i == 0    = id
            | i == 1    = showString "x"
-           | otherwise = showString "x^" . showsPrec 8 i
+           | otherwise = showString "pow x ". showsPrec 8 i
+                         -- showString "x^" . showsPrec 8 i
 
 eval1 :: Semiring b => Poly1 b -> b -> b
 eval1 (Poly1 m) z = sum [b <.> z^i | (i,b) <- M.toList m]
 
-type P1 = Poly1 Int
-
--- >>> single 1 <+> value 3 :: P1  -- x+3
+-- >>> let p = single 1 <+> value 3 :: Poly1 Z
+-- >>> p
 -- x + 3
--- >>> (single 1 <+> value 3)^2 :: P1
--- x^2 + 6x + 9
+-- >>> pow p 3
+-- pow x 3 + 9*pow x 2 + 27*x + 27
+-- >>> pow p 5
+-- pow x 5 + 15*pow x 4 + 90*pow x 3 + 270*pow x 2 + 405*x + 243
 
 type P2 = Map (N :* N)
 
@@ -52,13 +54,13 @@ x2 = single (1,0)
 y2 = single (0,1)
 
 -- >>> x2
--- fromList [((Sum 1,Sum 0),1)]
+-- M (fromList [((Sum 1,Sum 0),1)])
 -- >>> y2
--- fromList [((Sum 0,Sum 1),1)]
+-- M (fromList [((Sum 0,Sum 1),1)])
 -- >>> x2 <+> y2
--- fromList [((Sum 0,Sum 1),1),((Sum 1,Sum 0),1)]
+-- M (fromList [((Sum 0,Sum 1),1),((Sum 1,Sum 0),1)])
 -- >>> (x2 <+> y2)^2
--- fromList [((Sum 0,Sum 2),1),((Sum 1,Sum 1),2),((Sum 2,Sum 0),1)]
+-- M (fromList [((Sum 0,Sum 2),1),((Sum 1,Sum 1),2),((Sum 2,Sum 0),1)])
 
 type P2' = Map (Map Bool N)
 
@@ -118,42 +120,40 @@ instance (DetectableOne b, Show b) => Show (PolyM b) where
      term (pows, b)
        | all (== 0) pows = showsPrec 6 b
        | isOne b = xs
-       | otherwise = showsPrec 6 b . {- showString "*" . -} xs
+       | otherwise = showsPrec 6 b . showString " * " . xs
       where
-        xs = foldr (.) id (factor <$> M.toAscList pows)
+        xs = foldr (.) id (intersperse (showString " * ") (factor <$> M.toAscList pows))
         factor (name,Sum i)
           | i == 0    = id
           | i == 1    = showString name
-          | otherwise = showString name . showString "^" . showsPrec 8 i
-
--- m :: Map (Map String N) b
--- M.toList m :: [(Map String N, b)]
-
--- fst :: (Map String N, b) -> Map String N
--- keys . fst
-
--- M.toList m :: [(Map String N, b)]
+          | otherwise = showString "pow " . showString name . showString " "
+                      . showsPrec 8 i
+                        -- showString name . showString "^" . showsPrec 8 i
 
 -- TODO: try changing isZero for Map to be 'all isZero'. Might wedge on recursive examples.
 
--- >>> x = single (single "x") :: PolyM Int
--- >>> y = single (single "y") :: PolyM Int
--- >>> x <+> y
--- x + y
--- >>> (x <+> y)^2
--- x^2 + 2xy + y^2
--- >>> (x <+> y)^5
--- x^5 + 5x^4y + 10x^3y^2 + 10x^2y^3 + 5xy^4 + y^5
+varM :: String -> PolyM Z
+varM = single . single
 
--- >>> x = single (single "x") :: PolyM Int
--- >>> y = single (single "y") :: PolyM Int
--- >>> z = single (single "z") :: PolyM Int
--- >>> x <+> y <+> z
+-- varM name = single (single name)
+
+-- >>> x = varM "x"
+-- >>> y = varM "y"
+-- >>> z = varM "z"
+-- >>> p = x <+> y
+-- >>> p
+-- x + y
+-- >>> pow p 2
+-- pow x 2 + 2 * x * y + pow y 2
+-- >>> pow p 5
+-- pow x 5 + 5 * pow x 4 * y + 10 * pow x 3 * pow y 2 + 10 * pow x 2 * pow y 3 + 5 * x * pow y 4 + pow y 5
+-- >>> let q = p <+> z
+-- >>> q
 -- x + y + z
--- >>> (x <+> y <+> z)^2
--- x^2 + 2xy + 2xz + y^2 + 2yz + z^2
--- >>> (x <+> y <+> z)^5
--- x^5 + 5x^4y + 10x^3y^2 + 10x^2y^3 + 5xy^4 + 20x^3yz + 30x^2y^2z + 30x^2yz^2 + 20xy^3z + 30xy^2z^2 + 20xyz^3 + 5x^4z + 10x^3z^2 + 10x^2z^3 + 5xz^4 + y^5 + 5y^4z + 10y^3z^2 + 10y^2z^3 + 5yz^4 + z^5
+-- >>> pow q 2
+-- pow x 2 + 2 * x * y + 2 * x * z + pow y 2 + 2 * y * z + pow z 2
+-- >>> pow q 3
+-- pow x 3 + 3 * pow x 2 * y + 3 * x * pow y 2 + 6 * x * y * z + 3 * pow x 2 * z + 3 * x * pow z 2 + pow y 3 + 3 * pow y 2 * z + 3 * y * pow z 2 + pow z 3
 
 
 newtype PolyF h b = PolyF { unPolyF :: Map (h N) b } deriving Functor

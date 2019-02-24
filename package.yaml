@@ -25,6 +25,7 @@ default-extensions:
   - GeneralizedNewtypeDeriving
   - LambdaCase
   - MultiParamTypeClasses
+  - OverloadedStrings  # for Poly, since dante doesn't pick up
   - PatternSynonyms
   - QuantifiedConstraints
   - RankNTypes
@@ -36,7 +37,9 @@ default-extensions:
   - ViewPatterns
   - ScopedTypeVariables
 
-ghc-options: -Wall
+ghc-options:
+  -Wall
+  # -Wno-type-defaults   # for Poly, since dante doesn't pick up
 
 cpp-options: -DEXAMPLES
 
@@ -48,6 +51,10 @@ library:
     - MemoTrie
     - containers
     - multiset
+    # For Image
+    - vector
+    - vector-sized
+    - JuicyPixels
     # - total-map
     # - distributive
     # - adjunctions
@@ -67,6 +74,7 @@ library:
     - MMap
     - Poly
     - Examples
+    - Image
 
 tests:
   test:

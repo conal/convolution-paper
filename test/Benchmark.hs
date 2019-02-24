@@ -23,7 +23,8 @@ main = do
   putChar '\n'
   createDirectoryIfMissing True outDir
 
-  group "star-a" (star (single "a")) [] [lit "a"]
+  group "star-a" (star (single "a")) []
+    [ lit "a", ("a50", replicate 50 'a') ]
 
   -- group "starR-a" (starR (single "a")) [] [("a50", replicate 50 'a')]
 
@@ -41,7 +42,7 @@ main = do
     ++ [("30",replicate 30 'a' ++ replicate 30 'b')]
 
 lit :: String -> (String,String)
-lit str = (str,show str)
+lit str = (show str,str)
 
 outDir :: FilePath
 outDir = "test/Benchmarks"
@@ -50,12 +51,13 @@ type Ok x b = (HasSingle String b x, StarSemiring x, StarSemiring b, NFData b)
 
 group :: String -> (forall x b. Ok x b => x) -> [String] -> [(String,String)] -> IO ()
 group groupName example omit dats =
-  do putStrLn ("# Group " ++ show groupName ++ "\n")
+  do putStrLn ("# Group " ++ show groupName ++ "\n\n```\n")
      defaultMainWith config (dat <$> dats)
+     putStrLn "```\n"
  where
    config = defaultConfig
      { reportFile = Just (outDir ++ "/" ++ groupName ++ ".html")
-     , timeLimit  = 1 -- 5
+     , timeLimit  = 5 -- 1
      }
    dat :: (String,String) -> Benchmark
    dat (dname,str) =
@@ -67,7 +69,7 @@ group groupName example omit dats =
        , style @(RegExp CharMap       Bool) "RegExp:IntMap"
        -- , style @(RegExp ((:->:) Char) Bool) "RegExp:Memo"
 
-       , style @(LTrie  ((->)   Char) Bool) "LTrie:Function"
+       -- , style @(LTrie  ((->)   Char) Bool) "LTrie:Function"
        , style @(LTrie  (Map    Char) Bool) "LTrie:Map"
        , style @(LTrie  CharMap       Bool) "LTrie:IntMap"
        -- , style @(LTrie  ((:->:) Char) Bool) "LTrie:Memo"

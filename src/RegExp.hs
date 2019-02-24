@@ -54,7 +54,7 @@ type D1 b = (() ~ ())
 #endif
 
 instance (D0 b, Additive b) => Additive (RegExp h b) where
-  zero  = Value zero
+  zero = Value zero
 #ifdef OPTIMIZE
   p <+> q | isZero p  = q
           | isZero q  = p
@@ -91,15 +91,22 @@ instance (D0 b, D1 b, Semiring b) => Semiring (RegExp h b) where
 #endif
 
 instance (D0 b, D1 b, Semiring b) => StarSemiring (RegExp h b) where
+#if 0
+  -- Slightly slower in all benchmarks I tested
+  star p | isZero p  = one
+         | otherwise = Star p
+#else
   star = Star
+#endif
 
-type FR h b = (Functor h, Additive (h (RegExp h b)), HasSingle (Key h) (RegExp h b) (h (RegExp h b)))
+type FR h b = (Additive (h (RegExp h b)), HasSingle (Key h) (RegExp h b) (h (RegExp h b))
+              , Functor h, D0 b, D1 b)
 
-instance (FR h b, StarSemiring b, DetectableZero b, c ~ Key h, Eq c, D1 b)
+instance (FR h b, StarSemiring b, c ~ Key h, Eq c)
       => Indexable [c] b (RegExp h b) where
   e ! w = atEps (foldl ((!) . deriv) e w)
 
-instance (FR h b, StarSemiring b, DetectableZero b, c ~ Key h, Eq c, D1 b)
+instance (FR h b, StarSemiring b, c ~ Key h, Eq c)
       => HasSingle [c] b (RegExp h b) where
   w +-> b = b .> product (map Char w)
 

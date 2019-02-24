@@ -553,27 +553,23 @@ If we think of |a -> s| as a ``vector'' of |s| values, indexed by |a|, then |s .
 There is an important optimization to be made for scaling.
 When |s == zero|, |s .> p == zero|, so we can discard |p| entirely.
 This optimization applies quite often in practice, for instance with languages, which tend to be sparse.
-Rather than burden each |LeftSemimodule| instance with this optimization, let's define |(.>)| to apply this optimization on top of a more primitive |scale| method:
+A less dramatically helpful optimization is |one .> p == p|.
+Rather than burden each |LeftSemimodule| instance with these two optimizations, let's define |(.>)| via a more primitive |scale| method:
 \begin{code}
 class (Semiring s, Additive b) => LeftSemimodule s b | b -> s where
   scale :: s -> b -> b
 
-(.>) :: (Semiring b, Scalable b s, DetectableZero s) => s -> b -> b
+infixr 7 .>
+(.>) :: (Additive b, LeftSemimodule s b, DetectableZero s, DetectableOne s) => s -> b -> b
 s .> b  | isZero s   = zero
+        | isOne  s   = b
         | otherwise  = s `scale` b
 \end{code}
-The |DetectableZero| class \citep{semiring-num}:
-\notefoot{Maybe define and use |DetectableOne| as well here:
-\begin{code}
-(.>) :: (Semiring b, Scalable b s, DetectableZero s, DetectableOne s) => s -> b -> b
-s .> b  | isZero s   = zero
-        | isOne s    = b
-        | otherwise  = s `scale` b
-\end{code}
-\vspace{-4ex}}
+The |DetectableZero| and |DetectableOne| classes \citep{semiring-num}:
 \notefoot{Maybe use semiring-num again.}
 \begin{code}
-class Semiring a => DetectableZero a where isZero :: a -> Bool
+class Additive  b => DetectableZero  b where isZero  :: b -> Bool
+class Semiring  b => DetectableOne   b where isOne   :: b -> Bool
 \end{code}
 
 As with star semirings (\lemref{affine over semiring}), recursive affine equations in semimodules \emph{over} star semirings also have solutions:
@@ -597,42 +593,40 @@ The proof closely resembles that of \lemref{affine over semiring}, using the lef
 
 Most of the representations used in this paper are functions or are types that behave like functions.
 It will be useful to use a standard vocabulary for the latter.
-An ``indexable'' functor |h| is such that |h b| represent |a -> b| for a some type |a| of ``keys''.
+An ``indexable'' type |x| with domain |a| and codomain |b| represents |a -> b|:
 We'll need to restrict |b| in some cases.
 %format ! = "\hspace{0.5pt}!\hspace{0.5pt}"
 \begin{code}
-class Functor h => Indexable b h where
-  type Key h
-  infixl 9 NOP !
-  (!) :: h b -> Key h -> b
+class Indexable a b x | x -> a b where
+  infixl 9 !
+  (!) :: x -> a -> b
 
-instance Indexable b ((->) a) where
-  type Key ((->) a) = a
+instance Indexable a b (a -> b) where
   f ! k = f k
 \end{code}
-The |Additive b| constraint here allows |(!)| definitions to fill in zero for missing keys.
-\notefoot{Perhaps describe alternatives: (a) one method that returns |Maybe b| (as in |Lookup| from |Data.Key|) and an |Additive|-dependent method that substitutes zero for |Nothing|, or (b) adding |b| as a parameter to |Indexable| and |HasSingle|. The latter strategy led to many required constraints.}
 
-\note{Add a law for |Indexable|: |(!)| must be natural.
-Probably also that |h| maps |Additive| to |Additive| and that |(!)| is an |Additive| homomorphism.}
+\note{Add a law for |Indexable|: |(!)| must be natural?
+Probably also that |h| maps |Additive| to |Additive| and that |(!)| is an |Additive| homomorphism.
+Hm. It seems I can't even express those law now that there's no functor.
+}
 
 \secref{Monoids, Semirings and Semimodules} provides a fair amount of vocabulary for combining values.
 We'll also want an operation that constructs a ``vector'' (e.g., language or function) with a single non-zero component:
 %format +-> = "\mapsto"
 \begin{code}
-class Indexable b h => HasSingle b h where
+class Indexable a b x => HasSingle a b x where
   infixr 2 +->
-  (+->) :: Key h -> b -> h b
+  (+->) :: a -> b -> x
 
-instance (Eq a, Additive b) => HasSingle b ((->) a) where
+instance (Eq a, Additive b) => HasSingle a b (a -> b) where
   a +-> b = \ a' -> if a == a' then b else zero
 \end{code}
 Two specializations of |a +-> b| will come in handy: one for |a = mempty|, and one for |b = one|.
 \begin{code}
-single :: (HasSingle b h, Semiring b) => Key h -> h b
+single :: (HasSingle a b x, Semiring b) => a -> x
 single a = a +-> one
 
-value :: (HasSingle b h, Monoid (Key h)) => b -> h b
+value :: (HasSingle a b x, Monoid a) => b -> x
 value b = mempty +-> b
 \end{code}
 In particular, |mempty +-> one == single mempty == value one|.
@@ -871,11 +865,10 @@ Conversely, merging two finite maps can yield a key collision, which can be reso
 Both interpretations require |b| to be an additive monoid.
 Given the definitions in \figrefdef{Map}{Finite maps}{
 \begin{code}
-instance (Ord a, Additive b) => Indexable b (Map a) where
-  type Key (Map a) = a
+instance (Ord a, Additive b) => Indexable a b (Map a b) where
   m ! a = M.findWithDefault zero a m
 
-instance (Ord a, Additive b) => HasSingle b (Map a) where
+instance (Ord a, Additive b) => HasSingle a b (Map a b) where
   (+->) = M.singleton
 
 instance (Ord a, Additive b) => Additive (Map a b) where
@@ -1024,8 +1017,15 @@ deriv (c'   :  cs'  +-> b) == c' +-> cs' +-> b
 \end{spacing}
 \vspace{-2ex}
 \end{lemma}
-Although |deriv p| is defined as a \emph{function} from leading symbols, it could instead be another representation with function-like semantics, namely an indexable functor |h|.
-Generalizing in this way (recalling that functions themselves are a special case) enables convenient memoization, which has been found to be quite useful in practice \citep{Might2010YaccID}.
+Although |deriv p| is defined as a \emph{function} from leading symbols, it could instead be another representation with function-like semantics, namely as |h b| for an appropriate functor |h|.
+To relate |h| to the choice of alphabet |c|, introduce a type family:
+\begin{code}
+type family Key (h :: Type -> Type) :: Type
+
+type instance Key ((->) a) = a
+type instance Key (Map  a) = a
+\end{code}
+Generalizing in this way (with functions as a special case) enables convenient memoization, which has been found to be quite useful in practice for derivative-based parsing \citep{Might2010YaccID}.
 A few generalizations to the equations \lemref{deriv [c] -> b} suffice to generalize from |c -> ([c] -> b)| to |h ([c] -> b)| (with details in \proofref{lemma:deriv [c] -> b}).
 We must assume that |Key h = c| and that |h| is an ``additive functor'', i.e., |forall b. NOP Additive b => Additive (h b)| with |(!)| for |h| being an additive monoid homomorphism.
 \begin{code}
@@ -1043,7 +1043,7 @@ deriv (c   :  cs  +-> b) == c +-> cs +-> b
 \note{Consider re-expressing \lemref{deriv [c] -> b} in terms of |(!)|. Maybe even generalize |(<:)| to indexable functors.}
 
 \begin{theorem}[\provedIn{theorem:semiring decomp [c] -> b}]\thmlabel{semiring decomp [c] -> b}
-The following properties hold (in the generalized setting of indexable |h|):
+The following properties hold (in the generalized setting of a functor |h| with |Key h == c|):
 \begin{spacing}{1.4}
 \begin{code}
 zero  == zero  <: zero
@@ -1064,6 +1064,8 @@ w +-> b = foldr (\ c t -> zero <: c +-> t) (b <: zero) w
 \figrefdef{RegExp}{Semiring-generalized regular expressions}{
 %format :<+> = "\mathbin{:\!\!+}"
 %format :<.> = "\mathbin{:\!\!\conv}"
+%format D0 = DetectableZero
+%format D1 = DetectableOne
 \begin{code}
 data RegExp h b           =  Char (Key h)
                           |  Value b
@@ -1072,27 +1074,31 @@ data RegExp h b           =  Char (Key h)
                           |  Star (RegExp h b)
   deriving Functor
 
-instance (Additive b) => Additive (RegExp h b) where
+instance (D0 b, Additive b) => Additive (RegExp h b) where
   zero  = Value zero
-  (<+>) = (:<+>)
+  p <+> q  | isZero p   = q
+           | isZero q   = p
+           | otherwise  = p :<+> q
 
-instance Semiring b => LeftSemimodule b (RegExp h b) where
+instance (D0 b, D1 b, Semiring b) => Semiring (RegExp h b) where
   scale b = fmap (b NOP <.>)
 
 instance Semiring b => Semiring (RegExp h b) where
   one   = Value one
-  (<.>) = (:<.>)
+  p <.> q  | isZero  p  = zero
+           | isOne   p  = q
+           | otherwise  = p :<.> q
 
-instance Semiring b => StarSemiring (RegExp h b) where
+instance (D0 b, D1 b, Semiring b) => StarSemiring (RegExp h b) where
   star e = Star e
 
-type FR h b = (Functor h, Additive (h (RegExp h b)), HasSingle (RegExp h b) h)
+type FR h b =  (  Additive (h (RegExp h b)), HasSingle (Key h) (RegExp h b) (h (RegExp h b))
+               ,  Functor h, D0 b, D1 b )
 
-instance (FR h b, StarSemiring b, DetectableZero b, Eq (Key h)) => Indexable b (RegExp h) where
-  type Key (RegExp h) = [Key h]
+instance (FR h b, StarSemiring b, c ~ Key h, Eq c) => Indexable [c] b (RegExp h b) where
   e ! w = atEps (foldl ((!) . deriv) e w)
 
-instance (FR h b, StarSemiring b, DetectableZero b, Eq (Key h)) => HasSingle b (RegExp h) where
+instance (FR h b, StarSemiring b, c ~ Key h, Eq c) => HasSingle [c] b (RegExp h b) where
   w +-> b = b .> product (map Char w)
 
 atEps :: StarSemiring b => RegExp h b -> b
@@ -1102,7 +1108,7 @@ atEps (p  :<+>  q)   = atEps p <+> atEps q
 atEps (p  :<.>  q)   = atEps p <.> atEps q
 atEps (Star p)       = star (atEps p)
 
-deriv :: (FR h b, StarSemiring b, DetectableZero b, Eq (Key h)) => RegExp h b -> h (RegExp h b)
+deriv :: (FR h b, StarSemiring b, DetectableZero b, D1 b) => RegExp h b -> h (RegExp h b)
 deriv  (Char c)       = single c
 deriv  (Value _)      = zero
 deriv  (p  :<+>  q)   = deriv p <+> deriv q
@@ -1121,7 +1127,7 @@ The implementation in \figref{RegExp} generalizes the regular expression matchin
 
 As an alternative to successive syntactic differentiation, we can re-interpret the original (syntactic) regular expression in another semiring as follows:
 \begin{code}
-regexp :: (StarSemiring (f b), HasSingle b f, Semiring b, Key f ~ [Key h]) => RegExp h b -> f b
+regexp :: (StarSemiring x, HasSingle [Key h] b x, Semiring b) => RegExp h b -> x
 regexp (Char c)      = single [c]
 regexp (Value b)     = value b
 regexp (u  :<+>  v)  = regexp u  <+>  regexp v
@@ -1130,6 +1136,10 @@ regexp (Star u)      = star (regexp u)
 \end{code}
 Next, we will see one such choice of |f| that eliminates the syntactic overhead of repeatedly transforming syntactic representations.
 
+\note{Remark on the |Semiring| instance and its lack of optimizations for |isZero q| or |isOne q|.
+Those optimizations break some recursively defined languages.
+On the other hand, since this figure no longer fits on a page, remove the optimizations altogether, and address them in remarks.
+In fact, I'd also need the |D0| and |D1| instances for |RegExp h b|, so the figure is incomplete.}
 
 \sectionl{Tries}
 

@@ -11,12 +11,18 @@ import GHC.Natural (Natural)
 -- import qualified Data.Map as M
 import Data.List (intercalate,intersperse,sortOn)
 import qualified Data.Foldable as F
+import GHC.Exts(IsString(..))
 
 import Misc ((:*))
 import Semi
 
 import MMap (Map)  -- like Data.Map but better Monoid instance
 import qualified MMap as M
+
+newtype Name = Name String deriving (Eq,Ord)
+
+instance Show Name where show (Name s) = s
+instance IsString Name where fromString = Name
 
 newtype Poly1 b = Poly1 (Map N b) deriving
   (Additive, Semiring, Functor, Indexable n, HasSingle n)
@@ -29,11 +35,12 @@ instance (DetectableOne b, Show b) => Show (Poly1 b) where
      term (Sum i, b)
        | i == 0    = showsPrec 6 b
        | isOne b   = xs
-       | otherwise = showsPrec 6 b . showString "*" . xs
+       | otherwise = showsPrec 6 b . showTimes . xs
       where
         xs | i == 0    = id
            | i == 1    = showString "x"
-           | otherwise = showString "pow x ". showsPrec 8 i
+           | otherwise = showPow (Name "x") i
+                         -- showString "pow x ". showsPrec 8 i
                          -- showString "x^" . showsPrec 8 i
 
 eval1 :: Semiring b => Poly1 b -> b -> b
@@ -42,10 +49,12 @@ eval1 (Poly1 m) z = sum [b <.> z^i | (i,b) <- M.toList m]
 -- >>> let p = single 1 <+> value 3 :: Poly1 Z
 -- >>> p
 -- x + 3
+-- 
 -- >>> pow p 3
--- pow x 3 + 9*pow x 2 + 27*x + 27
+-- (wrap (pow x 3)) + 9 (wrap (pow x 2)) + 27 x + 27
+-- 
 -- >>> pow p 5
--- pow x 5 + 15*pow x 4 + 90*pow x 3 + 270*pow x 2 + 405*x + 243
+-- (wrap (pow x 5)) + 15 (wrap (pow x 4)) + 90 (wrap (pow x 3)) + 270 (wrap (pow x 2)) + 405 x + 243
 
 type P2 = Map (N :* N)
 
@@ -107,7 +116,7 @@ showsPrecTerm names d (b,m) = showParen (d >= 7) $
 #endif
 
 -- Polynomials with named "variables"
-newtype PolyM b = PolyM { unPolyM :: Map (Map String N) b } deriving
+newtype PolyM b = PolyM { unPolyM :: Map (Map Name N) b } deriving
   (Additive, Semiring, Functor, Indexable n, HasSingle n)
 
 instance (DetectableOne b, Show b) => Show (PolyM b) where
@@ -116,45 +125,61 @@ instance (DetectableOne b, Show b) => Show (PolyM b) where
                     -- TODO: better ordering
                     (term <$> sortOn (M.keys . fst) (M.toDescList m)))
    where
-     term :: (Map String N,b) -> ShowS
+     term :: (Map Name N,b) -> ShowS
      term (pows, b)
        | all (== 0) pows = showsPrec 6 b
        | isOne b = xs
-       | otherwise = showsPrec 6 b . showString " * " . xs
+       | otherwise = showsPrec 6 b . showTimes . xs
       where
-        xs = foldr (.) id (intersperse (showString " * ") (factor <$> M.toAscList pows))
+        xs = foldr (.) id (intersperse showTimes (factor <$> M.toAscList pows))
         factor (name,Sum i)
           | i == 0    = id
-          | i == 1    = showString name
-          | otherwise = showString "pow " . showString name . showString " "
-                      . showsPrec 8 i
-                        -- showString name . showString "^" . showsPrec 8 i
+          | i == 1    = showsPrec 7 name
+          | otherwise = showPow name i
+            -- showString "(wrap (pow " . showString name . showString " " . showsPrec 8 i . showString "))"
+            -- showString "pow " . showString name . showString " " . showsPrec 8 i
+            -- showString name . showString "^" . showsPrec 8 i
+
+#define ForPaper
+
+showTimes :: ShowS
+showPow :: (Show a, Show b) => a -> b -> ShowS
+
+#ifdef ForPaper
+showTimes = showString " "
+showPow a b = showString "(wrap (pow " . showsPrec 8 a . showString " " . showsPrec 8 b . showString "))"
+#else
+showTimes = showString " * "
+showPow a b = showsPrec 8 a . showString "^" . showsPrec 8 b
+#endif
 
 -- TODO: try changing isZero for Map to be 'all isZero'. Might wedge on recursive examples.
 
-varM :: String -> PolyM Z
+-- varM :: Name -> PolyM Z
+varM :: Semiring b => Name -> PolyM b
 varM = single . single
 
--- varM name = single (single name)
-
--- >>> x = varM "x"
--- >>> y = varM "y"
--- >>> z = varM "z"
--- >>> p = x <+> y
+-- >>> let { x = varM @Z "x" ; y = varM @Z "y" ; z = varM @Z "z" }
+-- >>> let { p = x <+> y ; q = p <+> z }
+-- 
 -- >>> p
 -- x + y
 -- >>> pow p 2
--- pow x 2 + 2 * x * y + pow y 2
+-- (wrap (pow x 2)) + 2 x y + (wrap (pow y 2))
 -- >>> pow p 5
--- pow x 5 + 5 * pow x 4 * y + 10 * pow x 3 * pow y 2 + 10 * pow x 2 * pow y 3 + 5 * x * pow y 4 + pow y 5
--- >>> let q = p <+> z
+-- (wrap (pow x 5)) + 5 (wrap (pow x 4)) y + 10 (wrap (pow x 3)) (wrap (pow y 2)) + 10 (wrap (pow x 2)) (wrap (pow y 3)) + 5 x (wrap (pow y 4)) + (wrap (pow y 5))
+-- 
 -- >>> q
 -- x + y + z
 -- >>> pow q 2
--- pow x 2 + 2 * x * y + 2 * x * z + pow y 2 + 2 * y * z + pow z 2
+-- (wrap (pow x 2)) + 2 x y + 2 x z + (wrap (pow y 2)) + 2 y z + (wrap (pow z 2))
 -- >>> pow q 3
--- pow x 3 + 3 * pow x 2 * y + 3 * x * pow y 2 + 6 * x * y * z + 3 * pow x 2 * z + 3 * x * pow z 2 + pow y 3 + 3 * pow y 2 * z + 3 * y * pow z 2 + pow z 3
+-- (wrap (pow x 3)) + 3 (wrap (pow x 2)) y + 3 x (wrap (pow y 2)) + 6 x y z + 3 (wrap (pow x 2)) z + 3 x (wrap (pow z 2)) + (wrap (pow y 3)) + 3 (wrap (pow y 2)) z + 3 y (wrap (pow z 2)) + (wrap (pow z 3))
+--
+-- >>> p <.> q
+-- (wrap (pow x 2)) + 2 x y + x z + (wrap (pow y 2)) + y z
 
+#if 0
 
 newtype PolyF h b = PolyF { unPolyF :: Map (h N) b } deriving Functor
 
@@ -190,3 +215,6 @@ instance (Foldable h, DetectableOne b, Show b) => Show (PolyF h b) where
 -- >>> (x <+> y)^5
 -- ?^5 + ?^5 + 5?^4? + 10?^3?^2 + 10?^2?^3 + 5??^4
 
+-- TODO: supply variable names from a default list
+
+#endif

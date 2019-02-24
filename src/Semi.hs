@@ -253,8 +253,29 @@ type Z = Sum Integer
 
 infixr 8 ^
 (^), pow :: Semiring a => a -> N -> a
-a ^ n = product (replicate (fromIntegral n) a)
 pow = (^)  -- useful for the paper
+#if 0
+a ^ n = product (replicate (fromIntegral n) a)
+#else
+-- Adapted from (^) in the GHC Prelude
+x0 ^ y0 | y0 == 0   = one
+        | otherwise = f x0 y0
+    where -- f : x0 ^ y0 = x ^ y
+          f x y | even y    = f (x <.> x) (y `quot` 2)
+                | y == 1    = x
+                | otherwise = g (x <.> x) (y `quot` 2) x         -- See Note [Half of y - 1]
+          -- g : x0 ^ y0 = (x ^ y) <.> z
+          g x y z | even y = g (x <.> x) (y `quot` 2) z
+                  | y == 1 = x <.> z
+                  | otherwise = g (x <.> x) (y `quot` 2) (x <.> z) -- See Note [Half of y - 1]
+
+{- Note [Half of y - 1]
+   ~~~~~~~~~~~~~~~~~~~~~
+   Since y is guaranteed to be odd and positive here,
+   half of y - 1 can be computed as y `quot` 2, optimising subtraction away.
+-}
+
+#endif
 
 instance Splittable N where
   isEmpty n = n == 0

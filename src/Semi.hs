@@ -20,7 +20,7 @@ import qualified Data.IntMap.Lazy as IntMap
 import Data.MemoTrie
 
 import Misc
-import Constrained
+-- import Constrained
 
 #include "GenInstances.inc"
 
@@ -134,7 +134,7 @@ Nums(Double)
 -- ApplSemi((->) a)  -- use monoid semiring instead for now
 -- etc
 
-ApplMono([])
+-- ApplMono([])
 -- ApplMono(Set)
 -- etc
 
@@ -206,7 +206,10 @@ instance Indexable b Id where
 -- instead.
 
 newtype Sum a = Sum a deriving
-  (Eq,Ord,Show,Num,Real,Integral,Additive,Semiring)
+  (Eq,Ord,Num,Real,Integral,Additive,DetectableZero,Semiring,DetectableOne)
+
+instance Show a => Show (Sum a) where
+  showsPrec d (Sum a) = showsPrec d a
 
 getSum :: Sum a -> a
 getSum (Sum a) = a
@@ -249,8 +252,9 @@ type N = Sum Natural
 type Z = Sum Integer
 
 infixr 8 ^
-(^) :: Semiring a => a -> N -> a
+(^), pow :: Semiring a => a -> N -> a
 a ^ n = product (replicate (fromIntegral n) a)
+pow = (^)  -- useful for the paper
 
 instance Splittable N where
   isEmpty n = n == 0

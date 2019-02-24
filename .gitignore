@@ -1,2 +1,2 @@
 *.cabal
-test/Benchmarks/*.html
+test/Benchmarks

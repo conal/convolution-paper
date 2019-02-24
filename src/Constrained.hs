@@ -143,7 +143,7 @@ instance Semiring b => ApplicativeC (Map' b) where
   pureC a = M (single a)
   liftA2C h (M p) (M q) = M (sum [h a b +-> p!a <.> q!b | a <- M.keys p, b <- M.keys q])
 
-instance (Semiring b, DetectableZero b) => MonadC (Map' b) where
+instance (Semiring b, DetectableZero b, DetectableOne b) => MonadC (Map' b) where
   -- F f >>= h = bigSum a f a .> h a
   M m >>== h = sum [m!a .> h a | a <- M.keys m]
   -- joinC is more demanding on b and Map'. Maybe eliminate it altogether.

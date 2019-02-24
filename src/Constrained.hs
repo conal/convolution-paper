@@ -1,8 +1,10 @@
--- {-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
+{-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
 
 -- | Some constrained classes
 
 module Constrained where
+
+import Prelude hiding (sum)
 
 import Control.Applicative (liftA2)
 import Control.Monad (join)
@@ -11,6 +13,12 @@ import Data.Set (Set)
 import qualified Data.Set as S
 import Data.MultiSet (MultiSet)
 import qualified Data.MultiSet as MS
+import Data.Map (Map)
+import qualified Data.Map as M
+
+-- I'd like to make Constrained more primitive than Semi, so I may need to
+-- shuffle some things.
+import Semi
 
 import Misc ((:*))
 
@@ -123,3 +131,59 @@ instance MonadC MultiSet where
 
 -- Can we give a FunctorC instance for Pred? I guess we'd have to sum over the
 -- preimage of the function being mapped.
+
+newtype Map' b a = M { unM :: Map a b }
+  deriving (Show, Additive, DetectableZero, LeftSemimodule b)
+
+instance Additive b => FunctorC (Map' b) where
+  type Ok (Map' b) a = (Ord a, Monoid a)
+  fmapC h (M p) = M (sum [h a +-> p ! a | a <- M.keys p])
+ 
+instance Semiring b => ApplicativeC (Map' b) where
+  pureC a = M (single a)
+  liftA2C h (M p) (M q) = M (sum [h a b +-> p!a <.> q!b | a <- M.keys p, b <- M.keys q])
+
+instance (Semiring b, DetectableZero b) => MonadC (Map' b) where
+  -- F f >>= h = bigSum a f a .> h a
+  M m >>== h = sum [m!a .> h a | a <- M.keys m]
+  -- joinC is more demanding on b and Map'. Maybe eliminate it altogether.
+  -- I could give bindViaJoin an explicit join function as argument.
+  joinC = error "joinC on Map' b not yet implemented"
+
+#if 0
+
+M f :: Map' b a
+f :: Map a b
+h :: (a -> Map' b c)
+h a :: Map' b c
+
+#endif
+
+#if 0
+
+instance FunctorC Map where
+  type Ok Map a = Ord a
+  fmapC = M.map
+
+instance MonoidalC Map where
+  unitC = unitViaPure
+  crossC = crossViaLiftA2
+  -- as `crossC` bs =
+  --   M.fromOccurList
+  --     [((a,b),m*n) | (a,m) <- M.toOccurList as, (b,n) <- M.toOccurList bs]
+
+-- Maybe use the explicit crossC but with `fromDistinctAscOccurList`, since the
+-- list is ordered and distinct.
+
+instance ApplicativeC Map where
+  pureC = M.singleton
+  liftA2C h as bs =
+    M.fromOccurList
+      [(h a b,m*n) | (a,m) <- M.toOccurList as, (b,n) <- M.toOccurList bs]
+  -- liftA2C = liftA2ViaCross
+
+instance MonadC Map where
+  joinC = MS.join
+  (>>==) = bindViaJoin
+
+#endif

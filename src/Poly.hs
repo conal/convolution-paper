@@ -51,10 +51,10 @@ eval1 (Poly1 m) z = sum [b <.> z^i | (i,b) <- M.toList m]
 -- x + 3
 -- 
 -- >>> pow p 3
--- (wrap (pow x 3)) + 9 (wrap (pow x 2)) + 27 x + 27
+-- (wrap (pow x 3)) + 9 * (wrap (pow x 2)) + 27 * x + 27
 -- 
 -- >>> pow p 5
--- (wrap (pow x 5)) + 15 (wrap (pow x 4)) + 90 (wrap (pow x 3)) + 270 (wrap (pow x 2)) + 405 x + 243
+-- (wrap (pow x 5)) + 15 * (wrap (pow x 4)) + 90 * (wrap (pow x 3)) + 270 * (wrap (pow x 2)) + 405 * x + 243
 
 type P2 = Map (N :* N)
 
@@ -142,16 +142,17 @@ instance (DetectableOne b, Show b) => Show (PolyM b) where
 
 #define ForPaper
 
-showTimes :: ShowS
 showPow :: (Show a, Show b) => a -> b -> ShowS
-
 #ifdef ForPaper
-showTimes = showString " "
 showPow a b = showString "(wrap (pow " . showsPrec 8 a . showString " " . showsPrec 8 b . showString "))"
 #else
-showTimes = showString " * "
 showPow a b = showsPrec 8 a . showString "^" . showsPrec 8 b
 #endif
+
+showTimes :: ShowS
+showTimes = showString " * "
+-- showTimes = showString " "
+-- Always generate "*", but suppress it in the paper. Looks great.
 
 -- TODO: try changing isZero for Map to be 'all isZero'. Might wedge on recursive examples.
 
@@ -165,19 +166,19 @@ varM = single . single
 -- >>> p
 -- x + y
 -- >>> pow p 2
--- (wrap (pow x 2)) + 2 x y + (wrap (pow y 2))
+-- (wrap (pow x 2)) + 2 * x * y + (wrap (pow y 2))
 -- >>> pow p 5
--- (wrap (pow x 5)) + 5 (wrap (pow x 4)) y + 10 (wrap (pow x 3)) (wrap (pow y 2)) + 10 (wrap (pow x 2)) (wrap (pow y 3)) + 5 x (wrap (pow y 4)) + (wrap (pow y 5))
+-- (wrap (pow x 5)) + 5 * (wrap (pow x 4)) * y + 10 * (wrap (pow x 3)) * (wrap (pow y 2)) + 10 * (wrap (pow x 2)) * (wrap (pow y 3)) + 5 * x * (wrap (pow y 4)) + (wrap (pow y 5))
 -- 
 -- >>> q
 -- x + y + z
 -- >>> pow q 2
--- (wrap (pow x 2)) + 2 x y + 2 x z + (wrap (pow y 2)) + 2 y z + (wrap (pow z 2))
+-- (wrap (pow x 2)) + 2 * x * y + 2 * x * z + (wrap (pow y 2)) + 2 * y * z + (wrap (pow z 2))
 -- >>> pow q 3
--- (wrap (pow x 3)) + 3 (wrap (pow x 2)) y + 3 x (wrap (pow y 2)) + 6 x y z + 3 (wrap (pow x 2)) z + 3 x (wrap (pow z 2)) + (wrap (pow y 3)) + 3 (wrap (pow y 2)) z + 3 y (wrap (pow z 2)) + (wrap (pow z 3))
---
+-- (wrap (pow x 3)) + 3 * (wrap (pow x 2)) * y + 3 * x * (wrap (pow y 2)) + 6 * x * y * z + 3 * (wrap (pow x 2)) * z + 3 * x * (wrap (pow z 2)) + (wrap (pow y 3)) + 3 * (wrap (pow y 2)) * z + 3 * y * (wrap (pow z 2)) + (wrap (pow z 3))
+
 -- >>> p <.> q
--- (wrap (pow x 2)) + 2 x y + x z + (wrap (pow y 2)) + y z
+-- (wrap (pow x 2)) + 2 * x * y + x * z + (wrap (pow y 2)) + y * z
 
 #if 0
 

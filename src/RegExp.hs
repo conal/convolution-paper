@@ -99,8 +99,8 @@ instance (D0 b, D1 b, Semiring b) => StarSemiring (RegExp h b) where
   star = Star
 #endif
 
-type FR h b = (Additive (h (RegExp h b)), HasSingle (Key h) (RegExp h b) (h (RegExp h b))
-              , Functor h, D0 b, D1 b)
+type FR h b = ( Additive (h (RegExp h b)), HasSingle (Key h) (RegExp h b) (h (RegExp h b))
+              , Functor h, DetectableZero b, DetectableOne b )
 
 instance (FR h b, StarSemiring b, c ~ Key h, Eq c)
       => Indexable [c] b (RegExp h b) where
@@ -117,7 +117,7 @@ atEps (p :<+> q) = atEps p <+> atEps q
 atEps (p :<.> q) = atEps p <.> atEps q
 atEps (Star p)   = star (atEps p)
 
-deriv :: (FR h b, StarSemiring b, DetectableZero b, D1 b)
+deriv :: (FR h b, StarSemiring b)
       => RegExp h b -> h (RegExp h b)
 deriv (Char c)   = single c
 deriv (Value _)  = zero

@@ -196,7 +196,7 @@ All of the algorithms in the paper follow from simple specifications in the form
 %format Z = "\mathbb Z"
 %format Pow = "\Pow"
 %format emptyset = "\emptyset"
-%format (single (s)) = "\single{"s"}"
+%% %format (single (s)) = "\single{"s"}"
 %format (set (e)) = "\set{"e"}"
 %format bigunion (lim) (body) = "\bigunion_{" lim "}{" body "}"
 %format pow a (b) = a "^{" b "}"
@@ -210,7 +210,7 @@ All of the algorithms in the paper follow from simple specifications in the form
 %format bigUnion (lim) = "\bigOp\bigcup{" lim "}{0}"
 %format bigSum (lim) = "\bigOp\sum{" lim "}{0}"
 %format bigSumQ (lim) = "\bigOp\sum{" lim "}{1}"
-%format bigSumKeys (lim) = "\bigOp\sum{" lim "}{2}"
+%format bigSumKeys (lim) = "\bigOp\sum{" lim "}{2.5}"
 
 %format bigOr (lim) = "\bigOp\bigvee{" lim "}{0}"
 %format bigOrQ (lim) = "\bigOp\bigvee{" lim "}{1.5}"
@@ -595,10 +595,11 @@ Most of the representations used in this paper are functions or are types that b
 It will be useful to use a standard vocabulary for the latter.
 An ``indexable'' functor |h| is such that |h b| represent |a -> b| for a some type |a| of ``keys''.
 We'll need to restrict |b| in some cases.
+%format ! = "\hspace{0.5pt}!\hspace{0.5pt}"
 \begin{code}
 class Functor h => Indexable b h where
   type Key h
-  infixl 9 !
+  infixl 9 NOP !
   (!) :: h b -> Key h -> b
 
 instance Indexable b ((->) a) where
@@ -1400,6 +1401,10 @@ instance DetectableZero b => ApplicativeC (Map' b) where
 Other representations such as tries would need similar reversal of type arguments.
 \footnote{The enhancement is the associated constraint \citep{Bolingbroke2011CK} |Ok|, limiting the types that the class methods must support. The line ``|type Ok f a = ()|'' means that the constraint on |a| defaults to |()|, which holds vacuously for all |a|.}%
 \footnote{Originally, |Applicative| had a |(<*>)| method from which one can easily define |liftA2|. Since the base library version 4.10 \needcite, |liftA2| was added as a method (along with a default definition of |(<*>)|) to allow for more efficient implementation. \note{Cite \href{https://ghc.haskell.org/trac/ghc/ticket/13191}{GHC ticket 13191} if I can't find a better reference.}}
+\notefoot{Sync up this code with changes I made to the implementation.}
+\notefoot{\emph{Oops!}
+I've made |Indexable| and |HasSingle| work with functors, such as |Map|, but for the free semimodule functor/applicative/monad, I need it to be a functor in \emph{elements}, not the ``weights''.
+Hm!}
 Higher-arity liftings can be defined via these three.
 (Exercise.)
 For |b <-- a|, these definitions are not really executable code, since they involve summations are over potentially infinite ranges, but they serve as specifications for other representations such as finite maps.
@@ -1451,11 +1456,14 @@ For |b <-- a|, the monad is known as the ``free semimodule monad'' (or sometimes
 The dimension of the semimodule is the cardinality of |a|.
 Basis vectors have the form |single u = u +-> one| for some |u :: a| (mapping |u| to |one| and every other value to |zero| as in \figref{monoid semiring}).
 
-The monad instance is defined as follows:\footnote{The |return| method does not appear here, since it is equivalent to |pure| from |Applicative|.}
+The monad instances for |(<--) b| and |Map' b| are defined as follows:\footnote{The |return| method does not appear here, since it is equivalent to |pure| from |Applicative|.}
 \begin{code}
 instance Semiring s => Monad ((<--) s) where
   (>>=) :: (s <-- a) -> (a -> (s <-- b))) -> (s <-- b)
-  F f >>= h = bigSum a f a .> h a
+  F f >>== h = bigSum a f a .> h a
+
+instance (Semiring b, DetectableZero b) => MonadC (Map' b) where
+  M m >>== h = bigSumKeys (a <# M.keys m) m!a .> h a
 \end{code}
 \vspace{-2ex}
 \begin{theorem}[\provedIn{theorem:standard FunApp}]\thmlabel{standard FunApp}
@@ -1492,7 +1500,35 @@ Polynomial multiplication via convolution follows from the following property:
 \begin{theorem}[\provedIn{theorem:poly hom}]\thmlabel{poly hom}
 The function |poly| is a semiring homomorphism when multiplication on |b| commutes.
 \end{theorem}
+Pragmatically, \thmref{poly hom} says that the |b <-- N| semiring (in which |(*)| is convolution) correctly implements arithmetic on univariate polynomials.
+More usefully, we can use |Map N b| to denote |b <-- N|.
+For viewing results, wrap this representation in a new type:
+%format Poly1
+\begin{code}
+newtype Poly1 b = Poly1 (Map N b) deriving (Additive, Semiring, Functor, Indexable n, HasSingle n)
 
+instance (DetectableOne b, Show b) => Show (Poly1 b) where ...
+\end{code}
+Try it out:
+%format Integer = Z
+%format >>> = "\lambda\rangle\ "
+{ \setlength{\blanklineskip}{1.5ex}
+\begin{code}
+
+>>> let p = single 1 <+> value 3 :: Poly1 Z
+>>> p
+x + 3
+
+>>> pow p 3
+(wrap (pow x 3)) + 9 (wrap (pow x 2)) + 27 x + 27
+
+>>> pow p 5
+(wrap (pow x 5)) + 15 (wrap (pow x 4)) + 90 (wrap (pow x 3)) + 270 (wrap (pow x 2)) + 405 x + 243
+
+\end{code}
+}
+
+\noindent
 What about multivariate polynomials, i.e., polynomial functions over higher-dimensional domains?
 Consider a 2D domain:
 %format poly2
@@ -1556,12 +1592,59 @@ The generalized |poly| function is a semiring homomorphism when multiplication o
 \begin{proof}
 Just like the proof of \thmref{poly hom} in \proofref{theorem:poly hom}, given \lemref{pows hom}.
 \end{proof}
-Pragmatically, \thmref{generalized poly hom} says that the |b <-- (n -> N)| semiring (in which |(*)| is higher-dimensional convolution) correctly implements |zero|, |one|, |(+)| and |(*)| on multivariate polynomials.
+\thmref{generalized poly hom} says that the |b <-- (n -> N)| semiring (in which |(*)| is higher-dimensional convolution) correctly implements arithmetic on multivariate polynomials.
+We can instead use |Map (f N) b| to denote |b <-- (n -> N)|, where |f| is indexable with |Key f = n|.
+One convenient choice is to let |n = String| (variable names), and |f = Map String|.\footnote{Unfortunately, the |Monoid| instance for the standard |Map| type defines |m <> m'| so that keys present in |m'| \emph{replace} those in |m|.
+This behavior is problematic for our use (and many others), so we must use a |Map| variant that wraps the standard type, changes the |Monoid| instance to so that |m <> m'| \emph{combines} values in (via |(<>)|) associated with the same keys in |m| and |m'|.}
+As with |Poly1|, wrap this representation in a new type with a |Show| instance:
+\notefoot{I elided the |DetectableOne b| constraint, but I'd like to introduce and use that class earlier and restore it here.}
+\notefoot{To do:}
+%format PolyM = Poly "_{\!M}"
+%format varM = var "_{\!M}"
+%format varM = var
+%format Name = String
+\begin{code}
+newtype PolyM b = PolyM (Map (Map Name N) b) deriving
+  (Additive, Semiring, Functor, Indexable n, HasSingle n)
+
+instance Show b => Show (PolyM b) where ...
+
+varM :: Semiring b => Name -> PolyM b
+varM = single . single
+\end{code}
+Try it out:
+%{
+%% %format @ = "\mathbin{@}"
+%format @ = "\,@"
+{ \setlength{\blanklineskip}{1.5ex}
+\begin{code}
+
+>>> let { x = varM @ Z "x" ; y = varM @ Z "y" ; z = varM @ Z "z" }
+>>> let { p = x <+> y ; q = p <+> z }
+
+>>> p
+x + y
+>>> pow p 2
+(wrap (pow x 2)) + 2 x y + (wrap (pow y 2))
+>>> pow p 5
+(wrap (pow x 5)) + 5 (wrap (pow x 4)) y + 10 (wrap (pow x 3)) (wrap (pow y 2)) + 10 (wrap (pow x 2)) (wrap (pow y 3)) + 5 x (wrap (pow y 4)) + (wrap (pow y 5))
+
+>>> q
+x + y + z
+>>> pow q 2
+(wrap (pow x 2)) + 2 x y + 2 x z + (wrap (pow y 2)) + 2 y z + (wrap (pow z 2))
+>>> pow q 3
+(wrap (pow x 3)) + 3 (wrap (pow x 2)) y + 3 x (wrap (pow y 2)) + 6 x y z + 3 (wrap (pow x 2)) z + 3 x (wrap (pow z 2)) + (wrap (pow y 3)) + 3 (wrap (pow y 2)) z + 3 y (wrap (pow z 2)) + (wrap (pow z 3))
+
+>>> p <.> q
+(wrap (pow x 2)) + 2 x y + x z + (wrap (pow y 2)) + y z
+
+\end{code}
+}
+%}
 
 \note{Next:
 \begin{itemize}\itemsep0ex
-\item Examples
-\item Double-check that I made the right choice with |n -> b| and |n -> N| instead of |b <-- n| and |N <-- n|.
 \item Should I move multidimensional convolution to \secref{Convolution}?
 \item References on multivariate polynomial multiplication \href{https://www.google.com/search?q=algorithm+for+multiplying+multivariate+polynomials}{(starting here)}
 \item Generalize to $m$-dimensional codomains (and maybe swap roles of $m$ and $n$)

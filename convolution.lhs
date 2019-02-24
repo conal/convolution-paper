@@ -1512,7 +1512,9 @@ instance (DetectableOne b, Show b) => Show (Poly1 b) where ...
 Try it out:
 %format Integer = Z
 %format >>> = "\lambda\rangle\ "
-{ \setlength{\blanklineskip}{1.5ex}
+%{
+%format * = "{}"
+%subst blankline = "\\[1.5ex]"
 \begin{code}
 
 >>> let p = single 1 <+> value 3 :: Poly1 Z
@@ -1520,13 +1522,13 @@ Try it out:
 x + 3
 
 >>> pow p 3
-(wrap (pow x 3)) + 9 (wrap (pow x 2)) + 27 x + 27
+(wrap (pow x 3)) + 9 * (wrap (pow x 2)) + 27 * x + 27
 
 >>> pow p 5
-(wrap (pow x 5)) + 15 (wrap (pow x 4)) + 90 (wrap (pow x 3)) + 270 (wrap (pow x 2)) + 405 x + 243
+(wrap (pow x 5)) + 15 * (wrap (pow x 4)) + 90 * (wrap (pow x 3)) + 270 * (wrap (pow x 2)) + 405 * x + 243
 
 \end{code}
-}
+%}
 
 \noindent
 What about multivariate polynomials, i.e., polynomial functions over higher-dimensional domains?
@@ -1616,31 +1618,28 @@ Try it out:
 %{
 %% %format @ = "\mathbin{@}"
 %format @ = "\,@"
-{ \setlength{\blanklineskip}{1.5ex}
+%format * = "{}"
+%subst blankline = "\\[1.5ex]"
 \begin{code}
 
->>> let { x = varM @ Z "x" ; y = varM @ Z "y" ; z = varM @ Z "z" }
+>>> let { x = varM @Z "x" ; y = varM @Z "y" ; z = varM @Z "z" }
 >>> let { p = x <+> y ; q = p <+> z }
 
 >>> p
 x + y
 >>> pow p 2
-(wrap (pow x 2)) + 2 x y + (wrap (pow y 2))
+(wrap (pow x 2)) + 2 * x * y + (wrap (pow y 2))
 >>> pow p 5
-(wrap (pow x 5)) + 5 (wrap (pow x 4)) y + 10 (wrap (pow x 3)) (wrap (pow y 2)) + 10 (wrap (pow x 2)) (wrap (pow y 3)) + 5 x (wrap (pow y 4)) + (wrap (pow y 5))
+(wrap (pow x 5)) + 5 * (wrap (pow x 4)) * y + 10 * (wrap (pow x 3)) * (wrap (pow y 2)) + 10 * (wrap (pow x 2)) * (wrap (pow y 3)) + 5 * x * (wrap (pow y 4)) + (wrap (pow y 5))
 
 >>> q
 x + y + z
 >>> pow q 2
-(wrap (pow x 2)) + 2 x y + 2 x z + (wrap (pow y 2)) + 2 y z + (wrap (pow z 2))
+(wrap (pow x 2)) + 2 * x * y + 2 * x * z + (wrap (pow y 2)) + 2 * y * z + (wrap (pow z 2))
 >>> pow q 3
-(wrap (pow x 3)) + 3 (wrap (pow x 2)) y + 3 x (wrap (pow y 2)) + 6 x y z + 3 (wrap (pow x 2)) z + 3 x (wrap (pow z 2)) + (wrap (pow y 3)) + 3 (wrap (pow y 2)) z + 3 y (wrap (pow z 2)) + (wrap (pow z 3))
-
->>> p <.> q
-(wrap (pow x 2)) + 2 x y + x z + (wrap (pow y 2)) + y z
+(wrap (pow x 3)) + 3 * (wrap (pow x 2)) * y + 3 * x * (wrap (pow y 2)) + 6 * x * y * z + 3 * (wrap (pow x 2)) * z + 3 * x * (wrap (pow z 2)) + (wrap (pow y 3)) + 3 * (wrap (pow y 2)) * z + 3 * y * (wrap (pow z 2)) + (wrap (pow z 3))
 
 \end{code}
-}
 %}
 
 \note{Next:

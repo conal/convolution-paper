@@ -36,6 +36,9 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 
 ### Misc
 
+
+*   A variant of `pow` that's syntactically quieter than having to write (and generate) "`(wrap (pow ...))`".
+    Instead, just "`(ppow ...)`", with `ppow`'s `%format` directive dropping the parentheses.
 *   Maybe drop `HasSingle` and define `single` via `fmap` and `one`.
 *   Derive a semiring for lists based on a homomorphism from `[a]` to `a <-- Nat`.
 *   From recognition to "parsing", i.e., generating rich representations.

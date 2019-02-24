@@ -12,7 +12,7 @@ import qualified Data.Map as M
 import Semi
 
 newtype Map k v = M (M.Map k v) deriving
-  (Eq,Ord,Show,Functor,Foldable,Additive,Semiring,Indexable n,HasSingle n)
+  (Eq,Ord,Show,Functor,Foldable,Additive,Semiring,Indexable k v,HasSingle k v)
 
 instance (Ord k, Semigroup v) => Semigroup (Map k v) where
   M u <> M v = M (M.unionWith (<>) u v)

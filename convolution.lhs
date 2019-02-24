@@ -188,7 +188,11 @@ All of the algorithms in the paper follow from simple specifications in the form
 
 %% Sometimes formatting breaks without an infix separator.
 %format @@ = "{\,}"
-%format (wrap (a)) = a
+
+%% Now I realize that the issue is parsing by lhs2tex. A better solution would
+%% be to parenthesize the second argument to bigSum & friends, and have
+%% formatting hide the parens. I'd like to make this change when I have time to
+%% check the results carefully.
 
 %format (paren (e)) = "\left(" e "\right)"
 
@@ -1522,10 +1526,10 @@ Try it out:
 x + 3
 
 >>> pow p 3
-(wrap (pow x 3)) + 9 * (wrap (pow x 2)) + 27 * x + 27
+pow x 3 + 9 * pow x 2 + 27 * x + 27
 
 >>> pow p 5
-(wrap (pow x 5)) + 15 * (wrap (pow x 4)) + 90 * (wrap (pow x 3)) + 270 * (wrap (pow x 2)) + 405 * x + 243
+pow x 5 + 15 * pow x 4 + 90 * pow x 3 + 270 * pow x 2 + 405 * x + 243
 
 \end{code}
 %}
@@ -1556,6 +1560,7 @@ We can do much better, however, generalizing from two dimensions to |n| dimensio
 %% %format pows a (b) = pow a (^b)
 
 %format sub u (v) = u "_" v
+%format (psub u (v)) = u "_" v
 %format bigProd (lim) = "\bigOp\prod{" lim "}{0}"
 %% %format bigProdQ (lim) = "\bigOp\prod{" lim "}{1}"
 \begin{code}
@@ -1564,7 +1569,7 @@ poly (F f) (x :: pow b n) = bigSum (p :: pow N n)  f p * pows x p
 
 infixr 8 NOP ^
 (^) :: pow b n -> pow N n -> b
-pows x p = bigProd (i < n) (wrap (pow (wrap (sub x i)) (sub p i)))
+pows x p = bigProd (i < n) @@ pow (psub x i) (sub p i)
 \end{code}
 For instance, for |n=3|, |pows (x,y,z) ((i,j,k)) = pow x i * pow y j * pow z k|.
 Generalizing further, rather than taking |n| here to be a natural number, let |n| be any type of countable size, and interpret |pow b n| and |pow N n| as |n -> b| and |n -> N|:
@@ -1574,7 +1579,7 @@ poly (F f) (x :: n -> b) = bigSumQ (p :: n -> N)  f p * pows x p
 
 infixr 8 NOP ^
 (^) :: (n -> b) -> (n -> N) -> b
-pows x p = bigProd i (wrap (pow (x i) ((p i))))
+pows x p = bigProd i @@ pow (x i) ((p i))
 \end{code}
 The value of this second generalization is that the result also applies to \emph{indexable functors} (indexed by |n|), since they represent functions via |(!)| (\secref{Function-like Types and Singletons}).
 
@@ -1628,16 +1633,16 @@ Try it out:
 >>> p
 x + y
 >>> pow p 2
-(wrap (pow x 2)) + 2 * x * y + (wrap (pow y 2))
+pow x 2 + 2 * x * y + pow y 2
 >>> pow p 5
-(wrap (pow x 5)) + 5 * (wrap (pow x 4)) * y + 10 * (wrap (pow x 3)) * (wrap (pow y 2)) + 10 * (wrap (pow x 2)) * (wrap (pow y 3)) + 5 * x * (wrap (pow y 4)) + (wrap (pow y 5))
+pow x 5 + 5 * pow x 4 * y + 10 * pow x 3 * pow y 2 + 10 * pow x 2 * pow y 3 + 5 * x * pow y 4 + pow y 5
 
 >>> q
 x + y + z
 >>> pow q 2
-(wrap (pow x 2)) + 2 * x * y + 2 * x * z + (wrap (pow y 2)) + 2 * y * z + (wrap (pow z 2))
+pow x 2 + 2 * x * y + 2 * x * z + pow y 2 + 2 * y * z + pow z 2
 >>> pow q 3
-(wrap (pow x 3)) + 3 * (wrap (pow x 2)) * y + 3 * x * (wrap (pow y 2)) + 6 * x * y * z + 3 * (wrap (pow x 2)) * z + 3 * x * (wrap (pow z 2)) + (wrap (pow y 3)) + 3 * (wrap (pow y 2)) * z + 3 * y * (wrap (pow z 2)) + (wrap (pow z 3))
+pow x 3 + 3 * pow x 2 * y + 3 * x * pow y 2 + 6 * x * y * z + 3 * pow x 2 * z + 3 * x * pow z 2 + pow y 3 + 3 * pow y 2 * z + 3 * y * pow z 2 + pow z 3
 
 \end{code}
 %}
@@ -1747,14 +1752,14 @@ For |one :: u :* v -> b|,
 For |f, g :: u :* v -> b|,
 \begin{code}
     curry (f * g)
-==  curry (bigSumPlus ((u,v),(s,t)) (u,s) <> (v,t) +-> f (u,s) <.> g (v,t))       -- |(*)| on functions (monoid semiring)
-==  curry (bigSumPlus ((u,v),(s,t)) (u <> v,s <> t) +-> f (u,s) <.> g (v,t))      -- |(<>)| on pairs
-==  bigSumPlus ((u,v),(s,t)) u <> v +-> s <> t +-> f (u,s) <.> g (v,t)            -- \lemref{curry +->}
-==  bigSum (u,v) (wrap (bigSum (s,t) u <> v +-> s <> t +-> f (u,s) <.> g (v,t)))  -- summation mechanics
-==  bigSum (u,v) u <> v +-> bigSum (s,t) s <> t +-> f (u,s) <.> g (v,t)           -- \lemref{+-> homomorphism}
-==  bigSum (u,v) u <> v +-> bigSum (s,t) s <> t +-> curry f u s <.> curry g v t   -- |curry| definition
-==  bigSum (u,v) u <> v +-> curry f u <.> curry g v                               -- |(+->)| on functions
-==  curry f * curry g                                                             -- |(+->)| on functions
+==  curry (bigSumPlus ((u,v),(s,t)) (u,s) <> (v,t) +-> f (u,s) <.> g (v,t))      -- |(*)| on functions (monoid semiring)
+==  curry (bigSumPlus ((u,v),(s,t)) (u <> v,s <> t) +-> f (u,s) <.> g (v,t))     -- |(<>)| on pairs
+==  bigSumPlus ((u,v),(s,t)) u <> v +-> s <> t +-> f (u,s) <.> g (v,t)           -- \lemref{curry +->}
+==  bigSum (u,v) @@ bigSum (s,t) u <> v +-> s <> t +-> f (u,s) <.> g (v,t)       -- summation mechanics
+==  bigSum (u,v) u <> v +-> bigSum (s,t) s <> t +-> f (u,s) <.> g (v,t)          -- \lemref{+-> homomorphism}
+==  bigSum (u,v) u <> v +-> bigSum (s,t) s <> t +-> curry f u s <.> curry g v t  -- |curry| definition
+==  bigSum (u,v) u <> v +-> curry f u <.> curry g v                              -- |(+->)| on functions
+==  curry f * curry g                                                            -- |(+->)| on functions
 \end{code}
 
 \subsection{\lemref{decomp +->}}\prooflabel{lemma:decomp +->}
@@ -1906,9 +1911,9 @@ For the other two equations:
 
 \begin{code}
     atEps (star p)
-==  atEps (bigSum i (wrap (pow p i)))  -- alternative |star| formulation
-==  bigSum i (wrap (pow (atEps p) i))  -- |atEps| is a semiring homomorphism (above)
-==  star (atEps p)                     -- defining property of |star|
+==  atEps (bigSum i @@ pow p i)  -- alternative |star| formulation
+==  bigSum i @@ pow (atEps p) i  -- |atEps| is a semiring homomorphism (above)
+==  star (atEps p)               -- defining property of |star|
 \end{code}
 
 %endif
@@ -2099,10 +2104,10 @@ Continuing with the other equations in \lemref{deriv [c] -> b},
 
 \begin{code}
     star (a <: dp)
-==  atEps (star (a <: dp)) <: deriv (star (a <: dp))            -- \lemref{decomp ([c] -> b)}
-==  star a <: \ c -> star a .> dp c * star (a <: dp)            -- \lemref{atEps and deriv via (<:)} below
-==  star a .> (one <: \ c -> dp c * star (a <: dp))             -- |(.>)| case below
-==  star a .> (one <: fmap (* NOP (wrap (star (a <: dp)))) dp)  -- |fmap| on functions
+==  atEps (star (a <: dp)) <: deriv (star (a <: dp))      -- \lemref{decomp ([c] -> b)}
+==  star a <: \ c -> star a .> dp c * star (a <: dp)      -- \lemref{atEps and deriv via (<:)} below
+==  star a .> (one <: \ c -> dp c * star (a <: dp))       -- |(.>)| case below
+==  star a .> (one <: fmap (* NOP @@ star (a <: dp)) dp)  -- |fmap| on functions
 \end{code}
 
 \begin{code}
@@ -2330,19 +2335,19 @@ poly (F (\ i -> if i == n then b else zero))              -- |(+->)| on |b <-- a
 
 \begin{code}
     pows x zero
-==  bigProd i (wrap (pow (x i) (zero i)))  -- |(^)| definition
-==  bigProd i (wrap (pow (x i) zero))      -- |zero| on functions
-==  bigProd i one                          -- exponentiation law
-==  one                                    -- multiplicative identity
+==  bigProd i @@ pow (x i) (zero i)  -- |(^)| definition
+==  bigProd i @@ pow (x i) zero      -- |zero| on functions
+==  bigProd i one                    -- exponentiation law
+==  one                              -- multiplicative identity
 \end{code}
 
 \begin{code}
     pows x (p + q)
-==  bigProd i (wrap (pow (x i) ((p + q) i)))                                                 -- |(^)| definition
-==  bigProd i (wrap (pow (x i) (p i + q i)))                                                 -- |(+)| on functions
-==  bigProd i (paren (pow (x i) (p i) * pow (x i) (q i)))                                    -- exponentiation law (with commutative |(*)|)
-==  paren (bigProd i (wrap (pow (x i) (p i)))) * paren (bigProd i (wrap (pow (x i) (q i))))  -- product property (with commutative |(*)|)
-==  pows x p * pows x q                                                                      -- |(^)| definition
+==  bigProd i @@ pow (x i) ((p + q) i)                                           -- |(^)| definition
+==  bigProd i @@ pow (x i) (p i + q i)                                           -- |(+)| on functions
+==  bigProd i @@ (pow (x i) (p i)) * (pow (x i) (q i))                           -- exponentiation law (with commutative |(*)|)
+==  paren (bigProd i @@ pow (x i) (p i)) * paren (bigProd i @@ pow (x i) (q i))  -- product property (with commutative |(*)|)
+==  pows x p * pows x q                                                          -- |(^)| definition
 \end{code}
 
 %endif extended

@@ -29,10 +29,9 @@ import Misc
 --------------------------------------------------------------------}
 
 -- Inspired by Indexable from Data.Key in the keys library.
-class Functor h => Indexable b h where
-  type Key h
+class Indexable a b x | x -> a b where
   infixl 9 !
-  (!) :: h b -> Key h -> b
+  (!) :: x -> a -> b
 
 -- TODO: Laws: (!) must be natural; h must presere additivity, and !)| is an
 -- Additive homomorphism.
@@ -90,14 +89,14 @@ type DetectableOne1  = Con1 DetectableOne
     Singletons
 --------------------------------------------------------------------}
 
-class Indexable b h => HasSingle b h where
+class Indexable a b x => HasSingle a b x where
   infixr 2 +->
-  (+->) :: Key h -> b -> h b
+  (+->) :: a -> b -> x
 
-single :: (HasSingle b h, Semiring b) => Key h -> h b
+single :: (HasSingle a b x, Semiring b) => a -> x
 single a = a +-> one
 
-value :: (HasSingle b h, Monoid (Key h)) => b -> h b
+value :: (HasSingle a b x, Monoid a) => b -> x
 value b = mempty +-> b
 
 -- instance HasSingle a Bool [a] where
@@ -138,11 +137,10 @@ Nums(Double)
 -- ApplMono(Set)
 -- etc
 
-instance Indexable b ((->) a) where
-  type Key ((->) a) = a
+instance Indexable a b (a -> b) where
   f ! k = f k
 
-instance (Eq a, Additive b) => HasSingle b ((->) a) where
+instance (Eq a, Additive b) => HasSingle a b (a -> b) where
   a +-> b = \ a' -> if a == a' then b else zero
 
 instance Additive b => Additive (a -> b) where
@@ -171,16 +169,14 @@ instance (Ord a, Monoid a, Semiring b) => Semiring (Map a b) where
   one = mempty +-> one
   p <.> q = sum [u <> v +-> p!u <.> q!v | u <- M.keys p, v <- M.keys q]
 
-instance (Ord a, Additive b) => Indexable b (Map a) where
-  type Key (Map a) = a
+instance (Ord a, Additive b) => Indexable a b (Map a b) where
   m ! a = M.findWithDefault zero a m
 
-instance (Ord a, Additive b) => HasSingle b (Map a) where (+->) = M.singleton
+instance (Ord a, Additive b) => HasSingle a b (Map a b) where (+->) = M.singleton
 
 -- newtype Identity b = Identity b
 
-instance Indexable b Identity where
-  type Key Identity = ()
+instance Indexable () b (Identity b) where
   Identity a ! () = a
 
 deriving instance Additive b         => Additive (Identity b)
@@ -194,8 +190,7 @@ deriving instance Semiring b         => Semiring (Identity b)
 newtype Id b = Id b deriving 
  (Functor, Additive, DetectableZero, DetectableOne, LeftSemimodule s, Semiring)
 
-instance Indexable b Id where
-  type Key Id = ()
+instance Indexable () b (Id b) where
   Id a ! () = a
 
 {--------------------------------------------------------------------
@@ -288,11 +283,10 @@ instance Splittable N where
 -- TODO: generalize to other Integral or Enum types and add to Semi
 newtype CharMap b = CharMap (IntMap b) deriving Functor
 
-instance Additive b => Indexable b CharMap where
-  type Key CharMap = Char
+instance Additive b => Indexable Char b (CharMap b) where
   CharMap m ! a = IntMap.findWithDefault zero (fromEnum a) m
 
-instance Additive b => HasSingle b CharMap where
+instance Additive b => HasSingle Char b (CharMap b) where
   a +-> b = CharMap (IntMap.singleton (fromEnum a) b)
 
 instance Additive b => Additive (CharMap b) where
@@ -302,11 +296,10 @@ instance Additive b => Additive (CharMap b) where
 instance Additive b => DetectableZero (CharMap b) where isZero (CharMap m) = IntMap.null m
 
 
-instance HasTrie a => Indexable b ((:->:) a) where
-  type Key ((:->:) a) = a
+instance HasTrie a => Indexable a b (a :->: b) where
   (!) = untrie
 
-instance (HasTrie a, Eq a, Additive b) => HasSingle b ((:->:) a) where
+instance (HasTrie a, Eq a, Additive b) => HasSingle a b (a :->: b) where
   a +-> b = trie (a +-> b)
 
 instance (HasTrie a, Additive b) => Additive (a :->: b) where

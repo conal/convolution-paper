@@ -1074,26 +1074,22 @@ data RegExp h b           =  Char (Key h)
                           |  Star (RegExp h b)
   deriving Functor
 
-instance (D0 b, Additive b) => Additive (RegExp h b) where
-  zero  = Value zero
-  p <+> q  | isZero p   = q
-           | isZero q   = p
-           | otherwise  = p :<+> q
+instance Additive b => Additive (RegExp h b) where
+  zero = Value zero
+  (<+>) = (:<+>)
 
-instance (D0 b, D1 b, Semiring b) => Semiring (RegExp h b) where
+instance Semiring b => Semiring (RegExp h b) where
   scale b = fmap (b NOP <.>)
 
 instance Semiring b => Semiring (RegExp h b) where
-  one   = Value one
-  p <.> q  | isZero  p  = zero
-           | isOne   p  = q
-           | otherwise  = p :<.> q
+  one = Value one
+  (<.>) = (:<.>)
 
-instance (D0 b, D1 b, Semiring b) => StarSemiring (RegExp h b) where
+instance Semiring b => StarSemiring (RegExp h b) where
   star e = Star e
 
 type FR h b =  (  Additive (h (RegExp h b)), HasSingle (Key h) (RegExp h b) (h (RegExp h b))
-               ,  Functor h, D0 b, D1 b )
+               ,  Functor h, DetectableZero b, DetectableOne b )
 
 instance (FR h b, StarSemiring b, c ~ Key h, Eq c) => Indexable [c] b (RegExp h b) where
   e ! w = atEps (foldl ((!) . deriv) e w)
@@ -1108,7 +1104,7 @@ atEps (p  :<+>  q)   = atEps p <+> atEps q
 atEps (p  :<.>  q)   = atEps p <.> atEps q
 atEps (Star p)       = star (atEps p)
 
-deriv :: (FR h b, StarSemiring b, DetectableZero b, D1 b) => RegExp h b -> h (RegExp h b)
+deriv :: (FR h b, StarSemiring b) => RegExp h b -> h (RegExp h b)
 deriv  (Char c)       = single c
 deriv  (Value _)      = zero
 deriv  (p  :<+>  q)   = deriv p <+> deriv q

@@ -131,6 +131,15 @@ eval1 (Poly1 m) z = sum [b <.> z^i | (i,b) <- M.toList m]
 -- >>> p^5
 -- x^5 + 15 * x^4 + 90 * x^3 + 270 * x^2 + 405 * x + 243
 
+-- TODO: generalize from Map N to any functor f with Key f = N. I'll need to get
+-- indices as well, as in the Keyed class from the keys library.
+-- 
+-- -- * Keyed
+-- class Functor f => Keyed f where
+--   mapWithKey :: (Key f -> a -> b) -> f a -> f b
+
+type List = LTrie Maybe
+
 {--------------------------------------------------------------------
     Multivariate polynomials
 --------------------------------------------------------------------}
@@ -168,6 +177,8 @@ varM = single . single
 -- >>> q^3
 -- x^3 + 3 * x^2 * y + 3 * x * y^2 + 6 * x * y * z + 3 * x^2 * z + 3 * x * z^2 + y^3 + 3 * y^2 * z + 3 * y * z^2 + z^3
 
+-- >>> q^4
+-- x^4 + 4 * x^3 * y + 6 * x^2 * y^2 + 4 * x * y^3 + 12 * x^2 * y * z + 12 * x * y^2 * z + 12 * x * y * z^2 + 4 * x^3 * z + 6 * x^2 * z^2 + 4 * x * z^3 + y^4 + 4 * y^3 * z + 6 * y^2 * z^2 + 4 * y * z^3 + z^4
 -- >>> p <.> q
 -- x^2 + 2 * x * y + x * z + y^2 + y * z
 

@@ -33,13 +33,15 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
     *   Lots of small changes for succinctness or at least fewer lines.
     *   Drop details for finite maps, leaving a short verbal description and pointer to extended version.
     *   Tighten some spacing environments.
-
+*   Image example
 
 ### Misc
 
-
 *   A variant of `pow` that's syntactically quieter than having to write (and generate) "`(wrap (pow ...))`".
     Instead, just "`(ppow ...)`", with `ppow`'s `%format` directive dropping the parentheses.
+    Better: use "`@@`" as a fake infix to help parsing.
+    Still better: Parenthesize second argument of summations (and similar), so lhs2tex can parse correctly.
+    Drop those parens in formatting, and sometimes add a second set.
 *   Maybe drop `HasSingle` and define `single` via `fmap` and `one`.
 *   Derive a semiring for lists based on a homomorphism from `[a]` to `a <-- Nat`.
 *   From recognition to "parsing", i.e., generating rich representations.

@@ -8,10 +8,6 @@ import Prelude hiding ((^),sum)
 
 import Data.List (intersperse,sortOn) -- intercalate,
 import GHC.Exts(IsString(..))
--- import GHC.Natural (Natural)
--- import Data.Map (Map)
--- import qualified Data.Map as M
--- import qualified Data.Foldable as F
 
 import Misc ((:*))
 import Semi
@@ -19,60 +15,95 @@ import Semi
 import MMap (Map)  -- like Data.Map but better Monoid instance
 import qualified MMap as M
 
+{--------------------------------------------------------------------
+    Show utilities
+--------------------------------------------------------------------}
+
+compose :: [a -> a] -> (a -> a)
+compose = foldr (.) id
+
+showIter :: Show b => Int -> String -> Int -> [b] -> ShowS
+showIter inner op outer bs =
+  showParen (outer > inner) $
+  compose (intersperse (showString op) (showsPrec inner <$> bs))
+
+-- TODO: check for empty bs and for singleton bs
+
+showSum, showProd :: Show b => Int -> [b] -> ShowS
+showSum  = showIter 6 " + "
+showProd = showIter 7 " * "
+
+{--------------------------------------------------------------------
+    Syntactic representations
+--------------------------------------------------------------------}
+
 newtype Name = Name String deriving (Eq,Ord)
 
-instance Show Name where show (Name s) = s
+instance DetectableZero Name where isZero = const False
+instance DetectableOne  Name where isOne  = const False
+
+instance Show     Name where show (Name s) = s
 instance IsString Name where fromString = Name
+
+data Pow b n = Pow b n  -- b * x^n
+
+instance (DetectableOne b, DetectableZero n) => DetectableOne (Pow b n) where
+  isOne (Pow b n) = isOne b || isZero n
+
+instance (Show n, Show b, DetectableZero n, DetectableOne n, DetectableOne b)
+      => Show (Pow b n) where
+  showsPrec d p@(Pow b n)
+    | isOne p   = showString "1"
+    | isOne n   = showsPrec d b
+    | otherwise = showParen (d >= 8) $
+                  showsPrec 8 b . showString "^" . showsPrec 8 n
+
+-- >>> Pow (Name "z") 5 :: Pow Name N
+-- z^5
+
+data Pows a = Pows (Map a N)
+
+instance DetectableOne (Pows a) where
+  isOne (Pows m) = all isZero m
+
+-- TODO: try changing isZero for Map to be 'all isZero'. Might wedge on recursive examples.
+
+instance (Show b, DetectableZero b, DetectableOne b) => Show (Pows b) where
+  showsPrec d p@(Pows m)
+    | isOne p   = showString "1"
+    | otherwise = showProd d (uncurry Pow <$> M.toList m)
+
+-- >>> Pows ((Name "x" +-> 2) <+> (Name "y" +-> 3) :: Map Name N)
+-- x^2 * y^3
+
+data Term b x = Term b x  -- b * x
+
+instance (Show b, Show x, DetectableOne x, DetectableZero b, DetectableOne b)
+      => Show (Term b x) where
+  showsPrec d (Term b x)
+    | isZero b || isOne x = showsPrec d b
+    | isOne  b  = showsPrec d x
+    | otherwise = showParen (d > 6) $
+                  showsPrec 6 b . showString " * " . showsPrec 6 x
+
+-- >>> Term 7 (Pows ((Name "x" +-> 2) <+> (Name "y" +-> 3))) :: Term Z (Pows Name)
+-- 7 * x^2 * y^3
+
+data Terms b = Terms [b]
+
+instance Show b => Show (Terms b) where showsPrec d (Terms bs) = showSum d bs
+
+{--------------------------------------------------------------------
+    Polynomials
+--------------------------------------------------------------------}
 
 newtype Poly1 b = Poly1 (Map N b) deriving
   (Additive, Semiring, Functor, Indexable N b, HasSingle N b)
 
--- data Pow b n = Pow b n  -- b * x^n
-
--- instance Show (Pow b n) where
---   showsPrec d (Pow b n) =
---   | isZero n  = id
---   | isOne  n  = showsPrec d b
---   | otherwise = showsPrec 8 b . showString "^" . showsPrec 8 n
-
-
--- TODO: eliminate in favor of Show (Pow b n)
-showPow :: (Show b, Show n, DetectableZero n, DetectableOne n) => b -> n -> ShowS
-showPow b n
-  | isZero n  = id
-  | isOne  n  = showsPrec 7 b
-  | otherwise = showsPrec 8 b . showString "^" . showsPrec 8 n
-
 instance (DetectableZero b, DetectableOne b, Show b) => Show (Poly1 b) where
-  showsPrec d (Poly1 m) = showParen (d >= 6) $
-     foldr (.) id (intersperse (showString " + ") (term <$> M.toDescList m))
+  showsPrec d (Poly1 m) = showsPrec d (Terms (term <$> M.toDescList m))
    where
-     term :: (N,b) -> ShowS
-     -- term (Sum i, b) = b `showTimes'` Pow (Name "x") i
-     term (Sum i, b)  -- b * x^i
-       | isZero i  = sb
-       | isZero b  = sb -- zero
-       | isOne  b  = xs
-       | otherwise = sb . showTimes . xs
-      where
-        sb = showsPrec 6 b
-        xs = showPow (Name "x") i
-
-showTimes :: ShowS
-showTimes = showString " * "
--- showTimes = showString " "
--- Always generate "*", but suppress it in the paper. Looks great.
-
-showTimes' :: (Show b, Show x, DetectableOne x, DetectableZero b, DetectableOne b)
-           => b -> x -> ShowS
-showTimes' b x  -- b * x
-  | isZero b  = b' -- zero
-  | isOne  x  = b'
-  | isOne  b  = x'
-  | otherwise = b' . showTimes . x'
- where
-   b' = showsPrec 6 b
-   x' = showsPrec 6 x
+     term (i,b) = Term b (Pow (Name "x") i)
 
 eval1 :: Semiring b => Poly1 b -> b -> b
 eval1 (Poly1 m) z = sum [b <.> z^i | (i,b) <- M.toList m]
@@ -94,80 +125,27 @@ x2 = single (1,0)
 y2 = single (0,1)
 
 -- >>> x2
--- M (fromList [((Sum 1,Sum 0),1)])
+-- M (fromList [((1,0),1)])
 -- >>> y2
--- M (fromList [((Sum 0,Sum 1),1)])
+-- M (fromList [((0,1),1)])
 -- >>> x2 <+> y2
--- M (fromList [((Sum 0,Sum 1),1),((Sum 1,Sum 0),1)])
+-- M (fromList [((0,1),1),((1,0),1)])
 -- >>> (x2 <+> y2)^2
--- M (fromList [((Sum 0,Sum 2),1),((Sum 1,Sum 1),2),((Sum 2,Sum 0),1)])
+-- M (fromList [((0,2),1),((1,1),2),((2,0),1)])
 
 type P2' = Map (Map Bool N)
-
--- showPoly :: Map n String -> Map (Map n N) -> String
--- showPoly names m = intercalate " + " (term <$> M.toList m)
---  where
---    term 
-
-#if 0
-
-type Term k b = (b, Map k N)
-
-showsPrecTerm :: forall k b. (Ord k, Show b, DetectableOne b)
-              => Map k String -> Int -> Term k b -> ShowS
-showsPrecTerm names d (b,m) = showParen (d >= 7) $
-  (if isOne b then id else showsPrec 7 b . showString " ") .
-  foldr (.) id (intersperse (showString " ") (factor <$> M.toList m))
- where
-   factor :: (k,N) -> ShowS
-   factor (k,n) | n == 0    = id
-                | n == 1    = name
-                | otherwise = name . showString "^" . showsPrec 8 n
-    where
-      name = showsPrec 9 (M.findWithDefault "?" k names)
-
--- newtype PolyM n b = PolyM (Map (Map n N) b) deriving
---   (Additive, Semiring, Functor, Indexable n, HasSingle n)
-
--- instance (DetectableOne b, Show b) => Show (PolyM n b) where
---   showsPrec d (PolyM m) = showParen (d >= 6) $
---      foldr (.) id (intersperse (showString " + ") (term <$> M.toDescList m))
---    where
---      term :: (N,b) -> ShowS
---      term (Sum i, b)
---        | i == 0    = showsPrec 6 b
---        | isOne b   = xs
---        | otherwise = shows b . showString "*" . xs
---       where
---         xs | i == 0    = id
---            | i == 1    = showString "x"
---            | otherwise = showString "x^" . showsPrec 8 i
-
-
-#endif
 
 -- Polynomials with named "variables"
 newtype PolyM b = PolyM { unPolyM :: Map (Map Name N) b } deriving
   (Additive, Semiring, Functor, Indexable (Map Name N) b, HasSingle (Map Name N) b)
 
 instance (DetectableZero b, DetectableOne b, Show b) => Show (PolyM b) where
-  showsPrec d (PolyM m) = showParen (d >= 6) $
-     foldr (.) id (intersperse (showString " + ")
-                    -- TODO: better ordering
-                    (term <$> sortOn (M.keys . fst) (M.toDescList m)))
+  showsPrec d (PolyM m) =
+    showsPrec d (Terms (term <$> sortOn (M.keys . fst) (M.toDescList m)))
    where
-     term :: (Map Name N,b) -> ShowS
-     term (pows, b)
-       | all (== 0) pows = sb
-       | isZero b        = sb
-       | isOne b         = xs
-       | otherwise       = sb . showTimes . xs
-      where
-        sb = showsPrec 6 b
-        xs = foldr (.) id (intersperse showTimes (factor <$> M.toAscList pows))
-        factor (name,Sum i) = showPow name i
+     term (p,b) = Term b (Pows p)
 
--- TODO: try changing isZero for Map to be 'all isZero'. Might wedge on recursive examples.
+-- TODO: improve the sorting criterion
 
 -- varM :: Name -> PolyM Z
 varM :: Semiring b => Name -> PolyM b
@@ -192,43 +170,3 @@ varM = single . single
 
 -- >>> p <.> q
 -- x^2 + 2 * x * y + x * z + y^2 + y * z
-
-#if 0
-
-newtype PolyF h b = PolyF { unPolyF :: Map (h N) b } deriving Functor
-
-deriving instance (Ord (h N), Additive b) => Additive (PolyF h b)
-deriving instance (Ord (h N), Monoid (h N), Semiring b) => Semiring (PolyF h b)
-deriving instance (Ord (h N), Additive k) => Indexable k (PolyF h)
-deriving instance (Ord (h N), Additive k) => HasSingle k (PolyF h)
-
-instance (Foldable h, DetectableOne b, Show b) => Show (PolyF h b) where
-  showsPrec d (PolyF m) = showParen (d >= 6) $
-     foldr (.) id (intersperse (showString " + ") (term <$> M.toDescList m))
-   where
-     term :: (h N,b) -> ShowS
-     term (pows, b)
-       | all (== 0) pows = showsPrec 6 b
-       | isOne b = xs
-       | otherwise = showsPrec 6 b . {- showString "*" . -} xs
-      where
-        xs :: ShowS
-        xs = foldr (.) id (factor <$> F.toList pows)
-        factor (Sum i)
-          | i == 0    = id
-          | i == 1    = showString name
-          | otherwise = showString name . showString "^" . showsPrec 8 i
-        name = "?"
-
--- >>> x = single (single "x") :: PolyF (Map String) Int
--- >>> y = single (single "y") :: PolyF (Map String) Int
--- >>> x <+> y
--- ? + ?
--- >>> (x <+> y)^2
--- ?^2 + ?^2 + 2??
--- >>> (x <+> y)^5
--- ?^5 + ?^5 + 5?^4? + 10?^3?^2 + 10?^2?^3 + 5??^4
-
--- TODO: supply variable names from a default list
-
-#endif

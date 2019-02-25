@@ -64,7 +64,7 @@ instance (Show n, Show b, DetectableZero n, DetectableOne n, DetectableOne b)
     | otherwise = showParen (d >= 8) $
                   showsPrec 8 b . showString "^" . showsPrec 8 n
 
--- >>> Pow (Name "z") 5 :: Pow Name N
+-- >>> Pow "z" 5 :: Pow Name N
 -- z^5
 
 data Pows b = Pows (Map b N)
@@ -82,7 +82,7 @@ instance (Show b, DetectableZero b, DetectableOne b) => Show (Pows b) where
     | isOne p   = showString "1"
     | otherwise = showProd d (uncurry Pow <$> M.toList m)
 
--- >>> Pows ((Name "x" +-> 2) <+> (Name "y" +-> 3) :: Map Name N)
+-- >>> Pows (("x" +-> 2) <+> ("y" +-> 3)) :: Pows Name
 -- x^2 * y^3
 
 data Term b x = Term b x  -- b * x
@@ -98,7 +98,7 @@ instance (Show b, Show x, DetectableOne x, DetectableZero b, DetectableOne b)
     | otherwise = showParen (d > 6) $
                   showsPrec 6 b . showString " * " . showsPrec 6 x
 
--- >>> Term 7 (Pows ((Name "x" +-> 2) <+> (Name "y" +-> 3))) :: Term Z (Pows Name)
+-- >>> Term 7 (Pows (("x" +-> 2) <+> ("y" +-> 3))) :: Term Z (Pows Name)
 -- 7 * x^2 * y^3
 
 data Terms b = Terms [b]
@@ -196,11 +196,6 @@ takeS n (b :# bs) = b : takeS (n-1) bs
 newtype Series1 b = Series1 (Stream b) deriving
   (Additive, Semiring, Functor, Indexable [()] b, HasSingle [()] b)
 
--- instance Show b => Show (Series1 b) where
---   showsPrec d (Series1 bs) =
---     take 100 .  -- for now
---     showsPrec d (streamList bs)
-
 instance (DetectableZero b, DetectableOne b, Show b) => Show (Series1 b) where
   showsPrec d (Series1 bs) = lopString .
     showsPrec d (Terms (term <$> zip [0::N ..] (lopStream bs)))
@@ -253,3 +248,6 @@ expS = 1 + integral expS
 
 -- >>> sinS * cosS
 -- x + (-2) % 3 * x^3 + 2 % 15 * x^5 + (-4) % 315 * x^7 + 2 % 2835 * x^9 + (-4) % 1 ...
+
+-- TODO: multivariate power series
+-- Can I generalize Poly1 and PolyM?

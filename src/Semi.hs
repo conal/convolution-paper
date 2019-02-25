@@ -135,6 +135,7 @@ Nums(Natural)
 Nums(Int)
 Nums(Float)
 Nums(Double)
+Nums(Rational)
 -- etc
 
 -- ApplSemi((->) a)  -- use monoid semiring instead for now
@@ -189,8 +190,8 @@ instance (Ord a, Additive b) => HasSingle a b (Map a b) where (+->) = M.singleto
 
 type instance Key Identity = ()
 
-instance Indexable () b (Identity b) where
-  Identity a ! () = a
+instance Indexable () b (Identity b) where Identity a ! () = a
+instance HasSingle () b (Identity b) where () +-> b = Identity b
 
 deriving instance Additive b         => Additive (Identity b)
 deriving instance DetectableZero b   => DetectableZero (Identity b)
@@ -198,15 +199,15 @@ deriving instance DetectableOne b    => DetectableOne (Identity b)
 deriving instance LeftSemimodule s b => LeftSemimodule s (Identity b)
 deriving instance Semiring b         => Semiring (Identity b)
 
--- For the paper:
+-- For the paper to show deriving:
 
 newtype Id b = Id b deriving 
  (Functor, Additive, DetectableZero, DetectableOne, LeftSemimodule s, Semiring)
 
-type instance Key Id = ()
+instance Indexable () b (Id b) where Id a ! () = a
+instance HasSingle () b (Id b) where () +-> b = Id b
 
-instance Indexable () b (Id b) where
-  Id a ! () = a
+type instance Key Id = ()
 
 {--------------------------------------------------------------------
     Sum and product monoids

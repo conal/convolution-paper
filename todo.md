@@ -112,6 +112,8 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
     *   [Monads from Comonads](http://comonad.com/reader/2011/monads-from-comonads/) (blog post by Ed Kmett, 2011)
     *   [*Monads from Comonads, Comonads from Monads*]
     *   [*Should I use a Monad or a Comonad?*]
+*   Polynomials:
+    *   Doug McIlroy's work
 *   Other:
     *   [*Convolution as a Unifying Concept: Applications in Separation Logic, Interval Calculi, and Concurrency*]
     *   [*Introduction to weighted automata theory*]

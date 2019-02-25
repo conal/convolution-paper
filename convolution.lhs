@@ -158,7 +158,7 @@ Using the perspective of semirings and free semimodules, this paper explores for
 
 Although Brzozowski formulated his method in terms of regular expressions, free semimodules appear to be a more natural and general setting.
 Regular expressions become a special case, while \emph{tries} offer a natural alternative that appears to be simpler and more efficient.
-Rather than constructing a grammatical representation that gets successively ``differentiated'' in Brzozowski's method, the standard notion of trie already has derivatives built in, saving much redundant work without the need for explicit memoization.
+Rather than constructing a grammatical representation that gets successively ``differentiated'' in Brzozowski's method, the standard notion of trie already has derivatives built in\out{, saving much redundant work without the need for explicit memoization}.
 Since tries generalize elegantly from sets to functions and from strings to algebraic data types, the essential theory and algorithms extend far beyond languages in the sense of sets of strings.
 Underlying these variations is a notion of generalized \emph{convolution}, which itself (along with probabilistic computation) generalizes to the free semimodule monad.
 This paper shows how to perform (generalized) convolution efficiently and easily, in one dimension or many, on time or space and on languages.
@@ -304,8 +304,9 @@ instance Monoid (Endo a) where
 \end{code}
 The identity and associativity monoid laws follow from the identity and associativity category laws, so we can generalize to endomorphisms, i.e., morphisms from an object to itself in any category.
 
-A modest generalization of Cayley's theorem states that every monoid is isomorphic to a monoid of endofunctions \needcite{}.
-(The Yoneda embedding generalizes this theorem to categories and endomorphisms \needcite{}.)
+A modest generalization of Cayley's theorem states that every monoid is isomorphic to a monoid of endofunctions \cite{Boisseau2018YNK}.
+This embedding is useful for turning quadratic-time algorithms linear \cite{Hughes1986NRL,Voigtlander2008AIC}.
+% (The Yoneda embedding generalizes this theorem to categories and endomorphisms.)
 \begin{code}
 toEndo :: Monoid a => a -> Endo a
 toEndo a = Endo (\ z -> a <> z)
@@ -327,7 +328,6 @@ The embedding of |a| into |Endo a| provides another example of a monoid homomorp
 ==  Endo (\ z -> a <> z) <> Endo (\ z -> b <> z)  -- |(<>)| on |Endo a|
 ==  toEndo a <> toEndo b                          -- |toEndo| definition (twice)
 \end{code}
-This embedding is useful for turning quadratic-time algorithms linear \needcite{}.
 
 \subsectionl{Additive Monoids}
 
@@ -554,10 +554,8 @@ When |s == zero|, |s .> p == zero|, so we can discard |p| entirely.
 This optimization applies quite often in practice, for instance with languages, which tend to be sparse.
 A less dramatically helpful optimization is |one .> p == p|.
 Rather than burden each |LeftSemimodule| instance with these two optimizations, let's define |(.>)| via a more primitive |scale| method:
-%format DetectableZero = Is"_0"
-%format DetectableOne  = Is"_1"
-%format isZero = is"_0"
-%format isOne  = is"_1"
+%% %format DetectableZero = IsZero
+%% %format DetectableOne  = IsOne
 \begin{code}
 class (Semiring s, Additive b) => LeftSemimodule s b | b -> s where
   scale :: s -> b -> b
@@ -598,7 +596,7 @@ Most of the representations used in this paper are functions or are types that b
 It will be useful to use a standard vocabulary for the latter.
 An ``indexable'' type |x| with domain |a| and codomain |b| represents |a -> b|:
 We'll need to restrict |b| in some cases.
-%format ! = "\hspace{0.5pt}!\hspace{0.5pt}"
+%% %format ! = "\hspace{0.5pt}!\hspace{0.5pt}"
 \begin{code}
 class Indexable a b x | x -> a b where
   infixl 9 !
@@ -956,7 +954,7 @@ derivs p (u <> v)  == derivs (derivs p u) v
 \end{code}
 Thanks to this decomposition property and the fact that |deriv p c == derivs p [c]|, one can successively differentiate with respect to single symbols.
 
-Generalizing from sets to functions,\notefoot{Intriguingly, |atEps| and |derivs| correspond to |coreturn| and |cojoin| for the function-from-monoid comonad \needcite{}.}
+Generalizing from sets to functions,\notefoot{Intriguingly, |atEps| and |derivs| correspond to |coreturn| and |cojoin| for the function-from-monoid comonad, also called the ``exponent comonad'' \citep{Uustalu2008CNC}.}
 
 > derivs f = \ u v -> f (u <> v)
 
@@ -1064,7 +1062,7 @@ w +-> b = foldr (\ c t -> zero <: c +-> t) (b <: zero) w
 \sectionl{Regular Expressions}
 
 \lemreftwo{atEps [c] -> b}{deriv [c] -> b} generalize and were inspired by a technique of \citet{Brzozowski64} for recognizing regular languages.
-\figrefdef{RegExp}{Semiring-generalized regular expressions}{
+\figrefdef{RegExp}{Semiring-generalized regular expressions denoting |[c] -> b|}{
 %format :<+> = "\mathbin{:\!\!+}"
 %format :<.> = "\mathbin{:\!\!\conv}"
 %format D0 = DetectableZero
@@ -1146,10 +1144,10 @@ In fact, I'd also need the |D0| and |D1| instances for |RegExp h b|, so the figu
 While simple and correct, these implementations are quite inefficient, primarily due to naive backtracking and redundant comparison.
 \secref{Decomposing Functions from Lists} explored the nature of functions on lists, identifying a decomposition principle and its relationship to the vocabulary of semirings and related algebraic abstractions.
 Applying this principle to a generalized form of regular expressions led to Brzozowski's algorithm, generalized from sets to functions in \secref{Regular Expressions}, providing an alternative to naive backtracking but still involving extensive syntactic manipulation as each candidate string is matched.
-Nevertheless, with some syntactic optimizations and memoization, recognition speed with this technique can be fairly good \needcite{}.
+Nevertheless, with some syntactic optimizations and memoization, recognition speed with this technique can be fairly good \cite{Might2010YaccID,Adams2016CPP}.
 
-As an alternative to regular expression differentiation, note that the problem of redundant comparison is solved elegantly by the classic trie (``prefix tree'') data structure \needcite{}.
-This data structure was later generalized to arbitrary (regular) algebraic data types \needcite{} and then from sets to functions \needcite{}.
+As an alternative to regular expression differentiation, note that the problem of redundant comparison is solved elegantly by the classic trie (``prefix tree'') data structure introduced by Axel Thue in 1912 \citep[Section 6.3]{Knuth1998ACP3}.
+This data structure was later generalized to arbitrary (regular) algebraic data types \cite{Connelly1995GenTrie} and then from sets to functions \cite{Hinze2000GGT}.
 We'll explore the data type generalization later.\notefoot{Add a forward pointer, or remove the promise.}
 Restricting our attention to functions of lists (``strings'' over some alphabet), we can formulate a simple trie data type as follows:
 \notefoot{Maybe another oppositely pointing arrows of some sort.
@@ -1163,7 +1161,7 @@ where |h| is an indexable functor whose associated key type is the type of list 
 The similarity between the |LTrie| type and the function decomposition from \secref{Decomposing Functions from Lists} (motivating the constructor's name) makes for easy instance calculation.
 As with |Pow a| and |Map a b|, we can define a trie counterpart to the monoid semiring, here |[c] -> b|.
 \begin{theorem}[\provedIn{theorem:LTrie}]\thmlabel{LTrie}
-Given the definitions in \figrefdef{LTrie}{Tries as |[c] -> b|}{
+Given the definitions in \figrefdef{LTrie}{List tries denoting |[c] -> b|}{
 %format :<: = "\mathrel{\Varid{:\!\!\triangleleft\!:}}"
 \begin{code}
 infix 1 :<
@@ -1260,9 +1258,9 @@ f <.> g  == bigSum (u,v) u + v +-> f u <.> g v                              -- \
 \end{spacing}
 \vspace{-3ex}
 \noindent
-This last form is the standard definition of one-dimensional, discrete \emph{convolution} \needcite{}.\footnote{Note that this reasoning applies to \emph{any} group (monoid with inverses)}
+This last form is the standard definition of one-dimensional, discrete \emph{convolution} \citep[Chapter 6]{Smith1997SEG}.\footnote{Note that this reasoning applies to \emph{any} group (monoid with inverses)}
 Therefore, just as monoid semiring multiplication generalizes language concatenation (via the predicate/set isomorphism), it also generalizes the usual notion of discrete convolution.
-Moreover, if the domain is a continuous type such as |R| or |C|, we can reinterpret summation as integration, resulting in \emph{continuous} convolution \needcite{}.
+Moreover, if the domain is a continuous type such as |R| or |C|, we can reinterpret summation as integration, resulting in \emph{continuous} convolution.
 Additionally, for multi-dimensional (discrete or continuous) convolution, we can simply use tuples of scalar indices for |w| and |u|, defining tuple addition and subtraction componentwise.
 \notefoot{More generally, cartesian products of monoids are also monoids.
 Consider multi-dimensional convolution in which different dimensions have different types, even mixing discrete and continuous, and maybe even sequences and numbers.
@@ -1305,7 +1303,7 @@ Alternatively, one could hand-optimize for streams.
 %format Fin (m) = Fin "_{" m "}"
 %format Array (m) = Array "_{" m "}"
 
-Many uses of discrete convolution (including convolutional neural networks \needcite{}) involve functions having finite support, i.e., non-zero on only a finite subset of their domains.
+Many uses of discrete convolution (including convolutional neural networks \citep[Chapter 9]{LecunBengioHinton2015DLNature}) involve functions having finite support, i.e., non-zero on only a finite subset of their domains.
 \notefoot{First suggest finite maps, using instances from \figref{Map}. Then intervals/arrays.}
 In many cases, these domain subsets may be defined by finite \emph{intervals}.
 For instance, such a 2D operation would be given by intervals in each dimension, together specifying lower left and upper right corners of a 2D interval (rectangle) outside of which the functions are guaranteed to be zero.
@@ -1374,7 +1372,7 @@ lift0 b  = b +-> one
 %format >>== = >>=
 %% %format keys p = p
 \noindent
-The signatures of |lift2|, |lift1|, and |lift0| \emph{almost} generalize to those of |liftA2|, |fmap|, and |pure| from the |Functor| and |Applicative| type classes \needcite.
+The signatures of |lift2|, |lift1|, and |lift0| \emph{almost} generalize to those of |liftA2|, |fmap|, and |pure| from the |Functor| and |Applicative| type classes \cite{McBride2008APE}.
 In type systems like Haskell's, however, |a -> s| is the functor |(a ->)| applied to |s|, while we would need it to be |(-> s)| applied to |a|.
 To fix this problem, define a type wrapper:
 \begin{code}
@@ -1420,11 +1418,8 @@ instance DetectableZero b => ApplicativeC (Map' b) where
 }, along with instances for functions and finite maps.%
 Other representations such as tries would need similar reversal of type arguments.
 \footnote{The enhancement is the associated constraint \citep{Bolingbroke2011CK} |Ok|, limiting the types that the class methods must support. The line ``|type Ok f a = ()|'' means that the constraint on |a| defaults to |()|, which holds vacuously for all |a|.}%
-\footnote{Originally, |Applicative| had a |(<*>)| method from which one can easily define |liftA2|. Since the base library version 4.10 \needcite, |liftA2| was added as a method (along with a default definition of |(<*>)|) to allow for more efficient implementation. \note{Cite \href{https://ghc.haskell.org/trac/ghc/ticket/13191}{GHC ticket 13191} if I can't find a better reference.}}
+\footnote{Originally, |Applicative| had a |(<*>)| method from which one can easily define |liftA2|. Since the base library version 4.10, |liftA2| was added as a method (along with a default definition of |(<*>)|) to allow for more efficient implementation \citep[Section 3.2.2]{GHC821}.}
 \notefoot{Sync up this code with changes I made to the implementation.}
-\notefoot{\emph{Oops!}
-I've made |Indexable| and |HasSingle| work with functors, such as |Map|, but for the free semimodule functor/applicative/monad, I need it to be a functor in \emph{elements}, not the ``weights''.
-Hm!}
 Higher-arity liftings can be defined via these three.
 (Exercise.)
 For |b <-- a|, these definitions are not really executable code, since they involve summations are over potentially infinite ranges, but they serve as specifications for other representations such as finite maps.
@@ -1472,7 +1467,7 @@ The latter property is known as ``the convolution theorem'' \citep[Chapter 6]{Br
 \sectionl{The Free Semimodule Monad}
 
 Where there's an applicative, there's often a compatible monad.
-For |b <-- a|, the monad is known as the ``free semimodule monad'' (or sometimes the ``free \emph{vector space} monad'') \needcite{}.
+For |b <-- a|, the monad is known as the ``free semimodule monad'' (or sometimes the ``free \emph{vector space} monad'') \cite{Piponi2007MonadVS,Kmett2011FreeModules,Gehrke2017Q}.
 The dimension of the semimodule is the cardinality of |a|.
 Basis vectors have the form |single u = u +-> one| for some |u :: a| (mapping |u| to |one| and every other value to |zero| as in \figref{monoid semiring}).
 
@@ -1512,22 +1507,23 @@ One can use a variety of representations for these indexed collections.
 We'll consider efficient representations below, but let's begin as |b <-- N| along with a denotation as a (polynomial) function of type |b -> b|:
 %% Elide the Sum isomorphism
 % type N = Sum Natural
+%format poly1
 \begin{code}
-poly :: Semiring b => (b <-- N) -> (b -> b)
-poly (F f) = \ x -> bigSum i  f i * x^i
+poly1 :: Semiring b => (b <-- N) -> (b -> b)
+poly1 (F f) = \ x -> bigSum i  f i * x^i
 \end{code}
 Polynomial multiplication via convolution follows from the following property:
 \begin{theorem}[\provedIn{theorem:poly hom}]\thmlabel{poly hom}
-The function |poly| is a semiring homomorphism when multiplication on |b| commutes.
+The function |poly1| is a semiring homomorphism when multiplication on |b| commutes.
 \end{theorem}
 Pragmatically, \thmref{poly hom} says that the |b <-- N| semiring (in which |(*)| is convolution) correctly implements arithmetic on univariate polynomials.
-More usefully, we can use |Map N b| to denote |b <-- N|.
+More usefully, we can use other representations of |b <-- N|, such as |Map N b|.
 For viewing results, wrap this representation in a new type:
 %format Poly1
 \begin{code}
-newtype Poly1 b = Poly1 (Map N b) deriving (Additive, Semiring, Functor, Indexable n, HasSingle n)
+newtype Poly1 b = Poly1 (Map N b) deriving (Additive, Semiring, Indexable n, HasSingle n, Functor)
 
-instance (DetectableOne b, Show b) => Show (Poly1 b) where ...
+instance (DetectableZero b, DetectableOne b, Show b) => Show (Poly1 b) where
 \end{code}
 Try it out:
 %format Integer = Z
@@ -1593,13 +1589,13 @@ poly :: (b <-- (n -> N)) -> ((n -> b) -> b)
 poly (F f) (x :: n -> b) = bigSumQ (p :: n -> N)  f p * pows x p
 
 infixr 8 NOP ^
-(^) :: (n -> b) -> (n -> N) -> b
+(^^) :: (n -> b) -> (n -> N) -> b
 pows x p = bigProd i @@ pow (x i) ((p i))
 \end{code}
 The value of this second generalization is that the result also applies to \emph{indexable functors} (indexed by |n|), since they represent functions via |(!)| (\secref{Function-like Types and Singletons}).
 
 \begin{lemma}[\provedIn{lemma:pows hom}]\lemlabel{pows hom}
-When |(*)| commutes, |(^)| satisfies the following exponentiation laws:
+When |(*)| commutes, |(^^)| satisfies the following exponentiation laws:
 \notefoot{Maybe also |pows (pows x p) q == pows x (p * q)|. Hunch: I'd have to generalize regular exponentiation and make |(^)| a special case. Handily, I could then drop the carrot symbol.}
 \begin{code}
 pows x zero == one
@@ -1618,7 +1614,7 @@ Just like the proof of \thmref{poly hom} in \proofref{theorem:poly hom}, given \
 We can instead use |Map (f N) b| to denote |b <-- (n -> N)|, where |f| is indexable with |Key f = n|.
 One convenient choice is to let |n = String| (variable names), and |f = Map String|.\footnote{Unfortunately, the |Monoid| instance for the standard |Map| type defines |m <> m'| so that keys present in |m'| \emph{replace} those in |m|.
 This behavior is problematic for our use (and many others), so we must use a |Map| variant that wraps the standard type, changes the |Monoid| instance to so that |m <> m'| \emph{combines} values in (via |(<>)|) associated with the same keys in |m| and |m'|.}
-As with |Poly1|, wrap this representation in a new type with a |Show| instance:
+As with |Poly1|, wrap this representation in a new type, and add a |Show| instance:
 \notefoot{I elided the |DetectableOne b| constraint, but I'd like to introduce and use that class earlier and restore it here.}
 \notefoot{To do:}
 %format PolyM = Poly "_{\!M}"
@@ -1626,10 +1622,9 @@ As with |Poly1|, wrap this representation in a new type with a |Show| instance:
 %format varM = var
 %format Name = String
 \begin{code}
-newtype PolyM b = PolyM (Map (Map Name N) b) deriving
-  (Additive, Semiring, Functor, Indexable n, HasSingle n)
+newtype PolyM b = PolyM (Map (Map Name N) b) deriving (Additive, Semiring, Indexable n, HasSingle n, Functor)
 
-instance Show b => Show (PolyM b) where ...
+instance (DetectableZero b, DetectableOne b, Show b) => Show (PolyM b) where ...
 
 varM :: Semiring b => Name -> PolyM b
 varM = single . single

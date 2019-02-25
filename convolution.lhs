@@ -554,8 +554,8 @@ When |s == zero|, |s .> p == zero|, so we can discard |p| entirely.
 This optimization applies quite often in practice, for instance with languages, which tend to be sparse.
 A less dramatically helpful optimization is |one .> p == p|.
 Rather than burden each |LeftSemimodule| instance with these two optimizations, let's define |(.>)| via a more primitive |scale| method:
-%% %format DetectableZero = IsZero
-%% %format DetectableOne  = IsOne
+%format DetectableZero = IsZero
+%format DetectableOne  = IsOne
 \begin{code}
 class (Semiring s, Additive b) => LeftSemimodule s b | b -> s where
   scale :: s -> b -> b
@@ -608,7 +608,7 @@ instance Indexable a b (a -> b) where
 
 \note{Add a law for |Indexable|: |(!)| must be natural?
 Probably also that |h| maps |Additive| to |Additive| and that |(!)| is an |Additive| homomorphism.
-Hm. It seems I can't even express those law now that there's no functor.
+Hm. It seems I can't even express those laws now that there's no functor.
 }
 
 \secref{Monoids, Semirings and Semimodules} provides a fair amount of vocabulary for combining values.
@@ -1278,7 +1278,8 @@ As a suitable indexable functor, we can simply use the identity functor:
 %% %format Identity = Id
 %format Id = Identity
 \begin{code}
-newtype Id b = Id b deriving (Functor, Additive, DetectableZero, DetectableOne, LeftSemimodule s, Semiring)
+newtype Id b = Id b deriving
+  (Functor, Additive, DetectableZero, DetectableOne, LeftSemimodule s, Semiring)
 
 instance Indexable  () b (Id b) where Id a NOP ! NOP () = a
 instance HasSingle  () b (Id b) where () +-> b = Id b
@@ -1286,16 +1287,6 @@ instance HasSingle  () b (Id b) where () +-> b = Id b
 The type |LTrie Identity| is isomorphic to \emph{streams} (infinite-only lists).
 Inlining and simplification during compilation can then eliminate all of the run-time overhead of introducing the identity functor.
 Alternatively, one could hand-optimize for streams.
-
-\workingHere
-
-\noindent
-\note{Next:
-\begin{itemize}
-\item Lists (finite) instead of streams (infinite), with a semantic function that zero-pads.
-\item Non-scalar domains as in notes from 2019-01-\{28,29\}.
-\end{itemize}
-}
 
 
 \sectionl{Beyond Convolution}
@@ -1596,7 +1587,7 @@ The value of this second generalization is that the result also applies to \emph
 
 \begin{lemma}[\provedIn{lemma:pows hom}]\lemlabel{pows hom}
 When |(*)| commutes, |(^^)| satisfies the following exponentiation laws:
-\notefoot{Maybe also |pows (pows x p) q == pows x (p * q)|. Hunch: I'd have to generalize regular exponentiation and make |(^)| a special case. Handily, I could then drop the carrot symbol.}
+\notefoot{Maybe also |pows (pows x p) q == pows x (p * q)|. Hunch: I'd have to generalize regular exponentiation and make |(^^)| a special case. Handily, I could then drop the carrot symbol.}
 \begin{code}
 pows x zero == one
 pows x (p + q) == pows x p * pows x q
@@ -2347,7 +2338,7 @@ poly (F (\ i -> if i == n then b else zero))          -- |(+->)| on |b <-- a| (d
 
 \begin{code}
     pows x zero
-==  bigProd i @@ pow (x i) (zero i)  -- |(^)| definition
+==  bigProd i @@ pow (x i) (zero i)  -- |(^^)| definition
 ==  bigProd i @@ pow (x i) zero      -- |zero| on functions
 ==  bigProd i one                    -- exponentiation law
 ==  one                              -- multiplicative identity
@@ -2355,11 +2346,11 @@ poly (F (\ i -> if i == n then b else zero))          -- |(+->)| on |b <-- a| (d
 
 \begin{code}
     pows x (p + q)
-==  bigProd i @@ pow (x i) ((p + q) i)                                           -- |(^)| definition
+==  bigProd i @@ pow (x i) ((p + q) i)                                           -- |(^^)| definition
 ==  bigProd i @@ pow (x i) (p i + q i)                                           -- |(+)| on functions
 ==  bigProd i @@ (pow (x i) (p i)) * (pow (x i) (q i))                           -- exponentiation law (with commutative |(*)|)
 ==  paren (bigProd i @@ pow (x i) (p i)) * paren (bigProd i @@ pow (x i) (q i))  -- product property (with commutative |(*)|)
-==  pows x p * pows x q                                                          -- |(^)| definition
+==  pows x p * pows x q                                                          -- |(^^)| definition
 \end{code}
 
 %endif extended

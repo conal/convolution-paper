@@ -13,7 +13,6 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 *   The comonad connection.
 *   Probabilistic computation.
 *   Arithmetic on infinite series.
-*   Lots of needed references (`\\needcite`).
 *   Reconsider title after writing the introduction and related work sections.
 *   Sets are to languages as binary relations are to what?
     Currying gets us to `String -> String -> Bool` (for sets).
@@ -128,6 +127,7 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 
 ## Did
 
+*   Lots of needed references (`\\needcite`).
 *   Benchmarking at least of regexp vs tries.
     Last I checked, my regexp implementations fail to terminate on $a^n n^bn$.
 *   Convolution commutes with currying and with uncurrying.

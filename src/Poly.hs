@@ -224,6 +224,11 @@ integral (Series1 bs0) = Series1 (0 :# go 1 bs0)
  where
    go n (b :# bs) = b/n :# go (n+1) bs
 
+derivative :: Fractional b => Series1 b -> Series1 b
+derivative (Series1 (_ :# bs0)) = Series1 (go 1 bs0)
+ where
+   go n (b :# bs) = n * b :# go (n+1) bs
+
 sinS, cosS, expS :: Series1 Rational
 sinS = integral cosS
 cosS = 1 - integral sinS
@@ -234,6 +239,13 @@ expS = 1 + integral expS
 -- >>> cosS
 -- 1 % 1 + (-1) % 2 * x^2 + 1 % 24 * x^4 + (-1) % 720 * x^6 + 1 % 40320 * x^8 + (-1 ...
 -- >>> expS
+-- 1 % 1 + x + 1 % 2 * x^2 + 1 % 6 * x^3 + 1 % 24 * x^4 + 1 % 120 * x^5 + 1 % 720 * ...
+
+-- >>> derivative sinS  -- == cosS
+-- 1 % 1 + (-1) % 2 * x^2 + 1 % 24 * x^4 + (-1) % 720 * x^6 + 1 % 40320 * x^8 + (-1 ...
+-- >>> derivative cosS  -- == - sinS
+-- (-1) % 1 * x + 1 % 6 * x^3 + (-1) % 120 * x^5 + 1 % 5040 * x^7 + (-1) % 362880 * ...
+-- >>> derivative expS  -- == expS
 -- 1 % 1 + x + 1 % 2 * x^2 + 1 % 6 * x^3 + 1 % 24 * x^4 + 1 % 120 * x^5 + 1 % 720 * ...
 
 -- >>> 2 * expS

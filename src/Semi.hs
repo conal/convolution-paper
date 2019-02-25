@@ -45,7 +45,7 @@ class Additive b where
   (<+>) :: b -> b -> b
   infixr 6 <+>
 
-class Additive b => DetectableZero b where
+class {- Additive b => -} DetectableZero b where
   isZero :: b -> Bool
 
 class Additive b => Semiring b where
@@ -53,7 +53,7 @@ class Additive b => Semiring b where
   (<.>) :: b -> b -> b
   infixr 7 <.>
 
-class Semiring b => DetectableOne b where
+class {- Semiring b => -} DetectableOne b where
   isOne :: b -> Bool
 
 class Semiring b => StarSemiring b  where
@@ -168,7 +168,7 @@ instance (Ord a, Additive b) => Additive (Map a b) where
   zero = M.empty
   (<+>) = M.unionWith (<+>)
 
-instance (Ord a, Additive b) => DetectableZero (Map a b) where isZero = M.null
+instance {- (Ord a, Additive b) => -} DetectableZero (Map a b) where isZero = M.null
 
 -- FunctorSemimodule(Map a)
 

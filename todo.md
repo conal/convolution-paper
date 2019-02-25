@@ -12,6 +12,7 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 *   Benchmarking results
 *   The comonad connection.
 *   Probabilistic computation.
+*   Arithmetic on infinite series.
 *   Lots of needed references (`\\needcite`).
 *   Reconsider title after writing the introduction and related work sections.
 *   Sets are to languages as binary relations are to what?

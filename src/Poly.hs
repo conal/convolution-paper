@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
+-- {-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
 
 -- | Playing with polynomials
 
@@ -6,12 +6,12 @@ module Poly where
 
 import Prelude hiding ((^),sum)
 
-import GHC.Natural (Natural)
+import Data.List (intercalate,intersperse,sortOn)
+import GHC.Exts(IsString(..))
+-- import GHC.Natural (Natural)
 -- import Data.Map (Map)
 -- import qualified Data.Map as M
-import Data.List (intercalate,intersperse,sortOn)
-import qualified Data.Foldable as F
-import GHC.Exts(IsString(..))
+-- import qualified Data.Foldable as F
 
 import Misc ((:*))
 import Semi
@@ -43,6 +43,15 @@ instance (DetectableOne b, Show b) => Show (Poly1 b) where
                          -- showString "pow x ". showsPrec 8 i
                          -- showString "x^" . showsPrec 8 i
 
+showPow :: (Show a, Show b) => a -> b -> ShowS
+showPow a b = showsPrec 8 a . showString "^" . showsPrec 8 b
+              -- showString "pow " . showsPrec 8 a . showString " " . showsPrec 8 b
+
+showTimes :: ShowS
+showTimes = showString " * "
+-- showTimes = showString " "
+-- Always generate "*", but suppress it in the paper. Looks great.
+
 eval1 :: Semiring b => Poly1 b -> b -> b
 eval1 (Poly1 m) z = sum [b <.> z^i | (i,b) <- M.toList m]
 
@@ -50,11 +59,11 @@ eval1 (Poly1 m) z = sum [b <.> z^i | (i,b) <- M.toList m]
 -- >>> p
 -- x + 3
 -- 
--- >>> pow p 3
--- pow x 3 + 9 * pow x 2 + 27 * x + 27
+-- >>> p^3
+-- x^3 + 9 * x^2 + 27 * x + 27
 -- 
--- >>> pow p 5
--- pow x 5 + 15 * pow x 4 + 90 * pow x 3 + 270 * pow x 2 + 405 * x + 243
+-- >>> p^5
+-- x^5 + 15 * x^4 + 90 * x^3 + 270 * x^2 + 405 * x + 243
 
 type P2 = Map (N :* N)
 
@@ -137,21 +146,6 @@ instance (DetectableOne b, Show b) => Show (PolyM b) where
           | i == 1    = showsPrec 7 name
           | otherwise = showPow name i
 
-#define ForPaper
-
-showPow :: (Show a, Show b) => a -> b -> ShowS
-#ifdef ForPaper
--- showPow a b = showString "(wrap (pow " . showsPrec 8 a . showString " " . showsPrec 8 b . showString "))"
-showPow a b = showString "pow " . showsPrec 8 a . showString " " . showsPrec 8 b
-#else
-showPow a b = showsPrec 8 a . showString "^" . showsPrec 8 b
-#endif
-
-showTimes :: ShowS
-showTimes = showString " * "
--- showTimes = showString " "
--- Always generate "*", but suppress it in the paper. Looks great.
-
 -- TODO: try changing isZero for Map to be 'all isZero'. Might wedge on recursive examples.
 
 -- varM :: Name -> PolyM Z
@@ -163,20 +157,20 @@ varM = single . single
 -- 
 -- >>> p
 -- x + y
--- >>> pow p 2
--- pow x 2 + 2 * x * y + pow y 2
--- >>> pow p 5
--- pow x 5 + 5 * pow x 4 * y + 10 * pow x 3 * pow y 2 + 10 * pow x 2 * pow y 3 + 5 * x * pow y 4 + pow y 5
+-- >>> p^2
+-- x^2 + 2 * x * y + y^2
+-- >>> p^5
+-- x^5 + 5 * x^4 * y + 10 * x^3 * y^2 + 10 * x^2 * y^3 + 5 * x * y^4 + y^5
 -- 
 -- >>> q
 -- x + y + z
--- >>> pow q 2
--- pow x 2 + 2 * x * y + 2 * x * z + pow y 2 + 2 * y * z + pow z 2
--- >>> pow q 3
--- pow x 3 + 3 * pow x 2 * y + 3 * x * pow y 2 + 6 * x * y * z + 3 * pow x 2 * z + 3 * x * pow z 2 + pow y 3 + 3 * pow y 2 * z + 3 * y * pow z 2 + pow z 3
+-- >>> q^2
+-- x^2 + 2 * x * y + 2 * x * z + y^2 + 2 * y * z + z^2
+-- >>> q^3
+-- x^3 + 3 * x^2 * y + 3 * x * y^2 + 6 * x * y * z + 3 * x^2 * z + 3 * x * z^2 + y^3 + 3 * y^2 * z + 3 * y * z^2 + z^3
 
 -- >>> p <.> q
--- (wrap (pow x 2)) + 2 * x * y + x * z + (wrap (pow y 2)) + y * z
+-- x^2 + 2 * x * y + x * z + y^2 + y * z
 
 #if 0
 

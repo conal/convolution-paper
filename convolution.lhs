@@ -203,13 +203,16 @@ All of the algorithms in the paper follow from simple specifications in the form
 %% %format (single (s)) = "\single{"s"}"
 %format (set (e)) = "\set{"e"}"
 %format bigunion (lim) (body) = "\bigunion_{" lim "}{" body "}"
-%format pow a (b) = a "^{" b "}"
 %format `union` = "\cup"
 %format union = (`union`)
 %format `intersection` = "\cap"
 %format intersection = (`intersection`)
 %format star p = "\closure{"p"}"
 %format exists = "\exists"
+
+%format ^ = "^"
+%% Handy alternative for complex exponent
+%format pow a (b) = a "^{" b "}"
 
 %format bigUnion (lim) = "\bigOp\bigcup{" lim "}{0}"
 %format bigSum (lim) = "\bigOp\sum{" lim "}{0}"
@@ -233,15 +236,13 @@ All of the algorithms in the paper follow from simple specifications in the form
 \note{
 Some contributions:
 \begin{itemize}
-\item
-  Generalize Brzozowski's algorithm from (a) regular expressions representing sets of strings to (b) representations of functions from sequences to any semiring, including relations.
-\item
-  Demonstrate that the tricky aspect of Brzozowski's algorithm is an instance of generalized convolution.
-\item
-  Applying the generalized algorithm to tries instead of regular expressions, which is simpler and apparently quite efficient, requiring no construction or manipulation of syntactic representations.
-\item
-  A simple and very general algorithm for multivariate polynomial multiplication.
-  (And infinite series?)
+\item Generalize Brzozowski's algorithm from (a) regular expressions representing sets of strings to (b) representations of functions from sequences to any semiring, including relations.
+\item Demonstrate that the tricky aspect of Brzozowski's algorithm is an instance of generalized convolution.
+      \note{Hm. Already observed, so not really a contribution.}
+\item Applying the generalized algorithm to tries instead of regular expressions, which is simpler and apparently quite efficient, requiring no construction or manipulation of syntactic representations.
+\item Application and evaluation of some simple memoization strategies resulting in quite dramatic speed improvement.
+\item A simple and very general algorithm for multivariate polynomial multiplication.
+      (And infinite series?)
 \end{itemize}
 }
 
@@ -446,10 +447,8 @@ Currying and uncurrying are semiring homomorphisms.
 
 The semiring operations allow all \emph{finite} combinations of addition, zero, multiplication, and one.
 It's often useful, however, to form infinite combinations, particularly in the form of Stephen Kleene's ``star'' (or ``closure'') operation:
-% I can't get pow i working in context here
-%format ptoi = "p^i"
 \begin{code}
-star p = bigSum (i>=0) @@ pow p i -- where |pow p 0 = one|, and |pow p (n+1) = p * pow p n|.
+star p = bigSum (i>=0) @@ p^i -- where |p^0 = one|, and |pow p (n+1) = p * p^n|.
 \end{code}
 Another characterization is as a solution to either of the following semiring equations:
 \begin{code}
@@ -788,7 +787,7 @@ Conspicuously missing, however, are the usual notions of language concatenation 
 \begin{code}
 U V = set (u <> v | u <# U && v <# V)
 
-star U = bigUnion (i >= 0) @@ pow U i -- where |pow U 0 = one|, and |pow U (n+1) = U @@ pow U n|.
+star U = bigUnion (i >= 0) @@ U^i -- where |U^0 = one|, and |pow U (n+1) = U @@ U^n|.
 \end{code}
 Intriguingly, this |star U| definition would satisfy the |StarSemiring| laws if |(*)| were language concatenation.
 A bit of reasoning shows that all of the semiring laws would hold as well:
@@ -1508,14 +1507,14 @@ As is well known, univariate polynomials form a semiring and can be multiplied b
 Perhaps less known is that this trick extends naturally to multivariate polynomials and to (univariate and multivariate) power series.
 
 Looking more closely, univariate polynomials (and even power series) can be represented by a collection of coefficients indexed by exponents, or conversely as a collection of exponents weighted by coefficients.
-For a polynomial in a variable |x|, an association of coefficient |c| with exponent |i| represents the monomial (polynomial term) |c * pow x i|.
+For a polynomial in a variable |x|, an association of coefficient |c| with exponent |i| represents the monomial (polynomial term) |c * x^i|.
 One can use a variety of representations for these indexed collections.
 We'll consider efficient representations below, but let's begin as |b <-- N| along with a denotation as a (polynomial) function of type |b -> b|:
 %% Elide the Sum isomorphism
 % type N = Sum Natural
 \begin{code}
 poly :: Semiring b => (b <-- N) -> (b -> b)
-poly (F f) = \ x -> bigSum i  f i * pow x i
+poly (F f) = \ x -> bigSum i  f i * x^i
 \end{code}
 Polynomial multiplication via convolution follows from the following property:
 \begin{theorem}[\provedIn{theorem:poly hom}]\thmlabel{poly hom}
@@ -1542,11 +1541,11 @@ Try it out:
 >>> p
 x + 3
 
->>> pow p 3
-pow x 3 + 9 * pow x 2 + 27 * x + 27
+>>> p^3
+x^3 + 9 * x^2 + 27 * x + 27
 
->>> pow p 5
-pow x 5 + 15 * pow x 4 + 90 * pow x 3 + 270 * pow x 2 + 405 * x + 243
+>>> p^5
+x^5 + 15 * x^4 + 90 * x^3 + 270 * x^2 + 405 * x + 243
 
 \end{code}
 %}
@@ -1557,22 +1556,21 @@ Consider a 2D domain:
 %format poly2
 \begin{code}
 poly2 :: Semiring b => (b <-- N :* N) -> (b * b -> b)
-poly2 (F f) = \ (x,y) -> bigSum (i,j) f (i,j) * pow x i * pow y j
+poly2 (F f) = \ (x,y) -> bigSum (i,j) f (i,j) * x^i * y^j
 \end{code}
 Then
 \begin{code}
     poly2 (F f) (x,y)
-==  bigSum (i,j) f (i,j) * pow x i * pow y j             -- |poly2| definition
-==  bigSum (i,j) curry f i j * pow x i * pow y j         -- |curry| definition
-==  bigSum i (bigSum j curry f i j * pow y j) * pow x i  -- linearity and commutativity assumption
-==  bigSum i poly (curry f i) y * pow x i                -- |poly| definition
-==  poly (\ i -> poly (curry f i) y) x                   -- |poly| definition
+==  bigSum (i,j) f (i,j) * x^i * y^j             -- |poly2| definition
+==  bigSum (i,j) curry f i j * x^i * y^j         -- |curry| definition
+==  bigSum i (bigSum j curry f i j * y^j) * x^i  -- linearity and commutativity assumption
+==  bigSum i poly (curry f i) y * x^i            -- |poly| definition
+==  poly (\ i -> poly (curry f i) y) x           -- |poly| definition
 \end{code}
 The essential idea here is that a polynomial with a pair-valued domain can be viewed as a polynomial over polynomials.
 
 We can do much better, however, generalizing from two dimensions to |n| dimensions for any |n|:
-%format ^ = "\string^"
-
+%format ^^ = "\string^"
 %format pows a (b) = a "\!{\string^}^{\hspace{-1pt}" b "}"
 %% %format pows a (b) = pow a (^b)
 
@@ -1581,15 +1579,15 @@ We can do much better, however, generalizing from two dimensions to |n| dimensio
 %format bigProd (lim) = "\bigOp\prod{" lim "}{0}"
 %% %format bigProdQ (lim) = "\bigOp\prod{" lim "}{1}"
 \begin{code}
-poly :: (b <-- pow N n) -> (pow b n -> b)
-poly (F f) (x :: pow b n) = bigSum (p :: pow N n)  f p * pows x p
+poly :: (b <-- N^n) -> (b^n -> b)
+poly (F f) (x :: b^n) = bigSum (p :: N^n)  f p * pows x p
 
-infixr 8 NOP ^
-(^) :: pow b n -> pow N n -> b
+infixr 8 NOP ^^
+(^^) :: b^n -> N^n -> b
 pows x p = bigProd (i < n) @@ pow (psub x i) (sub p i)
 \end{code}
-For instance, for |n=3|, |pows (x,y,z) ((i,j,k)) = pow x i * pow y j * pow z k|.
-Generalizing further, rather than taking |n| here to be a natural number, let |n| be any type of countable size, and interpret |pow b n| and |pow N n| as |n -> b| and |n -> N|:
+For instance, for |n=3|, |pows (x,y,z) ((i,j,k)) = x^i * y^j * z^k|.
+Generalizing further, rather than taking |n| here to be a natural number, let |n| be any type with countable cardinality, and interpret |b^n| and |N^n| as |n -> b| and |n -> N|:
 \begin{code}
 poly :: (b <-- (n -> N)) -> ((n -> b) -> b)
 poly (F f) (x :: n -> b) = bigSumQ (p :: n -> N)  f p * pows x p
@@ -1649,17 +1647,17 @@ Try it out:
 
 >>> p
 x + y
->>> pow p 2
-pow x 2 + 2 * x * y + pow y 2
->>> pow p 5
-pow x 5 + 5 * pow x 4 * y + 10 * pow x 3 * pow y 2 + 10 * pow x 2 * pow y 3 + 5 * x * pow y 4 + pow y 5
+>>> p^2
+x^2 + 2 * x * y + y^2
+>>> p^5
+x^5 + 5 * x^4 * y + 10 * x^3 * y^2 + 10 * x^2 * y^3 + 5 * x * y^4 + y^5
 
 >>> q
 x + y + z
->>> pow q 2
-pow x 2 + 2 * x * y + 2 * x * z + pow y 2 + 2 * y * z + pow z 2
->>> pow q 3
-pow x 3 + 3 * pow x 2 * y + 3 * x * pow y 2 + 6 * x * y * z + 3 * pow x 2 * z + 3 * x * pow z 2 + pow y 3 + 3 * pow y 2 * z + 3 * y * pow z 2 + pow z 3
+>>> q^2
+x^2 + 2 * x * y + 2 * x * z + y^2 + 2 * y * z + z^2
+>>> q^3
+x^3 + 3 * x^2 * y + 3 * x * y^2 + 6 * x * y * z + 3 * x^2 * z + 3 * x * z^2 + y^3 + 3 * y^2 * z + 3 * y * z^2 + z^3
 
 \end{code}
 %}
@@ -1924,13 +1922,13 @@ For the other two equations:
 \end{code}
 
 %else
-%% \note{For the |star p| proof, maybe instead show inductively that |atEps (pow p n) == pow (atEps p) n| for all |n >= 0|, and then appeal to the summation definition of |star p|.}
+%% \note{For the |star p| proof, maybe instead show inductively that |atEps (p^n) == (atEps p)^n| for all |n >= 0|, and then appeal to the summation definition of |star p|.}
 
 \begin{code}
     atEps (star p)
-==  atEps (bigSum i @@ pow p i)  -- alternative |star| formulation
-==  bigSum i @@ pow (atEps p) i  -- |atEps| is a semiring homomorphism (above)
-==  star (atEps p)               -- defining property of |star|
+==  atEps (bigSum i @@ p^i)  -- alternative |star p| formulation
+==  bigSum i @@ (atEps p)^i  -- |atEps| is a semiring homomorphism (above)
+==  star (atEps p)           -- defining property of |star|
 \end{code}
 
 %endif
@@ -2288,63 +2286,63 @@ Similarly for |liftA2|:
 
 \begin{code}
     poly zero
-==  poly (F (\ i -> zero))             -- |zero| on |b <-- a| (derived)
-==  \ x -> bigSum i  zero <.> pow x i  -- |poly| definition
-==  \ x -> bigSum i  zero              -- |zero| as annihilator
-==  \ x -> zero                        -- |zero| as additive identity
-==  zero                               -- |zero| on functions
+==  poly (F (\ i -> zero))         -- |zero| on |b <-- a| (derived)
+==  \ x -> bigSum i  zero <.> x^i  -- |poly| definition
+==  \ x -> bigSum i  zero          -- |zero| as annihilator
+==  \ x -> zero                    -- |zero| as additive identity
+==  zero                           -- |zero| on functions
 \end{code}
 
 \begin{code}
     poly one
-==  poly (pure mempty)                                              -- |one| on |b <-- a|
-==  poly (F (\ i -> if i == mempty then one else zero))             -- |pure| on |(<--) b|
-==  poly (F (\ i -> if i == Sum 0 then one else zero))              -- |mempty| on |N|
-==  \ x -> bigSum i (if i == Sum 0 then one else zero) <.> pow x i  -- |poly| definition
-==  \ x -> bigSum i (if i == Sum 0 then pow x i else zero)          -- simplify
-==  \ x -> pow x 0                                                  -- other terms vanish
-==  \ x -> one                                                      -- multiplicative identity
-==  one                                                             -- |one| on |a -> b|
+==  poly (pure mempty)                                          -- |one| on |b <-- a|
+==  poly (F (\ i -> if i == mempty then one else zero))         -- |pure| on |(<--) b|
+==  poly (F (\ i -> if i == Sum 0 then one else zero))          -- |mempty| on |N|
+==  \ x -> bigSum i (if i == Sum 0 then one else zero) <.> x^i  -- |poly| definition
+==  \ x -> bigSum i (if i == Sum 0 then x^i else zero)          -- simplify
+==  \ x -> x^0                                                  -- other terms vanish
+==  \ x -> one                                                  -- multiplicative identity
+==  one                                                         -- |one| on |a -> b|
 \end{code}
 
 \begin{code}
     poly (F f <+> F g)
-==  poly (F (\ i -> f i <+> g i))                                       -- |(<+>)| on |b <-- a| (derived)
-==  \ x -> bigSum i  (f i <+> g i) <.> pow x i                          -- |poly| definition
-==  \ x -> bigSum i  f i <.> pow x i <+> g i <.> pow x i                -- distributivity
-==  \ x -> (bigSum i  f i <.> pow x i) <+> (bigSum i  g i <.> pow x i)  -- summation property
-==  \ x -> poly (F f) x <+> poly (F g) x                                -- |poly| definition
-==  poly (F f) <+> poly (F g)                                           -- |(<+>)| on |a -> b|
+==  poly (F (\ i -> f i <+> g i))                               -- |(<+>)| on |b <-- a| (derived)
+==  \ x -> bigSum i  (f i <+> g i) <.> x^i                      -- |poly| definition
+==  \ x -> bigSum i  f i <.> x^i <+> g i <.> x^i                -- distributivity
+==  \ x -> (bigSum i  f i <.> x^i) <+> (bigSum i  g i <.> x^i)  -- summation property
+==  \ x -> poly (F f) x <+> poly (F g) x                        -- |poly| definition
+==  poly (F f) <+> poly (F g)                                   -- |(<+>)| on |a -> b|
 \end{code}
 
 \begin{code}
     poly (F f <.> F g)
-==  poly (liftA2 (<>) (F f) (F g))                                      -- |(<.>)| on |b <-- a|
-==  poly (bigSum (i,j)  i <> j +-> f i <.> g j)                         -- |liftA2| on |b <-- a|
-==  poly (bigSum (i,j)  i + j +-> f i <.> g j)                          -- |(<>)| on |N|
-==  bigSum (i,j)  poly (i + j +-> f i <.> g j)                          -- additivity of |poly| (previous property)
-==  bigSum (i,j) (\ x -> (f i <.> g j) <.> pow x (i + j))               -- \lemref{poly +->} below
-==  \ x -> bigSum (i,j) (f i <.> g j) <.> pow x (i + j)                 -- |(<+>)| on functions
-==  \ x -> bigSum (i,j) (f i <.> g j) <.> (pow x i <.> pow x j)         -- exponentiation property
-==  \ x -> bigSum (i,j) (f i <.> pow x i) <.> (g j <.> pow x j)         -- commutativity assumption
-==  \ x -> (bigSum i  f i <.> pow x i) <.> (bigSum j  g j <.> pow x j)  -- summation property
-==  \ x -> poly (F f) x <.> poly F g) x                                 -- |poly| definition
-==  poly (F f) <.> poly F g)                                            -- |(<.>)| on functions
+==  poly (liftA2 (<>) (F f) (F g))                              -- |(<.>)| on |b <-- a|
+==  poly (bigSum (i,j)  i <> j +-> f i <.> g j)                 -- |liftA2| on |b <-- a|
+==  poly (bigSum (i,j)  i + j +-> f i <.> g j)                  -- |(<>)| on |N|
+==  bigSum (i,j)  poly (i + j +-> f i <.> g j)                  -- additivity of |poly| (previous property)
+==  bigSum (i,j) (\ x -> (f i <.> g j) <.> pow x (i + j))       -- \lemref{poly +->} below
+==  \ x -> bigSum (i,j) (f i <.> g j) <.> pow x (i + j)         -- |(<+>)| on functions
+==  \ x -> bigSum (i,j) (f i <.> g j) <.> (x^i <.> x^j)         -- exponentiation property
+==  \ x -> bigSum (i,j) (f i <.> x^i) <.> (g j <.> x^j)         -- commutativity assumption
+==  \ x -> (bigSum i  f i <.> x^i) <.> (bigSum j  g j <.> x^j)  -- summation property
+==  \ x -> poly (F f) x <.> poly F g) x                         -- |poly| definition
+==  poly (F f) <.> poly F g)                                    -- |(<.>)| on functions
 \end{code}
 
 %% \note{The sum and product derivations might read more easily in reverse.}
 
 \begin{lemma}\lemlabel{poly +->}~
 \begin{code}
-poly (n +-> b) = \ x -> b * pow x n
+poly (n +-> b) = \ x -> b * x^n
 \end{code}
 \end{lemma}
 \begin{proof}~
 \begin{code}
 poly (n +-> b)
-poly (F (\ i -> if i == n then b else zero))              -- |(+->)| on |b <-- a| (derived)
-\ x -> bigSum i (if i == n then b else zero) <.> pow x n  -- |poly| definition
-\ x -> b * pow x n                                        -- other terms vanish
+poly (F (\ i -> if i == n then b else zero))          -- |(+->)| on |b <-- a| (derived)
+\ x -> bigSum i (if i == n then b else zero) <.> x^n  -- |poly| definition
+\ x -> b * x^n                                        -- other terms vanish
 \end{code}
 \end{proof}
 

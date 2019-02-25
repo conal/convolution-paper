@@ -251,3 +251,8 @@ expS = 1 + integral expS
 
 -- TODO: multivariate power series
 -- Can I generalize Poly1 and PolyM?
+
+-- Try lists as LTrie Maybe.
+-- Generalize my `Poly1` and `PolyM` definitions.
+-- Maybe even unify them.
+

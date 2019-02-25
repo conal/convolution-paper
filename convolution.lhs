@@ -1277,15 +1277,15 @@ Alternatively, curry, convolve, and uncurry, exploiting the fact that |curry| is
 What if we use functions from |N| rather than from |Z|?
 Because |N =~ [Unit]| (essentially, Peano numbers), we can directly use the definitions in \secref{Decomposing Functions from Lists} for domain |[c]|, specialized to |c = Unit|.
 As a suitable indexable functor, we can simply use the identity functor:
+%% %format Identity = Id
+%format Id = Identity
 \begin{code}
-newtype Identity b = Identity b
+newtype Id b = Id b deriving (Functor, Additive, DetectableZero, DetectableOne, LeftSemimodule s, Semiring)
 
-instance Indexable b Identity where
-  type Key Identity = ()
-  Identity a ! () = a
+instance Indexable  () b (Id b) where Id a NOP ! NOP () = a
+instance HasSingle  () b (Id b) where () +-> b = Id b
 \end{code}
 The type |LTrie Identity| is isomorphic to \emph{streams} (infinite-only lists).
-All of the needed classes instances are derived automatically.
 Inlining and simplification during compilation can then eliminate all of the run-time overhead of introducing the identity functor.
 Alternatively, one could hand-optimize for streams.
 
@@ -1664,6 +1664,8 @@ x^3 + 3 * x^2 * y + 3 * x * y^2 + 6 * x * y * z + 3 * x^2 * z + 3 * x * z^2 + y^
 
 \note{Next:
 \begin{itemize}\itemsep0ex
+\item Power series (infinite polynomials).
+      Maybe also |[a]|, representing |a <-- N|.
 \item Should I move multidimensional convolution to \secref{Convolution}?
 \item References on multivariate polynomial multiplication \href{https://www.google.com/search?q=algorithm+for+multiplying+multivariate+polynomials}{(starting here)}
 \item Generalize to $m$-dimensional codomains (and maybe swap roles of $m$ and $n$)

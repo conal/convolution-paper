@@ -6,7 +6,7 @@ module Poly where
 
 import Prelude hiding ((^),sum)
 
-import Data.List (intercalate,intersperse,sortOn)
+import Data.List (intersperse,sortOn) -- intercalate,
 import GHC.Exts(IsString(..))
 -- import GHC.Natural (Natural)
 -- import Data.Map (Map)
@@ -27,30 +27,52 @@ instance IsString Name where fromString = Name
 newtype Poly1 b = Poly1 (Map N b) deriving
   (Additive, Semiring, Functor, Indexable N b, HasSingle N b)
 
-instance (DetectableOne b, Show b) => Show (Poly1 b) where
+-- data Pow b n = Pow b n  -- b * x^n
+
+-- instance Show (Pow b n) where
+--   showsPrec d (Pow b n) =
+--   | isZero n  = id
+--   | isOne  n  = showsPrec d b
+--   | otherwise = showsPrec 8 b . showString "^" . showsPrec 8 n
+
+
+-- TODO: eliminate in favor of Show (Pow b n)
+showPow :: (Show b, Show n, DetectableZero n, DetectableOne n) => b -> n -> ShowS
+showPow b n
+  | isZero n  = id
+  | isOne  n  = showsPrec 7 b
+  | otherwise = showsPrec 8 b . showString "^" . showsPrec 8 n
+
+instance (DetectableZero b, DetectableOne b, Show b) => Show (Poly1 b) where
   showsPrec d (Poly1 m) = showParen (d >= 6) $
      foldr (.) id (intersperse (showString " + ") (term <$> M.toDescList m))
    where
      term :: (N,b) -> ShowS
-     term (Sum i, b)
-       | i == 0    = showsPrec 6 b
-       | isOne b   = xs
-       | otherwise = showsPrec 6 b . showTimes . xs
+     -- term (Sum i, b) = b `showTimes'` Pow (Name "x") i
+     term (Sum i, b)  -- b * x^i
+       | isZero i  = sb
+       | isZero b  = sb -- zero
+       | isOne  b  = xs
+       | otherwise = sb . showTimes . xs
       where
-        xs | i == 0    = id
-           | i == 1    = showString "x"
-           | otherwise = showPow (Name "x") i
-                         -- showString "pow x ". showsPrec 8 i
-                         -- showString "x^" . showsPrec 8 i
-
-showPow :: (Show a, Show b) => a -> b -> ShowS
-showPow a b = showsPrec 8 a . showString "^" . showsPrec 8 b
-              -- showString "pow " . showsPrec 8 a . showString " " . showsPrec 8 b
+        sb = showsPrec 6 b
+        xs = showPow (Name "x") i
 
 showTimes :: ShowS
 showTimes = showString " * "
 -- showTimes = showString " "
 -- Always generate "*", but suppress it in the paper. Looks great.
+
+showTimes' :: (Show b, Show x, DetectableOne x, DetectableZero b, DetectableOne b)
+           => b -> x -> ShowS
+showTimes' b x  -- b * x
+  | isZero b  = b' -- zero
+  | isOne  x  = b'
+  | isOne  b  = x'
+  | otherwise = b' . showTimes . x'
+ where
+   b' = showsPrec 6 b
+   x' = showsPrec 6 x
 
 eval1 :: Semiring b => Poly1 b -> b -> b
 eval1 (Poly1 m) z = sum [b <.> z^i | (i,b) <- M.toList m]
@@ -128,7 +150,7 @@ showsPrecTerm names d (b,m) = showParen (d >= 7) $
 newtype PolyM b = PolyM { unPolyM :: Map (Map Name N) b } deriving
   (Additive, Semiring, Functor, Indexable (Map Name N) b, HasSingle (Map Name N) b)
 
-instance (DetectableOne b, Show b) => Show (PolyM b) where
+instance (DetectableZero b, DetectableOne b, Show b) => Show (PolyM b) where
   showsPrec d (PolyM m) = showParen (d >= 6) $
      foldr (.) id (intersperse (showString " + ")
                     -- TODO: better ordering
@@ -136,15 +158,14 @@ instance (DetectableOne b, Show b) => Show (PolyM b) where
    where
      term :: (Map Name N,b) -> ShowS
      term (pows, b)
-       | all (== 0) pows = showsPrec 6 b
-       | isOne b = xs
-       | otherwise = showsPrec 6 b . showTimes . xs
+       | all (== 0) pows = sb
+       | isZero b        = sb
+       | isOne b         = xs
+       | otherwise       = sb . showTimes . xs
       where
+        sb = showsPrec 6 b
         xs = foldr (.) id (intersperse showTimes (factor <$> M.toAscList pows))
-        factor (name,Sum i)
-          | i == 0    = id
-          | i == 1    = showsPrec 7 name
-          | otherwise = showPow name i
+        factor (name,Sum i) = showPow name i
 
 -- TODO: try changing isZero for Map to be 'all isZero'. Might wedge on recursive examples.
 

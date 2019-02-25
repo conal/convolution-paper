@@ -9,8 +9,9 @@ import Prelude hiding ((^),sum)
 import Data.List (intersperse,sortOn) -- intercalate,
 import GHC.Exts(IsString(..))
 
-import Misc ((:*))
+-- import Misc ((:*))
 import Semi
+import LTrie (LTrie(..))
 
 import MMap (Map)  -- like Data.Map but better Monoid instance
 import qualified MMap as M
@@ -22,16 +23,18 @@ import qualified MMap as M
 compose :: [a -> a] -> (a -> a)
 compose = foldr (.) id
 
-showIter :: Show b => Int -> String -> Int -> [b] -> ShowS
-showIter inner op outer bs =
+showIter :: Show b => Int -> String -> (b -> Bool) -> Int -> [b] -> ShowS
+showIter inner op omit outer bs =
   showParen (outer > inner) $
-  compose (intersperse (showString op) (showsPrec inner <$> bs))
+  compose (intersperse (showString op) (showsPrec inner <$> filter (not . omit) bs))
 
 -- TODO: check for empty bs and for singleton bs
 
-showSum, showProd :: Show b => Int -> [b] -> ShowS
-showSum  = showIter 6 " + "
-showProd = showIter 7 " * "
+showSum :: (Show b, DetectableZero b) => Int -> [b] -> ShowS
+showSum  = showIter 6 " + " isZero
+
+showProd :: (Show b, DetectableOne b) => Int -> [b] -> ShowS
+showProd = showIter 7 " * " isOne
 
 {--------------------------------------------------------------------
     Syntactic representations
@@ -47,6 +50,9 @@ instance IsString Name where fromString = Name
 
 data Pow b n = Pow b n  -- b * x^n
 
+instance DetectableZero b => DetectableZero (Pow b n) where
+  isZero (Pow b _) = isZero b
+
 instance (DetectableOne b, DetectableZero n) => DetectableOne (Pow b n) where
   isOne (Pow b n) = isOne b || isZero n
 
@@ -61,9 +67,12 @@ instance (Show n, Show b, DetectableZero n, DetectableOne n, DetectableOne b)
 -- >>> Pow (Name "z") 5 :: Pow Name N
 -- z^5
 
-data Pows a = Pows (Map a N)
+data Pows b = Pows (Map b N)
 
-instance DetectableOne (Pows a) where
+instance DetectableZero b => DetectableZero (Pows b) where
+  isZero = const False
+
+instance DetectableOne (Pows b) where
   isOne (Pows m) = all isZero m
 
 -- TODO: try changing isZero for Map to be 'all isZero'. Might wedge on recursive examples.
@@ -78,6 +87,9 @@ instance (Show b, DetectableZero b, DetectableOne b) => Show (Pows b) where
 
 data Term b x = Term b x  -- b * x
 
+instance (DetectableZero b, DetectableZero x) => DetectableZero (Term b x) where
+  isZero (Term b x) = isZero b || isZero x
+
 instance (Show b, Show x, DetectableOne x, DetectableZero b, DetectableOne b)
       => Show (Term b x) where
   showsPrec d (Term b x)
@@ -91,10 +103,11 @@ instance (Show b, Show x, DetectableOne x, DetectableZero b, DetectableOne b)
 
 data Terms b = Terms [b]
 
-instance Show b => Show (Terms b) where showsPrec d (Terms bs) = showSum d bs
+instance (Show b, DetectableZero b) => Show (Terms b) where
+  showsPrec d (Terms bs) = showSum d bs
 
 {--------------------------------------------------------------------
-    Polynomials
+    Univariate polynomials
 --------------------------------------------------------------------}
 
 newtype Poly1 b = Poly1 (Map N b) deriving
@@ -118,22 +131,9 @@ eval1 (Poly1 m) z = sum [b <.> z^i | (i,b) <- M.toList m]
 -- >>> p^5
 -- x^5 + 15 * x^4 + 90 * x^3 + 270 * x^2 + 405 * x + 243
 
-type P2 = Map (N :* N)
-
-x2,y2 :: P2 Int
-x2 = single (1,0)
-y2 = single (0,1)
-
--- >>> x2
--- M (fromList [((1,0),1)])
--- >>> y2
--- M (fromList [((0,1),1)])
--- >>> x2 <+> y2
--- M (fromList [((0,1),1),((1,0),1)])
--- >>> (x2 <+> y2)^2
--- M (fromList [((0,2),1),((1,1),2),((2,0),1)])
-
-type P2' = Map (Map Bool N)
+{--------------------------------------------------------------------
+    Multivariate polynomials
+--------------------------------------------------------------------}
 
 -- Polynomials with named "variables"
 newtype PolyM b = PolyM { unPolyM :: Map (Map Name N) b } deriving
@@ -170,3 +170,74 @@ varM = single . single
 
 -- >>> p <.> q
 -- x^2 + 2 * x * y + x * z + y^2 + y * z
+
+{--------------------------------------------------------------------
+    Univariate power series
+--------------------------------------------------------------------}
+
+type Stream = LTrie Id
+
+infixr 5 :#
+pattern (:#) :: b -> Stream b -> Stream b
+pattern b :# bs = b :< Id bs
+{-# COMPLETE (:#) :: LTrie #-}
+
+streamList :: Stream b -> [b]
+streamList (b :# bs) = b : streamList bs
+
+listStream :: [b] -> Stream b
+listStream [] = error "listStream: oops! empty"
+listStream (b : bs) = b :# listStream bs
+
+takeS :: N -> Stream b -> [b]
+takeS 0 _ = []
+takeS n (b :# bs) = b : takeS (n-1) bs
+
+newtype Series1 b = Series1 (Stream b) deriving
+  (Additive, Semiring, Functor, Indexable [()] b, HasSingle [()] b)
+
+-- instance Show b => Show (Series1 b) where
+--   showsPrec d (Series1 bs) =
+--     take 100 .  -- for now
+--     showsPrec d (streamList bs)
+
+instance (DetectableZero b, DetectableOne b, Show b) => Show (Series1 b) where
+  showsPrec d (Series1 bs) = lopString .
+    showsPrec d (Terms (term <$> zip [0::N ..] (lopStream bs)))
+   where
+     term (i,b) = Term b (Pow (Name "x") i)
+     lopStream s = takeS 100 s
+     lopString s = take 80 s ++ " ..."
+
+instance (Semiring b, Num b, DetectableZero b, DetectableOne b)
+      => Num (Series1 b) where
+  fromInteger = value . fromInteger
+  negate = fmap negate
+  (+) = (<+>)
+  (*) = (<.>)
+  abs = error "abs on Series1 undefined"
+  signum = error "abs on Series1 undefined"
+
+-- As in Doug McIlroy's "The Music of Streams"
+integral :: Fractional b => Series1 b -> Series1 b
+integral (Series1 bs0) = Series1 (0 :# go 1 bs0)
+ where
+   go n (b :# bs) = b/n :# go (n+1) bs
+
+sinS, cosS, expS :: Series1 Rational
+sinS = integral cosS
+cosS = 1 - integral sinS
+expS = 1 + integral expS
+
+-- >>> sinS
+-- x + (-1) % 6 * x^3 + 1 % 120 * x^5 + (-1) % 5040 * x^7 + 1 % 362880 * x^9 + (-1) ...
+-- >>> cosS
+-- 1 % 1 + (-1) % 2 * x^2 + 1 % 24 * x^4 + (-1) % 720 * x^6 + 1 % 40320 * x^8 + (-1 ...
+-- >>> expS
+-- 1 % 1 + x + 1 % 2 * x^2 + 1 % 6 * x^3 + 1 % 24 * x^4 + 1 % 120 * x^5 + 1 % 720 * ...
+
+-- >>> 2 * expS
+-- 2 % 1 + 2 % 1 * x + x^2 + 1 % 3 * x^3 + 1 % 12 * x^4 + 1 % 60 * x^5 + 1 % 360 *  ...
+
+-- >>> sinS * cosS
+-- x + (-2) % 3 * x^3 + 2 % 15 * x^5 + (-4) % 315 * x^7 + 2 % 2835 * x^9 + (-4) % 1 ...

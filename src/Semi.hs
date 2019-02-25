@@ -9,6 +9,7 @@ import Prelude hiding (sum,product,(^))
 import Control.Applicative (liftA2)
 import GHC.Natural (Natural)
 import Data.Functor.Identity (Identity(..))
+import Data.Maybe (fromMaybe)
 import GHC.Exts (Coercible,coerce,Constraint)
 
 import Data.Map (Map)
@@ -208,6 +209,17 @@ instance Indexable () b (Id b) where Id a ! () = a
 instance HasSingle () b (Id b) where () +-> b = Id b
 
 type instance Key Id = ()
+
+type instance Key Maybe = ()
+
+instance Additive b => Indexable () b (Maybe b) where
+  -- Nothing ! () = zero
+  -- Just b  ! () = b
+  mb ! () = fromMaybe zero mb
+
+instance (DetectableZero b, Additive b) => HasSingle () b (Maybe b) where 
+  () +-> b | isZero b  = Nothing
+           | otherwise = Just b
 
 {--------------------------------------------------------------------
     Sum and product monoids

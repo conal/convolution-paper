@@ -12,7 +12,7 @@
 
 %let draft = not icfp
 
-%let short = not extended
+%let short = not long
 
 %if icfp
 
@@ -102,7 +102,7 @@ Target\\[1.5ex]conal@@conal.net
 \setlength{\blanklineskip}{2ex} % blank lines in code environment
 
 \nc\prooflabel[1]{\label{proof:#1}}
-%if extended
+%if long
 \nc\proofref[1]{Appendix \ref{proof:#1}}
 %else
 \nc\proofref[1]{proof in \citep[Appendix C]{Elliott2019-convolution-extended}}
@@ -1213,7 +1213,12 @@ Pleasantly, this trie data structure is a classic, though perhaps not in its laz
 Applying the |(<:)| decomposition to tries also appears to be more streamlined than the application to regular expressions.
 During matching, the next character in the candidate string is used to directly index to the relevant derivative (sub-trie), efficiently bypassing all other paths.
 
-Intriguingly, |atEps| and |derivs| correspond to |coreturn| and |cojoin| for the function-from-monoid comonad, also called the ``exponent comonad'' \citep{Uustalu2008CNC}:
+Intriguingly, |atEps| and |derivs| correspond to |coreturn| and |cojoin| for the function-from-monoid comonad, also called the ``exponent comonad'' \citep{Uustalu2008CNC}%
+%if short
+.
+As one might hope, |(!)| is a comonad homomorphism from |Cofree h| to |(->) (Key y)|  \citep{Elliott2019-convolution-extended}.
+%else
+:
 \begin{code}
 instance Functor w => Comonad w where
   coreturn  :: w b -> b
@@ -1232,9 +1237,9 @@ instance Functor h => Comonad (Cofree h) where
 \end{code}
 The connection between these two comonads runs deep:
 \begin{theorem}[\provedIn{theorem:Cofree hom}]\thmlabel{Cofree hom}
-Given the definitions above and in \figref{Cofree}, if |(!)| on |h| behaves like |(->) (Key h)|, then |Cofree h| is a comonad homomorphism from |Cofree h| to |(->) (Key h)|.
+Given the definitions above and in \figref{Cofree}, if |(!)| on |h| behaves like\notefoot{Come up with a better phrasing of this condition, and use it consistently} |(->) (Key h)|, then |Cofree h| is a comonad homomorphism from |Cofree h| to |(->) (Key h)|.
 \end{theorem}
-
+%endif
 
 \sectionl{Convolution}
 
@@ -1726,7 +1731,7 @@ Future work:
 \end{itemize}
 
 
-%if extended
+%if long
 
 \appendix
 
@@ -2443,7 +2448,7 @@ poly (F (\ i -> if i == n then b else zero))          -- |(+->)| on |b <-- a| (d
 ==  pows x p * pows x q                                                          -- |(^^)| definition
 \end{code}
 
-%endif extended
+%endif long
 
 \bibliography{bib}
 

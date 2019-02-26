@@ -1159,7 +1159,7 @@ data LTrie c b = b :< c -> LTrie c b  -- first guess
 \end{code}
 While this definition can work, we can get much better efficiency if we memoize the functions of |c|, e.g., as a generalized trie or a finite map.
 Rather than commit to a particular representation for the subtrie collection, let's replace the type parameter |c| with a functor |h| whose associated key type is |c|.
-The functor-parametrized list trie is also known as the ``cofree comonad'' \citep{Uustalu2005EDP,Uustalu2008CNC}.
+The functor-parametrized list trie is also known as the ``cofree comonad'' \citep{Uustalu2005EDP,Uustalu2008CNC,Uustalu2011RS,Hinze2013USR,Kmett2015MfL,Penner2017RSTT}.
 \begin{code}
 data Cofree h b = b :< h (Cofree h b)
 \end{code}

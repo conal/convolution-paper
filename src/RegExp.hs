@@ -135,7 +135,7 @@ regexp (u :<.> v) = regexp u <.> regexp v
 regexp (Star u)   = star (regexp u)
 
 
--- Alternatively, use regexp to convert to LTrie, and then use (!).
+-- Alternatively, use regexp to convert to Cofree, and then use (!).
 
 #ifdef EXAMPLES
 

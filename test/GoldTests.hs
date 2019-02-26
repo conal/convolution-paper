@@ -19,7 +19,7 @@ import Test.Tasty.Golden
 import Misc   (cats)
 import Semi
 import RegExp (RegExp)
-import LTrie  (LTrie)
+import Cofree  (Cofree)
 
 import Examples
 
@@ -37,9 +37,9 @@ basicTests = testGroup "Various representations"
   , tests @(RegExp (Map  Char) Bool) "RegExpMap"
   , tests @(RegExp CharMap     Bool) "RegExpIntMap"
 
-  , tests @(LTrie  ((->) Char) Bool) "TrieFun"
-  , tests @(LTrie  (Map  Char) Bool) "TrieMap"
-  , tests @(LTrie  CharMap     Bool) "TrieIntMap"
+  , tests @(Cofree  ((->) Char) Bool) "CofreeFun"
+  , tests @(Cofree  (Map  Char) Bool) "CofreeMap"
+  , tests @(Cofree  CharMap     Bool) "CofreeIntMap"
 
   ]
 

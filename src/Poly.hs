@@ -11,7 +11,7 @@ import GHC.Exts(IsString(..))
 
 -- import Misc ((:*))
 import Semi
-import LTrie (LTrie(..))
+import Cofree (Cofree(..))
 
 import MMap (Map)  -- like Data.Map but better Monoid instance
 import qualified MMap as M
@@ -138,7 +138,7 @@ eval1 (Poly1 m) z = sum [b <.> z^i | (i,b) <- M.toList m]
 -- class Functor f => Keyed f where
 --   mapWithKey :: (Key f -> a -> b) -> f a -> f b
 
-type List = LTrie Maybe
+type List = Cofree Maybe
 
 {--------------------------------------------------------------------
     Multivariate polynomials
@@ -186,12 +186,12 @@ varM = single . single
     Univariate power series
 --------------------------------------------------------------------}
 
-type Stream = LTrie Id
+type Stream = Cofree Id
 
 infixr 5 :#
 pattern (:#) :: b -> Stream b -> Stream b
 pattern b :# bs = b :< Id bs
-{-# COMPLETE (:#) :: LTrie #-}
+{-# COMPLETE (:#) :: Cofree #-}
 
 streamList :: Stream b -> [b]
 streamList (b :# bs) = b : streamList bs
@@ -263,7 +263,7 @@ expS = 1 + integral expS
 -- TODO: multivariate power series
 -- Can I generalize Poly1 and PolyM?
 
--- Try lists as LTrie Maybe.
+-- Try lists as Cofree Maybe.
 -- Generalize my `Poly1` and `PolyM` definitions.
 -- Maybe even unify them.
 

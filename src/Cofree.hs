@@ -4,7 +4,7 @@
 
 -- | List tries using Convo
 
-module LTrie where
+module Cofree where
 
 import Prelude hiding (sum,product)
 
@@ -23,7 +23,7 @@ import Examples
 
 -- #include "GenInstances.inc"
 
--- TODO: maybe rename LTrie to "Cofree". I'd use Ed's Cofree from the "free" library,
+-- TODO: maybe rename Cofree to "Cofree". I'd use Ed's Cofree from the "free" library,
 -- but he defined Key (Cofree f) = Seq (Key f), and I want [Key f]. Oh well.
 
 -- Move elsewhere
@@ -40,58 +40,58 @@ b <: h = \ case { [] -> b ; c:cs  -> h c cs }
 
 -- | List trie, denoting '[c] -> b'
 infix 1 :<
-data LTrie h b = b :< h (LTrie h b) deriving Functor
+data Cofree h b = b :< h (Cofree h b) deriving Functor
 
--- instance Functor h => Functor (LTrie h) where
+-- instance Functor h => Functor (Cofree h) where
 --   fmap f = go where go (a :< dp) = f a :< fmap go dp
 --   -- fmap f (a :< dp) = f a :< (fmap.fmap) f dp
 --   -- fmap f (a :< dp) = f a :< fmap (fmap f) dp
 
 -- TODO: I probably want FunctorC h, and inherit Ok.
-instance Functor h => FunctorC (LTrie h)
+instance Functor h => FunctorC (Cofree h)
 
-instance Indexable c (LTrie h b) (h (LTrie h b)) => Indexable [c] b (LTrie h b) where
+instance Indexable c (Cofree h b) (h (Cofree h b)) => Indexable [c] b (Cofree h b) where
   -- (b :< _ ) ! [] = b
   -- (_ :< ts) ! (k:ks) = ts ! k ! ks
   -- (b :< dp) ! w = case w of { [] -> b ; c:cs -> dp ! c ! cs }
   -- (!) (b :< dp) = b <: (!) (fmap (!) dp)
   (!) (b :< dp) = b <: (!) . (!) dp
 
-instance (Additive (h (LTrie h b)), Additive b) => Additive (LTrie h b) where
+instance (Additive (h (Cofree h b)), Additive b) => Additive (Cofree h b) where
   zero = zero :< zero
   (a :< dp) <+> (b :< dq) = a <+> b  :<  dp <+> dq
 
--- FunctorSemimodule(LTrie h)
+-- FunctorSemimodule(Cofree h)
 
--- instance (Functor h, Semiring b) => LeftSemimodule b (LTrie h b) where scale s = fmap (s <.>)
+-- instance (Functor h, Semiring b) => LeftSemimodule b (Cofree h b) where scale s = fmap (s <.>)
 
--- instance (Functor h, Semiring b) => LeftSemimodule b (LTrie h b) where
+-- instance (Functor h, Semiring b) => LeftSemimodule b (Cofree h b) where
 --   s `scale` (b :< dp) = s <.> b :< fmap (s `scale`) dp
 
-instance (Functor h, Semiring b) => LeftSemimodule b (LTrie h b) where
+instance (Functor h, Semiring b) => LeftSemimodule b (Cofree h b) where
   scale s = fmap (s <.>)
   -- scale s = go where go (b :< dp) = s <.> b :< fmap go dp
 
-instance (Functor h, Additive (h (LTrie h b)), Semiring b, DetectableZero b, DetectableOne b) => Semiring (LTrie h b) where
+instance (Functor h, Additive (h (Cofree h b)), Semiring b, DetectableZero b, DetectableOne b) => Semiring (Cofree h b) where
   one = one :< zero
   (a :< dp) <.> q = a .> q <+> (zero :< fmap (<.> q) dp)
 
-instance (Functor h, Additive (h (LTrie h b)), StarSemiring b, DetectableZero b, DetectableOne b) => StarSemiring (LTrie h b) where
+instance (Functor h, Additive (h (Cofree h b)), StarSemiring b, DetectableZero b, DetectableOne b) => StarSemiring (Cofree h b) where
   star (a :< dp) = q where q = star a .> (one :< fmap (<.> q) dp)
 
-instance (HasSingle c (LTrie h b) (h (LTrie h b)), Additive (h (LTrie h b)), Additive b) => HasSingle [c] b (LTrie h b) where
+instance (HasSingle c (Cofree h b) (h (Cofree h b)), Additive (h (Cofree h b)), Additive b) => HasSingle [c] b (Cofree h b) where
   w +-> b = foldr (\ c t -> zero :< c +-> t) (b :< zero) w
 
-instance (Additive (h (LTrie h b)), DetectableZero (h (LTrie h b)), DetectableZero b)
-      => DetectableZero (LTrie h b) where
+instance (Additive (h (Cofree h b)), DetectableZero (h (Cofree h b)), DetectableZero b)
+      => DetectableZero (Cofree h b) where
   isZero (a :< dp) = isZero a && isZero dp
 
-instance (Functor h, Additive (h (LTrie h b)), DetectableZero b, DetectableZero (h (LTrie h b)), DetectableOne b)
-      => DetectableOne (LTrie h b) where
+instance (Functor h, Additive (h (Cofree h b)), DetectableZero b, DetectableZero (h (Cofree h b)), DetectableOne b)
+      => DetectableOne (Cofree h b) where
   isOne (a :< dp) = isOne a && isZero dp
 
 -- | Trim to a finite depth, for examination.
-trimT :: (Functor h, Additive (h (LTrie h b)), Additive b, DetectableZero b) => Int -> LTrie h b -> LTrie h b
+trimT :: (Functor h, Additive (h (Cofree h b)), Additive b, DetectableZero b) => Int -> Cofree h b -> Cofree h b
 trimT 0 _ = zero
 trimT n (c :< ts) = c :< fmap (trimT (n-1)) ts
 
@@ -101,7 +101,7 @@ trimT n (c :< ts) = c :< fmap (trimT (n-1)) ts
     Examples
 --------------------------------------------------------------------}
 
-type L  = LTrie (Map Char) Bool
+type L  = Cofree (Map Char) Bool
 
 -- >>> pig :: L
 -- False :< [('p',False :< [('i',False :< [('g',True :< [])])])]

@@ -14,7 +14,7 @@ import Criterion.Types (Config(..),Verbosity(..))
 import Misc (cats)
 import Semi
 import RegExp
-import LTrie
+import Cofree
 
 import Examples
 
@@ -69,10 +69,10 @@ group groupName example omit dats =
        , style @(RegExp CharMap       Bool) "RegExp:IntMap"
        -- , style @(RegExp ((:->:) Char) Bool) "RegExp:Memo"
 
-       -- , style @(LTrie  ((->)   Char) Bool) "LTrie:Function"
-       , style @(LTrie  (Map    Char) Bool) "LTrie:Map"
-       , style @(LTrie  CharMap       Bool) "LTrie:IntMap"
-       -- , style @(LTrie  ((:->:) Char) Bool) "LTrie:Memo"
+       -- , style @(Cofree  ((->)   Char) Bool) "Cofree:Function"
+       , style @(Cofree  (Map    Char) Bool) "Cofree:Map"
+       , style @(Cofree  CharMap       Bool) "Cofree:IntMap"
+       -- , style @(Cofree  ((:->:) Char) Bool) "Cofree:Memo"
 
        ]
     where

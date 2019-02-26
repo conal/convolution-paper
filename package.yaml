@@ -70,7 +70,7 @@ library:
     - Constrained
     - Semi
     - RegExp
-    - LTrie
+    - Cofree
     - MMap
     - Poly
     - Examples

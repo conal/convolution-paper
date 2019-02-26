@@ -35,6 +35,7 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 
 ### Misc
 
+*   Consider unhiding page numbers in bib.bib.
 *   A variant of `pow` that's syntactically quieter than having to write (and generate) "`(wrap (pow ...))`".
     Instead, just "`(ppow ...)`", with `ppow`'s `%format` directive dropping the parentheses.
     Better: use "`@@`" as a fake infix to help parsing.
@@ -112,7 +113,9 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
     *   [Monads from Comonads](http://comonad.com/reader/2011/monads-from-comonads/) (blog post by Ed Kmett, 2011)
     *   [*Monads from Comonads, Comonads from Monads*]
     *   [*Should I use a Monad or a Comonad?*]
-*   Polynomials:
+    *   [*Moore for Less*] ([reddit discussion](https://www.reddit.com/r/haskell/comments/37lqxf/edward_kmett_moore_for_less/))
+    *   [*Radix Sort, Trie Trees, And Maps From Representable Functors*]
+*   Polynomials and power series:
     *   Doug McIlroy's work
 *   Other:
     *   [*Convolution as a Unifying Concept: Applications in Separation Logic, Interval Calculi, and Concurrency*]
@@ -251,3 +254,7 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 Thomas Wilke (2010)"
 
 [*Product Rules and Distributive Laws*]: https://www.mimuw.edu.pl/~jwinter/articles/cmcs16.pdf "Paper by Joost Winter"
+
+[*Moore for Less*]: https://www.schoolofhaskell.com/user/edwardk/moore/for-less "Blog post by Edward Kmett (2015)"
+
+[*Radix Sort, Trie Trees, And Maps From Representable Functors*]: https://chrispenner.ca/posts/representable-discrimination "blog post by Chris Penner (2017)"

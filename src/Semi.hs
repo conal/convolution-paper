@@ -315,6 +315,19 @@ type N = Sum Natural
 
 type Z = Sum Integer
 
+-- Experiment
+class HasPow a n x | a n -> x where
+  infixr 8 ^#
+  (^#) :: a -> n -> x
+
+instance Semiring b => HasPow b N b where
+  (^#) = (^)
+
+instance (HasPow b n x, Additive n, Additive b, Ord a, Semiring x)
+      => HasPow (Map a b) (Map a n) x where
+  bs ^# ns = product [bs!i ^# ns!i | i <- support bs]
+
+
 infixr 8 ^
 (^), pow :: Semiring a => a -> N -> a
 pow = (^)  -- useful for the paper

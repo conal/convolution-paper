@@ -130,6 +130,9 @@ type P1 = Poly1 (Map N)
 eval1 :: (Supported N b (h b), Semiring b) => Poly1 h b -> b -> b
 eval1 (Poly1 m) z = sum [m!i <.> z^i | i <- support m]
 
+eval :: (Supported n b (h b), HasPow (h b) n b, Semiring b) => Poly1 h b -> h b -> b
+eval (Poly1 m) z = sum [m!i <.> z^#i | i <- support m]
+
 -- TODO: generalize (^) so that this definition works in general.
 
 -- >>> let p = single 1 <+> value 3 :: P1 Z
@@ -152,12 +155,12 @@ eval1 (Poly1 m) z = sum [m!i <.> z^i | i <- support m]
 type PL1 = Poly1 (Cofree Maybe)
 
 -- >>> let p = single 1 <+> value 3 :: PL1 Z
--- <interactive>:200:17: error:
+-- <interactive>:556:17: error:
 --     • No instance for (Num [()]) arising from the literal ‘1’
 --     • In the first argument of ‘single’, namely ‘1’
 --       In the first argument of ‘(<+>)’, namely ‘single 1’
 --       In the expression: single 1 <+> value 3 :: PL1 Z
--- <interactive>:200:23-29: error:
+-- <interactive>:556:23-29: error:
 --     • No instance for (DetectableZero
 --                          (Maybe (Cofree Maybe (Sum Integer))))
 --         arising from a use of ‘value’
@@ -165,13 +168,13 @@ type PL1 = Poly1 (Cofree Maybe)
 --       In the expression: single 1 <+> value 3 :: PL1 Z
 --       In an equation for ‘p’: p = single 1 <+> value 3 :: PL1 Z
 -- >>> p
--- <interactive>:201:2: error: Variable not in scope: p
+-- <interactive>:557:2: error: Variable not in scope: p
 -- 
 -- >>> p^3
--- <interactive>:202:2: error: Variable not in scope: p
+-- <interactive>:558:2: error: Variable not in scope: p
 -- 
 -- >>> p^5
--- <interactive>:203:2: error: Variable not in scope: p
+-- <interactive>:559:2: error: Variable not in scope: p
 
 -- TODO: replace 'support' with toList
 -- TODO: Put (^) into a new class, and use in evalPoly

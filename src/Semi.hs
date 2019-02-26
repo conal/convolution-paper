@@ -36,13 +36,13 @@ type family Key (h :: * -> *) :: *
 class Functor f => Keyed f where
   mapWithKey :: (Key f -> a -> b) -> f a -> f b
 
--- | Countable support
-class Supported a x | x -> a where support :: x -> [a]
-
 -- Inspired by Indexable from Data.Key in the keys library.
 class Indexable a b x | x -> a b where
   infixl 9 !
   (!) :: x -> a -> b
+
+-- | Countable support
+class Indexable a b x => Supported a b x where support :: x -> [a]
 
 -- TODO: Laws: (!) must be natural; h must presere additivity, and !)| is an
 -- Additive homomorphism.
@@ -194,10 +194,10 @@ type instance Key (Map a) = a
 
 instance Keyed (Map a) where mapWithKey = M.mapWithKey
 
-instance Supported a (Map a b) where support = M.keys
-
 instance (Ord a, Additive b) => Indexable a b (Map a b) where
   m ! a = M.findWithDefault zero a m
+
+instance (Ord a, Additive b) => Supported a b (Map a b) where support = M.keys
 
 instance (Ord a, Additive b) => HasSingle a b (Map a b) where (+->) = M.singleton
 
@@ -207,9 +207,9 @@ type instance Key Identity = ()
 
 instance Keyed Identity where mapWithKey h = fmap (h ())
 
-instance Supported () (Identity b) where support = const [()]
-
 instance Indexable () b (Identity b) where Identity a ! () = a
+
+instance Supported () b (Identity b) where support = const [()]
 
 instance HasSingle () b (Identity b) where () +-> b = Identity b
 
@@ -228,9 +228,9 @@ type instance Key Id = ()
 
 instance Keyed Id where mapWithKey h = fmap (h ())
 
-instance Supported () (Id b) where support = const [()]
-
 instance Indexable () b (Id b) where Id a ! () = a
+
+instance Supported () b (Id b) where support = const [()]
 
 instance HasSingle () b (Id b) where () +-> b = Id b
 
@@ -238,16 +238,29 @@ type instance Key Maybe = ()
 
 instance Keyed Maybe where mapWithKey h = fmap (h ())
 
-instance Supported () (Maybe b) where support = const [()]
-
 instance Additive b => Indexable () b (Maybe b) where
   -- Nothing ! () = zero
   -- Just b  ! () = b
   mb ! () = fromMaybe zero mb
 
+instance Additive b => Supported () b (Maybe b) where support = const [()]
+
 instance (DetectableZero b, Additive b) => HasSingle () b (Maybe b) where 
   () +-> b | isZero b  = Nothing
            | otherwise = Just b
+
+instance Additive b => Additive (Maybe b) where
+  zero = Nothing
+  Nothing <+> v = v
+  u <+> Nothing = u
+  Just a <+> Just b = Just (a <+> b)
+
+instance Semiring b => Semiring (Maybe b) where
+  one = Just one
+  Nothing <.> _ = zero
+  _ <.> Nothing = zero
+  Just a <.> Just b = Just (a <.> b)
+  
 
 {--------------------------------------------------------------------
     Sum and product monoids
@@ -340,23 +353,30 @@ type instance Key [] = N
 
 instance Keyed [] where mapWithKey h = zipWith h [0 ..]
 
-instance Supported N [b] where
+instance Additive b => Indexable N b [b] where
+  [] ! _ = zero
+  (b : _ ) ! 0 = b
+  (_ : bs) ! n = bs ! (n-1)
+
+instance Additive b => Supported N b [b] where
   support [] = []
   support (_:xs) = [0 .. fromIntegral (length xs)]  -- avoid 0-1 for N
+
+-- I think I'll abandon [] in favor of Cofree Maybe.
 
 -- TODO: generalize to other Integral or Enum types and add to Semi
 newtype CharMap b = CharMap (IntMap b) deriving Functor
 
 type instance Key CharMap = Char
 
-instance Supported Char (CharMap b) where
-  support (CharMap m) = toEnum <$> IntMap.keys m
-
 instance Keyed CharMap where
   mapWithKey h (CharMap m) = CharMap (IntMap.mapWithKey (h . toEnum) m)
 
 instance Additive b => Indexable Char b (CharMap b) where
   CharMap m ! a = IntMap.findWithDefault zero (fromEnum a) m
+
+instance Additive b => Supported Char b (CharMap b) where
+  support (CharMap m) = toEnum <$> IntMap.keys m
 
 instance Additive b => HasSingle Char b (CharMap b) where
   a +-> b = CharMap (IntMap.singleton (fromEnum a) b)

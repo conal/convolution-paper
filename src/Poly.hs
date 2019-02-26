@@ -110,26 +110,37 @@ instance (Show b, DetectableZero b) => Show (Terms b) where
     Univariate polynomials
 --------------------------------------------------------------------}
 
-newtype Poly1 b = Poly1 (Map N b) deriving
-  (Additive, Semiring, Functor, Indexable N b, HasSingle N b)
+newtype Poly1 h b = Poly1 (h b) deriving
+  (Additive, Semiring, Functor) -- , Indexable n b, HasSingle n b)
 
-instance (DetectableZero b, DetectableOne b, Show b) => Show (Poly1 b) where
-  showsPrec d (Poly1 m) = showsPrec d (Terms (term <$> M.toDescList m))
+-- TODO: try combining h & b
+
+deriving instance Indexable n b (h b) => Indexable n b (Poly1 h b)
+deriving instance HasSingle n b (h b) => HasSingle n b (Poly1 h b)
+
+instance ( DetectableZero b, DetectableOne b, Show b, Supported n b (h b)
+         , Show n, DetectableZero n, DetectableOne n )
+      => Show (Poly1 h b) where
+  showsPrec d (Poly1 m) = showsPrec d (Terms (term <$> support m))
    where
-     term (i,b) = Term b (Pow (Name "x") i)
+     term i = Term (m!i) (Pow (Name "x") i)
 
-eval1 :: Semiring b => Poly1 b -> b -> b
-eval1 (Poly1 m) z = sum [b <.> z^i | (i,b) <- M.toList m]
+type P1 = Poly1 (Map N)
 
--- >>> let p = single 1 <+> value 3 :: Poly1 Z
+eval1 :: (Supported N b (h b), Semiring b) => Poly1 h b -> b -> b
+eval1 (Poly1 m) z = sum [m!i <.> z^i | i <- support m]
+
+-- TODO: generalize (^) so that this definition works in general.
+
+-- >>> let p = single 1 <+> value 3 :: P1 Z
 -- >>> p
--- x + 3
+-- 3 + x
 -- 
 -- >>> p^3
--- x^3 + 9 * x^2 + 27 * x + 27
+-- 27 + 27 * x + 9 * x^2 + x^3
 -- 
 -- >>> p^5
--- x^5 + 15 * x^4 + 90 * x^3 + 270 * x^2 + 405 * x + 243
+-- 243 + 405 * x + 270 * x^2 + 90 * x^3 + 15 * x^4 + x^5
 
 -- TODO: generalize from Map N to any functor f with Key f = N. I'll need to get
 -- indices as well, as in the Keyed class from the keys library.
@@ -137,6 +148,56 @@ eval1 (Poly1 m) z = sum [b <.> z^i | (i,b) <- M.toList m]
 -- -- * Keyed
 -- class Functor f => Keyed f where
 --   mapWithKey :: (Key f -> a -> b) -> f a -> f b
+
+type PL1 = Poly1 (Cofree Maybe)
+
+-- >>> let p = single 1 <+> value 3 :: PL1 Z
+-- <interactive>:200:17: error:
+--     • No instance for (Num [()]) arising from the literal ‘1’
+--     • In the first argument of ‘single’, namely ‘1’
+--       In the first argument of ‘(<+>)’, namely ‘single 1’
+--       In the expression: single 1 <+> value 3 :: PL1 Z
+-- <interactive>:200:23-29: error:
+--     • No instance for (DetectableZero
+--                          (Maybe (Cofree Maybe (Sum Integer))))
+--         arising from a use of ‘value’
+--     • In the second argument of ‘(<+>)’, namely ‘value 3’
+--       In the expression: single 1 <+> value 3 :: PL1 Z
+--       In an equation for ‘p’: p = single 1 <+> value 3 :: PL1 Z
+-- >>> p
+-- <interactive>:201:2: error: Variable not in scope: p
+-- 
+-- >>> p^3
+-- <interactive>:202:2: error: Variable not in scope: p
+-- 
+-- >>> p^5
+-- <interactive>:203:2: error: Variable not in scope: p
+
+-- TODO: replace 'support' with toList
+-- TODO: Put (^) into a new class, and use in evalPoly
+-- Drop Keyed?
+
+
+-- >>> let p = single 1 <+> value 3 :: PL1 Z
+-- <interactive>:20:10-29: error:
+--     • No instance for (Additive [Sum Integer])
+--         arising from a use of ‘<+>’
+--     • In the expression: single 1 <+> value 3 :: PL1 Z
+--       In an equation for ‘p’: p = single 1 <+> value 3 :: PL1 Z
+-- <interactive>:20:23-29: error:
+--     • No instance for (HasSingle N (Sum Integer) [Sum Integer])
+--         arising from a use of ‘value’
+--     • In the second argument of ‘(<+>)’, namely ‘value 3’
+--       In the expression: single 1 <+> value 3 :: PL1 Z
+--       In an equation for ‘p’: p = single 1 <+> value 3 :: PL1 Z
+-- >>> p
+-- <interactive>:21:2: error: Variable not in scope: p
+-- 
+-- >>> p^3
+-- <interactive>:22:2: error: Variable not in scope: p
+-- 
+-- >>> p^5
+-- <interactive>:23:2: error: Variable not in scope: p
 
 type List = Cofree Maybe
 
@@ -181,6 +242,12 @@ varM = single . single
 -- x^4 + 4 * x^3 * y + 6 * x^2 * y^2 + 4 * x * y^3 + 12 * x^2 * y * z + 12 * x * y^2 * z + 12 * x * y * z^2 + 4 * x^3 * z + 6 * x^2 * z^2 + 4 * x * z^3 + y^4 + 4 * y^3 * z + 6 * y^2 * z^2 + 4 * y * z^3 + z^4
 -- >>> p <.> q
 -- x^2 + 2 * x * y + x * z + y^2 + y * z
+
+{--------------------------------------------------------------------
+    Try PolyM via Poly1
+--------------------------------------------------------------------}
+
+type PM = Poly1 (Map (Map Name N))
 
 {--------------------------------------------------------------------
     Univariate power series

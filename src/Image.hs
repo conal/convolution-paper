@@ -57,6 +57,8 @@ arrToImg (Comp1 arr) = ImageYF $ Image
     Utilities
 --------------------------------------------------------------------}
 
+-- Move some or all elsewhere
+
 nat :: forall n. KnownNat n => Integer
 nat = natVal (Proxy @n)
 {-# INLINE nat #-}

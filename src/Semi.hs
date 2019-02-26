@@ -7,9 +7,10 @@ module Semi where
 import Prelude hiding (sum,product,(^))
 
 import Control.Applicative (liftA2)
+import Control.Arrow (first)
 import GHC.Natural (Natural)
 import Data.Functor.Identity (Identity(..))
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe,isNothing)
 import GHC.Exts (Coercible,coerce,Constraint)
 
 import Data.Map (Map)
@@ -41,8 +42,8 @@ class Indexable a b x | x -> a b where
   infixl 9 !
   (!) :: x -> a -> b
 
--- | Countable support
-class Indexable a b x => Supported a b x where support :: x -> [a]
+-- | Enumerate non-zero values
+class Indexable a b x => Listable a b x where toList :: x -> [(a,b)]
 
 -- TODO: Laws: (!) must be natural; h must presere additivity, and !)| is an
 -- Additive homomorphism.
@@ -197,7 +198,7 @@ instance Keyed (Map a) where mapWithKey = M.mapWithKey
 instance (Ord a, Additive b) => Indexable a b (Map a b) where
   m ! a = M.findWithDefault zero a m
 
-instance (Ord a, Additive b) => Supported a b (Map a b) where support = M.keys
+instance (Ord a, Additive b) => Listable a b (Map a b) where toList = M.toList
 
 instance (Ord a, Additive b) => HasSingle a b (Map a b) where (+->) = M.singleton
 
@@ -209,7 +210,7 @@ instance Keyed Identity where mapWithKey h = fmap (h ())
 
 instance Indexable () b (Identity b) where Identity a ! () = a
 
-instance Supported () b (Identity b) where support = const [()]
+instance Listable () b (Identity b) where toList (Identity b) = [((),b)]
 
 instance HasSingle () b (Identity b) where () +-> b = Identity b
 
@@ -219,20 +220,8 @@ deriving instance DetectableOne b    => DetectableOne (Identity b)
 deriving instance LeftSemimodule s b => LeftSemimodule s (Identity b)
 deriving instance Semiring b         => Semiring (Identity b)
 
--- For the paper to show deriving:
-
-newtype Id b = Id b deriving 
- (Functor, Additive, DetectableZero, DetectableOne, LeftSemimodule s, Semiring)
-
-type instance Key Id = ()
-
-instance Keyed Id where mapWithKey h = fmap (h ())
-
-instance Indexable () b (Id b) where Id a ! () = a
-
-instance Supported () b (Id b) where support = const [()]
-
-instance HasSingle () b (Id b) where () +-> b = Id b
+-- newtype Id b = Id b deriving 
+--  (Functor, Additive, DetectableZero, DetectableOne, LeftSemimodule s, Semiring)
 
 type instance Key Maybe = ()
 
@@ -243,7 +232,9 @@ instance Additive b => Indexable () b (Maybe b) where
   -- Just b  ! () = b
   mb ! () = fromMaybe zero mb
 
-instance Additive b => Supported () b (Maybe b) where support = const [()]
+instance Additive b => Listable () b (Maybe b) where
+  toList Nothing  = []
+  toList (Just b) = [((),b)]
 
 instance (DetectableZero b, Additive b) => HasSingle () b (Maybe b) where 
   () +-> b | isZero b  = Nothing
@@ -260,7 +251,14 @@ instance Semiring b => Semiring (Maybe b) where
   Nothing <.> _ = zero
   _ <.> Nothing = zero
   Just a <.> Just b = Just (a <.> b)
-  
+
+instance DetectableZero (Maybe b) where
+  isZero = isNothing
+  -- We could also check Just b for b==0
+
+instance DetectableOne b => DetectableOne (Maybe b) where
+  isOne (Just b) | isOne b = True
+  isOne _ = False
 
 {--------------------------------------------------------------------
     Sum and product monoids
@@ -325,7 +323,7 @@ instance Semiring b => HasPow b N b where
 
 instance (HasPow b n x, Additive n, Additive b, Ord a, Semiring x)
       => HasPow (Map a b) (Map a n) x where
-  bs ^# ns = product [bs!i ^# ns!i | i <- support bs]
+  bs ^# ns = product [b ^# ns!i | (i,b) <- toList bs]
 
 
 infixr 8 ^
@@ -362,6 +360,9 @@ instance Splittable N where
     Misc
 --------------------------------------------------------------------}
 
+instance DetectableZero () where isZero () = True
+instance DetectableOne  () where isOne  () = True
+
 type instance Key [] = N
 
 instance Keyed [] where mapWithKey h = zipWith h [0 ..]
@@ -371,11 +372,31 @@ instance Additive b => Indexable N b [b] where
   (b : _ ) ! 0 = b
   (_ : bs) ! n = bs ! (n-1)
 
-instance Additive b => Supported N b [b] where
-  support [] = []
-  support (_:xs) = [0 .. fromIntegral (length xs)]  -- avoid 0-1 for N
+instance Additive b => Listable N b [b] where
+  toList = zip [0 ..]
 
--- I think I'll abandon [] in favor of Cofree Maybe.
+
+#if 0
+
+-- For indexing Cofree Identity or Cofree Maybe.
+type Peano = [()]
+
+-- Should I really be using up lists here instead of saving them?
+
+instance Additive Peano where
+  zero = []
+  m <+> n = replicate (length m + length n) ()
+
+instance Semiring Peano where
+  one = [()]
+  m <.> n = replicate (length m * length n) ()
+
+instance DetectableZero Peano where isZero = null
+instance DetectableOne Peano where
+  isOne [()] = True
+  isOne _ = False
+
+#endif
 
 -- TODO: generalize to other Integral or Enum types and add to Semi
 newtype CharMap b = CharMap (IntMap b) deriving Functor
@@ -388,8 +409,8 @@ instance Keyed CharMap where
 instance Additive b => Indexable Char b (CharMap b) where
   CharMap m ! a = IntMap.findWithDefault zero (fromEnum a) m
 
-instance Additive b => Supported Char b (CharMap b) where
-  support (CharMap m) = toEnum <$> IntMap.keys m
+instance Additive b => Listable Char b (CharMap b) where
+  toList (CharMap m) = first toEnum <$> IntMap.toList m
 
 instance Additive b => HasSingle Char b (CharMap b) where
   a +-> b = CharMap (IntMap.singleton (fromEnum a) b)

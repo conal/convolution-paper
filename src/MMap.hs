@@ -13,7 +13,7 @@ import Semi
 
 newtype Map k v = M (M.Map k v) deriving
   ( Eq,Ord,Show,Functor,Foldable,Additive,Semiring
-  , Indexable k v,Supported k v, HasSingle k v )
+  , Indexable k v,Listable k v, HasSingle k v )
 
 instance (Ord k, Semigroup v) => Semigroup (Map k v) where
   M u <> M v = M (M.unionWith (<>) u v)

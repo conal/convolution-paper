@@ -858,7 +858,7 @@ The |(<.>)| implementation above will try all possible three-way splittings of t
 
 \sectionl{Finite maps}
 
-\note{I don't think finite maps need their own section. Look for another home. Maybe with |LTrie| as a suggested functor.}
+\note{I don't think finite maps need their own section. Look for another home. Maybe with |Cofree| as a suggested functor.}
 
 One representation of \emph{partial} functions is the type of finite maps, |Map a b| from keys of type |a| to values of type |b|, represented is a key-ordered balanced tree \citep{Adams1993Sets,Straka2012ATR,Nievergelt1973BST}.
 To model \emph{total} functions instead, we can treat unassigned keys as denoting zero.
@@ -954,10 +954,10 @@ derivs p (u <> v)  == derivs (derivs p u) v
 \end{code}
 Thanks to this decomposition property and the fact that |deriv p c == derivs p [c]|, one can successively differentiate with respect to single symbols.
 
-Generalizing from sets to functions,\notefoot{Intriguingly, |atEps| and |derivs| correspond to |coreturn| and |cojoin| for the function-from-monoid comonad, also called the ``exponent comonad'' \citep{Uustalu2008CNC}.}
-
-> derivs f = \ u v -> f (u <> v)
-
+Generalizing from sets to functions,
+\begin{code}
+derivs f = \ u v -> f (u <> v)
+\end{code}
 so that
 \begin{code}
 f  == \ u -> derivs f u mempty
@@ -1149,53 +1149,58 @@ Nevertheless, with some syntactic optimizations and memoization, recognition spe
 As an alternative to regular expression differentiation, note that the problem of redundant comparison is solved elegantly by the classic trie (``prefix tree'') data structure introduced by Axel Thue in 1912 \citep[Section 6.3]{Knuth1998ACP3}.
 This data structure was later generalized to arbitrary (regular) algebraic data types \cite{Connelly1995GenTrie} and then from sets to functions \cite{Hinze2000GGT}.
 We'll explore the data type generalization later.\notefoot{Add a forward pointer, or remove the promise.}
-Restricting our attention to functions of lists (``strings'' over some alphabet), we can formulate a simple trie data type as follows:
+Restricting our attention to functions of lists (``strings'' over some alphabet), we can formulate a simple trie data type along the lines of |(<:)| from \secref{Decomposing Functions from Lists}, with an entry for |mempty| and a sub-trie for each possible character:
 \notefoot{Maybe another oppositely pointing arrows of some sort.
 I might want yet another pair for generalized tries.}
 %format :< = "\mathrel{\Varid{:\!\!\triangleleft}}"
 \begin{code}
-infix 1 :<
-data LTrie h b = b :< h (LTrie h b) deriving Functor
+data LTrie c b = b :< c -> LTrie c b  -- first guess
 \end{code}
-where |h| is an indexable functor whose associated key type is the type of list elements (``characters'').
-The similarity between the |LTrie| type and the function decomposition from \secref{Decomposing Functions from Lists} (motivating the constructor's name) makes for easy instance calculation.
+While this definition can work, we can get much better efficiency if we memoize the functions of |c|, e.g., as a generalized trie or a finite map.
+Rather than commit to a particular representation for the subtrie collection, let's replace the type parameter |c| with a functor |h| whose associated key type is |c|.
+The functor-parametrized list trie is also known as the ``cofree comonad'' \citep{Uustalu2005EDP,Uustalu2008CNC}.
+\begin{code}
+data Cofree h b = b :< h (Cofree h b)
+\end{code}
+
+The similarity between |Cofree h b| and the function decomposition from \secref{Decomposing Functions from Lists} (motivating the constructor's name) makes for easy instance calculation.
 As with |Pow a| and |Map a b|, we can define a trie counterpart to the monoid semiring, here |[c] -> b|.
-\begin{theorem}[\provedIn{theorem:LTrie}]\thmlabel{LTrie}
-Given the definitions in \figrefdef{LTrie}{List tries denoting |[c] -> b|}{
+\begin{theorem}[\provedIn{theorem:Cofree}]\thmlabel{Cofree}
+Given the definitions in \figrefdef{Cofree}{List tries denoting |[c] -> b|}{
 %format :<: = "\mathrel{\Varid{:\!\!\triangleleft\!:}}"
 \begin{code}
 infix 1 :<
-data LTrie h b = b :< h (LTrie h b) -- deriving Show
+data Cofree h b = b :< h (Cofree h b) deriving Functor
 
-instance Indexable (LTrie h b) h => Indexable b (LTrie h) where
-  type instance Key (LTrie h) = [Key h]
+instance Indexable (Cofree h b) h => Indexable b (Cofree h) where
+  type instance Key (Cofree h) = [Key h]
   (!) (b :< dp) = b <: (!) . (!) dp -- |(b :< dp) ! w = case w of { [] -> b ; c:cs -> dp ! c ! cs }|
 
-instance (Additive (h (LTrie h b)), Additive b) => Additive (LTrie h b) where
+instance (Additive (h (Cofree h b)), Additive b) => Additive (Cofree h b) where
   zero = zero :< zero
   (a :< dp) <+> (b :< dq) = a <+> b :< dp <+> dq
 
-instance (Functor h, Semiring b) => LeftSemimodule b (LTrie h b) where
+instance (Functor h, Semiring b) => LeftSemimodule b (Cofree h b) where
   scale s = fmap (s NOP <.>)
 
-instance (Functor h, Additive (h (LTrie h b)), Semiring b, DetectableZero b) => Semiring (LTrie h b) where
+instance (Functor h, Additive (h (Cofree h b)), Semiring b, DetectableZero b) => Semiring (Cofree h b) where
   one = one :< zero
   (a :< dp) <.> q = a .> q <+> (zero :< fmap (<.> NOP q) dp)
 
-instance  (Functor h, Additive (h (LTrie h b)), StarSemiring b, DetectableZero b) =>
-          StarSemiring (LTrie h b) where
+instance  (Functor h, Additive (h (Cofree h b)), StarSemiring b, DetectableZero b) =>
+          StarSemiring (Cofree h b) where
   star (a :< dp) = q where q = star a .> (one :< fmap (<.> NOP q) dp)
 
-instance  (HasSingle (LTrie h b) h, Additive (h (LTrie h b)), Additive b) =>
-          HasSingle b (LTrie h) where
+instance  (HasSingle (Cofree h b) h, Additive (h (Cofree h b)), Additive b) =>
+          HasSingle b (Cofree h) where
   w +-> b = foldr (\ c t -> zero :< c +-> t) (b :< zero) w
 
-instance  (Additive (h (LTrie h b)), DetectableZero (h (LTrie h b)), DetectableZero b) =>
-          DetectableZero (LTrie h b) where
+instance  (Additive (h (Cofree h b)), DetectableZero (h (Cofree h b)), DetectableZero b) =>
+          DetectableZero (Cofree h b) where
   isZero (a :< dp) = isZero a && isZero dp
 
-instance  (Functor h, Additive (h (LTrie h b)), DetectableZero b, DetectableZero (h (LTrie h b)), DetectableOne b) =>
-          DetectableOne (LTrie h b) where
+instance  (Functor h, Additive (h (Cofree h b)), DetectableZero b, DetectableZero (h (Cofree h b)), DetectableOne b) =>
+          DetectableOne (Cofree h b) where
   isOne (a :< dp) = isOne a && isZero dp
 
 \end{code}
@@ -1208,21 +1213,28 @@ Pleasantly, this trie data structure is a classic, though perhaps not in its laz
 Applying the |(<:)| decomposition to tries also appears to be more streamlined than the application to regular expressions.
 During matching, the next character in the candidate string is used to directly index to the relevant derivative (sub-trie), efficiently bypassing all other paths.
 
-\workingHere
-
-\note{Thoughts:}
-
-Maybe explicitly use the cofree comonad:
+Intriguingly, |atEps| and |derivs| correspond to |coreturn| and |cojoin| for the function-from-monoid comonad, also called the ``exponent comonad'' \citep{Uustalu2008CNC}:
 \begin{code}
-infixr 5 :<
-data Cofree f a = a :< f (Cofree f a)
-\end{code}
-In the keys library, |Key (Cofree f a) = Seq a|, but |[a]| seems more suitable to me.
-I can of course define my own version.
-It does define |type instance Key (Map k) = k|.
+instance Functor w => Comonad w where
+  coreturn  :: w b -> b
+  cojoin    :: w b -> w (w b)
 
-The cofree comonad perspective is probably quite relevant, since the denotation as a function from lists crucially uses |coreturn| and |cojoin|.
-Oh! Examine |coreturn| and |cojoin| on |Cofree f|. Sure enough, |(!)| is a comonad homomorphism.
+instance Monoid a => Comonad ((->) a) where
+  coreturn  f = f mempty
+  cojoin    f = \ u -> \ v -> f (u <> v)
+
+instance Functor h => Functor (Cofree h) where
+  fmap f (a :< ds) = f a :< fmap (fmap f) ds
+
+instance Functor h => Comonad (Cofree h) where
+  coreturn   (a :< _)   = a
+  cojoin t@  (_ :< ds)  = t :< fmap cojoin ds
+\end{code}
+The connection between these two comonads runs deep:
+\begin{theorem}[\provedIn{theorem:Cofree hom}]\thmlabel{Cofree hom}
+Given the definitions above and in \figref{Cofree}, if |(!)| on |h| behaves like |(->) (Key h)|, then |Cofree h| is a comonad homomorphism from |Cofree h| to |(->) (Key h)|.
+\end{theorem}
+
 
 \sectionl{Convolution}
 
@@ -1284,7 +1296,7 @@ newtype Id b = Id b deriving
 instance Indexable  () b (Id b) where Id a NOP ! NOP () = a
 instance HasSingle  () b (Id b) where () +-> b = Id b
 \end{code}
-The type |LTrie Identity| is isomorphic to \emph{streams} (infinite-only lists).
+The type |Cofree Identity| is isomorphic to \emph{streams} (infinite-only lists).
 Inlining and simplification during compilation can then eliminate all of the run-time overhead of introducing the identity functor.
 Alternatively, one could hand-optimize for streams.
 
@@ -2161,7 +2173,7 @@ Substitute into \lemreftwo{atEps [c] -> b}{deriv [c] -> b}, and simplify, using 
 
 %% \subsection{\thmref{semiring decomp generalized}}\prooflabel{theorem:semiring decomp generalized}
 
-\subsection{\thmref{LTrie}}\prooflabel{theorem:LTrie}
+\subsection{\thmref{Cofree}}\prooflabel{theorem:Cofree}
 
 The theorem follows from \thmref{semiring decomp [c] -> b}.
 A few details:
@@ -2170,8 +2182,8 @@ A few details:
 
 \begin{code}
     (!) zero 
-==  (!) (zero :< zero)      -- |zero| for |LTrie c b|
-==  zero <: (!) . (!) zero  -- |(!)| for |LTrie c b|
+==  (!) (zero :< zero)      -- |zero| for |Cofree c b|
+==  zero <: (!) . (!) zero  -- |(!)| for |Cofree c b|
 ==  zero <: (!) . zero      -- |Indexable| law \note{TODO}
 ==  zero <: zero            -- coinduction
 ==  zero                    -- \thmref{semiring decomp [c] -> b}
@@ -2179,16 +2191,16 @@ A few details:
 
 \begin{code}
     (!) ((a :< dp) + (b :< dq))
-==  (!) (a + b :< dp + dq)                                  -- |(+)| on |LTrie c b|
-==  a + b <: (!) . (!) (dp + dq)                            -- |(!)| on |LTrie c b|
+==  (!) (a + b :< dp + dq)                                  -- |(+)| on |Cofree c b|
+==  a + b <: (!) . (!) (dp + dq)                            -- |(!)| on |Cofree c b|
 ==  a + b <: (!) . ((!) dp + (!) dq)                        -- |Indexable| law
 ==  a + b <: (!) . (\ cs -> dp ! cs + dq ! cs)              -- |(+)| on functions
 ==  a + b <: \ cs -> (!) (dp ! cs + dq ! cs)                -- |(.)| definition
 ==  a + b <: \ cs -> (!) (dp ! cs) + (!) (dq ! cs)          -- |Indexable| law
 ==  a + b <: \ cs -> ((!) . (!) dp) cs + ((!) . (!) dq) cs  -- |(.)| definition
 ==  a + b <: ((!) . (!) dp) + ((!) . (!) dq)                -- |(+)| on functions
-==  (a :< (!) . (!) dp) + (b :< (!) . (!) dq)               -- |(+)| on |LTrie c b|
-==  (!) (a :< dp) + (!) (b :< dq)                           -- |(!)| on |LTrie c b|
+==  (a :< (!) . (!) dp) + (b :< (!) . (!) dq)               -- |(+)| on |Cofree c b|
+==  (!) (a :< dp) + (!) (b :< dq)                           -- |(!)| on |Cofree c b|
 \end{code}
 
 %if True
@@ -2207,8 +2219,8 @@ Similarly for the other
 
 \begin{code}
     (!) (s .> (a :< dp))
-==  (!) (s * a :< fmap (s NOP .>) dp)        -- |(.>)| and |Functor| (derived) on |LTrie|
-==  s * a <: (!) . (!) (fmap (s NOP .>) dp)  -- |(!)| on |LTrie c b|
+==  (!) (s * a :< fmap (s NOP .>) dp)        -- |(.>)| and |Functor| (derived) on |Cofree|
+==  s * a <: (!) . (!) (fmap (s NOP .>) dp)  -- |(!)| on |Cofree c b|
 ==  s * a <: (!) . (s NOP .>) . (!) dp       -- |Indexable| law
 ==  ...
 
@@ -2234,12 +2246,90 @@ Similarly for the other
 
 \end{spacing}
 
-%if False
-\subsection{\thmref{Fourier}}\prooflabel{theorem:Fourier}
+\subsection{\thmref{Cofree hom}}\prooflabel{theorem:Cofree hom}
 
-%format T = "\mathcal F"
-\note{Additivity of |T|, and the convolution theorem. What about |star p| and |single w|?}
-%endif
+First show that
+
+> (!) (fmap f (a :< ds)) = fmap f ((!) (a :< ds))
+
+i.e.,
+
+> fmap f (a :< ds) ! cs = fmap f ((!) (a :< ds)) cs
+
+Consider cases for |cs|:
+
+\begin{code}
+
+    fmap f (a :< ds) ! []
+==  f a :< (fmap (fmap f) ds) ! []  -- |fmap| on |Cofree h|
+==  f a                             -- |(!)| on |Cofree h|
+
+    fmap f ((!) (a :< ds)) []
+==  (f . (!) (a :< ds)) []          -- |fmap| on functions
+==  f ((a :< ds) ! [])              -- |(.)| definition
+==  f a                             -- |(!)| on |Cofree h|
+
+    fmap f (a :< ds) ! (c:cs')
+==  f a :< fmap (fmap f) ds ! (c:cs')  -- |fmap| on |Cofree h|
+==  fmap (fmap f) ds ! c ! cs          -- |(!)| on |Cofree h|
+==  fmap f (ds ! c) ! cs               -- |(!)| on |h| is natural
+==  f (ds ! c ! cs)                    -- |(!)| on |h| is natural
+
+    fmap f ((!) (a :< ds)) (c:cs')
+==  (f . (!) (a :< ds)) (c:cs')        -- |fmap| on functions
+==  f ((a :< ds) ! (c:cs'))            -- |(.)| definition
+==  f (ds ! c ! cs')                   -- |(!)| on |Cofree h|
+
+\end{code}
+Next show that
+
+> coreturn (a :< ds) == coreturn ((!) (a :< ds))
+
+\begin{code}
+
+   coreturn ((!) (a :< ds))
+== ((!) (a :< ds)) mempty
+== (a :< ds) ! mempty
+== a
+== coreturn (a :< ds)
+
+\end{code}
+Finally,
+
+> (!) . fmap (!) . cojoin == cojoin . (!)
+
+i.e.,
+
+> fmap (!) (cojoin (a :< ds)) ! cs == cojoin ((!) (a :< ds)) cs
+
+\begin{code}
+
+    fmap (!) (cojoin (a :< ds)) ! []
+==  fmap (!) ((a :< ds) :< fmap cojoin ds) ! []               -- |cojoin| on |Cofree h|
+==  ((!) (a :< ds) :< fmap (fmap (!)) (fmap cojoin ds)) ! []  -- |fmap| on |Cofree h|
+==  (!) (a :< ds)                                             -- |(!)| on |Cofree h|
+
+    cojoin ((!) (a :< ds)) []
+==  (\ u -> \ v -> (a :< ds) ! (u <> v)) []  -- |cojoin| on functions
+==  \ v -> (a :< ds) ! (mempty <> v)         -- $\beta$ reduction
+==  \ v -> (a :< ds) ! v                     -- |Monoid| law
+==  (!) (a :< ds)                            -- $\eta$ reduction
+
+
+    fmap (!) (cojoin (a :< ds)) ! (c:cs')
+==  fmap (!) ((a :< ds) :< fmap cojoin ds) ! (c:cs')               -- |cojoin| on |Cofree h|
+==  ((!) (a :< ds) :< fmap (fmap (!)) (fmap cojoin ds)) ! (c:cs')  -- |fmap| on |Cofree h|
+==  fmap (fmap (!)) (fmap cojoin ds) ! c ! cs'                     -- |(!)| on |Cofree h|
+==  fmap (fmap (!) . cojoin) ds ! c ! cs'                          -- |Functor| law
+==  ... -- \note{Working here}
+
+    cojoin ((!) (a :< ds)) (c:cs')
+==  (\ u -> \ v -> (a :< ds) ! (u <> v)) (c:cs')  -- |cojoin| on functions
+==  \ v -> (a :< ds) ! ((c:cs') <> v)             -- $\beta$ reduction
+==  \ v -> (a :< ds) ! (c : (cs' <> v))           -- |(<>)| on |[c]|
+==  \ v -> ds ! c ! (cs' <> v)                    -- |(!)| on |Cofree h|
+
+\end{code}
 
 \subsection{\thmref{standard FunApp}}\prooflabel{theorem:standard FunApp}
 

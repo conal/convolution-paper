@@ -971,6 +971,7 @@ foldl :: (c -> b -> b) -> b -> [c] -> b
 foldl h e []      = e
 foldl h e (c:cs)  = foldl h (h e c) cs
 \end{code}
+Intriguingly, |atEps| and |derivs| correspond to |coreturn| and |cojoin| for the function-from-monoid comonad, also called the ``exponent comonad'' \citep{Uustalu2008CNC}.
 
 Understanding how |atEps| and |deriv| relate to the semiring vocabulary will help us develop efficient implementations in later sections.
 
@@ -1213,12 +1214,15 @@ Pleasantly, this trie data structure is a classic, though perhaps not in its laz
 Applying the |(<:)| decomposition to tries also appears to be more streamlined than the application to regular expressions.
 During matching, the next character in the candidate string is used to directly index to the relevant derivative (sub-trie), efficiently bypassing all other paths.
 
-Intriguingly, |atEps| and |derivs| correspond to |coreturn| and |cojoin| for the function-from-monoid comonad, also called the ``exponent comonad'' \citep{Uustalu2008CNC}%
+As one might hope, |(!)| is a comonad homomorphism from |Cofree h| to |(->) (Key y)|%
 %if short
-.
-As one might hope, |(!)| is a comonad homomorphism from |Cofree h| to |(->) (Key y)|  \citep{Elliott2019-convolution-extended}.
+ \citep{Elliott2019-convolution-extended}.
 %else
 :
+\begin{theorem}[\provedIn{theorem:Cofree hom}]\thmlabel{Cofree hom}
+Given the definitions in \figreftwo{Cofree}{Cofree hom}, if |(!)| on |h| behaves like\notefoot{Come up with a better phrasing of this condition, and use it consistently} |(->) (Key h)|, then |Cofree h| is a comonad homomorphism from |Cofree h| to |(->) (Key h)|.
+\end{theorem}
+\figdef{Cofree hom}{|Comonad| and instances}{
 \begin{code}
 instance Functor w => Comonad w where
   coreturn  :: w b -> b
@@ -1235,11 +1239,9 @@ instance Functor h => Comonad (Cofree h) where
   coreturn   (a :< _)   = a
   cojoin t@  (_ :< ds)  = t :< fmap cojoin ds
 \end{code}
-The connection between these two comonads runs deep:
-\begin{theorem}[\provedIn{theorem:Cofree hom}]\thmlabel{Cofree hom}
-Given the definitions above and in \figref{Cofree}, if |(!)| on |h| behaves like\notefoot{Come up with a better phrasing of this condition, and use it consistently} |(->) (Key h)|, then |Cofree h| is a comonad homomorphism from |Cofree h| to |(->) (Key h)|.
-\end{theorem}
+}
 %endif
+
 
 \sectionl{Convolution}
 

@@ -32,6 +32,13 @@ import Misc
 -- Keyed functors. Useful for memoization in RegExp and maybe elsewhere.
 type family Key (h :: * -> *) :: *
 
+-- Taken from Data.Key
+class Functor f => Keyed f where
+  mapWithKey :: (Key f -> a -> b) -> f a -> f b
+
+-- | Countable support
+class Supported a x | x -> a where support :: x -> [a]
+
 -- Inspired by Indexable from Data.Key in the keys library.
 class Indexable a b x | x -> a b where
   infixl 9 !
@@ -148,6 +155,9 @@ Nums(Rational)
 
 type instance Key ((->) a) = a
 
+instance Keyed ((->) a) where
+  mapWithKey h f = \ a -> h a (f a)
+
 instance Indexable a b (a -> b) where
   f ! k = f k
 
@@ -180,7 +190,11 @@ instance (Ord a, Monoid a, Semiring b) => Semiring (Map a b) where
   one = mempty +-> one
   p <.> q = sum [u <> v +-> p!u <.> q!v | u <- M.keys p, v <- M.keys q]
 
-type instance Key (Map  a) = a
+type instance Key (Map a) = a
+
+instance Keyed (Map a) where mapWithKey = M.mapWithKey
+
+instance Supported a (Map a b) where support = M.keys
 
 instance (Ord a, Additive b) => Indexable a b (Map a b) where
   m ! a = M.findWithDefault zero a m
@@ -191,7 +205,12 @@ instance (Ord a, Additive b) => HasSingle a b (Map a b) where (+->) = M.singleto
 
 type instance Key Identity = ()
 
+instance Keyed Identity where mapWithKey h = fmap (h ())
+
+instance Supported () (Identity b) where support = const [()]
+
 instance Indexable () b (Identity b) where Identity a ! () = a
+
 instance HasSingle () b (Identity b) where () +-> b = Identity b
 
 deriving instance Additive b         => Additive (Identity b)
@@ -205,12 +224,21 @@ deriving instance Semiring b         => Semiring (Identity b)
 newtype Id b = Id b deriving 
  (Functor, Additive, DetectableZero, DetectableOne, LeftSemimodule s, Semiring)
 
-instance Indexable () b (Id b) where Id a ! () = a
-instance HasSingle () b (Id b) where () +-> b = Id b
-
 type instance Key Id = ()
 
+instance Keyed Id where mapWithKey h = fmap (h ())
+
+instance Supported () (Id b) where support = const [()]
+
+instance Indexable () b (Id b) where Id a ! () = a
+
+instance HasSingle () b (Id b) where () +-> b = Id b
+
 type instance Key Maybe = ()
+
+instance Keyed Maybe where mapWithKey h = fmap (h ())
+
+instance Supported () (Maybe b) where support = const [()]
 
 instance Additive b => Indexable () b (Maybe b) where
   -- Nothing ! () = zero
@@ -308,10 +336,24 @@ instance Splittable N where
     Misc
 --------------------------------------------------------------------}
 
+type instance Key [] = N
+
+instance Keyed [] where mapWithKey h = zipWith h [0 ..]
+
+instance Supported N [b] where
+  support [] = []
+  support (_:xs) = [0 .. fromIntegral (length xs)]  -- avoid 0-1 for N
+
 -- TODO: generalize to other Integral or Enum types and add to Semi
 newtype CharMap b = CharMap (IntMap b) deriving Functor
 
 type instance Key CharMap = Char
+
+instance Supported Char (CharMap b) where
+  support (CharMap m) = toEnum <$> IntMap.keys m
+
+instance Keyed CharMap where
+  mapWithKey h (CharMap m) = CharMap (IntMap.mapWithKey (h . toEnum) m)
 
 instance Additive b => Indexable Char b (CharMap b) where
   CharMap m ! a = IntMap.findWithDefault zero (fromEnum a) m

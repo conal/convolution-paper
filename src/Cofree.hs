@@ -8,7 +8,7 @@ module Cofree where
 
 import Prelude hiding (sum,product)
 
-import Data.Functor.Classes (Show1(..))
+import Data.Functor.Classes (Show1(..),showsPrec1)
 import GHC.Exts (coerce)
 import Data.Map (Map)
 import qualified Data.Map as M
@@ -42,6 +42,16 @@ b <: h = \ case { [] -> b ; c:cs  -> h c cs }
 infix 1 :<
 data Cofree h b = b :< h (Cofree h b) deriving Functor
 
+-- Swiped from Control.Comonad.Cofree
+instance (Show1 f, Show a) => Show (Cofree f a) where showsPrec = showsPrec1
+instance Show1 f => Show1 (Cofree f) where
+  liftShowsPrec sp sl = go
+    where
+      goList = liftShowList sp sl
+      go d (a :< ds) = showParen (d > 5) $
+        sp 6 a . showString " :< " . liftShowsPrec go goList 5 ds
+
+
 -- instance Functor h => Functor (Cofree h) where
 --   fmap f = go where go (a :< dp) = f a :< fmap go dp
 --   -- fmap f (a :< dp) = f a :< (fmap.fmap) f dp
@@ -56,6 +66,12 @@ instance Indexable c (Cofree h b) (h (Cofree h b)) => Indexable [c] b (Cofree h 
   -- (b :< dp) ! w = case w of { [] -> b ; c:cs -> dp ! c ! cs }
   -- (!) (b :< dp) = b <: (!) (fmap (!) dp)
   (!) (b :< dp) = b <: (!) . (!) dp
+
+instance Listable c (Cofree h b) (h (Cofree h b)) =>  Listable [c] b (Cofree h b) where
+  toList = go []
+   where
+     go cs (a :< dp) =
+       (cs,a) : concatMap (\ (c,t) -> go (c:cs) t) (toList dp)
 
 instance (Additive (h (Cofree h b)), Additive b) => Additive (Cofree h b) where
   zero = zero :< zero

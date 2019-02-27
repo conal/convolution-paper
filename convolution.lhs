@@ -1,7 +1,7 @@
 % -*- latex -*-
 
 %% Temporary title
-\def\tit{Efficient Language Recognition and Generalized Convolution}
+\def\tit{Generalized Convolution and Efficient Language Recognition}
 
 %% Used in bib.bib
 %if anonymous
@@ -104,8 +104,10 @@ Target\\[1.5ex]conal@@conal.net
 \nc\prooflabel[1]{\label{proof:#1}}
 %if long
 \nc\proofref[1]{Appendix \ref{proof:#1}}
+\nc\seeproof[1]{(details in \proofref{#1})}
 %else
-\nc\proofref[1]{proof in \citep[Appendix C]{Elliott2019-convolution-extended}}
+\nc\proofref[1]{\citep[Appendix A]{Elliott2019-convolution-extended}}
+\nc\seeproof[1]{\proofref{#1}}
 %endif
 \nc\provedIn[1]{\textnormal{Proved in \proofref{#1}}}
 
@@ -161,9 +163,9 @@ One of those types is the grand abstract template and itself generalizes to the 
 Other representations serve varied uses and performance trade-offs, with implementations calculated from simple and regular specifications.
 
 Of particular interest is Brzozowski's method for regular expression matching.
-Uncovering the method's essence frees it from syntactic manipulations, while generalizing from from boolean to weighted membership (such as multisets and probability distributions) and from sets to \emph{n}-ary relations.
+Uncovering the method's essence frees it from syntactic manipulations, while generalizing from boolean to weighted membership (such as multisets and probability distributions) and from sets to \emph{n}-ary relations.
 The classic \emph{trie} data structure then provides an elegant and efficient alternative to syntax.
-Pleasantly, polynomial arithmetic requires no additional implementation effort, works correctly with a variety of representations, and handles the multivariate polynomials and power series with ease.
+Pleasantly, polynomial arithmetic requires no additional implementation effort, works correctly with a variety of representations, and handles multivariate polynomials and power series with ease.
 Image convolution also falls out as a special case, while shining light on boundary behavior.
 
 %else
@@ -273,35 +275,36 @@ Usually, however, convolution is taught, applied, and implemented in more specia
 For instance,
 \begin{itemize}
 \item
-  The usual definition relies on subtraction, which is unavailable in many useful settings, while the more general form applies to any monoid \citep{Golan2005RecentSemi,Wilding2015LAS}.
+  Standard definitions rely on subtraction (which is unavailable in many useful settings) and are dimension-specific, while the more general form applies to any monoid \citep{Golan2005RecentSemi,Wilding2015LAS}.
 \item
-  Brzozowski's method of regular expression matching \citep{Brzozowski64} appears quite different from the other applications and is limited to \emph{sets} of strings (i.e., languages), leaving unclear how to generalize to variations like weighted membership (multisets and probability distributions) as well as \emph{n}-ary \emph{relations} between strings.
+  Brzozowski's method of regular expression matching \citep{Brzozowski64} appears quite unlike other applications and is limited to \emph{sets} of strings (i.e., languages), leaving unclear how to generalize to variations like weighted membership (multisets and probability distributions) as well as \emph{n}-ary \emph{relations} between strings.
 \item
-  Image convolution involves seemingly arbitrary semantic choices at image boundaries, including replication, zero-padding, and mirroring.
+  Image convolution is usually tied to arrays and involves seemingly arbitrary semantic choices at image boundaries, including replication, zero-padding, and mirroring.
 \notefoot{Not really a good example.}
 \end{itemize}
 
 \note{Rework the rest of this section for better coherence.}
 
-This paper formulates general convolution using the common algebraic framework of semirings and semimodules, including a collection of types for which semiring multiplication is convolution.
-One of those types is the grand abstract template, namely the ``monoid semiring'', i.e., functions from any monoid to any semiring.
-Furthermore, convolution reveals itself as a special case of an even more general notion, namely the free semimodule monad.
+This paper formulates general convolution in the algebraic framework of semirings and semimodules, including a collection of types for which semiring multiplication is convolution.
+One of those types is the grand abstract template, namely the \emph{monoid semiring}, i.e., functions from any monoid to any semiring.
+Furthermore, convolution reveals itself as a special case of an even more general notion---the \emph{free semimodule monad}.
 The other types are specific representations for different uses and different performance trade-offs, relating to the monoid semiring by simple denotation functions (interpretations).
-The corresponding semiring implementations are calculated from the requirement that the denotations be semiring homomorphisms.
+The corresponding semiring implementations are calculated from the requirement that these denotations be semiring homomorphisms, thus guaranteeing that the computationally efficient representations behave like their mathematically simple and general template.
 
-An application of central interest is language specification and recognition, in which convolution specializes to language concatenation.
-Here, we examine Brzozowski's method of flexible and efficient regular expression matching by derivatives (later extended to parsing context-free languages) and find that its essence is much more general, namely functions from lists (e.g., letters over some ``alphabet'') to an arbitrary semiring.
+An application of central interest in this paper is language specification and recognition, in which convolution specializes to language concatenation.
+Here, we examine a method by \citet{Brzozowski64} for flexible and efficient regular expression matching, which was later extended to parsing context-free languages \citep{Might2010YaccID}.
+We will see that the essential technique is much more general, namely functions from lists to an arbitrary semiring.
 While Brzozowski's method involves repeated manipulation of syntactic representations (regular expressions or grammars), uncovering the method's essence frees us from such representations.
 Thue's (list) tries appear provide a compelling alternative in simplicity and efficiency, as well as a satisfying confluence of classic techniques from the second and seventh decades of the twentieth century, as well as modern functional programming notion of the cofree comonad.
 
 Concretely, this paper makes the following contributions:
 \begin{itemize}
-\item A generalization of Brzozowski's algorithm from (a) regular expressions representing sets of strings to (b) representations of functions from sequences to any semiring, including relations.
-\item Demonstrate that the subtle aspect of Brzozowski's algorithm (matching of concatenated languages) is an instance of generalized convolution.
-\item Applying the generalized algorithm to tries instead of regular expressions, which is simpler and apparently quite efficient, requiring no construction or manipulation of syntactic representations.
+\item A generalization of Brzozowski's algorithm from (a) regular expressions representing sets of strings to (b) representations of functions from sequences to any semiring, including relations (via currying).
+\item Demonstration that the subtle aspect of Brzozowski's algorithm (matching of concatenated languages) is an instance of generalized convolution.
+\item Application of the generalized algorithm to tries (rather than regular expressions), yielding a simple and apparently quite efficient, requiring no construction or manipulation of syntactic representations.
 \item Application and evaluation of some simple memoization strategies resulting in quite dramatic speed improvement.
-\item Very general polynomial multiplication algorithm that handles univariate and multivariate polynomial arithmetic on polynomials and power series (``infinite polynomials'') requiring no additional implementation effort and working correctly with a variety of representations.
-\item Image convolution also as a special case, shining light on otherwise arbitrary border behavior.
+\item A very general polynomial multiplication algorithm that handles univariate and multivariate arithmetic on polynomials and power series (``infinite polynomials'') requiring no additional implementation effort and working correctly with a variety of representations.
+\item Image convolution as another special case, shining light on otherwise arbitrary border behavior.
 \end{itemize}
 
 \sectionl{Monoids, Semirings and Semimodules}
@@ -610,7 +613,7 @@ If we think of |a -> s| as a ``vector'' of |s| values, indexed by |a|, then |s .
 There is an important optimization to be made for scaling.
 When |s == zero|, |s .> p == zero|, so we can discard |p| entirely.
 This optimization applies quite often in practice, for instance with languages, which tend to be sparse.
-A less dramatically helpful optimization is |one .> p == p|.
+Another optimization (though less dramatically helpful) is |one .> p == p|.
 Rather than burden each |LeftSemimodule| instance with these two optimizations, let's define |(.>)| via a more primitive |scale| method:
 %format DetectableZero = IsZero
 %format DetectableOne  = IsOne
@@ -670,7 +673,7 @@ Hm. It seems I can't even express those laws now that there's no functor.
 }
 
 \secref{Monoids, Semirings and Semimodules} provides a fair amount of vocabulary for combining values.
-We'll also want an operation that constructs a ``vector'' (e.g., language or function) with a single non-zero component:
+We'll also want an operation that constructs a ``vector'' (e.g., language or function) with a single nonzero component:
 %format +-> = "\mapsto"
 \begin{code}
 class Indexable a b x => HasSingle a b x where
@@ -699,7 +702,7 @@ f == bigSum a a +-> f a
 \vspace{-3ex}
 \end{lemma}
 \noindent
-For the uses in this paper, |f| is often ``sparse'', i.e., non-zero on a relatively small (e.g., finite) subset of its domain.
+For the uses in this paper, |f| is often ``sparse'', i.e., nonzero on a relatively small (e.g., finite) subset of its domain.
 
 Singletons also curry handily and provide another useful homomorphism:
 \begin{lemma}[\provedIn{lemma:curry +->}]\lemlabel{curry +->}~
@@ -838,7 +841,7 @@ Note that the left |s|-semimodule laws specialized to |s=Bool| require |True| (|
 
 \sectionl{Languages and the Monoid Semiring}
 
-A ``language'' is a set of strings over some alphabet, so the |Additive| and |LeftSemimodule| instances for sets given above apply directly.
+A \emph{language} is a set of strings over some alphabet, so the |Additive| and |LeftSemimodule| instances for sets given above apply directly.
 Conspicuously missing, however, are the usual notions of language concatenation and closure (Kleene star), defined as follows for languages |U| and |V|:
 \begin{code}
 U V = set (u <> v | u <# U && v <# V)
@@ -907,8 +910,8 @@ instance Splittable [c] where
 \end{code}
 
 While simple, general, and (assuming |Splittable| domain) computable, the definitions of |(<+>)| and |(<.>)| above for the monoid semiring make for quite inefficient implementations, primarily due to naive backtracking.
-As a simple example, consider the language |single "pickles" + single "pickled"|, and suppose we want to test the word ``pickling'' for membership.
-The |(<+>)| implementation above will first try ``pickles'', fail near the end, and then backtrack all the way to the beginning to try ``pickled''.
+As a simple example, consider the language |single "pickles" + single "pickled"|, and suppose that we want to test the word ``pickling'' for membership.
+The |(<+>)| definition from \secref{Additive Monoids} will first try ``pickles'', fail near the end, and then backtrack all the way to the beginning to try ``pickled''.
 The second attempt redundantly discovers that the prefix ``pickl'' is also a prefix of the candidate word and that ``pickle'' is not.
 Next consider the language |single "ca" <.> single "ts" <.> single "up"|, and suppose we want to test ``catsup'' for membership.
 The |(<.>)| implementation above will try all possible three-way splittings of the test string.
@@ -944,11 +947,13 @@ instance (Ord a, Monoid a, Semiring b) => Semiring (Map a b) where
   p <.> q = sum [u <> v +-> p!u <.> q!v | u <- M.keys p, v <- M.keys q]
 \end{code}
 \vspace{-4ex}
-}, |(!)| is a homomorphism with respect to each instantiated class.%
-\footnote{The ``|M|'' module qualifier indicates names coming from the finite map library.}
+}, |(!)| is a homomorphism with respect to each instantiated class.
+(The ``|M|'' module qualifier indicates names coming from the finite map library.)
 \notefoot{Do I want a theorem and proof here?
 I think so, though I'll have to make a few assumptions about finite maps.
 On the other hand, those assumptions don't differ much from the homomorphism properties I'm claiming to hold.}
+The finiteness of finite maps prevents giving a useful |StarSemiring| instance.
+
 
 \sectionl{Decomposing Functions from Lists}
 
@@ -980,7 +985,7 @@ infix 1 <:
 (<:) :: b -> (c -> ([c] -> b)) -> ([c] -> b)
 b <: h = \ NOP case {NOP [] -> b NOP;NOP c:cs  -> h c cs NOP}
 \end{code}
-\vspace{-3ex}
+\vspace{-4ex}
 \end{lemma}
 \noindent
 %format derivs = deriv "^{\ast}"
@@ -1024,6 +1029,7 @@ f  == \ u -> derivs f u mempty
    == atEps . foldl deriv f
 \end{code}
 where |foldl| is the usual left fold on lists:
+\notefoot{The choice of \emph{left} fold bothers me. Could we define |derivs| via a \emph{right} fold (the natural fold for lists), perhaps leading to a right-to-left string matching algorithm? Or maybe left vs right doesn't matter?}
 \begin{code}
 foldl :: (c -> b -> b) -> b -> [c] -> b
 foldl h e []      = e
@@ -1035,7 +1041,7 @@ Understanding how |atEps| and |deriv| relate to the semiring vocabulary will hel
 
 \begin{lemma}[\provedIn{lemma:atEps [c] -> b}]\lemlabel{atEps [c] -> b}
 The |atEps| function is a star semiring and left semimodule homomorphism, i.e.,
-\begin{spacing}{1.4}
+\begin{spacing}{1.3}
 \begin{code}
 atEps zero         == zero
 atEps one          == one
@@ -1048,7 +1054,7 @@ atEps (star p)     == star (atEps p)
 Moreover,\footnote{Mathematically, the |(.>)| equation says that |atEps| is a left |b|-semiring homomorphism as well, since every semiring is a (left and right) semimodule over itself.
 Likewise, the |(+->)| equation might be written as ``|null w +-> b|'' or even ``|atEps w +-> b|''.
 Unfortunately, these prettier formulations would lead to ambiguity during Haskell type inference.}
-\begin{spacing}{1.4}
+\begin{spacing}{1.3}
 \begin{code}
 atEps (s .> p)   == s * atEps p
 
@@ -1064,12 +1070,12 @@ Differentiation has the following properties:
 \notefoot{If I replace application to |c| by indexing by |c| (i.e., |(! NOP c)|), will this lemma hold for all of the representations? I suspect so. Idea: Define $\derivOp_c\,p = \derivOp\,p\:!\:c$.}
 \begin{spacing}{1.3}
 \begin{code}
-deriv zero   c == zero
-deriv one    c == zero
+deriv zero   c       == zero
+deriv one    c       == zero
 deriv (p  <+>  q) c  == deriv p c <+> deriv q c
 deriv (p  <.>  q) c  == atEps p .> deriv q c <+> deriv p c <.> q
-deriv (star p) c == star (atEps p) .> deriv p c * star p
-deriv (s .> p) c == s .> deriv p c
+deriv (star p) c     == star (atEps p) .> deriv p c * star p
+deriv (s .> p) c     == s .> deriv p c
 
 deriv (     []      +-> b) == \c -> zero
 deriv (c'   :  cs'  +-> b) == c' +-> cs' +-> b
@@ -1086,19 +1092,21 @@ type instance Key ((->) a) = a
 type instance Key (Map  a) = a
 \end{code}
 Generalizing in this way (with functions as a special case) enables convenient memoization, which has been found to be quite useful in practice for derivative-based parsing \citep{Might2010YaccID}.
-A few generalizations to the equations \lemref{deriv [c] -> b} suffice to generalize from |c -> ([c] -> b)| to |h ([c] -> b)| (with details in \proofref{lemma:deriv [c] -> b}).
+A few generalizations to the equations in \lemref{deriv [c] -> b} suffice to generalize from |c -> ([c] -> b)| to |h ([c] -> b)| \seeproof{lemma:deriv [c] -> b}.
 We must assume that |Key h = c| and that |h| is an ``additive functor'', i.e., |forall b. NOP Additive b => Additive (h b)| with |(!)| for |h| being an additive monoid homomorphism.
+\begin{spacing}{1.3}
 \begin{code}
-deriv zero  == zero
-deriv one   == zero
-deriv (p  <+>  q) == deriv p <+> deriv q
-deriv (p  <.>  q) == fmap (atEps p NOP .>) (deriv q) <+> fmap (<.> q) (deriv p)
-deriv (star p) == fmap (\ d -> star (atEps p) .> d <.> Star p) (deriv p)
-deriv (s .> p) == fmap (s NOP .>) (deriv p)
+deriv zero         == zero
+deriv one          == zero
+deriv (p  <+>  q)  == deriv p <+> deriv q
+deriv (p  <.>  q)  == fmap (atEps p NOP .>) (deriv q) <+> fmap (<.> q) (deriv p)
+deriv (star p)     == fmap (\ d -> star (atEps p) .> d <.> Star p) (deriv p)
+deriv (s .> p)     == fmap (s NOP .>) (deriv p)
 
 deriv (    []     +-> b) == zero
 deriv (c   :  cs  +-> b) == c +-> cs +-> b
 \end{code}
+\end{spacing}
 
 \note{Consider re-expressing \lemref{deriv [c] -> b} in terms of |(!)|. Maybe even generalize |(<:)| to indexable functors.}
 
@@ -1199,7 +1207,7 @@ In fact, I'd also need the |D0| and |D1| instances for |RegExp h b|, so the figu
 
 \sectionl{Tries}
 
-\secref{Languages and the Monoid Semiring} gave an implementation of language recognition and its generalization to the monoid semiring (|a -> b| for monoid |a| and semiring |b|), packaged as instances of a few common algebraic abstractions (|Additive| etc).
+\secref{Languages and the Monoid Semiring} gave an implementation of language recognition and its generalization to the monoid semiring (|a -> b| for monoid |a| and semiring |b|), packaged as instances of a few common algebraic abstractions (|Additive|, |Semiring| etc).
 While simple and correct, these implementations are quite inefficient, primarily due to naive backtracking and redundant comparison.
 \secref{Decomposing Functions from Lists} explored the nature of functions on lists, identifying a decomposition principle and its relationship to the vocabulary of semirings and related algebraic abstractions.
 Applying this principle to a generalized form of regular expressions led to Brzozowski's algorithm, generalized from sets to functions in \secref{Regular Expressions}, providing an alternative to naive backtracking but still involving extensive syntactic manipulation as each candidate string is matched.
@@ -1207,10 +1215,8 @@ Nevertheless, with some syntactic optimizations and memoization, recognition spe
 
 As an alternative to regular expression differentiation, note that the problem of redundant comparison is solved elegantly by the classic trie (``prefix tree'') data structure introduced by Axel Thue in 1912 \citep[Section 6.3]{Knuth1998ACP3}.
 This data structure was later generalized to arbitrary (regular) algebraic data types \citep{Connelly1995GenTrie} and then from sets to functions \citep{Hinze2000GGT}.
-We'll explore the data type generalization later.\notefoot{Add a forward pointer, or remove the promise.}
+\out{We'll explore the data type generalization later.\notefoot{Add a forward pointer, or remove the promise.}}
 Restricting our attention to functions of lists (``strings'' over some alphabet), we can formulate a simple trie data type along the lines of |(<:)| from \secref{Decomposing Functions from Lists}, with an entry for |mempty| and a sub-trie for each possible character:
-\notefoot{Maybe another oppositely pointing arrows of some sort.
-I might want yet another pair for generalized tries.}
 %format :< = "\mathrel{\Varid{:\!\!\triangleleft}}"
 \begin{code}
 data LTrie c b = b :< c -> LTrie c b  -- first guess
@@ -1222,7 +1228,7 @@ The functor-parametrized list trie is also known as the ``cofree comonad'' \cite
 data Cofree h b = b :< h (Cofree h b)
 \end{code}
 
-The similarity between |Cofree h b| and the function decomposition from \secref{Decomposing Functions from Lists} (motivating the constructor's name) makes for easy instance calculation.
+The similarity between |Cofree h b| and the function decomposition from \secref{Decomposing Functions from Lists} (motivating the constructor name ``|:<|'') makes for easy instance calculation.
 As with |Pow a| and |Map a b|, we can define a trie counterpart to the monoid semiring, here |[c] -> b|.
 \begin{theorem}[\provedIn{theorem:Cofree}]\thmlabel{Cofree}
 Given the definitions in \figrefdef{Cofree}{List tries denoting |[c] -> b|}{
@@ -1271,12 +1277,11 @@ Although the |(<:)| decomposition in \secref{Decomposing Functions from Lists} w
 Pleasantly, this trie data structure is a classic, though perhaps not in its lazy infinite form for use as a language representation.
 Applying the |(<:)| decomposition to tries also appears to be more streamlined than the application to regular expressions.
 During matching, the next character in the candidate string is used to directly index to the relevant derivative (sub-trie), efficiently bypassing all other paths.
-
-As one might hope, |(!)| is a comonad homomorphism from |Cofree h| to |(->) (Key y)|%
+As one might hope,
 %if short
- \citep{Elliott2019-convolution-extended}.
+|(!)| is a comonad homomorphism from |Cofree h| to |(->) (Key y)| \seeproof{theorem:Cofree hom}.
 %else
-:
+|(!)| on |Cofree h| is another homomorphism:
 \begin{theorem}[\provedIn{theorem:Cofree hom}]\thmlabel{Cofree hom}
 Given the definitions in \figreftwo{Cofree}{Cofree hom}, if |(!)| on |h| behaves like\notefoot{Come up with a better phrasing of this condition, and use it consistently} |(->) (Key h)|, then |Cofree h| is a comonad homomorphism from |Cofree h| to |(->) (Key h)|.
 \end{theorem}
@@ -1317,7 +1322,7 @@ Using the set/predicate isomorphism from \secref{Calculating Instances from Homo
 
 which is the definition of the concatenation of two languages from  \secref{Languages and the Monoid Semiring}.
 
-By specializing the \emph{domain} of the functions to sequences (from general monoids), we got efficient matching of semiring-generalized ``languages'', as in \secreftwo{Decomposing Functions from Lists}{Tries}, which translates to regular expressions (\secref{Regular Expressions}), generalizing work of \citet{Brzozowski64}.
+By specializing the \emph{domain} of the functions to sequences (from general monoids), we got efficient matching of semiring-generalized ``languages'', as in \secreftwo{Decomposing Functions from Lists}{Tries}, which translated to regular expressions (\secref{Regular Expressions}), generalizing work of \citet{Brzozowski64}.
 
 %format R = "\mathbb R"
 %format C = "\mathbb C"
@@ -1363,15 +1368,28 @@ instance HasSingle  () b (Id b) where () +-> b = Id b
 \end{code}
 The type |Cofree Identity| is isomorphic to \emph{streams} (infinite-only lists).
 Inlining and simplification during compilation can then eliminate all of the run-time overhead of introducing the identity functor.
-Alternatively, one could hand-optimize for streams.
+(Failing a ``sufficiently smart compiler'', one could use |Stream =~ Cofree Id| as a specification and optimize manually.)
 
+Just as |Cofree Identity| gives (necessarily infinite) streams, |Cofree Maybe| gives (possibly finite) \emph{nonempty lists} \citep{Uustalu2008CNC, Maguire2016}.
+As with finite maps, we can interpret absence as |zero|:
+\begin{code}
+instance Additive b => Indexable () b (Maybe b) where
+  Nothing  ! () = zero
+  Just b   ! () = b
+
+instance (DetectableZero b, Additive b) => HasSingle () b (Maybe b) where 
+  () +-> b  | isZero b   = Nothing
+            | otherwise  = Just b
+\end{code}
+As we'll see in \secref{Polynomials}, the introduction of finiteness here enables arithmetic on (finite) polynomials in addition to (infinite) power series.
+\note{Maybe a similar comment about image convolution, though we probably wouldn't really want to use lists.}
 
 \sectionl{Beyond Convolution}
 
 %format Fin (m) = Fin "_{" m "}"
 %format Array (m) = Array "_{" m "}"
 
-Many uses of discrete convolution (including convolutional neural networks \citep[Chapter 9]{LecunBengioHinton2015DLNature}) involve functions having finite support, i.e., non-zero on only a finite subset of their domains.
+Many uses of discrete convolution (including convolutional neural networks \citep[Chapter 9]{LecunBengioHinton2015DLNature}) involve functions having finite support, i.e., nonzero on only a finite subset of their domains.
 \notefoot{First suggest finite maps, using instances from \figref{Map}. Then intervals/arrays.}
 In many cases, these domain subsets may be defined by finite \emph{intervals}.
 For instance, such a 2D operation would be given by intervals in each dimension, together specifying lower left and upper right corners of a 2D interval (rectangle) outside of which the functions are guaranteed to be zero.
@@ -1383,19 +1401,10 @@ For instance, a 1D convolution might have the following type:
 \begin{code}
 (*) :: Semiring s => Array (m+1) s -> Array (n+1) s -> Array (m+n+1) s
 \end{code}
-Unfortunately, this signature is incompatible with the general type of |(*)|, in which arguments and result all have the same type.
+Unfortunately, this signature is incompatible with the general type of semiring multiplication, in which arguments and result all have the same type.
 
 From the perspective of functions, an array of size |n| is a memoized function from |Fin n|, a type representing the finite set |set (0, ..., n-1)|.
-Although we can still define a convolution-like operation in terms of index addition, indices no longer form a monoid, simply due to the non-uniformity of types.
-%format lift0
-%format lift1
-%format lift2
-%format liftn = lift "_n"
-%if False
-
-The inability to support convolution on statically sized arrays (or other memoized forms of functions over finite domains) as semiring multiplication came from the expectation that index/argument combination is via a monoid.
-%endif
-This limitation is a shame, since convolution still makes sense:
+We can still define convolution in the customary sense in terms of index addition:
 \begin{code}
 f <.> g = bigSum (u,v) u + v +-> f u <.> g v
 \end{code}
@@ -1403,7 +1412,15 @@ where now
 \begin{code}
 (+) :: Fin (m+1) -> Fin (n+1) -> Fin (m+n+1)
 \end{code}
-Fortunately, this monoid expectation can be dropped by generalizing from monoidal combination to an \emph{arbitrary} binary operation |h :: a -> b -> c|.
+Indices no longer form a monoid under addition, however, simply due to the nonuniformity of types.
+
+%format lift0
+%format lift1
+%format lift2
+%format liftn = lift "_n"
+
+The inability to support convolution on statically sized arrays (or other memoized forms of functions over finite domains) as semiring multiplication came from the expectation that indices/arguments combine via a monoid.
+Fortunately, this expectation can be dropped by generalizing from monoidal combination to an \emph{arbitrary} binary operation |h :: a -> b -> c|.
 For now, let's call this more general operation ``|lift2 h|''.
 \begin{code}
 lift2 :: Semiring s => (a -> b -> c) -> (a -> s) -> (b -> s) -> (c -> s)
@@ -1442,7 +1459,7 @@ lift0 b  = b +-> one
 \noindent
 The signatures of |lift2|, |lift1|, and |lift0| \emph{almost} generalize to those of |liftA2|, |fmap|, and |pure| from the |Functor| and |Applicative| type classes \citep{McBride2008APE}.
 In type systems like Haskell's, however, |a -> s| is the functor |(a ->)| applied to |s|, while we would need it to be |(-> s)| applied to |a|.
-To fix this problem, define a type wrapper:
+To fix this problem, define a type wrapper that swaps domain and codomain type parameters:
 \begin{code}
 newtype s <-- a = F (a -> s)
 \end{code}
@@ -1475,7 +1492,7 @@ instance Semiring b => Applicative ((<--) b) where
 newtype Map' b a = M (Map a b)
 
 instance DetectableZero b => FunctorC (Map' b) where
-  type Ok (Map' b) a = (Ord a, Monoid a)
+  type Ok (Map' b) a = Ord a
   fmapC h (M p) = bigSumKeys (a <# M.keys p) h a +-> p ! a
 
 instance DetectableZero b => ApplicativeC (Map' b) where
@@ -1483,14 +1500,13 @@ instance DetectableZero b => ApplicativeC (Map' b) where
   liftA2C h (M p) (M q) = bigSumKeys (a <# M.keys p BR b <# M.keys q) h a b +-> (p!a) <.> (q!b)
 \end{code}
 \vspace{-3ex}
-}, along with instances for functions and finite maps.%
-Other representations such as tries would need similar reversal of type arguments.
+}, along with instances for functions and finite maps.
+Other representations would need similar reversal of type arguments.
 \footnote{The enhancement is the associated constraint \citep{Bolingbroke2011CK} |Ok|, limiting the types that the class methods must support. The line ``|type Ok f a = ()|'' means that the constraint on |a| defaults to |()|, which holds vacuously for all |a|.}%
 \footnote{Originally, |Applicative| had a |(<*>)| method from which one can easily define |liftA2|. Since the base library version 4.10, |liftA2| was added as a method (along with a default definition of |(<*>)|) to allow for more efficient implementation \citep[Section 3.2.2]{GHC821}.}
-\notefoot{Sync up this code with changes I made to the implementation.}
 Higher-arity liftings can be defined via these three.
-(Exercise.)
-For |b <-- a|, these definitions are not really executable code, since they involve summations are over potentially infinite ranges, but they serve as specifications for other representations such as finite maps.
+\out{(Exercise.)}
+For |b <-- a|, these definitions are not really executable code, since they involve potentially infinite summations, but they serve as specifications for other representations such as finite maps, regular expressions, and tries.
 \begin{theorem}
 For each instance defined in \figref{FunApp}, the following equalities hold:
 \notefoot{Probe more into the pattern of |single = pure|, |one = single mempty| and |(*) = liftA2 (<>)|.
@@ -1518,17 +1534,18 @@ instance (Semiring b, Monoid a) => Semiring (b <-- a) where
   (*) = liftA2 (<>)
 \end{code}
 }, along with a the old |a -> b| instance re-assigned to |b <-- a|.
-Just as the |Bool <-- a| gives us two important operations on languages, now so does |a -> Bool|, namely the set of all ``strings'' and the \emph{intersection} of languages.
-These two semirings share several instances in common, which are expressed in \figref{-> and <-- semirings} via GHC-Haskell's \verb|GeneralizedNewtypeDeriving| language extension (present since GHC 6.8.1 and later made safe \citep{Breitner2016SZC}).
-As with |Additive|, this |Semiring| instance implies that curried functions (of any number and type of arguments and with semiring result type) are semirings, with |curry| and |uncurry| being semiring homomorphisms.
-(The proof is very similar to that of \thmref{curry additive} in \proofref{theorem:curry additive}.)
+Just as the |Additive| and |Semiring| instances for |Bool <-- a| give us four important languages operations (union, concatenation and their identities), now the |Semiring (a -> Bool)| gives us two more: the set of all ``strings'' and the \emph{intersection} of languages.
+These two semirings share several instances in common, expressed in \figref{-> and <-- semirings} via GHC-Haskell's \verb|GeneralizedNewtypeDeriving| language extension (present since GHC 6.8.1 and later made safe by \citet{Breitner2016SZC}).
+All six of these operations are also useful in their generalize form (i.e., for |a -> b| and |b <-- a| for semirings |b|).
+As with |Additive|, this |Semiring (a -> b)| instance implies that curried functions (of any number and type of arguments and with semiring result type) are semirings, with |curry| and |uncurry| being semiring homomorphisms.
+(The proof is very similar to that of \thmref{curry additive}.)
 
 The |a -> b| and |b <-- a| semirings have another deep relationship:
 %format Fourier = "\mathcal F"
 \begin{theorem}\thmlabel{Fourier}
 The Fourier transform is a semiring and left semimodule homomorphism from |b <- a| to |a -> b|.
 \end{theorem}
-This theorem is more often expressed by saying that (a) the Fourier transform is linear (i.e., an additive monoid and left semimodule homomorphism), and (b) the Fourier transform of a convolution (i.e., |(*)| on |b <-- a|) of two functions is the pointwise product (i.e., |(*)| on |a -> b|) of the Fourier transforms of the two functions.
+This theorem is more often expressed by saying that (a) the Fourier transform is linear (i.e., an additive-monoid and left-semimodule homomorphism), and (b) the Fourier transform of a convolution (i.e., |(*)| on |b <-- a|) of two functions is the pointwise product (i.e., |(*)| on |a -> b|) of the Fourier transforms of the two functions.
 The latter property is known as ``the convolution theorem'' \citep[Chapter 6]{Bracewell2000Fourier}.
 
 
@@ -1536,7 +1553,7 @@ The latter property is known as ``the convolution theorem'' \citep[Chapter 6]{Br
 
 Where there's an applicative, there's often a compatible monad.
 For |b <-- a|, the monad is known as the ``free semimodule monad'' (or sometimes the ``free \emph{vector space} monad'') \citep{Piponi2007MonadVS,Kmett2011FreeModules,Gehrke2017Q}.
-The dimension of the semimodule is the cardinality of |a|.
+The semimodule's dimension is the cardinality of |a|.
 Basis vectors have the form |single u = u +-> one| for some |u :: a| (mapping |u| to |one| and every other value to |zero| as in \figref{monoid semiring}).
 
 The monad instances for |(<--) b| and |Map' b| are defined as follows:\footnote{The |return| method does not appear here, since it is equivalent to |pure| from |Applicative|.}
@@ -1550,7 +1567,7 @@ instance (Semiring b, DetectableZero b) => MonadC (Map' b) where
 \end{code}
 \vspace{-2ex}
 \begin{theorem}[\provedIn{theorem:standard FunApp}]\thmlabel{standard FunApp}
-The definitions of |fmap| and |liftA2| on |((<--) b)| in \figref{FunApp} satisfy the following standard equations for monads:
+The definitions of |fmap| and |liftA2| on |(<--) b| in \figref{FunApp} satisfy the following standard equations for monads:
 \begin{code}
 fmap h p = p >>= pure . h
 
@@ -1566,7 +1583,7 @@ liftA2 h p q  = p >>= \ u -> fmap (h u) q
 %format N = "\mathbb{N}"
 %format (Sum a) = a
 
-As is well known, univariate polynomials form a semiring and can be multiplied by \emph{convolving} their coefficients.
+As is well known, univariate polynomials form a semiring and can be multiplied by convolving their coefficients.
 Perhaps less known is that this trick extends naturally to multivariate polynomials and to (univariate and multivariate) power series.
 
 Looking more closely, univariate polynomials (and even power series) can be represented by a collection of coefficients indexed by exponents, or conversely as a collection of exponents weighted by coefficients.
@@ -1586,12 +1603,12 @@ The function |poly1| is a semiring homomorphism when multiplication on |b| commu
 \end{theorem}
 Pragmatically, \thmref{poly hom} says that the |b <-- N| semiring (in which |(*)| is convolution) correctly implements arithmetic on univariate polynomials.
 More usefully, we can use other representations of |b <-- N|, such as |Map N b|.
-For viewing results, wrap this representation in a new type:
+For viewing results, wrap this representation in a new type, and provide a |Show| instance:
 %format Poly1
 \begin{code}
 newtype Poly1 b = Poly1 (Map N b) deriving (Additive, Semiring, Indexable n, HasSingle n, Functor)
 
-instance (DetectableZero b, DetectableOne b, Show b) => Show (Poly1 b) where
+instance (DetectableZero b, DetectableOne b, Show b) => Show (Poly1 b) where NOP ...
 \end{code}
 Try it out:
 %format Integer = Z
@@ -1676,7 +1693,7 @@ In other words, |pows x| is a (commutative) monoid homomorphism from the sum mon
 The generalized |poly| function is a semiring homomorphism when multiplication on |b| commutes.
 \end{theorem}
 \begin{proof}
-Just like the proof of \thmref{poly hom} in \proofref{theorem:poly hom}, given \lemref{pows hom}.
+Just like the proof of \thmref{poly hom}, given \lemref{pows hom}.
 \end{proof}
 \thmref{generalized poly hom} says that the |b <-- (n -> N)| semiring (in which |(*)| is higher-dimensional convolution) correctly implements arithmetic on multivariate polynomials.
 We can instead use |Map (f N) b| to denote |b <-- (n -> N)|, where |f| is indexable with |Key f = n|.
@@ -1690,7 +1707,8 @@ As with |Poly1|, wrap this representation in a new type, and add a |Show| instan
 %format varM = var
 %format Name = String
 \begin{code}
-newtype PolyM b = PolyM (Map (Map Name N) b) deriving (Additive, Semiring, Indexable n, HasSingle n, Functor)
+newtype PolyM b = PolyM (Map (Map Name N) b)
+  deriving (Additive, Semiring, Indexable n, HasSingle n, Functor)
 
 instance (DetectableZero b, DetectableOne b, Show b) => Show (PolyM b) where ...
 
@@ -1744,6 +1762,7 @@ Future work:
 \item More careful performance testing, analysis, and optimization.
 \item Explore Brzozowski derivatives as actual derivatives of residual functions, as in my journal notes from 2019-02-08.
 \item Generalization from lists to other data types.
+\item Comonadic animation and imagery.
 \end{itemize}
 }
 

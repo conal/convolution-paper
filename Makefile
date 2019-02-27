@@ -62,6 +62,10 @@ showpdf=skim
 %.see: %.pdf
 	${showpdf} $<
 
+icfp.see: $(icfp).see
+long.see: $(long).see
+long-anon.see: $(long-anon).see
+
 SHELL = bash
 
 clean:

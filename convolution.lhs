@@ -249,6 +249,36 @@ All of the algorithms in the paper follow from simple specifications in the form
 
 \sectionl{Introduction}
 
+The mathematical operation of \emph{convolution} combines two functions into a third---often written ``|h = f * g|''---with each |h| value resulting from summing or integrating over the products of several pairs of |f| and |g| values, according to a simple rule.
+This operation is at the heart of many important and interesting applications in a variety of fields \citep{SnehaHL2017Conv,Behl2014CAC}.
+\begin{itemize}
+\item In image processing, convolution provides operations like smoothing, sharpening, and edge detection \citep{Young95FIP}.
+  \note{Add something about more general signal processing \citep[Chapter 2]{Yarlagadda2010ADSS}.}
+\item In machine learning convolutional neural networks (CNNs) allowed recognition of translation-independent image features \citep{Fukushima1988Neo, LeCun1998GBDR, Schmidhuber2015DL, Alom2018History}.
+\item In probability, the convolution of independent distributions equals the distribution of the sum \citep{Grinstead2003IP}.
+\item In acoustics, reverberation results from convolution of sounds and their echos \citep{Pishdadian2017FRC}.
+      Musical uses are known as ``convolution reverb'' \citep[Chapter 4]{HassICM1}.
+\item In optics, blurring is convolution with a lens or iris, and shadowing is convolution with an occluding object \needcite.
+\item The coefficients of the product of two polynomials equals the convolution of their coefficients \needcite.
+\item In formal languages, (generalized) convolution is language concatenation \needcite.
+\end{itemize}
+
+%if False
+
+\emph{Convolution} is a broadly useful operation with applications including signal processing, machine learning, probability, optics, polynomial multiplication, and efficient parsing.
+Usually, however, this operation is understood and implemented in more specialized forms, hiding commonalities and limiting usefulness.
+This paper formulates convolution in the common algebraic framework of semirings and semimodules and populates that framework with various representation types.
+One of those types is the grand abstract template and itself generalizes to the free semimodule monad.
+Other representations serve varied uses and performance trade-offs, with implementations calculated from simple and regular specifications.
+
+Of particular interest is Brzozowski's method for regular expression matching.
+Uncovering the method's essence frees it from syntactic manipulations, while generalizing from from boolean to weighted membership (such as multisets and probability distributions) and from sets to \emph{n}-ary relations.
+The classic \emph{trie} data structure then provides an elegant and efficient alternative to syntax.
+Pleasantly, polynomial arithmetic requires no additional implementation effort, works correctly with a variety of representations, and handles the multivariate polynomials and power series with ease.
+Image convolution also falls out as a special case, while shining light on boundary behavior.
+
+%endif
+
 \workingHere
 
 
@@ -323,8 +353,8 @@ instance Monoid (Endo a) where
 \end{code}
 The identity and associativity monoid laws follow from the identity and associativity category laws, so we can generalize to endomorphisms, i.e., morphisms from an object to itself in any category.
 
-A modest generalization of Cayley's theorem states that every monoid is isomorphic to a monoid of endofunctions \cite{Boisseau2018YNK}.
-This embedding is useful for turning quadratic-time algorithms linear \cite{Hughes1986NRL,Voigtlander2008AIC}.
+A modest generalization of Cayley's theorem states that every monoid is isomorphic to a monoid of endofunctions \citep{Boisseau2018YNK}.
+This embedding is useful for turning quadratic-time algorithms linear \citep{Hughes1986NRL,Voigtlander2008AIC}.
 % (The Yoneda embedding generalizes this theorem to categories and endomorphisms.)
 \begin{code}
 toEndo :: Monoid a => a -> Endo a
@@ -839,7 +869,7 @@ instance (Semiring b, Monoid a)  => StarSemiring (a -> b)  -- default |star|
 \end{code}
 \vspace{-4ex}
 }.
-With this instance, |a -> b| type is known as ``the monoid semiring'', and its |(*)| operation as ``convolution'' \citep{golan2013semirings,wilding2015linear}.
+With this instance, |a -> b| type is known as ``the monoid semiring'', and its |(*)| operation as ``convolution'' \citep{Golan2013SemiApps,Wilding2015LAS}.
 
 \begin{theorem}[\provedIn{theorem:semiring hom ->}]\thmlabel{semiring hom ->}
 Given the instance definitions in \figref{monoid semiring}, |setPred| is a star semiring homomorphism.
@@ -1164,10 +1194,10 @@ In fact, I'd also need the |D0| and |D1| instances for |RegExp h b|, so the figu
 While simple and correct, these implementations are quite inefficient, primarily due to naive backtracking and redundant comparison.
 \secref{Decomposing Functions from Lists} explored the nature of functions on lists, identifying a decomposition principle and its relationship to the vocabulary of semirings and related algebraic abstractions.
 Applying this principle to a generalized form of regular expressions led to Brzozowski's algorithm, generalized from sets to functions in \secref{Regular Expressions}, providing an alternative to naive backtracking but still involving extensive syntactic manipulation as each candidate string is matched.
-Nevertheless, with some syntactic optimizations and memoization, recognition speed with this technique can be fairly good \cite{Might2010YaccID,Adams2016CPP}.
+Nevertheless, with some syntactic optimizations and memoization, recognition speed with this technique can be fairly good \citep{Might2010YaccID,Adams2016CPP}.
 
 As an alternative to regular expression differentiation, note that the problem of redundant comparison is solved elegantly by the classic trie (``prefix tree'') data structure introduced by Axel Thue in 1912 \citep[Section 6.3]{Knuth1998ACP3}.
-This data structure was later generalized to arbitrary (regular) algebraic data types \cite{Connelly1995GenTrie} and then from sets to functions \cite{Hinze2000GGT}.
+This data structure was later generalized to arbitrary (regular) algebraic data types \citep{Connelly1995GenTrie} and then from sets to functions \citep{Hinze2000GGT}.
 We'll explore the data type generalization later.\notefoot{Add a forward pointer, or remove the promise.}
 Restricting our attention to functions of lists (``strings'' over some alphabet), we can formulate a simple trie data type along the lines of |(<:)| from \secref{Decomposing Functions from Lists}, with an entry for |mempty| and a sub-trie for each possible character:
 \notefoot{Maybe another oppositely pointing arrows of some sort.
@@ -1401,7 +1431,7 @@ lift0 b  = b +-> one
 %format >>== = >>=
 %% %format keys p = p
 \noindent
-The signatures of |lift2|, |lift1|, and |lift0| \emph{almost} generalize to those of |liftA2|, |fmap|, and |pure| from the |Functor| and |Applicative| type classes \cite{McBride2008APE}.
+The signatures of |lift2|, |lift1|, and |lift0| \emph{almost} generalize to those of |liftA2|, |fmap|, and |pure| from the |Functor| and |Applicative| type classes \citep{McBride2008APE}.
 In type systems like Haskell's, however, |a -> s| is the functor |(a ->)| applied to |s|, while we would need it to be |(-> s)| applied to |a|.
 To fix this problem, define a type wrapper:
 \begin{code}
@@ -1496,7 +1526,7 @@ The latter property is known as ``the convolution theorem'' \citep[Chapter 6]{Br
 \sectionl{The Free Semimodule Monad}
 
 Where there's an applicative, there's often a compatible monad.
-For |b <-- a|, the monad is known as the ``free semimodule monad'' (or sometimes the ``free \emph{vector space} monad'') \cite{Piponi2007MonadVS,Kmett2011FreeModules,Gehrke2017Q}.
+For |b <-- a|, the monad is known as the ``free semimodule monad'' (or sometimes the ``free \emph{vector space} monad'') \citep{Piponi2007MonadVS,Kmett2011FreeModules,Gehrke2017Q}.
 The dimension of the semimodule is the cardinality of |a|.
 Basis vectors have the form |single u = u +-> one| for some |u :: a| (mapping |u| to |one| and every other value to |zero| as in \figref{monoid semiring}).
 

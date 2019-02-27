@@ -841,7 +841,7 @@ instance (Semiring b, Monoid a)  => StarSemiring (b <-- a)  -- default |star|
 \end{code}
 \vspace{-4ex}
 }.
-The |b <-- a| type is known as ``the monoid semiring'', and its |(*)| operation as ``convolution'' \citep{golan2013semirings,wilding2015linear}.
+The |b <-- a| type is known as ``the monoid semiring'', and its |(*)| operation as ``convolution'' \citep{Golan2013SemiApps,Wilding2015LAS}.
 
 \begin{theorem}[\provedIn{theorem:Semiring (b <-- a)}]\thmlabel{Semiring (b <-- a)}
 Given the derived and explicitly defined instances for |b <-- a| above, |recogLang| is a homomorphism with respect to each instantiated class.

@@ -298,12 +298,15 @@ While Brzozowski's method involves repeated manipulation of syntactic representa
 Thue's (list) tries appear provide a compelling alternative in simplicity and efficiency, as well as a satisfying confluence of classic techniques from the second and seventh decades of the twentieth century, as well as modern functional programming notion of the cofree comonad.
 
 Concretely, this paper makes the following contributions:
+\notefoot{Maybe add section references.}
 \begin{itemize}
-\item A generalization of Brzozowski's algorithm from (a) regular expressions representing sets of strings to (b) representations of functions from sequences to any semiring, including relations (via currying).
+\item A generalization of Brzozowski's algorithm from (a) regular expressions representing sets of strings to (b) various representations of |[c] -> b| where |c| is any type and |b| is any semiring, including $n$-ary functions and relations on lists (via currying).
 \item Demonstration that the subtle aspect of Brzozowski's algorithm (matching of concatenated languages) is an instance of generalized convolution.
-\item Application of the generalized algorithm to tries (rather than regular expressions), yielding a simple and apparently quite efficient, requiring no construction or manipulation of syntactic representations.
-\item Application and evaluation of some simple memoization strategies resulting in quite dramatic speed improvement.
-\item A very general polynomial multiplication algorithm that handles univariate and multivariate arithmetic on polynomials and power series (``infinite polynomials'') requiring no additional implementation effort and working correctly with a variety of representations.
+\item Specialization of the generalized algorithm to tries (rather than regular expressions), yielding a simple and apparently quite efficient implementation, requiring no construction or manipulation of syntactic representations.
+\item The observation that Brzozowski's key operations on languages generalize to the comonad operations of the standard function-from-monoid comonad and its various representations (including generalized regular expressions).
+      The trie representation is the cofree comonad, which memoizes functions from the free monoid, i.e., lists.
+\item Application and evaluation of some simple memoization strategies encapsulated in simple and familiar functors, resulting in dramatic speed improvement.
+\item Demonstration of a few type specializations that yield correct arithmetic on univariate and multivariate polynomials and power series, requiring no additional implementation effort and working correctly with a variety of representations.
 \item Image convolution as another special case, shining light on otherwise arbitrary border behavior.
 \end{itemize}
 
@@ -657,7 +660,6 @@ Most of the representations used in this paper are functions or are types that b
 It will be useful to use a standard vocabulary for the latter.
 An ``indexable'' type |x| with domain |a| and codomain |b| represents |a -> b|:
 We'll need to restrict |b| in some cases.
-%% %format ! = "\hspace{0.5pt}!\hspace{0.5pt}"
 \begin{code}
 class Indexable a b x | x -> a b where
   infixl 9 !
@@ -1088,8 +1090,8 @@ To relate |h| to the choice of alphabet |c|, introduce a type family:
 \begin{code}
 type family Key (h :: Type -> Type) :: Type
 
-type instance Key ((->) a) = a
-type instance Key (Map  a) = a
+type instance Key ((->)  a) = a
+type instance Key (Map   a) = a
 \end{code}
 Generalizing in this way (with functions as a special case) enables convenient memoization, which has been found to be quite useful in practice for derivative-based parsing \citep{Might2010YaccID}.
 A few generalizations to the equations in \lemref{deriv [c] -> b} suffice to generalize from |c -> ([c] -> b)| to |h ([c] -> b)| \seeproof{lemma:deriv [c] -> b}.
@@ -1363,7 +1365,7 @@ As a suitable indexable functor, we can simply use the identity functor:
 newtype Id b = Id b deriving
   (Functor, Additive, DetectableZero, DetectableOne, LeftSemimodule s, Semiring)
 
-instance Indexable  () b (Id b) where Id a NOP ! NOP () = a
+instance Indexable  () b (Id b) where Id a ! () = a
 instance HasSingle  () b (Id b) where () +-> b = Id b
 \end{code}
 The type |Cofree Identity| is isomorphic to \emph{streams} (infinite-only lists).

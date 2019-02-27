@@ -136,7 +136,7 @@ newtype Map' b a = M { unM :: Map a b }
   deriving (Show, Additive, DetectableZero, LeftSemimodule b)
 
 instance Additive b => FunctorC (Map' b) where
-  type Ok (Map' b) a = (Ord a, Monoid a)
+  type Ok (Map' b) a = Ord a
   fmapC h (M p) = M (sum [h a +-> p ! a | a <- M.keys p])
  
 instance Semiring b => ApplicativeC (Map' b) where

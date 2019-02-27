@@ -8,6 +8,7 @@ import Prelude hiding ((^),sum)
 
 import Data.List (intersperse,sortOn) -- intercalate,
 import GHC.Exts(IsString(..))
+import Data.Functor.Identity (Identity(..))
 
 -- import Misc ((:*))
 import Semi
@@ -118,32 +119,38 @@ newtype Poly1 h b = Poly1 (h b) deriving
 deriving instance Indexable n b (h b) => Indexable n b (Poly1 h b)
 deriving instance HasSingle n b (h b) => HasSingle n b (Poly1 h b)
 
-instance ( DetectableZero b, DetectableOne b, Show b, Supported n b (h b)
+instance ( DetectableZero b, DetectableOne b, Show b, Listable n b (h b)
          , Show n, DetectableZero n, DetectableOne n )
       => Show (Poly1 h b) where
-  showsPrec d (Poly1 m) = showsPrec d (Terms (term <$> support m))
+  showsPrec d (Poly1 m) = showsPrec d (Terms (term <$> toList m))
    where
-     term i = Term (m!i) (Pow (Name "x") i)
+     term (i,b) = Term b (Pow (Name "x") i)
 
 type P1 = Poly1 (Map N)
 
-eval1 :: (Supported N b (h b), Semiring b) => Poly1 h b -> b -> b
-eval1 (Poly1 m) z = sum [m!i <.> z^i | i <- support m]
+eval1 :: (Listable N b (h b), Semiring b) => Poly1 h b -> b -> b
+eval1 (Poly1 m) z = sum [b <.> z^i | (i,b) <- toList m]
 
-eval :: (Supported n b (h b), HasPow (h b) n b, Semiring b) => Poly1 h b -> h b -> b
-eval (Poly1 m) z = sum [m!i <.> z^#i | i <- support m]
+-- eval :: (Listable n b (h b), HasPow (h b) n b, Semiring b) => Poly1 h b -> h b -> b
+-- eval (Poly1 m) z = sum [b <.> z^#i | (i,b) <- toList m]
 
 -- TODO: generalize (^) so that this definition works in general.
 
 -- >>> let p = single 1 <+> value 3 :: P1 Z
 -- >>> p
 -- 3 + x
--- 
 -- >>> p^3
 -- 27 + 27 * x + 9 * x^2 + x^3
 -- 
 -- >>> p^5
 -- 243 + 405 * x + 270 * x^2 + 90 * x^3 + 15 * x^4 + x^5
+-- 
+-- >>> eval1 p 10
+-- 13
+-- >>> eval1 (p^3) 10
+-- 2197
+-- >>> (eval1 p 10)^3
+-- 2197
 
 -- TODO: generalize from Map N to any functor f with Key f = N. I'll need to get
 -- indices as well, as in the Keyed class from the keys library.
@@ -155,26 +162,46 @@ eval (Poly1 m) z = sum [m!i <.> z^#i | i <- support m]
 type PL1 = Poly1 (Cofree Maybe)
 
 -- >>> let p = single 1 <+> value 3 :: PL1 Z
--- <interactive>:556:17: error:
+-- <interactive>:1087:17: error:
 --     • No instance for (Num [()]) arising from the literal ‘1’
 --     • In the first argument of ‘single’, namely ‘1’
 --       In the first argument of ‘(<+>)’, namely ‘single 1’
 --       In the expression: single 1 <+> value 3 :: PL1 Z
--- <interactive>:556:23-29: error:
---     • No instance for (DetectableZero
---                          (Maybe (Cofree Maybe (Sum Integer))))
---         arising from a use of ‘value’
---     • In the second argument of ‘(<+>)’, namely ‘value 3’
---       In the expression: single 1 <+> value 3 :: PL1 Z
---       In an equation for ‘p’: p = single 1 <+> value 3 :: PL1 Z
+
+-- >>> one :: Cofree Maybe Z
+-- 1 :< Nothing
+
+-- >>> one :: PL1 Z
+-- <interactive>:1782:2-13: error:
+--     • No instance for (DetectableZero [()])
+--         arising from a use of ‘print’
+--     • In a stmt of an interactive GHCi command: print it
+
+-- q1 :: PL1 Z
+-- q1 = one
+
+-- q2 :: String
+-- q2 = show q1
+
+-- >>> one :: PL1 Z
+-- <interactive>:1243:2-13: error:
+--     • Reduction stack overflow; size = 201
+--       When simplifying the following type:
+--         Additive (Maybe (Cofree Maybe (Sum Integer)))
+--       Use -freduction-depth=0 to disable this check
+--       (any upper bound you could choose might fail unpredictably with
+--        minor updates to GHC, so disabling the check is recommended if
+--        you're sure that type checking should terminate)
+--     • In a stmt of an interactive GHCi command: print it
+
 -- >>> p
--- <interactive>:557:2: error: Variable not in scope: p
+-- <interactive>:1088:2: error: Variable not in scope: p
 -- 
 -- >>> p^3
--- <interactive>:558:2: error: Variable not in scope: p
+-- <interactive>:1089:2: error: Variable not in scope: p
 -- 
 -- >>> p^5
--- <interactive>:559:2: error: Variable not in scope: p
+-- <interactive>:1090:2: error: Variable not in scope: p
 
 -- TODO: replace 'support' with toList
 -- TODO: Put (^) into a new class, and use in evalPoly
@@ -256,11 +283,11 @@ type PM = Poly1 (Map (Map Name N))
     Univariate power series
 --------------------------------------------------------------------}
 
-type Stream = Cofree Id
+type Stream = Cofree Identity
 
 infixr 5 :#
 pattern (:#) :: b -> Stream b -> Stream b
-pattern b :# bs = b :< Id bs
+pattern b :# bs = b :< Identity bs
 {-# COMPLETE (:#) :: Cofree #-}
 
 streamList :: Stream b -> [b]

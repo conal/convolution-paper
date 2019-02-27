@@ -1610,9 +1610,9 @@ newtype Poly1 b = Poly1 (Map N b) deriving (Additive, Semiring, Indexable n, Has
 
 instance (DetectableZero b, DetectableOne b, Show b) => Show (Poly1 b) where NOP ...
 \end{code}
-Try it out:
 %format Integer = Z
 %format >>> = "\lambda\rangle\ "
+Try it out (with prompts indicated by ``|>>>|''):
 %{
 %format * = "{}"
 %subst blankline = "\\[1.5ex]"
@@ -1681,7 +1681,9 @@ The value of this second generalization is that the result also applies to \emph
 
 \begin{lemma}[\provedIn{lemma:pows hom}]\lemlabel{pows hom}
 When |(*)| commutes, |(^^)| satisfies the following exponentiation laws:
-\notefoot{Maybe also |pows (pows x p) q == pows x (p * q)|. Hunch: I'd have to generalize regular exponentiation and make |(^^)| a special case. Handily, I could then drop the carrot symbol.}
+\notefoot{Maybe also |pows (pows x p) q == pows x (p * q)|. Hunch: I'd have to generalize regular exponentiation and make |(^^)| a special case.
+Handily, I could then drop the carrot symbol.
+I think I'll also need the |Listable| class (preferably with a better name).}
 \begin{code}
 pows x zero == one
 pows x (p + q) == pows x p * pows x q
@@ -1697,11 +1699,9 @@ Just like the proof of \thmref{poly hom}, given \lemref{pows hom}.
 \end{proof}
 \thmref{generalized poly hom} says that the |b <-- (n -> N)| semiring (in which |(*)| is higher-dimensional convolution) correctly implements arithmetic on multivariate polynomials.
 We can instead use |Map (f N) b| to denote |b <-- (n -> N)|, where |f| is indexable with |Key f = n|.
-One convenient choice is to let |n = String| (variable names), and |f = Map String|.\footnote{Unfortunately, the |Monoid| instance for the standard |Map| type defines |m <> m'| so that keys present in |m'| \emph{replace} those in |m|.
-This behavior is problematic for our use (and many others), so we must use a |Map| variant that wraps the standard type, changes the |Monoid| instance to so that |m <> m'| \emph{combines} values in (via |(<>)|) associated with the same keys in |m| and |m'|.}
+One convenient choice is to let |n = String| for variable names, and |f = Map String|.\footnote{Unfortunately, the |Monoid| instance for the standard |Map| type defines |m <> m'| so that keys present in |m'| \emph{replace} those in |m|.
+This behavior is problematic for our use (and many others), so we must use a |Map| variant that wraps the standard type, changing the |Monoid| instance so that |m <> m'| \emph{combines} values (via |(<>)|) associated with the same keys in |m| and |m'|.}
 As with |Poly1|, wrap this representation in a new type, and add a |Show| instance:
-\notefoot{I elided the |DetectableOne b| constraint, but I'd like to introduce and use that class earlier and restore it here.}
-\notefoot{To do:}
 %format PolyM = Poly "_{\!M}"
 %format varM = var "_{\!M}"
 %format varM = var
@@ -1744,7 +1744,9 @@ x^3 + 3 * x^2 * y + 3 * x * y^2 + 6 * x * y * z + 3 * x^2 * z + 3 * x * z^2 + y^
 %}
 
 \note{Next:
-\begin{itemize}\itemsep0ex
+\begin{itemize}
+\item Generalize |(^)| and |(^^)| via a class, as in the implementation.
+\item Maybe generalize |Poly1| from the start.
 \item Power series (infinite polynomials).
       Maybe also |[a]|, representing |a <-- N|.
 \item Should I move multidimensional convolution to \secref{Convolution}?
@@ -1753,6 +1755,8 @@ x^3 + 3 * x^2 * y + 3 * x * y^2 + 6 * x * y * z + 3 * x^2 * z + 3 * x * z^2 + y^
 \item Finite maps
 \end{itemize}
 }
+
+\subsectionl{Image convolution}
 
 \sectionl{Conclusions and Future Work}
 

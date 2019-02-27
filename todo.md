@@ -7,12 +7,13 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 
 ### Major
 
-*   Introduction, including contributions.
 *   Related work. Lots of references below.
 *   Benchmarking results
-*   The comonad connection (in progress).
 *   Probabilistic computation.
 *   Reconsider title after writing the introduction and related work sections.
+*   Wording improvements:
+    *   "*Uncovering* the method's essence"
+*   Acknowledge semiring-num, at least in related work.
 *   Sets are to languages as binary relations are to what?
     Currying gets us to `String -> String -> Bool` (for sets).
     Is there anything interesting and/or useful here?
@@ -22,6 +23,9 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 *   Possibly some items in the Future Work section.
 *   Reduce page count in the ICFP submission. Some strategies:
     *   Move more proofs to the appendix.
+    *   Rewrite some of my explicit lemmas and theorems as an in-line statement with a proof link.
+        Keep the more formal style in the extended version.
+        Make this change when I don't need to refer to a lemma/theorem other than from another proof.
     *   Remove homomorphism examples.
     *   Drop the whole section "Calculating Instances from Homomorphisms".
     *   More side-by-side code or derivations.
@@ -129,6 +133,8 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 
 ## Did
 
+*   Introduction, including contributions.
+*   The comonad connection (in progress).
 *   Arithmetic on infinite series.
 *   Lots of needed references (`\\needcite`).
 *   Benchmarking at least of regexp vs tries.

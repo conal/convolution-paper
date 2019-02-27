@@ -250,17 +250,18 @@ All of the algorithms in the paper follow from simple specifications in the form
 \sectionl{Introduction}
 
 The mathematical operation of \emph{convolution} combines two functions into a third---often written ``|h = f * g|''---with each |h| value resulting from summing or integrating over the products of several pairs of |f| and |g| values, according to a simple rule.
-This operation is at the heart of many important and interesting applications in a variety of fields \citep{SnehaHL2017Conv,Behl2014CAC}.
+This operation is at the heart of many important and interesting applications in a variety of fields \citep{SnehaHL2017Conv}.
 \begin{itemize}
 \item In image processing, convolution provides operations like smoothing, sharpening, and edge detection \citep{Young95FIP}.
   \note{Add something about more general signal processing \citep[Chapter 2]{Yarlagadda2010ADSS}.}
-\item In machine learning convolutional neural networks (CNNs) allowed recognition of translation-independent image features \citep{Fukushima1988Neo, LeCun1998GBDR, Schmidhuber2015DL, Alom2018History}.
+\item In machine learning convolutional neural networks (CNNs) allowed recognition of translation-independent image features \citep{Fukushima1988Neo, LeCun1998GBDR, Schmidhuber2015DL}.
+  % Alom2018History
 \item In probability, the convolution of independent distributions equals the distribution of the sum \citep{Grinstead2003IP}.
 \item In acoustics, reverberation results from convolution of sounds and their echos \citep{Pishdadian2017FRC}.
       Musical uses are known as ``convolution reverb'' \citep[Chapter 4]{HassICM1}.
-\item In optics, blurring is convolution with a lens or iris, and shadowing is convolution with an occluding object \needcite.
-\item The coefficients of the product of two polynomials equals the convolution of their coefficients \needcite.
-\item In formal languages, (generalized) convolution is language concatenation \needcite.
+%\item In optics, blurring is convolution with a lens or iris, and shadowing is convolution with an occluding object.
+\item The coefficients of the product of two polynomials equals the convolution of their coefficients \citep{Dolan2013FunSemi}.
+\item In formal languages, (generalized) convolution is language concatenation \citep{Dongol2016CUC}.
 \end{itemize}
 
 %if False

@@ -150,6 +150,22 @@ Target\\[1.5ex]conal@@conal.net
 
 \begin{abstract}
 
+%if True
+
+\emph{Convolution} is a broadly useful operation with applications including signal processing, machine learning, probability, optics, polynomial multiplication, and efficient parsing.
+Usually, however, this operation is understood and implemented in more specialized forms, hiding commonalities and limiting usefulness.
+This paper formulates convolution in the common algebraic framework of semirings and semimodules and populates that framework with various representation types.
+One of those types is the grand abstract template and itself generalizes to the free semimodule monad.
+Other representations serve varied uses and performance trade-offs, with implementations calculated from simple and regular specifications.
+
+Of particular interest is Brzozowski's method for regular expression matching.
+Uncovering the method's essence frees it from syntactic manipulations, while generalizing from from boolean to weighted membership (such as multisets and probability distributions) and from sets to \emph{n}-ary relations.
+The classic \emph{trie} data structure then provides an elegant and efficient alternative to syntax.
+Pleasantly, polynomial arithmetic requires no additional implementation effort, works correctly with a variety of representations, and handles the multivariate polynomials and power series with ease.
+Image convolution also falls out as a special case, while shining light on boundary behavior.
+
+%else
+
 A number of useful and interesting tasks can be formulated in the vocabulary of \emph{semirings}\out{, which are types that have addition, multiplication, and their corresponding identities zero and one.
 Multiplication with one must form a monoid, while addition with zero must form commutative monoid.
 As in a ring, multiplication distributes over addition, but unlike rings, there needn't be an additive inverse}.
@@ -169,6 +185,8 @@ The (affirmative) answer to this question draws a lovely path from a simple, wel
 %endif
 
 All of the algorithms in the paper follow from simple specifications in the form of homomorphisms that relate different representations to each other.
+
+%endif
 
 \end{abstract}
 
@@ -231,7 +249,8 @@ All of the algorithms in the paper follow from simple specifications in the form
 
 \sectionl{Introduction}
 
-\note{Trim the abstract, moving some content here and expanding.}
+\workingHere
+
 
 \note{
 Some contributions:

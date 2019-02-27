@@ -146,7 +146,9 @@ Target\\[1.5ex]conal@@conal.net
 
 \begin{document}
 
+%if not icfp
 \maketitle
+%endif
 
 \begin{abstract}
 
@@ -189,6 +191,10 @@ All of the algorithms in the paper follow from simple specifications in the form
 %endif
 
 \end{abstract}
+
+%if icfp
+\maketitle
+%endif
 
 %format <+> = +
 %format <.> = *
@@ -263,38 +269,40 @@ This operation is at the heart of many important and interesting applications in
 \item The coefficients of the product of two polynomials equals the convolution of their coefficients \citep{Dolan2013FunSemi}.
 \item In formal languages, (generalized) convolution is language concatenation \citep{Dongol2016CUC}.
 \end{itemize}
-
-%if False
-
-\emph{Convolution} is a broadly useful operation with applications including signal processing, machine learning, probability, optics, polynomial multiplication, and efficient parsing.
-Usually, however, this operation is understood and implemented in more specialized forms, hiding commonalities and limiting usefulness.
-This paper formulates convolution in the common algebraic framework of semirings and semimodules and populates that framework with various representation types.
-One of those types is the grand abstract template and itself generalizes to the free semimodule monad.
-Other representations serve varied uses and performance trade-offs, with implementations calculated from simple and regular specifications.
-
-Of particular interest is Brzozowski's method for regular expression matching.
-Uncovering the method's essence frees it from syntactic manipulations, while generalizing from from boolean to weighted membership (such as multisets and probability distributions) and from sets to \emph{n}-ary relations.
-The classic \emph{trie} data structure then provides an elegant and efficient alternative to syntax.
-Pleasantly, polynomial arithmetic requires no additional implementation effort, works correctly with a variety of representations, and handles the multivariate polynomials and power series with ease.
-Image convolution also falls out as a special case, while shining light on boundary behavior.
-
-%endif
-
-\workingHere
-
-
-\note{
-Some contributions:
+Usually, however, convolution is taught, applied, and implemented in more specialized forms, obscuring the underlying commonalities and unnecessarily limiting its usefulness.
+For instance,
 \begin{itemize}
-\item Generalize Brzozowski's algorithm from (a) regular expressions representing sets of strings to (b) representations of functions from sequences to any semiring, including relations.
-\item Demonstrate that the tricky aspect of Brzozowski's algorithm is an instance of generalized convolution.
-      \note{Hm. Already observed, so not really a contribution.}
+\item
+  The usual definition relies on subtraction, which is unavailable in many useful settings, while the more general form applies to any monoid \citep{Golan2005RecentSemi,Wilding2015LAS}.
+\item
+  Brzozowski's method of regular expression matching \citep{Brzozowski64} appears quite different from the other applications and is limited to \emph{sets} of strings (i.e., languages), leaving unclear how to generalize to variations like weighted membership (multisets and probability distributions) as well as \emph{n}-ary \emph{relations} between strings.
+\item
+  Image convolution involves seemingly arbitrary semantic choices at image boundaries, including replication, zero-padding, and mirroring.
+\notefoot{Not really a good example.}
+\end{itemize}
+
+\note{Rework the rest of this section for better coherence.}
+
+This paper formulates general convolution using the common algebraic framework of semirings and semimodules, including a collection of types for which semiring multiplication is convolution.
+One of those types is the grand abstract template, namely the ``monoid semiring'', i.e., functions from any monoid to any semiring.
+Furthermore, convolution reveals itself as a special case of an even more general notion, namely the free semimodule monad.
+The other types are specific representations for different uses and different performance trade-offs, relating to the monoid semiring by simple denotation functions (interpretations).
+The corresponding semiring implementations are calculated from the requirement that the denotations be semiring homomorphisms.
+
+An application of central interest is language specification and recognition, in which convolution specializes to language concatenation.
+Here, we examine Brzozowski's method of flexible and efficient regular expression matching by derivatives (later extended to parsing context-free languages) and find that its essence is much more general, namely functions from lists (e.g., letters over some ``alphabet'') to an arbitrary semiring.
+While Brzozowski's method involves repeated manipulation of syntactic representations (regular expressions or grammars), uncovering the method's essence frees us from such representations.
+Thue's (list) tries appear provide a compelling alternative in simplicity and efficiency, as well as a satisfying confluence of classic techniques from the second and seventh decades of the twentieth century, as well as modern functional programming notion of the cofree comonad.
+
+Concretely, this paper makes the following contributions:
+\begin{itemize}
+\item A generalization of Brzozowski's algorithm from (a) regular expressions representing sets of strings to (b) representations of functions from sequences to any semiring, including relations.
+\item Demonstrate that the subtle aspect of Brzozowski's algorithm (matching of concatenated languages) is an instance of generalized convolution.
 \item Applying the generalized algorithm to tries instead of regular expressions, which is simpler and apparently quite efficient, requiring no construction or manipulation of syntactic representations.
 \item Application and evaluation of some simple memoization strategies resulting in quite dramatic speed improvement.
-\item A simple and very general algorithm for multivariate polynomial multiplication.
-      (And infinite series?)
+\item Very general polynomial multiplication algorithm that handles univariate and multivariate polynomial arithmetic on polynomials and power series (``infinite polynomials'') requiring no additional implementation effort and working correctly with a variety of representations.
+\item Image convolution also as a special case, shining light on otherwise arbitrary border behavior.
 \end{itemize}
-}
 
 \sectionl{Monoids, Semirings and Semimodules}
 
@@ -870,7 +878,7 @@ instance (Semiring b, Monoid a)  => StarSemiring (a -> b)  -- default |star|
 \end{code}
 \vspace{-4ex}
 }.
-With this instance, |a -> b| type is known as ``the monoid semiring'', and its |(*)| operation as ``convolution'' \citep{Golan2013SemiApps,Wilding2015LAS}.
+With this instance, |a -> b| type is known as ``the monoid semiring'', and its |(*)| operation as ``convolution'' \citep{Golan2005RecentSemi,Wilding2015LAS}.
 
 \begin{theorem}[\provedIn{theorem:semiring hom ->}]\thmlabel{semiring hom ->}
 Given the instance definitions in \figref{monoid semiring}, |setPred| is a star semiring homomorphism.
@@ -1728,10 +1736,6 @@ x^3 + 3 * x^2 * y + 3 * x * y^2 + 6 * x * y * z + 3 * x^2 * z + 3 * x * z^2 + y^
 \end{itemize}
 }
 
-\sectionl{The Comonad Connection}
-
-\note{Move relevant remarks here, and expand on them.}
-
 \sectionl{Conclusions and Future Work}
 
 \note{
@@ -1743,6 +1747,7 @@ Future work:
 \end{itemize}
 }
 
+%if False
 \sectionl{Miscellaneous Notes}
 
 \begin{itemize}
@@ -1782,6 +1787,7 @@ Future work:
   \end{itemize}
 \end{itemize}
 
+%endif
 
 %if long
 

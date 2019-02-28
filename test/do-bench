@@ -1,8 +1,8 @@
 #! /bin/bash
-stack bench >& o
+stack bench >& o.tmp
 
 echo -n "\\stats{"
-grep Group o | cut -c10-100 | sed 's/"/}{/' | tr -d '\n'
-grep time o | cut -c22-29 | tr '\n' "#" | sed 's/#/}{/g' | tr -d '\n'
+grep Group o.tmp | cut -c10-100 | sed 's/"/}{/' | tr -d '\n'
+grep time o.tmp | cut -c22-29 | tr '\n' "#" | sed 's/#/}{/g' | tr -d '\n'
 echo "}"
 

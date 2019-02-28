@@ -1771,10 +1771,16 @@ Brzozowski's method spurred much follow-up investigation in recent years, partic
 \citet{Radanne2018RLG} explored regular expressions extended to include intersection and complement (as did Brzozowski) with an emphasis on testing.
 \citet{Piponi2015PF} investigated regular expressions and their relationship to the semiring of polynomial functors, as well as derivatives and dissections of data types.
 
+\citet{McIlroy1999PSPS,McIlroy2001MS} formulated and implementation of power series as a small and beautiful collection of operations on infinite coefficient streams, including not only the arithmetic operations, but also inversion and composition, as well as differentiation and integration.
+He also provided transcendental operations by simple recursion and integration, such as |sin = integral cos| and |cos = 1 - integral sin|.
+
+\citet{Dongol2016CUC} investigated convolution in a general algebraic setting that includes formal language concatenation.
+\citet{Kmett2015MfL} observed that Moore machines are a special case of the cofree comonad.
 The connections between parsing and semirings have been explored deeply by \citet{Goodman1998PIO,Goodman1999SP} and by \citet{Liu2004}, building on the foundational work of \citet{Chomsky1959CFL}.
 
+\note{To do: More fully describe connections to this paper.}
 
-
+%if False
 \workingHere
 \note{
 \begin{itemize}
@@ -1786,6 +1792,7 @@ The connections between parsing and semirings have been explored deeply by \cite
       Hm. Maybe my trie idea is direct construction of Moore automata.
 \end{itemize}
 }
+%endif
 
 
 \sectionl{Conclusions and Future Work}

@@ -159,40 +159,26 @@ eval1 (Poly1 m) z = sum [b <.> z^i | (i,b) <- toList m]
 -- class Functor f => Keyed f where
 --   mapWithKey :: (Key f -> a -> b) -> f a -> f b
 
-type PL1 = Poly1 (Cofree Maybe)
+-- >>> 1 :: Peano
+-- [()]
+
+-- >>> take 50 $ show (single 1 :: Cofree Identity Z)
+-- "0 :< Identity (1 :< Identity (0 :< Identity (0 :< "
+
+type PS1 = Poly1 (Cofree Identity) -- streams
+
+type List = Cofree Maybe
+
+type PL1 = Poly1 (Cofree Maybe)  -- nonempty lists
 
 -- >>> let p = single 1 <+> value 3 :: PL1 Z
--- <interactive>:1087:17: error:
---     • No instance for (Num [()]) arising from the literal ‘1’
---     • In the first argument of ‘single’, namely ‘1’
---       In the first argument of ‘(<+>)’, namely ‘single 1’
---       In the expression: single 1 <+> value 3 :: PL1 Z
+-- >>> p
+-- 3 + x
+-- >>> p^3
+-- 27 + 27 * x + 9 * x^[(),()] + x^[(),(),()]
 
--- >>> one :: Cofree Maybe Z
--- 1 :< Nothing
-
--- >>> one :: PL1 Z
--- <interactive>:1782:2-13: error:
---     • No instance for (DetectableZero [()])
---         arising from a use of ‘print’
---     • In a stmt of an interactive GHCi command: print it
-
--- q1 :: PL1 Z
--- q1 = one
-
--- q2 :: String
--- q2 = show q1
-
--- >>> one :: PL1 Z
--- <interactive>:1243:2-13: error:
---     • Reduction stack overflow; size = 201
---       When simplifying the following type:
---         Additive (Maybe (Cofree Maybe (Sum Integer)))
---       Use -freduction-depth=0 to disable this check
---       (any upper bound you could choose might fail unpredictably with
---        minor updates to GHC, so disabling the check is recommended if
---        you're sure that type checking should terminate)
---     • In a stmt of an interactive GHCi command: print it
+-- >>> single 3 :: Cofree Maybe Z
+-- 0 :< Just (0 :< Just (0 :< Just (1 :< Nothing)))
 
 -- >>> p
 -- <interactive>:1088:2: error: Variable not in scope: p
@@ -202,34 +188,6 @@ type PL1 = Poly1 (Cofree Maybe)
 -- 
 -- >>> p^5
 -- <interactive>:1090:2: error: Variable not in scope: p
-
--- TODO: replace 'support' with toList
--- TODO: Put (^) into a new class, and use in evalPoly
--- Drop Keyed?
-
-
--- >>> let p = single 1 <+> value 3 :: PL1 Z
--- <interactive>:20:10-29: error:
---     • No instance for (Additive [Sum Integer])
---         arising from a use of ‘<+>’
---     • In the expression: single 1 <+> value 3 :: PL1 Z
---       In an equation for ‘p’: p = single 1 <+> value 3 :: PL1 Z
--- <interactive>:20:23-29: error:
---     • No instance for (HasSingle N (Sum Integer) [Sum Integer])
---         arising from a use of ‘value’
---     • In the second argument of ‘(<+>)’, namely ‘value 3’
---       In the expression: single 1 <+> value 3 :: PL1 Z
---       In an equation for ‘p’: p = single 1 <+> value 3 :: PL1 Z
--- >>> p
--- <interactive>:21:2: error: Variable not in scope: p
--- 
--- >>> p^3
--- <interactive>:22:2: error: Variable not in scope: p
--- 
--- >>> p^5
--- <interactive>:23:2: error: Variable not in scope: p
-
-type List = Cofree Maybe
 
 {--------------------------------------------------------------------
     Multivariate polynomials

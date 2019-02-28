@@ -1,3 +1,4 @@
+#! /bin/bash
 stack bench >& o
 
 echo -n "\\stats{"

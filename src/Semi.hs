@@ -1,5 +1,7 @@
 {-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
 
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 -- | Commutative monoids, semirings, and semimodules
 
 module Semi where
@@ -12,6 +14,7 @@ import GHC.Natural (Natural)
 import Data.Functor.Identity (Identity(..))
 import Data.Maybe (fromMaybe,isNothing)
 import GHC.Exts (Coercible,coerce,Constraint)
+import Control.DeepSeq (NFData)
 
 import Data.Map (Map)
 import qualified Data.Map as M
@@ -147,6 +150,11 @@ Nums(Double)
 Nums(Rational)
 -- etc
 
+-- Experiment
+instance StarSemiring (Natural) where
+  star 0 = 1
+  star _ = 987654321
+
 -- ApplSemi((->) a)  -- use monoid semiring instead for now
 -- etc
 
@@ -171,11 +179,20 @@ instance Additive b => Additive (a -> b) where
   -- zero = \ _ -> zero
   -- f <+> g  = \ a -> f a <+> g a
 
-instance (Monoid a, Eq a, Splittable a, Semiring b) => Semiring (a -> b) where
-  one = single mempty
-  f <.> g = \ w -> sum [f u <.> g v | (u,v) <- splits w]
+type D01 b = (DetectableZero b, DetectableOne b)
 
-instance (Monoid a, Eq a, Splittable a, Semiring b) => StarSemiring (a -> b)
+-- Short-circuiting <.>
+infixr 7 <..>
+(<..>) :: (Semiring b, DetectableZero b, DetectableOne b) => b -> b -> b
+x <..> y | isZero x  = zero
+         | isOne  x  = y
+         | otherwise = x <.> y
+
+instance (Monoid a, Eq a, Splittable a, Semiring b, D01 b) => Semiring (a -> b) where
+  one = single mempty
+  f <.> g = \ w -> sum [f u <..> g v | (u,v) <- splits w]
+
+instance (Monoid a, Eq a, Splittable a, Semiring b, D01 b) => StarSemiring (a -> b)
 
 instance (Ord a, Additive b) => Additive (Map a b) where
   zero = M.empty
@@ -268,7 +285,7 @@ instance DetectableOne b => DetectableOne (Maybe b) where
 -- instead.
 
 newtype Sum a = Sum a deriving
-  (Eq,Ord,Num,Real,Integral,Additive,DetectableZero,Semiring,DetectableOne)
+  (Eq,Ord,NFData,Num,Real,Integral,Additive,DetectableZero,Semiring,DetectableOne,StarSemiring)
 
 instance Show a => Show (Sum a) where
   showsPrec d (Sum a) = showsPrec d a
@@ -376,25 +393,47 @@ instance Additive b => Listable N b [b] where
   toList = zip [0 ..]
 
 
-#if 0
+#if 1
 
 -- For indexing Cofree Identity or Cofree Maybe.
 type Peano = [()]
 
 -- Should I really be using up lists here instead of saving them?
+-- Maybe wrap in a newtype
 
 instance Additive Peano where
-  zero = []
-  m <+> n = replicate (length m + length n) ()
+  zero = mempty
+  m <+> n = m <> n
+            -- fromIntegral (length m + length n)
+            -- replicate (length m + length n) ()
 
 instance Semiring Peano where
   one = [()]
-  m <.> n = replicate (length m * length n) ()
+  m <.> n = fromIntegral (length m * length n)
+            -- replicate (length m * length n) ()
 
 instance DetectableZero Peano where isZero = null
 instance DetectableOne Peano where
   isOne [()] = True
   isOne _ = False
+
+instance Num Peano where
+  fromInteger n
+    | n < 0 = error "fromInteger@Peano: negative argument"
+    | otherwise = replicate (fromInteger n) ()
+  (+) = (<+>)
+  (*) = (<.>)
+  negate = noPeano "negate"
+  abs = noPeano "abs"
+  signum = noPeano "signum"
+
+noPeano :: String -> a
+noPeano meth = error (meth++"@Peano: undefined")
+
+-- >>> 10 :: Peano
+-- [(),(),(),(),(),(),(),(),(),()]
+-- >>> 2^3 :: Peano
+-- [(),(),(),(),(),(),(),()]
 
 #endif
 

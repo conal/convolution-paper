@@ -21,10 +21,13 @@ pig  = single "pig"
 pp :: (Stringy b x, Additive x, Semiring b) => x
 pp   = pink <+> pig
 
-as, ass, pps :: (Stringy b x, StarSemiring x, StarSemiring b) => x
+as, ass, pps, asbs, asbas, asas :: (Stringy b x, StarSemiring x, StarSemiring b) => x
 as  = star sa
 ass = star as
 pps = star pp
+asbs = star sa <.> star sb
+asbas = star sa <.> sb <.> star sa
+asas = star sa <.> star sa
 
 anbn :: (Stringy b x, Semiring x, Semiring b) => x
 anbn = one <+> (sa <.> anbn <.> sb)

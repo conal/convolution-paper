@@ -22,8 +22,8 @@ main = do
   putChar '\n'
   createDirectoryIfMissing True outDir
 
-  group "star-a" (star (single "a")) []
-    [ ("a100", replicate 100 'a') ]
+  -- group "star-a" (star (single "a")) []
+  --   [ ("a100", replicate 100 'a') ]
 
   -- -- group "starR-a" (starR (single "a")) [] [("a50", replicate 50 'a')]
   -- -- group "starL-a" (starL (single "a")) [] [("a50", replicate 50 'a')]
@@ -31,21 +31,21 @@ main = do
   -- group "letters" (star letter) []
   --   [ ("asdf-50", cats 50 "asdf") ]
 
-  -- group "fish" (star letter <.> single "fish" <.> star letter) [] $
-  --   []
-  --   ++ [("100", take 100 (cycle az) ++ "fish" ++ take 100 (cycle az))]
+  group "fish" (star letter <.> single "fish" <.> star letter) [] $
+    []
+    ++ [("30", take 30 (cycle az) ++ "fish" ++ take 30 (cycle az))]
 
   -- group "asas" (star (single "a") <.> star (single "a")) [] $
   --   []
   --   -- ++ lit <$> [ "aabbb", "aabbba", "aaaa" , "bb" ]
-  --   ++ [("a100b100",replicate 100 'a' ++ replicate 100 'a')]
-  --   ++ [("a100cb100",replicate 100 'a' ++ "c" ++ replicate 100 'a')]
+  --   ++ [("a30b30",replicate 30 'a' ++ replicate 30 'a')]
+  --   -- ++ [("a30cb30",replicate 30 'a' ++ "c" ++ replicate 30 'a')]
 
   -- group "asbs" (star (single "a") <.> star (single "b")) [] $
   --   []
   --   -- ++ lit <$> [ "aabbb", "aabbba", "aaaa" , "bb" ]
-  --   ++ [("a100b100",replicate 100 'a' ++ replicate 100 'b')]
-  --   ++ [("a100cb100",replicate 100 'a' ++ "c" ++ replicate 100 'b')]
+  --   ++ [("a30b30",replicate 30 'a' ++ replicate 30 'b')]
+  --   -- ++ [("a30cb30",replicate 30 'a' ++ "c" ++ replicate 30 'b')]
 
   -- group "asbas" (star (single "a") <.> single "b" <.> star (single "a")) [] $
   --   []
@@ -54,12 +54,14 @@ main = do
 
   -- -- With O = N, the dyck examples don't work for RegExp:Function, while anbn
   -- -- is okay.
-  -- group "dyck" dyck ["RegExp:Function","RegExp:Map","RegExp:IntMap"] $
-  --   lit <$> [ "[]","[[]]","[[a]]","[[]][]" ]
+  -- group "dyck" dyck ["RegExp:Map","RegExp:IntMap"] $
+  --   []
+  --   -- ++ lit <$> [ "[]","[[]]","[[a]]","[[]][]" ]
+  --   ++ [("", "[[[[[[[]]][[[[]]]][[[]]][]][[[[]]]]]][]]")]
 
   -- group "anbn" anbn ["RegExp:Map","RegExp:IntMap"] $
   --   []
-  --   ++ map lit ["","ab","aacbb","aaabbb","aaabbbb"]
+  --   -- ++ map lit ["","ab","aacbb","aaabbb","aaabbbb"]
   --   ++ [("30",replicate 30 'a' ++ replicate 30 'b')]
 
 lit :: String -> (String,String)
@@ -78,6 +80,7 @@ group groupName example omit dats =
  where
    config = defaultConfig
      { reportFile = Just (outDir ++ "/" ++ groupName ++ ".html")
+     -- , csvFile    = Just (outDir ++ "/" ++ groupName ++ ".csv")
      , timeLimit  = 5 -- 1
      -- , timeLimit = 0, resamples = 1
      }
@@ -97,7 +100,8 @@ group groupName example omit dats =
        ]
     where
       style :: forall x b. Ok x b => String -> Benchmark
-      style s | s `elem` omit = bgroup "" []
+      style s | s `elem` omit = bench s (whnf id ())
+                                -- bgroup "" []
               | otherwise     = bench s (nf (example @x @b !) str)
 
 type O = Bool -- N

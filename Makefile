@@ -36,13 +36,15 @@ latex+= -halt-on-error
 # # Preview continuously
 # latex+= -pvc
 
-%.pdf: %.tex bib.bib Makefile
+%.pdf: %.tex bib.bib $(figures) Makefile
 	$(latex) $*.tex
 	touch $@
 
-# The previous rule always ran, and I didn't know why. Passing "-d" (debug) to
-# make, I see that it's because the PDFs are not getting updated by latexmk,
-# so their prerequisites stay newer. Workaround: touch the PDF.
+# The previous rule always ran. Passing "-d" (debug) to make revealed that the
+# PDFs were not getting updated by latexmk, so their prerequisites stay newer.
+# Workaround: touch the PDF.
+
+figures = $(wildcard figures/*.pdf)
 
 figures: $(figures)
 

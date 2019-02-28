@@ -1760,10 +1760,37 @@ x^3 + 3 * x^2 * y + 3 * x * y^2 + 6 * x * y * z + 3 * x^2 * z + 3 * x * z^2 + y^
 
 \subsectionl{Image convolution}
 
+\sectionl{Performance}
+
+\sectionl{Related Work}
+
+This paper began with a desire to understand regular expression matching via ``derivatives'' by \citet{Brzozowski64} more fundamentally and generally.
+Brzozowski's method spurred much follow-up investigation in recent years, particularly the ``Yacc is Dead'' work of \citet{Might2010YaccID}, which considerably extended expressiveness to context-free grammars (recursively defined regular expressions) as well as addressing some efficiency issues, including memoization, with further performance analysis following from \cite{Adams2016CPP}.
+\citet{Owens2009RE} dusted off regular expression derivatives after many years of neglect with a re-exposition and experience report.
+\citet{Fischer2010PRE} also extended regular language membership from boolean to ``weighted'' by an arbitrary semiring, relating them to weighted finite automata.
+\citet{Radanne2018RLG} explored regular expressions extended to include intersection and complement (as did Brzozowski) with an emphasis on testing.
+\citet{Piponi2015PF} investigated regular expressions and their relationship to the semiring of polynomial functors, as well as derivatives and dissections of data types.
+
+The connections between parsing and semirings have been explored deeply by \citet{Goodman1998PIO,Goodman1999SP} and by \citet{Liu2004}, building on the foundational work of \citet{Chomsky1959CFL}.
+
+
+
+\workingHere
+\note{
+\begin{itemize}
+\item Derivatives for language matching and parsing
+\item Applications of semirings, including parsing
+\item Polynomials and power series, including Doug McIlroy's work
+\item Automata, including weighted.
+      The cofree comonad is a Moore machine \citep{Kmett2015MfL}.
+      Hm. Maybe my trie idea is direct construction of Moore automata.
+\end{itemize}
+}
+
+
 \sectionl{Conclusions and Future Work}
 
 \note{
-Future work:
 \begin{itemize}
 \item More careful performance testing, analysis, and optimization.
 \item Explore Brzozowski derivatives as actual derivatives of residual functions, as in my journal notes from 2019-02-08.
@@ -1771,6 +1798,7 @@ Future work:
 \item Comonadic animation and imagery.
 \end{itemize}
 }
+
 
 %if False
 \sectionl{Miscellaneous Notes}

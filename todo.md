@@ -8,7 +8,9 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 ### Major
 
 *   Related work. Lots of references below.
-*   Benchmarking results
+*   Benchmarking results.
+    Recursively defined languages.
+*   Image convolution
 *   Probabilistic computation.
 *   Reconsider title after writing the introduction and related work sections.
 *   Wording improvements:

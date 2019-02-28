@@ -1468,7 +1468,7 @@ newtype s <-- a = F (a -> s)
 The use of |s <-- a| as an alternative to |a -> s| allows us to give instances for both and to stay within Haskell's type system (and ability to infer types via first-order unification).
 
 With this change, we can replace the specialized |liftn| operations with standard ones.
-An enhanced version of the |Functor| and |Applicative| classes appear in \figrefdef{FunApp}{|Functor| and |Applicative| classes and some instances}{
+An enhanced version of the |Functor| and |Applicative| classes (similar to those by \citet{Kidney2017CA}) appear in \figrefdef{FunApp}{|Functor| and |Applicative| classes and some instances}{
 \begin{code}
 class FunctorC f where
   type Ok f a :: Constraint
@@ -1747,7 +1747,7 @@ x^3 + 3 * x^2 * y + 3 * x * y^2 + 6 * x * y * z + 3 * x^2 * z + 3 * x * z^2 + y^
 
 \note{Next:
 \begin{itemize}
-\item Generalize |(^)| and |(^^)| via a class, as in the implementation.
+\item Generalize |a^b| and |(a^^b)| via a class, as in the implementation.
 \item Maybe generalize |Poly1| from the start.
 \item Power series (infinite polynomials).
       Maybe also |[a]|, representing |a <-- N|.
@@ -1777,8 +1777,12 @@ He also provided transcendental operations by simple recursion and integration, 
 \citet{Dongol2016CUC} investigated convolution in a general algebraic setting that includes formal language concatenation.
 \citet{Kmett2015MfL} observed that Moore machines are a special case of the cofree comonad.
 The connections between parsing and semirings have been explored deeply by \citet{Goodman1998PIO,Goodman1999SP} and by \citet{Liu2004}, building on the foundational work of \citet{Chomsky1959CFL}.
+\citet{Kmett2011FreeModules} also explored some issues similar to those in the present paper, building on semirings and free semimodules, pointing out that the classic continuation monad can neatly represent linear functionals.
 
-\note{To do: More fully describe connections to this paper.}
+\citet{Kidney2016Semi,semiring-num} implemented a Haskell semiring library that helped with early implementations leading to the present paper, with a particular leaning toward convolution \citep{Kidney2017CA}.
+Several of the class instances given above, though independently encountered, also appear in that library.
+
+\note{To do: More fully describe connections between this paper and the work cited above.}
 
 %if False
 \workingHere

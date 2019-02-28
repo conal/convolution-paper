@@ -31,15 +31,15 @@ basicTests :: TestTree
 basicTests = testGroup "Various representations"
   [ testGroup "" []
 
-  , tests @(String  ->         Bool) "Function"
+  , tests @(String  ->          N) "Function"
 
-  , tests @(RegExp ((->) Char) Bool) "RegExpFun"
-  , tests @(RegExp (Map  Char) Bool) "RegExpMap"
-  , tests @(RegExp CharMap     Bool) "RegExpIntMap"
+  , tests @(RegExp ((->) Char)  N) "RegExpFun"
+  , tests @(RegExp (Map  Char)  N) "RegExpMap"
+  , tests @(RegExp CharMap      N) "RegExpIntMap"
 
-  , tests @(Cofree  ((->) Char) Bool) "CofreeFun"
-  , tests @(Cofree  (Map  Char) Bool) "CofreeMap"
-  , tests @(Cofree  CharMap     Bool) "CofreeIntMap"
+  , tests @(Cofree  ((->) Char) N) "CofreeFun"
+  , tests @(Cofree  (Map  Char) N) "CofreeMap"
+  , tests @(Cofree  CharMap     N) "CofreeIntMap"
 
   ]
 
@@ -54,12 +54,16 @@ tests :: forall x b.
 tests group = testGroup group
   [ testGroup "" []
 
+#if 0
+
   , gold "as-eps"                         $ as  # ""
   , gold "as-a"                           $ as  # "a"
-  , gold "ass-eps"                        $ ass # ""
-  , groupNot ["Function"]                 $
-    gold "ass-a"                          $ ass # "a"
 
+  , groupNot ["Function"]                 $
+    testGroup "ass"  
+    [ gold "ass-eps"                        $ ass # ""
+    , gold "ass-a"                          $ ass # "a"
+    ]
   , gold "pp-pi"                          $ pp # "pi"
   , gold "pp-pig"                         $ pp # "pig"
   , gold "pp-pig"                         $ pp # "pig"
@@ -87,13 +91,23 @@ tests group = testGroup group
     , gold "anbn-aaabbbb"                 $ anbn # "aaabbbb"
     ]
 
-  , groupNot ["RegExpMap","RegExpIntMap"] $
+#endif
+
+  , groupNot ["RegExpFun","RegExpMap","RegExpIntMap"] $
     testGroup "dyck"
     [ gold "dyck-a"                       $ dyck # "[]"
     , gold "dyck-b"                       $ dyck # "[[]]"
     , gold "dyck-c"                       $ dyck # "[[a]]"
     , gold "dyck-d"                       $ dyck # "[[]][]"
     ]
+
+  , gold "asbs-aabbbb"  $ asbs # "aabbbb"
+  , gold "asbs-aabbba"  $ asbs # "aabbba"
+
+  , gold "asbas-aabaaa" $ asbas # "aabaaa"
+  , gold "asbas-aabba"  $ asbas # "aabba"
+
+  , gold "asas-aaaaa" $ asas # "aaaaa"
 
   ]
  where
@@ -104,5 +118,5 @@ tests group = testGroup group
    groupNot gs | group `elem` gs = const (testGroup "" [])
                | otherwise       = id
    gold :: Show z => String -> z -> TestTree
-   gold nm = goldenVsString nm ("test/gold/" <> nm <> ".txt")
+   gold nm = goldenVsString nm ("test/gold-nat/" <> nm <> ".txt")
              . pure . pack . show

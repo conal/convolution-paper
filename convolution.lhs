@@ -1312,6 +1312,36 @@ instance Functor h => Comonad (Cofree h) where
 
 While there has been no performance tuning and only rudimentary benchmarking, we can at least get a sanity check on performance.
 
+%format RegExpF = RegExp"_"->
+%format RegExpM = RegExp"_"Map
+%format CofreeF = Cofree"_"->
+%format CofreeM = Cofree"_"Map
+
+\nc\stat[6]{
+\textit{#1} & #2 & #3 & #4 & #5 \\ \hline
+}
+
+\nc\incstat[1]{\input{test/stats/#1.txt}}
+
+\begin{center}
+\begin{tabular}{||c||c||c||c||c||}
+\hline
+\stat{{Example}}{|RegExpF|}{|RegExpM|}{|CofreeF|}{|CofreeM|} \hline
+\hline
+
+\incstat{fish}
+\incstat{asas}
+\incstat{asbs}
+\incstat{asbas}
+\incstat{dyck}
+\incstat{anbn}
+
+%\hline
+\end{tabular}
+%\vspace{0.25ex}
+\end{center}
+
+
 \note{
 \begin{itemize}
 \item |Map| vs |IntMap|

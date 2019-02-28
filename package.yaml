@@ -39,6 +39,7 @@ default-extensions:
 
 ghc-options:
   -Wall
+  -O2
   # -Wno-type-defaults   # for Poly, since dante doesn't pick up
 
 cpp-options: -DEXAMPLES
@@ -107,6 +108,5 @@ benchmarks:
     - deepseq
     - MemoTrie
     - paper
-  # ghc-options: -O
 
 # stack bench

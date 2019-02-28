@@ -36,17 +36,16 @@ latex+= -halt-on-error
 # # Preview continuously
 # latex+= -pvc
 
-%.pdf: %.tex bib.bib $(figures) Makefile
+stats = $(wildcard test/stats/*.txt)
+stats: $(stats)
+
+%.pdf: %.tex bib.bib $(stats) Makefile
 	$(latex) $*.tex
 	touch $@
 
 # The previous rule always ran. Passing "-d" (debug) to make revealed that the
 # PDFs were not getting updated by latexmk, so their prerequisites stay newer.
 # Workaround: touch the PDF.
-
-figures = $(wildcard figures/*.pdf)
-
-figures: $(figures)
 
 texdeps = formatting.fmt Makefile
 

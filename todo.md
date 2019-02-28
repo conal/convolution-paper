@@ -7,22 +7,9 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 
 ### Major
 
-*   Related work. Lots of references below.
-*   Benchmarking results.
-    Recursively defined languages.
-*   Image convolution
-*   Probabilistic computation.
-*   Reconsider title after writing the introduction and related work sections.
-*   Wording improvements:
-    *   "*Uncovering* the method's essence"
-*   Acknowledge semiring-num, at least in related work.
-*   Sets are to languages as binary relations are to what?
-    Currying gets us to `String -> String -> Bool` (for sets).
-    Is there anything interesting and/or useful here?
-    Note that a (generalized) trie from pairs of strings is going to look like a curried trie anyway.
-*   Super-memoization.
-    See notes from 2018-12-02 and 2018-12-05.
-*   Possibly some items in the Future Work section.
+*   Benchmarking results, including recursively defined languages.
+*   Improve the polynomial section.
+*   Image convolution example
 *   Reduce page count in the ICFP submission. Some strategies:
     *   Move more proofs to the appendix.
     *   Rewrite some of my explicit lemmas and theorems as an in-line statement with a proof link.
@@ -37,10 +24,21 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
     *   Lots of small changes for succinctness or at least fewer lines.
     *   Drop details for finite maps, leaving a short verbal description and pointer to extended version.
     *   Tighten some spacing environments.
-*   Image example
+*   Future work
 
 ### Misc
 
+*   Probabilistic computation.
+*   Reconsider title after writing the introduction and related work sections.
+*   Wording improvements:
+    *   "*Uncovering* the method's essence"
+*   Sets are to languages as binary relations are to what?
+    Currying gets us to `String -> String -> Bool` (for sets).
+    Is there anything interesting and/or useful here?
+    Note that a (generalized) trie from pairs of strings is going to look like a curried trie anyway.
+*   Super-memoization.
+    See notes from 2018-12-02 and 2018-12-05.
+*   Possibly some items in the Future Work section.
 *   Consider unhiding page numbers in bib.bib.
 *   A variant of `pow` that's syntactically quieter than having to write (and generate) "`(wrap (pow ...))`".
     Instead, just "`(ppow ...)`", with `ppow`'s `%format` directive dropping the parentheses.
@@ -135,6 +133,8 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 
 ## Did
 
+*   Acknowledge semiring-num, at least in related work.
+*   Related work. Lots of references below.
 *   Introduction, including contributions.
 *   The comonad connection (in progress).
 *   Arithmetic on infinite series.

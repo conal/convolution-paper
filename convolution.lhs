@@ -300,10 +300,10 @@ Thue's (list) tries appear provide a compelling alternative in simplicity and ef
 Concretely, this paper makes the following contributions:
 \notefoot{Maybe add section references.}
 \begin{itemize}
-\item A generalization of Brzozowski's algorithm from (a) regular expressions representing sets of strings to (b) various representations of |[c] -> b| where |c| is any type and |b| is any semiring, including $n$-ary functions and relations on lists (via currying).
+\item Generalization of Brzozowski's algorithm from (a) regular expressions representing sets of strings to (b) various representations of |[c] -> b| where |c| is any type and |b| is any semiring, including $n$-ary functions and relations on lists (via currying).
 \item Demonstration that the subtle aspect of Brzozowski's algorithm (matching of concatenated languages) is an instance of generalized convolution.
 \item Specialization of the generalized algorithm to tries (rather than regular expressions), yielding a simple and apparently quite efficient implementation, requiring no construction or manipulation of syntactic representations.
-\item The observation that Brzozowski's key operations on languages generalize to the comonad operations of the standard function-from-monoid comonad and its various representations (including generalized regular expressions).
+\item Observation that Brzozowski's key operations on languages generalize to the comonad operations of the standard function-from-monoid comonad and its various representations (including generalized regular expressions).
       The trie representation is the cofree comonad, which memoizes functions from the free monoid, i.e., lists.
 \item Application and evaluation of some simple memoization strategies encapsulated in simple and familiar functors, resulting in dramatic speed improvement.
 \item Demonstration of a few type specializations that yield correct arithmetic on univariate and multivariate polynomials and power series, requiring no additional implementation effort and working correctly with a variety of representations.
@@ -1308,6 +1308,16 @@ instance Functor h => Comonad (Cofree h) where
 %endif
 
 
+\sectionl{Performance}
+
+While there has been no performance tuning and only rudimentary benchmarking, we can at least get a sanity check on performance.
+
+\note{
+\begin{itemize}
+\item |Map| vs |IntMap|
+\end{itemize}
+}
+
 \sectionl{Convolution}
 
 Consider again the definition of multiplication in the monoid semiring, on |f,g :: a -> b| from \figref{monoid semiring}.
@@ -1385,6 +1395,7 @@ instance (DetectableZero b, Additive b) => HasSingle () b (Maybe b) where
 \end{code}
 As we'll see in \secref{Polynomials}, the introduction of finiteness here enables arithmetic on (finite) polynomials in addition to (infinite) power series.
 \note{Maybe a similar comment about image convolution, though we probably wouldn't really want to use lists.}
+
 
 \sectionl{Beyond Convolution}
 
@@ -1759,8 +1770,6 @@ x^3 + 3 * x^2 * y + 3 * x * y^2 + 6 * x * y * z + 3 * x^2 * z + 3 * x * z^2 + y^
 }
 
 \subsectionl{Image convolution}
-
-\sectionl{Performance}
 
 \sectionl{Related Work}
 

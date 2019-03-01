@@ -7,13 +7,22 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 
 ### Major
 
+*   Fix/finish some proofs.
+*   See all of the issues flagged in the non-anonymous draft.
 *   Regular expressions:
-    *   Optimizations.
+    *   Optimizations. [done]
+    *   Try partially applying `(!)`.
     *   Try implementing `(!)` by converting to `Cofree` (via `regexp`), and mention how it went.
         I expect the speed to be nearly indistinguishable from starting with `Cofree`.
-*   Move finite maps inside of another section.
+*   Maybe include the implementation in the supplementary material.
+    *   Tweak `Makefile` to generate a tarball with the extended paper and source.
+    *   Remove author & copyright info from package.yaml, say via sed.
+    *   Check that the README instructions work in isolation.
+        Include how to get `stack`.
 *   Why homomorphisms matter.
-*   Improve the polynomial section.
+*   Polynomials:
+    *   Univariate and multivariate. [done]
+    *   Power series: represent via list instead of stream.
 *   Image convolution example
 *   Reduce page count in the ICFP submission. Some strategies:
     *   Remove polynomials (and image convolution)
@@ -33,7 +42,10 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
     *   Lots of small changes for succinctness or at least fewer lines.
     *   Drop details for finite maps, leaving a short verbal description and pointer to extended version.
     *   Tighten some spacing environments.
+*   Move finite maps inside of another section.
+*   Comonad proof
 *   Conclusions and Future work
+
 
 ### Misc
 
@@ -144,6 +156,8 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 
 ## Did
 
+*   Check spacing with summations etc in the ICFP version.
+    I made need some version-specific tweaks to `%format` definitions.
 *   Benchmarking results, including recursively defined languages.
 *   Acknowledge semiring-num, at least in related work.
 *   Related work. Lots of references below.

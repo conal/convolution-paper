@@ -46,7 +46,7 @@
 %else
 
 %% While editing/previewing, use 12pt and tiny margin.
-\documentclass[hidelinks,twoside,11pt]{article}  % fleqn,
+\documentclass[hidelinks,twoside]{article}  % fleqn,
 
 \usepackage[margin=1in]{geometry}  % 0.12in, 0.9in, 1in
 
@@ -1155,10 +1155,8 @@ deriv (p  <+>  q)  == deriv p <+> deriv q
 deriv (p  <.>  q)  == fmap (atEps p NOP .>) (deriv q) <+> fmap (<.> q) (deriv p)
 deriv (star p)     == fmap (\ d -> star (atEps p) .> d <.> Star p) (deriv p)
 deriv (s .> p)     == fmap (s NOP .>) (deriv p)
-
-deriv (    []     +-> b) == zero
-deriv (c   :  cs  +-> b) == c +-> cs +-> b
 \end{code}
+\vspace{-4ex}
 \end{spacing}
 
 \note{Consider reexpressing \lemref{deriv [c] -> b} in terms of |(!)|. Maybe even generalize |(<:)| to indexable functors.}
@@ -1242,6 +1240,26 @@ Given the definitions in \figref{RegExp}, |(!)| is a homomorphism with respect t
 The implementation in \figref{RegExp} generalizes the regular expression matching algorithm of \citet{Brzozowski64}, adding customizable memoization, depending on choice of the indexable functor |h|.
 Note that the definition of |e ! w| is exactly |atEps (derivs e w)| generalized to indexable |h|, performing syntactic differentiation with respect to successive characters in |w| and applying |atEps| to the final resulting regular expression.
 
+For efficiency, and sometimes even termination (with recursively defined languages), we will need to add some optimizations to the |Additive| and |Semiring| instances for |RegExp| in \figref{RegExp}:
+\\
+\begin{minipage}[b]{0.4\textwidth}
+\begin{code}
+  p <+> q  | isZero p   = q
+           | isZero q   = p
+           | otherwise  = p :<+> q
+\end{code}
+\end{minipage}
+% \begin{minipage}[b]{0ex}{\rule[1ex]{0.5pt}{0.5in}}\end{minipage}
+\begin{minipage}[b]{0.45\textwidth} % \mathindent1em
+\begin{code}
+  p <.> q  | isZero p   = zero
+           | isOne  p   = q
+           | otherwise  = p :<.> q
+\end{code}
+\end{minipage}
+\\
+For |p <.> q|, we might also check whether |q| is |zero| or |one|, but doing so itself leads to non-termination in right-recursive grammars.
+
 As an alternative to repeated syntactic differentiation, we can reinterpret the original (syntactic) regular expression in another semiring as follows:
 \begin{code}
 regexp :: (StarSemiring x, HasSingle [Key h] b x, Semiring b) => RegExp h b -> x
@@ -1253,10 +1271,6 @@ regexp (Star u)      = star (regexp u)
 \end{code}
 Next, we will see a choice of |f| that eliminates the overhead of repeatedly syntactic transformation.
 
-\note{Remark on the |Semiring| instance and its lack of optimizations for |isZero q| or |isOne q|.
-Those optimizations break some recursively defined languages.
-On the other hand, since this figure no longer fits on a page, remove the optimizations altogether, and address them in remarks.
-In fact, I'd also need the |D0| and |D1| instances for |RegExp h b|, so the figure is incomplete.}
 
 \sectionl{Tries}
 

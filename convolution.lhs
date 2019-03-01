@@ -48,9 +48,10 @@
 %% While editing/previewing, use 12pt and tiny margin.
 \documentclass[hidelinks,twoside]{article}  % fleqn,
 
+%if anonymous
 \usepackage[margin=1in]{geometry}  % 0.12in, 0.9in, 1in
-
-%if not anonymous
+%else
+\usepackage[margin=0.2in]{geometry}  % 0.12in, 0.9in, 1in
 
 %% \geometry{paperwidth=6.5in,paperheight=8in}  % for iPad portrait preview
 %% \geometry{paperwidth=5.2in,paperheight=6.5in}  % same but easier on the eyes
@@ -164,7 +165,9 @@ Target\\[1.5ex]conal@@conal.net
 \maketitle
 %endif
 
-%set moreApps = False
+%% %let moreApps = not icfp
+
+%let moreApps = True
 
 \begin{abstract}
 
@@ -179,7 +182,7 @@ Other representations serve varied uses and performance trade-offs, with impleme
 Of particular interest is Brzozowski's method for regular expression matching.
 Uncovering the method's essence frees it from syntactic manipulations, while generalizing from boolean to weighted membership (such as multisets and probability distributions) and from sets to \emph{n}-ary relations.
 The classic \emph{trie} data structure then provides an elegant and efficient alternative to syntax.
-%if moreApps
+%if False
 Pleasantly, polynomial arithmetic requires no additional implementation effort, works correctly with a variety of representations, and handles multivariate polynomials and power series with ease.
 Image convolution also falls out as a special case, while shining light on boundary behavior.
 %endif
@@ -322,7 +325,7 @@ Concretely, this paper makes the following contributions:
 \item Observation that Brzozowski's key operations on languages generalize to the comonad operations of the standard function-from-monoid comonad and its various representations (including generalized regular expressions).
       The trie representation is the cofree comonad, which memoizes functions from the free monoid (lists).
 \item Application and evaluation of some simple memoization strategies encapsulated in simple and familiar functors, resulting in dramatic speed improvement.
-%if moreApps
+%if False
 \item Demonstration of a few type specializations that yield correct arithmetic on univariate and multivariate polynomials and power series, requiring no additional implementation effort and working correctly with a variety of representations.
 \item Image convolution as another special case, shining light on otherwise arbitrary border behavior.
 %endif
@@ -1756,7 +1759,8 @@ More usefully, we can use other representations of |b <-- N|, such as |Map N b|.
 For viewing results, wrap this representation in a new type, and provide a |Show| instance:
 %format Poly1
 \begin{code}
-newtype Poly1 b = Poly1 (Map N b) deriving (Additive, Semiring, Indexable n, HasSingle n, Functor)
+newtype Poly1 b = Poly1 (Map N b)
+  deriving (Additive, Semiring, Indexable n, HasSingle n, Functor)
 
 instance (DetectableZero b, DetectableOne b, Show b) => Show (Poly1 b) where NOP ...
 \end{code}
@@ -1781,8 +1785,18 @@ x^5 + 15 * x^4 + 90 * x^3 + 270 * x^2 + 405 * x + 243
 \end{code}
 %}
 
+%format ^^ = "\string^"
+%format pows a (b) = a "\!{\string^}^{\hspace{-1pt}" b "}"
+%% %format pows a (b) = pow a (^b)
+
+%format sub u (v) = u "_" v
+%format (psub u (v)) = u "_" v
+%format bigProd (lim) = "\bigOp\prod{" lim "}{0}"
+%% %format bigProdQ (lim) = "\bigOp\prod{" lim "}{1}"
+
 \noindent
 What about multivariate polynomials, i.e., polynomial functions over higher-dimensional domains?
+%if long
 Consider a 2D domain:
 %format poly2
 \begin{code}
@@ -1801,33 +1815,42 @@ Then
 The essential idea here is that a polynomial with a pair-valued domain can be viewed as a polynomial over polynomials.
 
 We can do much better, however, generalizing from two dimensions to |n| dimensions for any |n|:
-%format ^^ = "\string^"
-%format pows a (b) = a "\!{\string^}^{\hspace{-1pt}" b "}"
-%% %format pows a (b) = pow a (^b)
-
-%format sub u (v) = u "_" v
-%format (psub u (v)) = u "_" v
-%format bigProd (lim) = "\bigOp\prod{" lim "}{0}"
-%% %format bigProdQ (lim) = "\bigOp\prod{" lim "}{1}"
+%else
+Generalize to |n| dimensions:
+%endif long
+\\
+\begin{minipage}[c]{0.5\textwidth}
 \begin{code}
 poly :: (b <-- N^n) -> (b^n -> b)
 poly (F f) (x :: b^n) = bigSum (p :: N^n)  f p * pows x p
-
+\end{code}
+\end{minipage}
+% \begin{minipage}[b]{0ex}{\rule[1ex]{0.5pt}{0.5in}}\end{minipage}
+\begin{minipage}[c]{0.45\textwidth} % \mathindent1em
+\begin{code}
 infixr 8 NOP ^^
 (^^) :: b^n -> N^n -> b
 pows x p = bigProd (i < n) @@ pow (psub x i) (sub p i)
 \end{code}
+\end{minipage}
+\\
 For instance, for |n=3|, |pows (x,y,z) ((i,j,k)) = x^i * y^j * z^k|.
 Generalizing further, rather than taking |n| here to be a natural number, let |n| be any type with countable cardinality, and interpret |b^n| and |N^n| as |n -> b| and |n -> N|:
+\\
+\begin{minipage}[c]{0.5\textwidth}
 \begin{code}
 poly :: (b <-- (n -> N)) -> ((n -> b) -> b)
 poly (F f) (x :: n -> b) = bigSumQ (p :: n -> N)  f p * pows x p
-
+\end{code}
+\end{minipage}
+% \begin{minipage}[b]{0ex}{\rule[1ex]{0.5pt}{0.5in}}\end{minipage}
+\begin{minipage}[c]{0.45\textwidth} % \mathindent1em
+\begin{code}
 infixr 8 NOP ^
 (^^) :: (n -> b) -> (n -> N) -> b
 pows x p = bigProd i @@ pow (x i) ((p i))
 \end{code}
-The value of this second generalization is that the result also applies to \emph{indexable functors} (indexed by |n|), since they represent functions via |(!)| (\secref{Function-like Types and Singletons}).
+\end{minipage}
 
 \begin{lemma}[\provedIn{lemma:pows hom}]\lemlabel{pows hom}
 When |(*)| commutes, |(^^)| satisfies the following exponentiation laws:
@@ -1838,7 +1861,9 @@ I think I'll also need the |Listable| class (preferably with a better name).}
 pows x zero == one
 pows x (p + q) == pows x p * pows x q
 \end{code}
+%if long
 In other words, |pows x| is a (commutative) monoid homomorphism from the sum monoid to the product monoid.
+%endif
 \end{lemma}
 
 \begin{theorem}\thmlabel{generalized poly hom}
@@ -1873,21 +1898,14 @@ Try it out:
 %subst blankline = "\\[1.5ex]"
 \begin{code}
 
->>> let { x = varM @Z "x" ; y = varM @Z "y" ; z = varM @Z "z" }
->>> let { p = x <+> y ; q = p <+> z }
-
+>>> let p = varM @Z "x" <+> varM @Z "y" <+> varM @Z "z" :: PolyM Z
 >>> p
-x + y
->>> p^2
-x^2 + 2 * x * y + y^2
->>> p^5
-x^5 + 5 * x^4 * y + 10 * x^3 * y^2 + 10 * x^2 * y^3 + 5 * x * y^4 + y^5
-
->>> q
 x + y + z
->>> q^2
+
+>>> p^2
 x^2 + 2 * x * y + 2 * x * z + y^2 + 2 * y * z + z^2
->>> q^3
+
+>>> p^3
 x^3 + 3 * x^2 * y + 3 * x * y^2 + 6 * x * y * z + 3 * x^2 * z + 3 * x * z^2 + y^3 + 3 * y^2 * z + 3 * y * z^2 + z^3
 
 \end{code}
@@ -2459,7 +2477,7 @@ A few details:
     (!) zero 
 ==  (!) (zero :< zero)      -- |zero| for |Cofree c b|
 ==  zero <: (!) . (!) zero  -- |(!)| for |Cofree c b|
-==  zero <: (!) . zero      -- |Indexable| law \note{TODO}
+==  zero <: (!) . zero      -- Additive functor assumption
 ==  zero <: zero            -- coinduction
 ==  zero                    -- \thmref{semiring decomp [c] -> b}
 \end{code}
@@ -2523,7 +2541,7 @@ Similarly for the other
 
 \subsection{\thmref{Cofree hom}}\prooflabel{theorem:Cofree hom}
 
-First show that
+First show that |(!)| is natural (a functor homomorphism):
 
 > (!) (fmap f (a :< ds)) = fmap f ((!) (a :< ds))
 
@@ -2562,11 +2580,11 @@ Next show that
 
 \begin{code}
 
-   coreturn ((!) (a :< ds))
-== ((!) (a :< ds)) mempty
-== (a :< ds) ! mempty
-== a
-== coreturn (a :< ds)
+    coreturn ((!) (a :< ds))
+==  ((!) (a :< ds)) mempty
+==  (a :< ds) ! mempty
+==  a
+==  coreturn (a :< ds)
 
 \end{code}
 Finally,
@@ -2596,13 +2614,12 @@ i.e.,
 ==  ((!) (a :< ds) :< fmap (fmap (!)) (fmap cojoin ds)) ! (c:cs')  -- |fmap| on |Cofree h|
 ==  fmap (fmap (!)) (fmap cojoin ds) ! c ! cs'                     -- |(!)| on |Cofree h|
 ==  fmap (fmap (!) . cojoin) ds ! c ! cs'                          -- |Functor| law
-==  ... -- \note{Working here}
-
-    cojoin ((!) (a :< ds)) (c:cs')
-==  (\ u -> \ v -> (a :< ds) ! (u <> v)) (c:cs')  -- |cojoin| on functions
-==  \ v -> (a :< ds) ! ((c:cs') <> v)             -- $\beta$ reduction
-==  \ v -> (a :< ds) ! (c : (cs' <> v))           -- |(<>)| on |[c]|
-==  \ v -> ds ! c ! (cs' <> v)                    -- |(!)| on |Cofree h|
+==  ...                                                            -- \note{working here}
+==  cojoin ((!) (a :< ds)) (c:cs')
+==  (\ u -> \ v -> (a :< ds) ! (u <> v)) (c:cs')                   -- |cojoin| on functions
+==  \ v -> (a :< ds) ! ((c:cs') <> v)                              -- $\beta$ reduction
+==  \ v -> (a :< ds) ! (c : (cs' <> v))                            -- |(<>)| on |[c]|
+==  \ v -> ds ! c ! (cs' <> v)                                     -- |(!)| on |Cofree h|
 
 \end{code}
 

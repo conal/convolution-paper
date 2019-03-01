@@ -4,6 +4,9 @@
 
 module Misc where
 
+import GHC.TypeLits (KnownNat,natVal)
+import Data.Typeable (Proxy(..))
+
 infixl 6 :+
 
 type (:*)  = (,)
@@ -22,9 +25,17 @@ instance (forall u. con u => con (h u)) => Con1 con h
 class    (forall u v. con u v => con (h u) (h v)) => Con2 con h
 instance (forall u v. con u v => con (h u) (h v)) => Con2 con h
 
-
 cats :: Monoid a => Int -> a -> a
 cats n a = mconcat (replicate n a)
+
+nat :: forall n. KnownNat n => Integer
+nat = natVal (Proxy @n)
+{-# INLINE nat #-}
+
+int :: forall n. KnownNat n => Int
+int = fromIntegral (nat @n)
+{-# INLINE int #-}
+
 
 {--------------------------------------------------------------------
     Invertible monoids

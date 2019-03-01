@@ -1739,17 +1739,27 @@ liftA2 h p q  = p >>= \ u -> fmap (h u) q
 As is well known, univariate polynomials form a semiring and can be multiplied by convolving their coefficients.
 Perhaps less known is that this trick extends naturally to multivariate polynomials and to (univariate and multivariate) power series.
 
+%format ^^ = "\string^"
+%format pows a (b) = a "\!{\string^}^{\hspace{-1pt}" b "}"
+%% %format pows a (b) = pow a (^b)
+
+%format sub u (v) = u "_" v
+%format (psub u (v)) = u "_" v
+%format bigProd (lim) = "\bigOp\prod{" lim "}{0}"
+%% %format bigProdQ (lim) = "\bigOp\prod{" lim "}{1}"
+%format poly1
+%format Integer = Z
+%format >>> = "\lambda\rangle\ "
+
 Looking more closely, univariate polynomials (and even power series) can be represented by a collection of coefficients indexed by exponents, or conversely as a collection of exponents weighted by coefficients.
 For a polynomial in a variable |x|, an association of coefficient |c| with exponent |i| represents the monomial (polynomial term) |c * x^i|.
 One can use a variety of representations for these indexed collections.
 We'll consider efficient representations below, but let's begin as |b <-- N| along with a denotation as a (polynomial) function of type |b -> b|:
-%% Elide the Sum isomorphism
-% type N = Sum Natural
-%format poly1
 \begin{code}
 poly1 :: Semiring b => (b <-- N) -> (b -> b)
 poly1 (F f) = \ x -> bigSum i  f i * x^i
 \end{code}
+%if long
 Polynomial multiplication via convolution follows from the following property:
 \begin{theorem}[\provedIn{theorem:poly hom}]\thmlabel{poly hom}
 The function |poly1| is a semiring homomorphism when multiplication on |b| commutes.
@@ -1764,8 +1774,6 @@ newtype Poly1 b = Poly1 (Map N b)
 
 instance (DetectableZero b, DetectableOne b, Show b) => Show (Poly1 b) where NOP ...
 \end{code}
-%format Integer = Z
-%format >>> = "\lambda\rangle\ "
 Try it out (with prompts indicated by ``|>>>|''):
 %{
 %format * = "{}"
@@ -1784,17 +1792,8 @@ x^5 + 15 * x^4 + 90 * x^3 + 270 * x^2 + 405 * x + 243
 
 \end{code}
 %}
+%endif
 
-%format ^^ = "\string^"
-%format pows a (b) = a "\!{\string^}^{\hspace{-1pt}" b "}"
-%% %format pows a (b) = pow a (^b)
-
-%format sub u (v) = u "_" v
-%format (psub u (v)) = u "_" v
-%format bigProd (lim) = "\bigOp\prod{" lim "}{0}"
-%% %format bigProdQ (lim) = "\bigOp\prod{" lim "}{1}"
-
-\noindent
 What about multivariate polynomials, i.e., polynomial functions over higher-dimensional domains?
 %if long
 Consider a 2D domain:
@@ -1852,6 +1851,7 @@ pows x p = bigProd i @@ pow (x i) ((p i))
 \end{code}
 \end{minipage}
 
+%if long
 \begin{lemma}[\provedIn{lemma:pows hom}]\lemlabel{pows hom}
 When |(*)| commutes, |(^^)| satisfies the following exponentiation laws:
 \notefoot{Maybe also |pows (pows x p) q == pows x (p * q)|. Hunch: I'd have to generalize regular exponentiation and make |(^^)| a special case.
@@ -1865,13 +1865,20 @@ pows x (p + q) == pows x p * pows x q
 In other words, |pows x| is a (commutative) monoid homomorphism from the sum monoid to the product monoid.
 %endif
 \end{lemma}
+%endif
 
-\begin{theorem}\thmlabel{generalized poly hom}
+\begin{theorem}%
+%if short
+[\provedIn{foo}]%
+%endif
+\thmlabel{generalized poly hom}
 The generalized |poly| function is a semiring homomorphism when multiplication on |b| commutes.
 \end{theorem}
+%if long
 \begin{proof}
 Just like the proof of \thmref{poly hom}, given \lemref{pows hom}.
 \end{proof}
+%endif
 \thmref{generalized poly hom} says that the |b <-- (n -> N)| semiring (in which |(*)| is higher-dimensional convolution) correctly implements arithmetic on multivariate polynomials.
 We can instead use |Map (f N) b| to denote |b <-- (n -> N)|, where |f| is indexable with |Key f = n|.
 One convenient choice is to let |n = String| for variable names, and |f = Map String|.\footnote{Unfortunately, the |Monoid| instance for the standard |Map| type defines |m <> m'| so that keys present in |m'| \emph{replace} those in |m|.

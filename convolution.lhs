@@ -1,7 +1,17 @@
 % -*- latex -*-
 
+%let short = not long
+
 %% Temporary title
-\def\tit{Generalized Convolution and Efficient Language Recognition}
+\def\tit{Generalized Convolution and
+%if long
+\\
+%endif
+Efficient Language Recognition
+%if long
+\\ (Extended version)
+%endif
+}
 
 %% Used in bib.bib
 %if anonymous
@@ -9,10 +19,6 @@
 %else
 \newcommand\auth{Conal Elliott}
 %endif
-
-%let draft = not icfp
-
-%let short = not long
 
 %if icfp
 
@@ -46,12 +52,16 @@
 %% While editing/previewing, use 12pt and tiny margin.
 \documentclass[hidelinks,twoside]{article}  % fleqn,
 
+%if not anonymous
+
 \usepackage[margin=0.2in]{geometry}  % 0.12in, 0.9in, 1in
 
 %% \geometry{paperwidth=6.5in,paperheight=8in}  % for iPad portrait preview
 %% \geometry{paperwidth=5.2in,paperheight=6.5in}  % same but easier on the eyes
 \geometry{paperheight=9.3in} % for 2-up on big monitor, larger text
 %% \geometry{paperwidth=10in} % 2-up big monitor, smaller text
+
+%endif
 
 \usepackage[square]{natbib}
 \bibliographystyle{plainnat}
@@ -97,7 +107,9 @@ Target\\[1.5ex]conal@@conal.net
 \let\cite=\citep
 
 \title\tit
+%if draft
 \date{Draft of \today{} \currenttime}
+%endif
 
 \setlength{\blanklineskip}{2ex} % blank lines in code environment
 
@@ -152,6 +164,8 @@ Target\\[1.5ex]conal@@conal.net
 \maketitle
 %endif
 
+%set moreApps = False
+
 \begin{abstract}
 
 %if True
@@ -165,8 +179,10 @@ Other representations serve varied uses and performance trade-offs, with impleme
 Of particular interest is Brzozowski's method for regular expression matching.
 Uncovering the method's essence frees it from syntactic manipulations, while generalizing from boolean to weighted membership (such as multisets and probability distributions) and from sets to \emph{n}-ary relations.
 The classic \emph{trie} data structure then provides an elegant and efficient alternative to syntax.
+%if moreApps
 Pleasantly, polynomial arithmetic requires no additional implementation effort, works correctly with a variety of representations, and handles multivariate polynomials and power series with ease.
 Image convolution also falls out as a special case, while shining light on boundary behavior.
+%endif
 
 %else
 
@@ -264,11 +280,11 @@ This operation is at the heart of many important and interesting applications in
   \note{Add something about more general signal processing \citep[Chapter 2]{Yarlagadda2010ADSS}.}
 \item In machine learning convolutional neural networks (CNNs) allowed recognition of translation-independent image features \citep{Fukushima1988Neo, LeCun1998GBDR, Schmidhuber2015DL}.
   % Alom2018History
-\item In probability, the convolution of independent distributions equals the distribution of the sum \citep{Grinstead2003IP}.
+\item In probability, the convolution of distributions of independent random variables yields the distribution of their sum \citep{Grinstead2003IP}.
 \item In acoustics, reverberation results from convolution of sounds and their echos \citep{Pishdadian2017FRC}.
       Musical uses are known as ``convolution reverb'' \citep[Chapter 4]{HassICM1}.
 %\item In optics, blurring is convolution with a lens or iris, and shadowing is convolution with an occluding object.
-\item The coefficients of the product of two polynomials equals the convolution of their coefficients \citep{Dolan2013FunSemi}.
+\item The coefficients of the product of polynomials is the convolution of their coefficients \citep{Dolan2013FunSemi}.
 \item In formal languages, (generalized) convolution is language concatenation \citep{Dongol2016CUC}.
 \end{itemize}
 Usually, however, convolution is taught, applied, and implemented in more specialized forms, obscuring the underlying commonalities and unnecessarily limiting its usefulness.
@@ -306,8 +322,10 @@ Concretely, this paper makes the following contributions:
 \item Observation that Brzozowski's key operations on languages generalize to the comonad operations of the standard function-from-monoid comonad and its various representations (including generalized regular expressions).
       The trie representation is the cofree comonad, which memoizes functions from the free monoid, i.e., lists.
 \item Application and evaluation of some simple memoization strategies encapsulated in simple and familiar functors, resulting in dramatic speed improvement.
+%if moreApps
 \item Demonstration of a few type specializations that yield correct arithmetic on univariate and multivariate polynomials and power series, requiring no additional implementation effort and working correctly with a variety of representations.
 \item Image convolution as another special case, shining light on otherwise arbitrary border behavior.
+%endif
 \end{itemize}
 
 \sectionl{Monoids, Semirings and Semimodules}
@@ -1326,7 +1344,7 @@ instance Functor h => Comonad (Cofree h) where
 \nc\hang{\ensuremath{\infty}}
 
 While the implementation has had no performance tuning and only rudimentary benchmarking, we can at least get a sanity check on performance and functionality.
-\figrefdef{examples}{}{
+\figrefdef{examples}{Examples}{
 \begin{code}
 
 a1  = single "a"
@@ -1368,12 +1386,6 @@ As the figure shows memoization via |Map| is only moderately helpful (and someti
 The two recursively defined examples fail to terminate with |RegExp Map|, perhaps because the implementation (\secref{Regular Expressions}) lacks a crucial trick \citep{Might2010YaccID}.
 
 %% \note{Replace the |RegExpM| ns times with \hang.}
-
-\note{
-\begin{itemize}
-\item |Map| vs |IntMap|. Maybe add |IntMap| to \figref{stats}.
-\end{itemize}
-}
 
 \sectionl{Convolution}
 
@@ -1440,7 +1452,9 @@ Inlining and simplification during compilation can then eliminate all of the run
 (Failing a ``sufficiently smart compiler'', one could use |Stream =~ Cofree Id| as a specification and optimize manually.)
 
 Just as |Cofree Identity| gives (necessarily infinite) streams, |Cofree Maybe| gives (possibly finite) \emph{nonempty lists} \citep{Uustalu2008CNC, Maguire2016}.
-As with finite maps, we can interpret absence as |zero|:
+As with finite maps, we can interpret absence as |zero|%
+%if moreApps
+:
 \begin{code}
 instance Additive b => Indexable () b (Maybe b) where
   Nothing  ! () = zero
@@ -1452,6 +1466,9 @@ instance (DetectableZero b, Additive b) => HasSingle () b (Maybe b) where
 \end{code}
 As we'll see in \secref{Polynomials}, the introduction of finiteness here enables arithmetic on (finite) polynomials in addition to (infinite) power series.
 \note{Maybe a similar comment about image convolution, though we probably wouldn't really want to use lists.}
+%else
+.
+%endif
 
 
 \sectionl{Beyond Convolution}
@@ -1646,6 +1663,7 @@ liftA2 h p q  = p >>= \ u -> fmap (h u) q
 \end{code}
 \end{theorem}
 
+%if moreApps
 \sectionl{More Applications}
 
 \subsectionl{Polynomials}
@@ -1828,6 +1846,8 @@ x^3 + 3 * x^2 * y + 3 * x * y^2 + 6 * x * y * z + 3 * x^2 * z + 3 * x * z^2 + y^
 
 \subsectionl{Image convolution}
 
+%endif
+
 \sectionl{Related Work}
 
 This paper began with a desire to understand regular expression matching via ``derivatives'' by \citet{Brzozowski64} more fundamentally and generally.
@@ -1865,7 +1885,7 @@ Several of the class instances given above, though independently encountered, al
 %endif
 
 
-\sectionl{Conclusions and Future Work}
+%% \sectionl{Conclusions and Future Work}
 
 \note{
 \begin{itemize}
@@ -2553,6 +2573,8 @@ Similarly for |liftA2|:
 \end{code}
 \end{spacing}
 
+%if moreApps
+
 \subsection{\thmref{poly hom}}\prooflabel{theorem:poly hom}
 
 \begin{code}
@@ -2635,6 +2657,8 @@ poly (F (\ i -> if i == n then b else zero))          -- |(+->)| on |b <-- a| (d
 ==  paren (bigProd i @@ pow (x i) (p i)) * paren (bigProd i @@ pow (x i) (q i))  -- product property (with commutative |(*)|)
 ==  pows x p * pows x q                                                          -- |(^^)| definition
 \end{code}
+
+%endif moreApps
 
 %endif long
 

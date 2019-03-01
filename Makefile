@@ -6,17 +6,19 @@ icfp = $(outdir)/$(paper)-icfp
 long = $(outdir)/$(paper)-long
 long-anon = $(outdir)/$(paper)-long-anon
 
-pdf: $(long).pdf
-# pdf: $(icfp).pdf
+# pdf: $(long).pdf
+pdf: $(icfp).pdf
 # pdf: $(long-anon).pdf
 
-see: $(long).see
-# see: $(icfp).see
+# see: $(long).see
+see: $(icfp).see
 # see: $(long-anon).see
 
 icfp: $(icfp).pdf
 long: $(long).pdf
 long-anon: $(long-anon).pdf
+
+all: icfp long long-anon
 
 # # Doesn't work
 # .PRECIOUS: $(outdir)/%.tex $(outdir)/%.pdf
@@ -56,7 +58,7 @@ $(icfp).tex: $(paper).lhs $(texdeps)
 	lhs2tex --set=icfp --set=anonymous -o $*.tex $(paper).lhs
 
 $(long).tex: $(paper).lhs $(texdeps)
-	lhs2tex --set=long -o $*.tex $(paper).lhs
+	lhs2tex --set=long --set=draft -o $*.tex $(paper).lhs
 
 $(long-anon).tex: $(paper).lhs $(texdeps)
 	lhs2tex --set=long --set=anonymous -o $*.tex $(paper).lhs

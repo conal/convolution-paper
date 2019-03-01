@@ -7,10 +7,10 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 
 ### Major
 
-*   Benchmarking results, including recursively defined languages.
 *   Improve the polynomial section.
 *   Image convolution example
 *   Reduce page count in the ICFP submission. Some strategies:
+    *   Remove polynomials (and image convolution)
     *   Move more proofs to the appendix.
     *   Rewrite some of my explicit lemmas and theorems as an in-line statement with a proof link.
         Keep the more formal style in the extended version.
@@ -24,7 +24,7 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
     *   Lots of small changes for succinctness or at least fewer lines.
     *   Drop details for finite maps, leaving a short verbal description and pointer to extended version.
     *   Tighten some spacing environments.
-*   Future work
+*   Conclusions and Future work
 
 ### Misc
 
@@ -133,6 +133,7 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 
 ## Did
 
+*   Benchmarking results, including recursively defined languages.
 *   Acknowledge semiring-num, at least in related work.
 *   Related work. Lots of references below.
 *   Introduction, including contributions.

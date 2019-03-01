@@ -39,7 +39,7 @@ default-extensions:
 
 ghc-options:
   -Wall
-  -O2
+  # -O2  # Use when benchmarking
   # -Wno-type-defaults   # for Poly, since dante doesn't pick up
 
 cpp-options: -DEXAMPLES
@@ -55,6 +55,7 @@ library:
     - multiset
     # For Image
     - vector
+    - finite-typelits
     - vector-sized
     - JuicyPixels
     # - total-map
@@ -96,6 +97,8 @@ tests:
 
 benchmarks:
   bench:
+    ghc-options:
+      -O2
     source-dirs:         test
     main:                Benchmark.hs
     other-modules: []

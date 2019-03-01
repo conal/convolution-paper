@@ -105,6 +105,7 @@ type FR h b = ( Additive (h (RegExp h b)), HasSingle (Key h) (RegExp h b) (h (Re
 instance (FR h b, StarSemiring b, c ~ Key h, Eq c)
       => Indexable [c] b (RegExp h b) where
   e ! w = atEps (foldl ((!) . deriv) e w)
+  -- (!) e = atEps . foldl ((!) . deriv) e
 
 instance (FR h b, StarSemiring b, c ~ Key h, Eq c)
       => HasSingle [c] b (RegExp h b) where

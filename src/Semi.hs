@@ -15,6 +15,7 @@ import Data.Functor.Identity (Identity(..))
 import Data.Maybe (fromMaybe,isNothing)
 import GHC.Exts (Coercible,coerce,Constraint)
 import Control.DeepSeq (NFData)
+import GHC.TypeLits (KnownNat)
 
 import Data.Map (Map)
 import qualified Data.Map as M
@@ -23,6 +24,10 @@ import qualified Data.IntMap.Lazy as IntMap
 -- import Data.Set (Set)
 -- import qualified Data.Set as S
 import Data.MemoTrie
+
+import Data.Finite (Finite)
+import Data.Vector.Sized (Vector)
+import qualified Data.Vector.Sized as V
 
 import Misc
 -- import Constrained
@@ -482,3 +487,39 @@ instance (HasTrie a, Additive b) => Additive (a :->: b) where
 -- False negatives are okay. Only used for optimization
 instance (HasTrie a, Additive b) => DetectableZero (a :->: b) where isZero _ = False
 -- instance Additive b => DetectableOne  (a :->: b) where isOne  _ = False
+
+
+{--------------------------------------------------------------------
+    Vectors
+--------------------------------------------------------------------}
+
+-- instance Splittable (Finite n) where
+--   splits n = 
+
+type Fin n = Sum (Finite n)
+
+-- Maybe Monoid won't cut it here, since Finite n isn't properly additive.
+
+type instance Key (Vector n) = Fin n
+
+instance Indexable (Fin n) b (Vector n b) where
+  v ! Sum i = v `V.index` i
+
+instance (KnownNat n, DetectableZero b) => Listable (Fin n) b (Vector n b) where
+  toList v = filter (not . isZero . snd) ([0 ..] `zip` V.toList v)
+
+instance (KnownNat n, Additive b) => HasSingle (Fin n) b (Vector n b) where
+  Sum i +-> b = V.generate (\ j -> if j == i then b else zero)
+
+instance (KnownNat n, Additive b) => Additive (Vector n b) where
+  zero = pure zero
+  (<+>) = liftA2 (<+>)
+
+instance DetectableZero b => DetectableZero (Vector n b) where
+  isZero = all isZero
+
+-- instance (KnownNat n, Semiring b) => Semiring (Vector n b) where
+--   one = 0 +-> one
+
+-- instance DetectableOne b => DetectableOne (Vector n b) where
+--   isOne = 

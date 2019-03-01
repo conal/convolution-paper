@@ -1347,7 +1347,7 @@ Applying the |(<:)| decomposition to tries also appears to be more streamlined t
 During matching, the next character in the candidate string is used to directly index to the relevant derivative (sub-trie), efficiently bypassing all other paths.
 As one might hope,
 %if short
-|(!)| is a comonad homomorphism from |Cofree h| to |(->) (Key y)| \seeproof{theorem:Cofree hom}.
+|(!)| is a comonad homomorphism from |Cofree h| to |(->) (Key h)| \seeproof{theorem:Cofree hom}.
 %else
 |(!)| on |Cofree h| is another homomorphism:
 \begin{theorem}[\provedIn{theorem:Cofree hom}]\thmlabel{Cofree hom}
@@ -1418,22 +1418,25 @@ The examples |anbn| and |dyck| are two classic, non-regular, context-free langua
 \stat{Example}{|RegExpF|}{|RegExpM|}{|CofreeF|}{|CofreeM|}{} \hline
 \hline
 %include test/stats/star-a.txt
+%include test/stats/letters.txt
 %include test/stats/asas.txt
 %include test/stats/asbs.txt
 %include test/stats/asbas.txt
-%include test/stats/letters.txt
 %include test/stats/fishy.txt
 %include test/stats/anbn.txt
 %include test/stats/dyck.txt
 \end{tabular}
 \end{center}
-} gives some running times for these examples measured with the \emph{criterion} library \citep{criterion}, on a late 2013 MacBook Pro.
+} gives some execution times for these examples measured with the \emph{criterion} library \citep{criterion}, compiled with GHC 8.6.3 (with \texttt{-O2}), and running on a late 2013 MacBook Pro.
 (Note milliseconds vs microseconds---``ms'' vs ``$\mu{}$s''.)
-Each example is interpreted in four semirings: |RegExp ((->) Char) N|, |RegExp (Map Char) N|, |Cofree ((->) Char N)|, and |Cofree (Map Char) N|.
+Each example is interpreted in the four semirings: |RegExp ((->) Char) N|, |RegExp (Map Char) N|, |Cofree ((->) Char N)|, and |Cofree (Map Char) N|.
 Each interpretation of each language is given a matching input string of length 100; and matches are counted, thanks to use of the |N| semiring.
 (The |star a * star a| example matches in 101 ways, while the others match uniquely.)
-As the figure shows, memoization (via |Map|) is only moderately helpful (and occasionally harmful) for |RegExp| but is \emph{extremely} helpful for |Cofree|, which performs terribly without it.
+As the figure shows, memoization (via |Map|) is only moderately helpful (and occasionally harmful) for |RegExp|.
+|Cofree|, on the other hand, performs terribly without memoization and (in these examples) 2K to 230K times faster with memoization.
+Here, memoized |Cofree| performs between 8.5 and 485 times faster than memoized |RegExp| and between 11.5 and 1075 times faster than nonmemoized |RegExp|.
 The two recursively defined examples fail to terminate with |RegExp Map|, perhaps because the implementation (\secref{Regular Expressions}) lacks a crucial trick \citep{Might2010YaccID}.
+Other |RegExp| improvements \citep{Might2010YaccID,Adams2016CPP} might narrow the gap further, and careful study and optimization of the |Cofree| implementation (\figref{Cofree}) might widen it.
 
 %% \note{Replace the |RegExpM| ns times with \hang.}
 
@@ -1463,7 +1466,11 @@ Likewise, by specializing the \emph{domain} of the functions to sequences (from 
 %format R = "\mathbb R"
 %format C = "\mathbb C"
 
-%format bigSumPlus (lim) = "\bigOp\sum{" lim "}{1.5}"
+%if icfp
+%format bigSumPlus (lim) = "\bigOp\sum{" lim "}{0.7}"
+%else
+%format bigSumPlus (lim) = "\bigOp\sum{" lim "}{1.4}"
+%endif
 Let's now consider specializing the functions' domains to \emph{integers} rather than sequences, recalling that integers (and numeric types in general) form a monoid under addition.
 \vspace{-2ex}
 \begin{spacing}{1.5}

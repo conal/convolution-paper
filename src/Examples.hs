@@ -29,7 +29,7 @@ asas = star a1 <.> star a1
 fishy = star letter <.> single "fish" <.> star letter
 
 anbn :: (HasSingle String b x, Semiring x, Semiring b) => x
-anbn = one <+> (a1 <.> anbn <.> b1)
+anbn = one <+> a1 <.> anbn <.> b1
 
 sumSingle :: (HasSingle [a] b x, Semiring b, Additive x) => [a] -> x
 sumSingle bs = sum [single [c] | c <- bs]

@@ -53,7 +53,8 @@ main = do
  where
    config = defaultConfig
      { 
-      timeLimit = 5 -- 1
+       timeLimit = 0 -- 5
+     , reportFile = Just "test/stats.html"
      }
 
 type Ok x b = (HasSingle String b x, StarSemiring x, StarSemiring b, NFData b)
@@ -65,11 +66,11 @@ group groupName example omit str =
 
     , style @(RegExp ((->)   Char) O) "RegExp:Function"
     , style @(RegExp (Map    Char) O) "RegExp:Map"
-    -- , style @(RegExp CharMap       O) "RegExp:IntMap"
+    , style @(RegExp CharMap       O) "RegExp:IntMap"
 
     , style @(Cofree  ((->)   Char) O) "Cofree:Function"
     , style @(Cofree  (Map    Char) O) "Cofree:Map"
-    -- , style @(Cofree  CharMap       O) "Cofree:IntMap"
+    , style @(Cofree  CharMap       O) "Cofree:IntMap"
 
     ]
  where

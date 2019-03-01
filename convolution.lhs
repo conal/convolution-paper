@@ -1312,61 +1312,66 @@ instance Functor h => Comonad (Cofree h) where
 
 %format a1 = a
 %format b1 = b
+%format letter = atoz
 
 %format RegExpF = RegExp"_"->
 %format RegExpM = RegExp"_"Map
 %format CofreeF = Cofree"_"->
 %format CofreeM = Cofree"_"Map
 
-\nc\stat[6]{\textbf{#1} & #2 & #3 & #4 & #5 \\ \hline}
+\nc\stat[6]{#1 & #2 & #3 & #4 & #5 \\ \hline}
 \nc\incstat[1]{\input{test/stats/#1.txt}}
 
-While there has been no performance tuning and only rudimentary benchmarking, we can at least get a sanity check on performance and functionality.
+% For examples that don't run
+\nc\hang{\ensuremath{\infty}}
+
+While the implementation has had no performance tuning and only rudimentary benchmarking, we can at least get a sanity check on performance and functionality.
 \figrefdef{examples}{}{
 \begin{code}
 
 a1  = single "a"
 b1  = single "b"
 
-asbs   = star a1 <.> star b1
-asbas  = star a1 <.> b1 <.> star a1
-asas   = star a1 <.> star a1
-
 letter = sum [single [c] | c <- ['a' .. 'z']]
 
-fishy  = star letter <.> single "fish" <.> star letter
+fishy = star letter <.> single "fish" <.> star letter
 
-anbn = one <+> (a1 <.> anbn <.> b1)
+anbn = one <+> a1 <.> anbn <.> b1
 
 dyck = star (single "[" <.> dyck <.> single "]")
 
 \end{code}
 } shows the source code for a collection of examples, all polymorphic in the choice of semiring.
 The |letter| example is any single letter from `a' to `z'.
-The examples |anbn| and |dyck| are two classic, context-free (and non-regular) examples: $a^nb^n$ and the Dyck language of balanced brackets.
+The examples |anbn| and |dyck| are two classic, non-regular, context-free examples: $a^nb^n$ and the Dyck language of balanced brackets.
 \figrefdef{stats}{Running times for examples in \figref{examples}}{
 \begin{center}
 \begin{tabular}{||c||c||c||c||c||}
 \hline
 \stat{Example}{|RegExpF|}{|RegExpM|}{|CofreeF|}{|CofreeM|}{} \hline
 \hline
-\incstat{star-a}
-\incstat{asas}
-\incstat{asbs}
-\incstat{asbas}
-\incstat{letters}
-\incstat{fishy}
-\incstat{anbn}
-\incstat{dyck}
+%include test/stats/star-a.txt
+%include test/stats/asas.txt
+%include test/stats/asbs.txt
+%include test/stats/asbas.txt
+%include test/stats/letters.txt
+%include test/stats/fishy.txt
+%include test/stats/anbn.txt
+%include test/stats/dyck.txt
 \end{tabular}
 \end{center}
 } gives some running times for these examples measured with the \emph{criterion} library \citep{criterion}, running on a late 2013 MacBook Pro.
-Each example is tested with a matching input string of length 100 and counting the number of successful matches via choice of the |N| semiring.
-(The |asas| example matches in 101 ways, while the others all match uniquely.)
+Each examples is run four ways: |RegExp ((->) Char)|, |RegExp (Map Char)|, |Cofree ((->) Char)|, and |Cofree (Map Char)|.
+Each example is tested with a matching input string of length 100 and counts the number of successful matches via choice of the |N| semiring.
+(The |star a * star a| example matches in 101 ways, while the others match uniquely.)
+As the figure shows memoization via |Map| is only moderately helpful (and sometimes harmful) for |RegExp| but is \emph{extremely} helpful for |Cofree|, which performs terribly without it.
+The two recursively defined examples fail to terminate with |RegExp Map|, perhaps because the implementation (\secref{Regular Expressions}) lacks a crucial trick \citep{Might2010YaccID}.
+
+%% \note{Replace the |RegExpM| ns times with \hang.}
 
 \note{
 \begin{itemize}
-\item |Map| vs |IntMap|
+\item |Map| vs |IntMap|. Maybe add |IntMap| to \figref{stats}.
 \end{itemize}
 }
 

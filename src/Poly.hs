@@ -34,37 +34,10 @@ instance ( DetectableZero b, DetectableOne b, Show b, Listable n b z
    where
      term (i,b) = Term b (Pow (Name "x") i)
 
--- type b <-- a = a -> b
--- pattern F :: (a -> b) -> (b <-- a)
--- pattern F f = f
-
--- poly :: HasPow (n -> b) (n -> N) b => ((n -> N) <-- b) -> ((n -> b) -> b)
--- poly (F f) x = sum [f p * x ^^ p | p <- allVals]
-
-#if 0
-
-f :: b -> (n -> N)
-
-#endif
-
-allVals :: [a]
-allVals = error "allVals: just for pretend"
-
--- poly1 :: (Indexable n b x, HasPow b n x, Listable n x z) => Poly1 z -> x -> b
--- poly1 (Poly1 m) x = sum [c <.> x^i | (i,c) <- toList m]
-
-
 type P1 b = Poly1 (Map N b)
-
 
 poly1 :: (Listable N b z, Semiring b) => Poly1 z -> b -> b
 poly1 (Poly1 m) z = sum [b <.> z^i | (i,b) <- toList m]
-
-
--- poly :: (Listable n b (h b), HasPow (h b) n b, Semiring b) => Poly1 h b -> h b -> b
--- poly (Poly1 m) z = sum [b <.> z^#i | (i,b) <- toList m]
-
--- TODO: generalize (^) so that this definition works in general.
 
 -- >>> let p = single 1 <+> value 3 :: P1 Z
 -- >>> p
@@ -82,15 +55,18 @@ poly1 (Poly1 m) z = sum [b <.> z^i | (i,b) <- toList m]
 -- >>> (poly1 p 10)^3
 -- 2197
 
--- TODO: generalize from Map N to any functor f with Key f = N. I'll need to get
--- indices as well, as in the Keyed class from the keys library.
--- 
--- -- * Keyed
--- class Functor f => Keyed f where
---   mapWithKey :: (Key f -> a -> b) -> f a -> f b
+-- poly :: (Listable n b x, HasPow x n b, Semiring b) => Poly1 x -> x -> b
 
--- >>> 1 :: Peano
--- [()]
+poly :: (Listable n b x, Semiring b, HasPow z n b) => Poly1 x -> z -> b
+poly (Poly1 m) z = sum [b <.> z^#i | (i,b) <- toList m]
+
+-- >>> let p = single 1 <+> value 3 :: P1 Z
+-- >>> poly p 10
+-- 13
+-- >>> poly (p^3) 10
+-- 2197
+-- >>> (poly p 10)^3
+-- 2197
 
 -- >>> take 50 $ show (single 1 :: Cofree Identity Z)
 -- "0 :< Identity (1 :< Identity (0 :< Identity (0 :< "
@@ -137,31 +113,18 @@ instance (DetectableZero b, DetectableOne b, Show b) => Show (PolyM b) where
 varM :: Semiring b => Name -> PolyM b
 varM = single . single
 
--- >>> let { x = varM @Z "x" ; y = varM @Z "y" ; z = varM @Z "z" }
--- >>> let { p = x <+> y ; q = p <+> z }
--- 
+-- >>> let p = varM @Z "x" <+> varM @Z "y" <+> varM @Z "z" :: PolyM Z
 -- >>> p
--- x + y
--- >>> p^2
--- x^2 + 2 * x * y + y^2
--- >>> p^5
--- x^5 + 5 * x^4 * y + 10 * x^3 * y^2 + 10 * x^2 * y^3 + 5 * x * y^4 + y^5
--- 
--- >>> q
 -- x + y + z
--- >>> q^2
+-- 
+-- >>> p^2
 -- x^2 + 2 * x * y + 2 * x * z + y^2 + 2 * y * z + z^2
--- >>> q^3
+-- 
+-- >>> p^3
 -- x^3 + 3 * x^2 * y + 3 * x * y^2 + 6 * x * y * z + 3 * x^2 * z + 3 * x * z^2 + y^3 + 3 * y^2 * z + 3 * y * z^2 + z^3
 
--- >>> q^4
--- x^4 + 4 * x^3 * y + 6 * x^2 * y^2 + 4 * x * y^3 + 12 * x^2 * y * z + 12 * x * y^2 * z + 12 * x * y * z^2 + 4 * x^3 * z + 6 * x^2 * z^2 + 4 * x * z^3 + y^4 + 4 * y^3 * z + 6 * y^2 * z^2 + 4 * y * z^3 + z^4
--- >>> p <.> q
--- x^2 + 2 * x * y + x * z + y^2 + y * z
-
-{--------------------------------------------------------------------
-    Try PolyM via Poly1
---------------------------------------------------------------------}
+-- TODO: use the generalized Poly1 in place of PolyM. I'll have to tweak
+-- something, since the Poly1 Show instance wants to insert "x".
 
 type PM b = Poly1 (Map (Map Name N) b)
 
@@ -302,7 +265,7 @@ instance (Show n, Show b, DetectableZero n, DetectableOne n, DetectableOne b)
 -- >>> Pow "z" 5 :: Pow Name N
 -- z^5
 
-data Pows b = Pows (Map b N)
+newtype Pows b = Pows (Map b N) -- deriving (Semiring,Monoid)
 
 instance DetectableZero b => DetectableZero (Pows b) where
   isZero = const False

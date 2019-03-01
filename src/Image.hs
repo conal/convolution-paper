@@ -1,5 +1,3 @@
-
-{-# OPTIONS_GHC -Wall #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-} -- TEMP
 
 -- | Simple image convolution.
@@ -7,9 +5,10 @@
 
 module Image where
 
+import Control.Applicative (liftA2)
 import GHC.Float (float2Double)
 import GHC.Generics ((:.:)(..))
-import GHC.TypeLits
+import GHC.TypeLits (KnownNat)
 import Data.Maybe (fromMaybe)
 import Data.Typeable (Proxy(..))
 
@@ -23,6 +22,12 @@ import Codec.Picture ( convertRGB8 )
 import Codec.Picture.Types
   (DynamicImage(ImageYF), Image(..), PixelF , dynamicMap, pixelAt, promoteImage , extractLumaPlane)
 
+import Misc
+import Semi
+
+{--------------------------------------------------------------------
+    Vectors and arrays
+--------------------------------------------------------------------}
 
 -- | A 2D array represented as a composition of sized vectors.
 type Arr m n = Vector m :.: Vector n
@@ -56,13 +61,3 @@ arrToImg (Comp1 arr) = ImageYF $ Image
 {--------------------------------------------------------------------
     Utilities
 --------------------------------------------------------------------}
-
--- Move some or all elsewhere
-
-nat :: forall n. KnownNat n => Integer
-nat = natVal (Proxy @n)
-{-# INLINE nat #-}
-
-int :: forall n. KnownNat n => Int
-int = fromIntegral (nat @n)
-{-# INLINE int #-}

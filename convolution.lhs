@@ -1451,7 +1451,7 @@ f * g  = bigSum (u,v) u <> v +-> f u <.> g v
 \end{code}
 As in \secref{Languages and the Monoid Semiring}, specializing the \emph{codomain} to |Bool|%
 %if short
-\ and using
+~and using
 %else
 , we get
 \begin{code}
@@ -1769,8 +1769,7 @@ More usefully, we can use other representations of |b <-- N|, such as |Map N b|.
 For viewing results, wrap this representation in a new type, and provide a |Show| instance:
 %format Poly1
 \begin{code}
-newtype Poly1 b = Poly1 (Map N b)
-  deriving (Additive, Semiring, Indexable n, HasSingle n, Functor)
+newtype Poly1 z = Poly1 z deriving (Additive, Semiring, Indexable n b, HasSingle n b)
 
 instance (DetectableZero b, DetectableOne b, Show b) => Show (Poly1 b) where NOP ...
 \end{code}
@@ -1780,7 +1779,7 @@ Try it out (with prompts indicated by ``|>>>|''):
 %subst blankline = "\\[1.5ex]"
 \begin{code}
 
->>> let p = single 1 <+> value 3 :: Poly1 Z
+>>> let p = single 1 <+> value 3 :: Poly1 (Map N Z)
 >>> p
 x + 3
 
@@ -1793,6 +1792,77 @@ x^5 + 15 * x^4 + 90 * x^3 + 270 * x^2 + 405 * x + 243
 \end{code}
 %}
 %endif
+
+We can also use |[]| in place of |Map N|, where |[b]| has the required instances (|Additive|, |Semiring|, etc) based on a denotation of |[b]| as |N -> b|, as always with absence denoting zero (here in case of sampling off the end of the list)%
+%if short
+~\citep{Kidney2017CS,Elliott2019-convolution-extended}.
+%else
+.
+The example above yields identical results.
+%endif
+Since lists are potentially infinite (unlike finite maps), however, this simple change enables power series%
+%if short
+~\citep{McIlroy1999PSPS,McIlroy2001MS,Elliott2019-convolution-extended}.
+%else
+.
+Following \citet{McIlroy1999PSPS,McIlroy2001MS}, define integration and differentiation as follows:
+%format integralL = integral
+%format derivativeL = derivative
+%format sinL = sin"_{\hspace{-1pt}p}"
+%format cosL = cos"_{\hspace{-1pt}p}"
+%format expL = exp"_{\hspace{-1pt}p}"
+\begin{code}
+integralL :: Fractional b => Poly1 [b] -> Poly1 [b]
+integralL (Poly1 bs0) = Poly1 (0 : go 1 bs0)
+ where
+   go _ []       = []
+   go n (b : d)  = b/n : go (n+1) d
+
+derivativeL :: (Additive b, Fractional b) => Poly1 [b] -> Poly1 [b]
+derivativeL (Poly1 [])         = zero
+derivativeL (Poly1 (_ : bs0))  = Poly1 (go 1 bs0)
+ where
+   go _ []        = []
+   go n (b : bs)  = n * b : go (n+1) bs
+\end{code}
+Then define |sin|, |cos|, and |exp| via simple ordinary differential equations (ODEs):
+\begin{code}
+sinL, cosL, expL :: Poly1 [Rational]
+sinL = integralL cosL
+cosL = 1 - integralL sinL
+expL = 1 + integralL expL
+\end{code}
+Try it out:
+%format lop (e) = e
+{%
+%format % = "/"
+\begin{code}
+
+>>> lop sinL
+x + (-1) % 6 * x^3 + 1 % 120 * x^5 + (-1) % 5040 * x^7 + 1 % 362880 * x^9 + (-1) % 39916800 * x^11 + 1 ...
+>>> lop cosL
+1 % 1 + (-1) % 2 * x^2 + 1 % 24 * x^4 + (-1) % 720 * x^6 + 1 % 40320 * x^8 + (-1) % 3628800 * x^10 + 1 ...
+>>> lop expL
+1 % 1 + x + 1 % 2 * x^2 + 1 % 6 * x^3 + 1 % 24 * x^4 + 1 % 120 * x^5 + 1 % 720 * x^6 + 1 % 5040 * x^7 ...
+\end{code}
+As expected, |derivativeL sinL == cosL|, |derivativeL cosL == - sinL|, and |derivativeL expL == expL|:
+\begin{code}
+
+>>> lop (derivativeL sinL)
+1 % 1 + (-1) % 2 * x^2 + 1 % 24 * x^4 + (-1) % 720 * x^6 + 1 % 40320 * x^8 + (-1) % 3628800 * x^10 + 1 ...
+>>> lop (derivativeL cosL)
+(-1) % 1 * x + 1 % 6 * x^3 + (-1) % 120 * x^5 + 1 % 5040 * x^7 + (-1) % 362880 * x^9 + 1 % 39916800 * ...
+>>> lop (derivativeL expL)
+1 % 1 + x + 1 % 2 * x^2 + 1 % 6 * x^3 + 1 % 24 * x^4 + 1 % 120 * x^5 + 1 % 720 * x^6 + 1 % 5040 * x^7 ...
+
+\end{code}
+%}
+Crucially for termination of ODEs such as these, |integralL| is nonstrict, yielding its result's first coefficient before examining its argument.
+In particular, the definition of |integralL| does \emph{not} optimize for |Poly1 []|.
+
+\vspace{2ex}
+%endif short
+
 
 What about multivariate polynomials, i.e., polynomial functions over higher-dimensional domains?
 %if long
@@ -1905,7 +1975,7 @@ Try it out:
 %subst blankline = "\\[1.5ex]"
 \begin{code}
 
->>> let p = varM @Z "x" <+> varM @Z "y" <+> varM @Z "z" :: PolyM Z
+>>> let p = varM "x" <+> varM "y" <+> varM "z" :: PolyM Z
 >>> p
 x + y + z
 
@@ -1954,7 +2024,7 @@ He also defined transcendental operations by simple recursion and integration, s
 The connections between parsing and semirings have been explored deeply by \citet{Goodman1998PIO,Goodman1999SP} and by \citet{Liu2004}, building on the foundational work of \citet{Chomsky1959CFL}.
 \citet{Kmett2011FreeModules} also explored some issues similar to those in the present paper, building on semirings and free semimodules, pointing out that the classic continuation monad can neatly represent linear functionals.
 
-\citet{Kidney2016Semi,semiring-num} implemented a Haskell semiring library that helped with early implementations leading to the present paper, with a particular leaning toward convolution \citep{Kidney2017CA}.
+\citet{Kidney2016Semi,semiring-num} implemented a Haskell semiring library that helped with early implementations leading to the present paper, with a particular leaning toward convolution \citep{Kidney2017CS}.
 Several of the class instances given above, though independently encountered, also appear in that library.
 
 \note{To do: More fully describe connections between this paper and the work cited above.}

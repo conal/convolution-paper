@@ -7,12 +7,12 @@ long = $(outdir)/$(paper)-long
 long-anon = $(outdir)/$(paper)-long-anon
 
 # pdf: $(long).pdf
-pdf: $(icfp).pdf
-# pdf: $(long-anon).pdf
+# pdf: $(icfp).pdf
+pdf: $(long-anon).pdf
 
 # see: $(long).see
-see: $(icfp).see
-# see: $(long-anon).see
+# see: $(icfp).see
+see: $(long-anon).see
 
 icfp: $(icfp).pdf
 long: $(long).pdf

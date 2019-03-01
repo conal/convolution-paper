@@ -23,6 +23,7 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 *   Polynomials:
     *   Univariate and multivariate. [done]
     *   Power series: represent via list instead of stream.
+    *   Prettier negative coefficients
 *   Image convolution example
 *   Reduce page count in the ICFP submission. Some strategies:
     *   Remove polynomials (and image convolution)

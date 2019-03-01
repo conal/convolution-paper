@@ -403,50 +403,46 @@ instance Additive b => Indexable N b [b] where
 instance Additive b => Listable N b [b] where
   toList = zip [0 ..]
 
-
-#if 1
-
--- For indexing Cofree Identity or Cofree Maybe.
-type Peano = [()]
+instance (Additive b, DetectableZero b) => HasSingle N b [b] where
+  0 +-> b | isZero b = zero
+          | otherwise = [b] 
+  n +-> b = zero : (n-1 +-> b)
 
 -- Should I really be using up lists here instead of saving them?
 -- Maybe wrap in a newtype
 
-instance Additive Peano where
+-- [a] as a denotation of a <-- N
+
+-- See Cofree
+instance Additive b => Additive [b] where
   zero = mempty
-  m <+> n = m <> n
-            -- fromIntegral (length m + length n)
-            -- replicate (length m + length n) ()
+  [] <+> bs = bs
+  as <+> [] = as
+  (a : as) <+> (b : bs) = a <+> b : as <+> bs
 
-instance Semiring Peano where
-  one = [()]
-  m <.> n = fromIntegral (length m * length n)
-            -- replicate (length m * length n) ()
+instance (Semiring b, D01 b) => Semiring [b] where
+  one = one : zero
+  [] <.> _ = []  -- 0 * q == 0
+  (a : dp) <.> q = a .> q <+> (zero : dp <.> q)
 
-instance DetectableZero Peano where isZero = null
-instance DetectableOne Peano where
-  isOne [()] = True
+instance DetectableZero [b] where isZero = null
+
+instance DetectableOne b => DetectableOne [b] where
+  isOne [b] = isOne b
   isOne _ = False
 
-instance Num Peano where
-  fromInteger n
-    | n < 0 = error "fromInteger@Peano: negative argument"
-    | otherwise = replicate (fromInteger n) ()
+instance Semiring b => LeftSemimodule b [b] where
+  scale s = fmap (s <.>)
+
+instance (Semiring b, Num b, DetectableZero b, DetectableOne b)
+      => Num [b] where
+  fromInteger = value . fromInteger
+  negate = ((-1) .>)
   (+) = (<+>)
   (*) = (<.>)
-  negate = noPeano "negate"
-  abs = noPeano "abs"
-  signum = noPeano "signum"
+  abs = fmap abs
+  signum = fmap signum
 
-noPeano :: String -> a
-noPeano meth = error (meth++"@Peano: undefined")
-
--- >>> 10 :: Peano
--- [(),(),(),(),(),(),(),(),(),()]
--- >>> 2^3 :: Peano
--- [(),(),(),(),(),(),(),()]
-
-#endif
 
 -- TODO: generalize to other Integral or Enum types and add to Semi
 newtype CharMap b = CharMap (IntMap b) deriving Functor

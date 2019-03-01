@@ -23,7 +23,7 @@ import qualified MMap as M
 
 newtype Poly1 z = Poly1 z deriving
   ( Additive, Semiring, Indexable n b, Listable n b, HasSingle n b
-  , Functor, Num )
+  , Num )  -- , Functor
 
 instance ( DetectableZero b, DetectableOne b, Show b, Listable n b z
          , Show n, DetectableZero n, DetectableOne n )
@@ -37,7 +37,47 @@ type P1 b = Poly1 (Map N b)
 poly1 :: (Listable N b z, Semiring b) => Poly1 z -> b -> b
 poly1 (Poly1 m) z = sum [b <.> z^i | (i,b) <- toList m]
 
+-- >>> let p = single 1 <+> value 3 :: Poly1 (Map N Z)
+-- >>> p
+-- 3 + x
+-- >>> p^3
+-- 27 + 27 * x + 9 * x^2 + x^3
+-- 
+-- >>> p^5
+-- 243 + 405 * x + 270 * x^2 + 90 * x^3 + 15 * x^4 + x^5
+-- 
+-- >>> poly1 p 10
+-- 13
+-- >>> poly1 (p^3) 10
+-- 2197
+-- >>> (poly1 p 10)^3
+-- 2197
+
 -- >>> let p = single 1 <+> value 3 :: P1 Z
+-- >>> poly p 10
+-- 13
+-- >>> poly (p^3) 10
+-- 2197
+-- >>> (poly p 10)^3
+-- 2197
+
+-- >>> let p = single 1 <+> value 3 :: Poly1 [Z]
+-- >>> p
+-- 3 + x
+-- >>> p^3
+-- 27 + 27 * x + 9 * x^2 + x^3
+-- 
+-- >>> p^5
+-- 243 + 405 * x + 270 * x^2 + 90 * x^3 + 15 * x^4 + x^5
+-- 
+-- >>> poly1 p 10
+-- 13
+-- >>> poly1 (p^3) 10
+-- 2197
+-- >>> (poly1 p 10)^3
+-- 2197
+
+-- >>> let p = single 1 <+> value 3 :: Poly1 (Cofree Maybe Z)
 -- >>> p
 -- 3 + x
 -- >>> p^3
@@ -57,14 +97,6 @@ poly1 (Poly1 m) z = sum [b <.> z^i | (i,b) <- toList m]
 
 poly :: (Listable n b x, Semiring b, HasPow z n b) => Poly1 x -> z -> b
 poly (Poly1 m) z = sum [b <.> z^#i | (i,b) <- toList m]
-
--- >>> let p = single 1 <+> value 3 :: P1 Z
--- >>> poly p 10
--- 13
--- >>> poly (p^3) 10
--- 2197
--- >>> (poly p 10)^3
--- 2197
 
 -- >>> take 50 $ show (single 1 :: Cofree Identity Z)
 -- "0 :< Identity (1 :< Identity (0 :< Identity (0 :< "
@@ -91,17 +123,17 @@ type PL1 b = Poly1 (Cofree Maybe b)  -- nonempty lists
 -- >>> p^5
 -- <interactive>:1090:2: error: Variable not in scope: p
 
-type PolyL b = Poly1 [b]
+-- type PolyL b = Poly1 [b]
 
 -- As in Doug McIlroy's "The Music of Streams"
-integralL :: Fractional b => PolyL b -> PolyL b
+integralL :: Fractional b => Poly1 [b] -> Poly1 [b]
 -- integralL (Poly1 []) = Poly1 []  -- Breaks ODE termination.
 integralL (Poly1 bs0) = Poly1 (0 : go 1 bs0)
  where
    go _ [] = []
    go n (b : d) = b/n : go (n+1) d
 
-derivativeL :: (Additive b, Fractional b) => PolyL b -> PolyL b
+derivativeL :: (Additive b, Fractional b) => Poly1 [b] -> Poly1 [b]
 derivativeL (Poly1 []) = zero
 derivativeL (Poly1 (_ : bs0)) = Poly1 (go 1 bs0)
  where
@@ -110,33 +142,33 @@ derivativeL (Poly1 (_ : bs0)) = Poly1 (go 1 bs0)
 
 -- integralL generalizes beyond Maybe, but derivativeL doesn't. TODO: fix.
 
-sinL, cosL, expL :: PolyL Rational
+sinL, cosL, expL :: Poly1 [Rational]
 sinL = integralL cosL
 cosL = 1 - integralL sinL
 expL = 1 + integralL expL
 
 lop :: Show a => a -> IO ()
-lop = putStrLn . take 100 . show
+lop = putStrLn . (++ " ...") . take 102 . show
 
 -- >>> lop sinL
--- x + (-1) % 6 * x^3 + 1 % 120 * x^5 + (-1) % 5040 * x^7 + 1 % 362880 * x^9 + (-1) % 39916800 * x^11 +
+-- x + (-1) % 6 * x^3 + 1 % 120 * x^5 + (-1) % 5040 * x^7 + 1 % 362880 * x^9 + (-1) % 39916800 * x^11 + 1 ...
 -- >>> lop cosL
--- 1 % 1 + (-1) % 2 * x^2 + 1 % 24 * x^4 + (-1) % 720 * x^6 + 1 % 40320 * x^8 + (-1) % 3628800 * x^10 +
+-- 1 % 1 + (-1) % 2 * x^2 + 1 % 24 * x^4 + (-1) % 720 * x^6 + 1 % 40320 * x^8 + (-1) % 3628800 * x^10 + 1 ...
 -- >>> lop expL
--- 1 % 1 + x + 1 % 2 * x^2 + 1 % 6 * x^3 + 1 % 24 * x^4 + 1 % 120 * x^5 + 1 % 720 * x^6 + 1 % 5040 * x^
+-- 1 % 1 + x + 1 % 2 * x^2 + 1 % 6 * x^3 + 1 % 24 * x^4 + 1 % 120 * x^5 + 1 % 720 * x^6 + 1 % 5040 * x^7  ...
 
--- >>> lop $ derivativeL sinL  -- == cosL
--- 1 % 1 + (-1) % 2 * x^2 + 1 % 24 * x^4 + (-1) % 720 * x^6 + 1 % 40320 * x^8 + (-1) % 3628800 * x^10 +
--- >>> lop $ derivativeL cosL  -- == - sinL
--- (-1) % 1 * x + 1 % 6 * x^3 + (-1) % 120 * x^5 + 1 % 5040 * x^7 + (-1) % 362880 * x^9 + 1 % 39916800
--- >>> lop $ derivativeL expL  -- == expL
--- 1 % 1 + x + 1 % 2 * x^2 + 1 % 6 * x^3 + 1 % 24 * x^4 + 1 % 120 * x^5 + 1 % 720 * x^6 + 1 % 5040 * x^
+-- >>> lop (derivativeL sinL)  -- |== cosL|
+-- 1 % 1 + (-1) % 2 * x^2 + 1 % 24 * x^4 + (-1) % 720 * x^6 + 1 % 40320 * x^8 + (-1) % 3628800 * x^10 + 1 ...
+-- >>> lop (derivativeL cosL)  -- |== - sinL|
+-- (-1) % 1 * x + 1 % 6 * x^3 + (-1) % 120 * x^5 + 1 % 5040 * x^7 + (-1) % 362880 * x^9 + 1 % 39916800 *  ...
+-- >>> lop (derivativeL expL)  -- |== expL|
+-- 1 % 1 + x + 1 % 2 * x^2 + 1 % 6 * x^3 + 1 % 24 * x^4 + 1 % 120 * x^5 + 1 % 720 * x^6 + 1 % 5040 * x^7  ...
 
--- >>> lop $ 2 * expL
--- 2 % 1 + 2 % 1 * x + x^2 + 1 % 3 * x^3 + 1 % 12 * x^4 + 1 % 60 * x^5 + 1 % 360 * x^6 + 1 % 2520 * x^7
+-- >>> lop (2 * expL)
+-- 2 % 1 + 2 % 1 * x + x^2 + 1 % 3 * x^3 + 1 % 12 * x^4 + 1 % 60 * x^5 + 1 % 360 * x^6 + 1 % 2520 * x^7 + ...
 
--- >>> lop $ sinL * cosL
--- x + (-2) % 3 * x^3 + 2 % 15 * x^5 + (-4) % 315 * x^7 + 2 % 2835 * x^9 + (-4) % 155925 * x^11 + 4 % 6
+-- >>> lop (sinL * cosL)
+-- x + (-2) % 3 * x^3 + 2 % 15 * x^5 + (-4) % 315 * x^7 + 2 % 2835 * x^9 + (-4) % 155925 * x^11 + 4 % 608 ...
 
 -- TODO: multivariate power series
 -- Can I generalize Poly1 and PolyM?
@@ -161,7 +193,7 @@ instance (DetectableZero b, DetectableOne b, Show b) => Show (PolyM b) where
 varM :: Semiring b => Name -> PolyM b
 varM = single . single
 
--- >>> let p = varM @Z "x" <+> varM @Z "y" <+> varM @Z "z" :: PolyM Z
+-- >>> let p = varM "x" <+> varM "y" <+> varM "z" :: PolyM Z
 -- >>> p
 -- x + y + z
 -- 

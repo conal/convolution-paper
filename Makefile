@@ -39,7 +39,10 @@ latex+= -halt-on-error
 stats = $(wildcard test/stats/*.txt)
 stats: $(stats)
 
-%.pdf: %.tex bib.bib $(stats) Makefile
+see-stats:
+	echo $(stats)
+
+%.pdf: %.tex bib.bib Makefile
 	$(latex) $*.tex
 	touch $@
 
@@ -47,7 +50,7 @@ stats: $(stats)
 # PDFs were not getting updated by latexmk, so their prerequisites stay newer.
 # Workaround: touch the PDF.
 
-texdeps = formatting.fmt Makefile
+texdeps = formatting.fmt Makefile $(stats)
 
 $(icfp).tex: $(paper).lhs $(texdeps)
 	lhs2tex --set=icfp --set=anonymous -o $*.tex $(paper).lhs

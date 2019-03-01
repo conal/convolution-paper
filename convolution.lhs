@@ -1310,37 +1310,59 @@ instance Functor h => Comonad (Cofree h) where
 
 \sectionl{Performance}
 
-While there has been no performance tuning and only rudimentary benchmarking, we can at least get a sanity check on performance.
+%format a1 = a
+%format b1 = b
 
 %format RegExpF = RegExp"_"->
 %format RegExpM = RegExp"_"Map
 %format CofreeF = Cofree"_"->
 %format CofreeM = Cofree"_"Map
 
-\nc\stat[6]{
-\textit{#1} & #2 & #3 & #4 & #5 \\ \hline
-}
-
+\nc\stat[6]{\textbf{#1} & #2 & #3 & #4 & #5 \\ \hline}
 \nc\incstat[1]{\input{test/stats/#1.txt}}
 
+While there has been no performance tuning and only rudimentary benchmarking, we can at least get a sanity check on performance and functionality.
+\figrefdef{examples}{}{
+\begin{code}
+
+a1  = single "a"
+b1  = single "b"
+
+asbs   = star a1 <.> star b1
+asbas  = star a1 <.> b1 <.> star a1
+asas   = star a1 <.> star a1
+
+letter = sum [single [c] | c <- ['a' .. 'z']]
+
+fishy  = star letter <.> single "fish" <.> star letter
+
+anbn = one <+> (a1 <.> anbn <.> b1)
+
+dyck = star (single "[" <.> dyck <.> single "]")
+
+\end{code}
+} shows the source code for a collection of examples, all polymorphic in the choice of semiring.
+The |letter| example is any single letter from `a' to `z'.
+The examples |anbn| and |dyck| are two classic, context-free (and non-regular) examples: $a^nb^n$ and the Dyck language of balanced brackets.
+\figrefdef{stats}{Running times for examples in \figref{examples}}{
 \begin{center}
 \begin{tabular}{||c||c||c||c||c||}
 \hline
-\stat{{Example}}{|RegExpF|}{|RegExpM|}{|CofreeF|}{|CofreeM|} \hline
+\stat{Example}{|RegExpF|}{|RegExpM|}{|CofreeF|}{|CofreeM|}{} \hline
 \hline
-
-\incstat{fish}
+\incstat{star-a}
 \incstat{asas}
 \incstat{asbs}
 \incstat{asbas}
-\incstat{dyck}
+\incstat{letters}
+\incstat{fishy}
 \incstat{anbn}
-
-%\hline
+\incstat{dyck}
 \end{tabular}
-%\vspace{0.25ex}
 \end{center}
-
+} gives some running times for these examples measured with the \emph{criterion} library \citep{criterion}, running on a late 2013 MacBook Pro.
+Each example is tested with a matching input string of length 100 and counting the number of successful matches via choice of the |N| semiring.
+(The |asas| example matches in 101 ways, while the others all match uniquely.)
 
 \note{
 \begin{itemize}

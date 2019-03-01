@@ -23,37 +23,37 @@ main = do
   defaultMainWith config [
       bgroup "" []
 
-    , group "star-a" (star (single "a")) [] $
+    , group "star-a" (star a1) [] $
         replicate 100 'a'
 
     , group "letters" (star letter) [] $
-        cats 50 "asdf" 
+        cats 25 "asdf" 
 
-    , group "fish" (star letter <.> single "fish" <.> star letter) [] $
-        take 30 (cycle az) ++ "fish" ++ take 30 (cycle az)
+    , group "fishy" (star letter <.> single "fish" <.> star letter) [] $
+        take 48 (cycle az) ++ "fish" ++ take 48 (cycle az)
 
-    , group "asas" (star (single "a") <.> star (single "a")) [] $
-        replicate 30 'a' ++ replicate 30 'a'
+    , group "asas" (star a1 <.> star a1) [] $
+        replicate 50 'a' ++ replicate 50 'a'
 
-    , group "asbs" (star (single "a") <.> star (single "b")) [] $
-        replicate 30 'a' ++ replicate 30 'b'
+    , group "asbs" (star a1 <.> star b1) [] $
+        replicate 50 'a' ++ replicate 50 'b'
 
-    , group "asbas" (star (single "a") <.> single "b" <.> star (single "a")) [] $
-        replicate 30 'a' ++ "b" ++ replicate 30 'a'
+    , group "asbas" (star a1 <.> b1 <.> star a1) [] $
+        replicate 50 'a' ++ "b" ++ replicate 49 'a'
 
       -- With O = N, the dyck examples don't work for RegExp:Function, while anbn
       -- is okay.
     , group "dyck" dyck ["RegExp:Map","RegExp:IntMap"] $
-        "[[[[[[[]]][[[[]]]][[[]]][]][[[[]]]]]][]]"
+        "[[[[[[]][[[[]]]][[[[]]]][[[]]][]][[[[]]]]]][]][[[]]][[[[]]]][[[[[[[]]][[[[]]]][[[]]][]][[[[]]]]]][]]"
 
     , group "anbn" anbn ["RegExp:Map","RegExp:IntMap"] $
-        replicate 30 'a' ++ replicate 30 'b'
+        replicate 50 'a' ++ replicate 50 'b'
 
     ]
  where
    config = defaultConfig
      { 
-      timeLimit = 5 -- 0.1
+      timeLimit = 5 -- 1
      }
 
 type Ok x b = (HasSingle String b x, StarSemiring x, StarSemiring b, NFData b)

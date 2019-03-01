@@ -10,41 +10,44 @@ import Data.Char (toUpper)
 
 import Semi
 
-type Stringy b x = HasSingle String b x
-
-sa, sb, pink, pig :: (Stringy b x, Semiring b) => x
-sa   = single "a"
-sb   = single "b"
+a1, b1, pink, pig :: (HasSingle String b x, Semiring b) => x
+a1   = single "a"
+b1   = single "b"
 pink = single "pink"
 pig  = single "pig"
 
-pp :: (Stringy b x, Additive x, Semiring b) => x
+pp :: (HasSingle String b x, Additive x, Semiring b) => x
 pp   = pink <+> pig
 
-as, ass, pps, asbs, asbas, asas :: (Stringy b x, StarSemiring x, StarSemiring b) => x
-as  = star sa
+as, ass, pps, asbs, asbas, asas, fishy :: (HasSingle String b x, StarSemiring x, StarSemiring b) => x
+as  = star a1
 ass = star as
 pps = star pp
-asbs = star sa <.> star sb
-asbas = star sa <.> sb <.> star sa
-asas = star sa <.> star sa
+asbs = star a1 <.> star b1
+asbas = star a1 <.> b1 <.> star a1
+asas = star a1 <.> star a1
+fishy = star letter <.> single "fish" <.> star letter
 
-anbn :: (Stringy b x, Semiring x, Semiring b) => x
-anbn = one <+> (sa <.> anbn <.> sb)
+anbn :: (HasSingle String b x, Semiring x, Semiring b) => x
+anbn = one <+> (a1 <.> anbn <.> b1)
 
 sumSingle :: (HasSingle [a] b x, Semiring b, Additive x) => [a] -> x
 sumSingle bs = sum [single [c] | c <- bs]
 
-char, letterL, letterU, letter, digit :: (Stringy b x, Semiring x, Semiring b) => x
-char    = sumSingle [' ' .. '~']
-letterL = sumSingle ['a' .. 'z']
-letterU = sumSingle ['A' .. 'Z']
-letter  = letterL <+> letterU
-digit   = sumSingle ['0' .. '9']
+-- char, letterL, letterU, letter, digit :: (HasSingle String b x, Semiring x, Semiring b) => x
+-- char    = sumSingle [' ' .. '~']
+-- letterL = sumSingle ['a' .. 'z']
+-- letterU = sumSingle ['A' .. 'Z']
+-- letter  = letterL <+> letterU
+-- digit   = sumSingle ['0' .. '9']
+
+letter :: (HasSingle String b x, Semiring x, Semiring b) => x
+-- letter = sumSingle ['a' .. 'z']
+letter = sum [single [c] | c <- ['a' .. 'z']]
 
 -- Balanced brackets <https://en.wikipedia.org/wiki/Dyck_language>
-dyck :: (Stringy b x, Semiring x, Semiring b) => x
-dyck = one <+> single "[" <.> dyck <.> single "]" <.> dyck
+dyck :: (HasSingle String b x, StarSemiring x, Semiring b) => x
+dyck = star (single "[" <.> dyck <.> single "]")
 
 -- Will dyck get repeatedly reconstructed, considering polymorphism?
 

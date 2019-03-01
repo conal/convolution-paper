@@ -1,12 +1,19 @@
 #! /bin/bash
 
-echo Benchmarking
+# ./do-bench1 star-a 'star a1'
+# ./do-bench1 letters 'star letter'
+./do-bench1 fishy 'fishy'
+# ./do-bench1 asas 'star a1 <.> star a1'
+# ./do-bench1 asbs 'star a1 <.> star b1'
+# ./do-bench1 asbas 'star a1 <.> b1 <.> star a1'
+# ./do-bench1 dyck 'dyck'
+./do-bench1 anbn 'anbn'
 
-for x in star-a letters fish asas asbs asbas dyck anbn
-do
-  echo $x
-  ./do-bench $x > stats/$x.txt
-done
+# for x in star-a letters fish asas asbs asbas dyck anbn
+# do
+#   echo $x
+#   ./do-bench $x > stats/$x.txt
+# done
 
 # # Rerender the paper
 # (cd .. ; make)

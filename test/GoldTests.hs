@@ -91,6 +91,14 @@ tests group = testGroup group
     , gold "anbn-aaabbbb"                 $ anbn # "aaabbbb"
     ]
 
+  , gold "asbs-aabbbb"  $ asbs # "aabbbb"
+  , gold "asbs-aabbba"  $ asbs # "aabbba"
+
+  , gold "asbas-aabaaa" $ asbas # "aabaaa"
+  , gold "asbas-aabba"  $ asbas # "aabba"
+
+  , gold "asas-100" $ asas # replicate 100 'a'
+
 #endif
 
   , groupNot ["RegExpFun","RegExpMap","RegExpIntMap"] $
@@ -99,15 +107,8 @@ tests group = testGroup group
     , gold "dyck-b"                       $ dyck # "[[]]"
     , gold "dyck-c"                       $ dyck # "[[a]]"
     , gold "dyck-d"                       $ dyck # "[[]][]"
+    , gold "dyck-e"                       $ dyck # "[[]][[]"
     ]
-
-  , gold "asbs-aabbbb"  $ asbs # "aabbbb"
-  , gold "asbs-aabbba"  $ asbs # "aabbba"
-
-  , gold "asbas-aabaaa" $ asbas # "aabaaa"
-  , gold "asbas-aabba"  $ asbas # "aabba"
-
-  , gold "asas-aaaaa" $ asas # "aaaaa"
 
   ]
  where
@@ -118,5 +119,5 @@ tests group = testGroup group
    groupNot gs | group `elem` gs = const (testGroup "" [])
                | otherwise       = id
    gold :: Show z => String -> z -> TestTree
-   gold nm = goldenVsString nm ("test/gold-nat/" <> nm <> ".txt")
+   gold nm = goldenVsString nm ("test/gold/" <> nm <> ".txt")
              . pure . pack . show

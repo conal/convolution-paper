@@ -22,10 +22,8 @@ import qualified MMap as M
 --------------------------------------------------------------------}
 
 newtype Poly1 z = Poly1 z deriving
-  (Additive, Semiring, Functor, Num) -- , Indexable n b, HasSingle n b)
-
-deriving instance Indexable n b z => Indexable n b (Poly1 z)
-deriving instance HasSingle n b z => HasSingle n b (Poly1 z)
+  ( Additive, Semiring, Indexable n b, Listable n b, HasSingle n b
+  , Functor, Num )
 
 instance ( DetectableZero b, DetectableOne b, Show b, Listable n b z
          , Show n, DetectableZero n, DetectableOne n )

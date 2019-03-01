@@ -22,7 +22,7 @@ import qualified MMap as M
 --------------------------------------------------------------------}
 
 newtype Poly1 z = Poly1 z deriving
-  (Additive, Semiring, Functor) -- , Indexable n b, HasSingle n b)
+  (Additive, Semiring, Functor, Num) -- , Indexable n b, HasSingle n b)
 
 deriving instance Indexable n b z => Indexable n b (Poly1 z)
 deriving instance HasSingle n b z => HasSingle n b (Poly1 z)
@@ -93,6 +93,56 @@ type PL1 b = Poly1 (Cofree Maybe b)  -- nonempty lists
 -- >>> p^5
 -- <interactive>:1090:2: error: Variable not in scope: p
 
+type PolyL b = Poly1 [b]
+
+-- As in Doug McIlroy's "The Music of Streams"
+integralL :: Fractional b => PolyL b -> PolyL b
+-- integralL (Poly1 []) = Poly1 []  -- Breaks ODE termination.
+integralL (Poly1 bs0) = Poly1 (0 : go 1 bs0)
+ where
+   go _ [] = []
+   go n (b : d) = b/n : go (n+1) d
+
+derivativeL :: (Additive b, Fractional b) => PolyL b -> PolyL b
+derivativeL (Poly1 []) = zero
+derivativeL (Poly1 (_ : bs0)) = Poly1 (go 1 bs0)
+ where
+   go _ [] = []
+   go n (b : bs) = n * b : go (n+1) bs
+
+-- integralL generalizes beyond Maybe, but derivativeL doesn't. TODO: fix.
+
+sinL, cosL, expL :: PolyL Rational
+sinL = integralL cosL
+cosL = 1 - integralL sinL
+expL = 1 + integralL expL
+
+lop :: Show a => a -> IO ()
+lop = putStrLn . take 100 . show
+
+-- >>> lop sinL
+-- x + (-1) % 6 * x^3 + 1 % 120 * x^5 + (-1) % 5040 * x^7 + 1 % 362880 * x^9 + (-1) % 39916800 * x^11 +
+-- >>> lop cosL
+-- 1 % 1 + (-1) % 2 * x^2 + 1 % 24 * x^4 + (-1) % 720 * x^6 + 1 % 40320 * x^8 + (-1) % 3628800 * x^10 +
+-- >>> lop expL
+-- 1 % 1 + x + 1 % 2 * x^2 + 1 % 6 * x^3 + 1 % 24 * x^4 + 1 % 120 * x^5 + 1 % 720 * x^6 + 1 % 5040 * x^
+
+-- >>> lop $ derivativeL sinL  -- == cosL
+-- 1 % 1 + (-1) % 2 * x^2 + 1 % 24 * x^4 + (-1) % 720 * x^6 + 1 % 40320 * x^8 + (-1) % 3628800 * x^10 +
+-- >>> lop $ derivativeL cosL  -- == - sinL
+-- (-1) % 1 * x + 1 % 6 * x^3 + (-1) % 120 * x^5 + 1 % 5040 * x^7 + (-1) % 362880 * x^9 + 1 % 39916800
+-- >>> lop $ derivativeL expL  -- == expL
+-- 1 % 1 + x + 1 % 2 * x^2 + 1 % 6 * x^3 + 1 % 24 * x^4 + 1 % 120 * x^5 + 1 % 720 * x^6 + 1 % 5040 * x^
+
+-- >>> lop $ 2 * expL
+-- 2 % 1 + 2 % 1 * x + x^2 + 1 % 3 * x^3 + 1 % 12 * x^4 + 1 % 60 * x^5 + 1 % 360 * x^6 + 1 % 2520 * x^7
+
+-- >>> lop $ sinL * cosL
+-- x + (-2) % 3 * x^3 + 2 % 15 * x^5 + (-4) % 315 * x^7 + 2 % 2835 * x^9 + (-4) % 155925 * x^11 + 4 % 6
+
+-- TODO: multivariate power series
+-- Can I generalize Poly1 and PolyM?
+
 {--------------------------------------------------------------------
     Multivariate polynomials
 --------------------------------------------------------------------}
@@ -128,125 +178,6 @@ varM = single . single
 
 type PM b = Poly1 (Map (Map Name N) b)
 
-{--------------------------------------------------------------------
-    Univariate power series via Cofree Maybe
---------------------------------------------------------------------}
-
-type CM = Cofree Maybe
-
-cmElems :: CM b -> [b]
-cmElems (b :< d) = b : maybe [] cmElems d
-
-
--- listCM' :: Additive b => Maybe [b] -> CM b
--- listCM' Nothing = zero
--- listCM' (Just l) = listCM l
-
--- listCM :: [b] -> CM b
--- listCM Nothing = zero
--- listCM (Just l) = listCM l
-
--- listCM :: [b] -> CM b
--- listCM [] = zero
--- listCM (b : bs) = b :< listCM bs
-
--- takeS :: N -> CM b -> [b]
--- takeS 0 _ = []
--- takeS n (b :# bs) = b : takeS (n-1) bs
-
-newtype Series1 b = Series1 (CM b) deriving
-  (Additive, Semiring, Functor, Indexable [()] b, HasSingle [()] b)
-
-instance (DetectableZero b, DetectableOne b, Show b) => Show (Series1 b) where
-  showsPrec d (Series1 bs) =
-    showsPrec d (Terms (term <$> zip [0::N ..] (cmElems bs)))
-   where
-     term (i,b) = Term b (Pow (Name "x") i)
-
-instance (Semiring b, Num b, DetectableZero b, DetectableOne b)
-      => Num (Series1 b) where
-  fromInteger = value . fromInteger
-  negate = fmap negate
-  (+) = (<+>)
-  (*) = (<.>)
-  abs = error "abs on Series1 undefined"
-  signum = error "abs on Series1 undefined"
-
--- As in Doug McIlroy's "The Music of Streams"
-integralCM :: Fractional b => Series1 b -> Series1 b
-integralCM (Series1 bs0) = Series1 (0 :< Just (go 1 bs0))
- where
-   go n (b :< d) = b/n :< go (n+1) <$> d
-
-derivativeCM :: (Additive b, Fractional b) => Series1 b -> Series1 b
-derivativeCM (Series1 (_ :< Nothing)) = zero
-derivativeCM (Series1 (_ :< Just bs0)) = Series1 (go 1 bs0)
- where
-   go n (b :< bs) = n * b :< (go (n+1) <$> bs)
-
--- integralCM generalizes beyond Maybe, but derivativeCM doesn't. TODO: fix.
-
-sinCM, cosCM, expCM :: Series1 Rational
-sinCM = integralCM cosCM
-cosCM = 1 - integralCM sinCM
-expCM = 1 + integralCM expCM
-
-lop :: Show a => a -> IO ()
-lop = putStrLn . take 100 . show
-
--- >>> lop sinCM
--- x + (-1) % 6 * x^3 + 1 % 120 * x^5 + (-1) % 5040 * x^7 + 1 % 362880 * x^9 + (-1) % 39916800 * x^11 +
--- >>> lop cosCM
--- 1 % 1 + (-1) % 2 * x^2 + 1 % 24 * x^4 + (-1) % 720 * x^6 + 1 % 40320 * x^8 + (-1) % 3628800 * x^10 +
--- >>> lop expCM
--- 1 % 1 + x + 1 % 2 * x^2 + 1 % 6 * x^3 + 1 % 24 * x^4 + 1 % 120 * x^5 + 1 % 720 * x^6 + 1 % 5040 * x^
-
--- >>> lop $ derivativeCM sinCM  -- == cosCM
--- 1 % 1 + (-1) % 2 * x^2 + 1 % 24 * x^4 + (-1) % 720 * x^6 + 1 % 40320 * x^8 + (-1) % 3628800 * x^10 +
--- >>> lop $ derivativeCM cosCM  -- == - sinCM
--- (-1) % 1 * x + 1 % 6 * x^3 + (-1) % 120 * x^5 + 1 % 5040 * x^7 + (-1) % 362880 * x^9 + 1 % 39916800
--- >>> lop $ derivativeCM expCM  -- == expCM
--- 1 % 1 + x + 1 % 2 * x^2 + 1 % 6 * x^3 + 1 % 24 * x^4 + 1 % 120 * x^5 + 1 % 720 * x^6 + 1 % 5040 * x^
-
--- >>> lop $ 2 * expCM
--- 2 % 1 + 2 % 1 * x + x^2 + 1 % 3 * x^3 + 1 % 12 * x^4 + 1 % 60 * x^5 + 1 % 360 * x^6 + 1 % 2520 * x^7
-
--- >>> lop $ sinCM * cosCM
--- x + (-2) % 3 * x^3 + 2 % 15 * x^5 + (-4) % 315 * x^7 + 2 % 2835 * x^9 + (-4) % 155925 * x^11 + 4 % 6
-
--- TODO: multivariate power series
--- Can I generalize Poly1 and PolyM?
-
-{--------------------------------------------------------------------
-    Univariate power series via []
---------------------------------------------------------------------}
-
-newtype PolyL b = PolyL [b] deriving
-  ( Additive, Semiring, DetectableZero, DetectableOne, LeftSemimodule b
-  , Indexable N b, Listable N b, HasSingle N b
-  , Functor )
-
-polyL :: Semiring b => PolyL b -> b -> b
-polyL (PolyL cs0) x = go cs0
- where
-   go [] = zero
-   go (c:cs) = c <+> go cs <.> x
-
-instance (DetectableZero b, DetectableOne b, Show b) => Show (PolyL b) where
-  showsPrec d (PolyL bs) =
-    showsPrec d (Terms (term <$> zip [0::N ..] bs))
-   where
-     term (i,b) = Term b (Pow (Name "x") i)
-
-instance (Semiring b, Num b, DetectableZero b, DetectableOne b)
-      => Num (PolyL b) where
-  fromInteger = value . fromInteger
-  negate = fmap negate
-  (+) = (<+>)
-  (*) = (<.>)
-  abs = error "abs on PolyL undefined"
-  signum = error "abs on PolyL undefined"
-
 -- >>> let p = single 1 <+> value 3 :: Poly1 [Z]
 -- >>> p
 -- 3 + x
@@ -262,70 +193,6 @@ instance (Semiring b, Num b, DetectableZero b, DetectableOne b)
 -- 2197
 -- >>> (poly1 p 10)^3
 -- 2197
-
--- >>> let p = single 1 <+> value 3 :: PolyL Z
--- >>> p
--- 3 + x
--- >>> p^3
--- 27 + 27 * x + 9 * x^2 + x^3
--- 
--- >>> p^5
--- 243 + 405 * x + 270 * x^2 + 90 * x^3 + 15 * x^4 + x^5
---
--- >>> polyL p 10
--- 13
--- >>> polyL (p^3) 10
--- 2197
--- >>> (polyL p 10)^3
--- 2197
-
--- As in Doug McIlroy's "The Music of Streams"
-integralL :: Fractional b => PolyL b -> PolyL b
--- integralL (PolyL []) = PolyL []  -- May prevent ODE termination. Check.
-integralL (PolyL bs0) = PolyL (0 : go 1 bs0)
- where
-   go _ [] = []
-   go n (b : d) = b/n : go (n+1) d
-
-derivativeL :: (Additive b, Fractional b) => PolyL b -> PolyL b
-derivativeL (PolyL []) = zero
-derivativeL (PolyL (_ : bs0)) = PolyL (go 1 bs0)
- where
-   go _ [] = []
-   go n (b : bs) = n * b : go (n+1) bs
-
--- integralL generalizes beyond Maybe, but derivativeL doesn't. TODO: fix.
-
-sinL, cosL, expL :: PolyL Rational
-sinL = integralL cosL
-cosL = 1 - integralL sinL
-expL = 1 + integralL expL
-
--- lop :: Show a => a -> IO ()
--- lop = putStrLn . take 100 . show
-
--- >>> lop sinL
--- x + (-1) % 6 * x^3 + 1 % 120 * x^5 + (-1) % 5040 * x^7 + 1 % 362880 * x^9 + (-1) % 39916800 * x^11 +
--- >>> lop cosL
--- 1 % 1 + (-1) % 2 * x^2 + 1 % 24 * x^4 + (-1) % 720 * x^6 + 1 % 40320 * x^8 + (-1) % 3628800 * x^10 +
--- >>> lop expL
--- 1 % 1 + x + 1 % 2 * x^2 + 1 % 6 * x^3 + 1 % 24 * x^4 + 1 % 120 * x^5 + 1 % 720 * x^6 + 1 % 5040 * x^
-
--- >>> lop $ derivativeL sinL  -- == cosL
--- 1 % 1 + (-1) % 2 * x^2 + 1 % 24 * x^4 + (-1) % 720 * x^6 + 1 % 40320 * x^8 + (-1) % 3628800 * x^10 +
--- >>> lop $ derivativeL cosL  -- == - sinL
--- (-1) % 1 * x + 1 % 6 * x^3 + (-1) % 120 * x^5 + 1 % 5040 * x^7 + (-1) % 362880 * x^9 + 1 % 39916800
--- >>> lop $ derivativeL expL  -- == expL
--- 1 % 1 + x + 1 % 2 * x^2 + 1 % 6 * x^3 + 1 % 24 * x^4 + 1 % 120 * x^5 + 1 % 720 * x^6 + 1 % 5040 * x^
-
--- >>> lop $ 2 * expL
--- 2 % 1 + 2 % 1 * x + x^2 + 1 % 3 * x^3 + 1 % 12 * x^4 + 1 % 60 * x^5 + 1 % 360 * x^6 + 1 % 2520 * x^7
-
--- >>> lop $ sinL * cosL
--- x + (-2) % 3 * x^3 + 2 % 15 * x^5 + (-4) % 315 * x^7 + 2 % 2835 * x^9 + (-4) % 155925 * x^11 + 4 % 6
-
--- TODO: multivariate power series
--- Can I generalize Poly1 and PolyM?
 
 {--------------------------------------------------------------------
     Show utilities

@@ -1793,11 +1793,11 @@ x^5 + 15 * x^4 + 90 * x^3 + 270 * x^2 + 405 * x + 243
 %}
 %endif
 
-We can also use |[]| in place of |Map N|, where |[b]| has the required instances (|Additive|, |Semiring|, etc) based on a denotation of |[b]| as |N -> b|, as always with absence denoting zero (here in case of sampling off the end of the list)%
+We can also use |[]| in place of |Map N|, where |[b]| has the required instances (|Additive|, |Semiring|, etc) based on a denotation of |[b]| as |N -> b|, as always with absence denoting zero (here in case of sampling off the end of the list)
 %if short
-~\citep{Kidney2017CS,Elliott2019-convolution-extended}.
+\citep{Kidney2017CS,Elliott2019-convolution-extended}.
 %else
-.
+\citep{Kidney2017CS}.
 The example above yields identical results.
 %endif
 Since lists are potentially infinite (unlike finite maps), however, this simple change enables power series%

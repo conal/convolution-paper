@@ -1,13 +1,13 @@
 #! /bin/bash
 
-./do-bench1 star-a 'star a1'
-./do-bench1 letters 'star letter'
-./do-bench1 fishy 'fishy'
-./do-bench1 asas 'star a1 <.> star a1'
-./do-bench1 asbs 'star a1 <.> star b1'
-./do-bench1 asbas 'star a1 <.> b1 <.> star a1'
-./do-bench1 dyck 'dyck'
-./do-bench1 anbn 'anbn'
+./do-bench1 star-a   'star a1'
+./do-bench1 letters  'star letter'
+./do-bench1 fishy    'fishy'
+./do-bench1 asas     'star a1 <.> star a1'
+./do-bench1 asbs     'star a1 <.> star b1'
+./do-bench1 asbas    'star a1 <.> b1 <.> star a1'
+./do-bench1 dyck     'dyck'
+./do-bench1 anbn     'anbn'
 
 # # Rerender the paper
 # (cd .. ; make)

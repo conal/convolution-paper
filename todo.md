@@ -22,7 +22,7 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 *   Why homomorphisms matter.
 *   Polynomials:
     *   Univariate and multivariate. [done]
-    *   Power series: represent via list instead of stream.
+    *   Power series: represent via list instead of stream. [done]
     *   Prettier negative coefficients
 *   Image convolution example
 *   Reduce page count in the ICFP submission. Some strategies:

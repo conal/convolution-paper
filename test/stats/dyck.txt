@@ -1,1 +1,1 @@
-\stat{dyck}{71.56 $\mu{}$s}{$\infty$}{1.179 ms}{1.195 $\mu{}$s}{}
+\stat{ dyck }{69.93 $\mu{}$s}{$\infty$}{1.176 ms}{1.194 $\mu{}$s}{}

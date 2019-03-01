@@ -1,0 +1,12 @@
+#! /bin/bash
+
+echo Benchmarking
+
+for x in star-a letters fish asas asbs asbas dyck anbn
+do
+  echo $x
+  ./do-bench $x > stats/$x.txt
+done
+
+# # Rerender the paper
+# (cd .. ; make)

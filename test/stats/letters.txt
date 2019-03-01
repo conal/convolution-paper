@@ -1,1 +1,1 @@
-\stat{letters}{3.581 ms}{3.219 ms}{186.0 ms}{6.837 $\mu{}$s}{}
+\stat{ letters }{3.727 ms}{3.206 ms}{180.2 ms}{7.378 $\mu{}$s}{}

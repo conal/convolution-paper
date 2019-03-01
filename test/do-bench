@@ -1,10 +1,9 @@
 #! /bin/bash
 
-stack bench >& o.tmp
+stack bench --benchmark-arguments "$1" >& o.tmp
 
-echo -n "\\stat{"
+echo -n "\\stat{" $1 "}{"
 grep Group o.tmp | cut -c10-100 | sed 's/"/}{/' | tr -d '\n'
 # grep time o.tmp | cut -c22-30 | sed 's/ /}{/g' | sed 's/μ/$\\mu{}$/g' | tr -d '\n'
 grep time o.tmp | cut -c22-29 | tr '\n' "#" | sed 's/#/}{/g' | sed 's/μ/$\\mu{}$/g' | tr -d '\n'
 echo "}"
-

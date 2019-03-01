@@ -1729,9 +1729,9 @@ liftA2 h p q  = p >>= \ u -> fmap (h u) q
 \end{theorem}
 
 %if moreApps
-\sectionl{More Applications}
+%% \sectionl{More Applications}
 
-\subsectionl{Polynomials}
+\sectionl{Polynomials}
 
 %format N = "\mathbb{N}"
 %format (Sum a) = a
@@ -1931,7 +1931,9 @@ x^3 + 3 * x^2 * y + 3 * x * y^2 + 6 * x * y * z + 3 * x^2 * z + 3 * x * z^2 + y^
 \end{itemize}
 }
 
-\subsectionl{Image convolution}
+%% \sectionl{Image Convolution}
+
+%% If I add image convolution to the paper, restore the ``More Applications'' section, and make Polynomials and Image Convolution be subsections.
 
 %endif
 

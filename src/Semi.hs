@@ -48,6 +48,9 @@ class Indexable a b x | x -> a b where
 -- | Enumerate non-zero values
 class Indexable a b x => Listable a b x where toList :: x -> [(a,b)]
 
+-- TODO: rename toList to "nonZeros" or some such. Introduce early in the paper,
+-- and use for representations like Map.
+
 -- TODO: Laws: (!) must be natural; h must presere additivity, and !)| is an
 -- Additive homomorphism.
 
@@ -198,7 +201,15 @@ instance (Ord a, Additive b) => Additive (Map a b) where
   zero = M.empty
   (<+>) = M.unionWith (<+>)
 
-instance {- (Ord a, Additive b) => -} DetectableZero (Map a b) where isZero = M.null
+instance DetectableZero (Map a b) where isZero = M.null
+
+#if 1
+-- Experiment for Poly
+instance DetectableOne (Map a b) where isOne = const False
+#else
+instance (Monoid a, Ord a, Additive b, DetectableOne b) => DetectableOne (Map a b) where
+  isOne m = isOne (m!mempty) && isZero (M.delete mempty m)
+#endif
 
 -- FunctorSemimodule(Map a)
 
@@ -331,15 +342,15 @@ type N = Sum Natural
 type Z = Sum Integer
 
 -- Experiment
-class HasPow a n x | a n -> x where
+class HasPow x n b | x n -> b where
   infixr 8 ^#
-  (^#) :: a -> n -> x
+  (^#) :: x -> n -> b
 
 instance Semiring b => HasPow b N b where
   (^#) = (^)
 
-instance (HasPow b n x, Additive n, Additive b, Ord a, Semiring x)
-      => HasPow (Map a b) (Map a n) x where
+instance (HasPow x n b, Additive x, Ord k, Additive n, Semiring b)
+      => HasPow (Map k x) (Map k n) b where
   bs ^# ns = product [b ^# ns!i | (i,b) <- toList bs]
 
 

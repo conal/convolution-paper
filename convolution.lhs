@@ -3,13 +3,9 @@
 %let short = not long
 
 %% Temporary title
-\def\tit{Generalized Convolution and
+\def\tit{Generalized Convolution and Efficient Language Recognition
 %if long
-\\
-%endif
-Efficient Language Recognition
-%if long
-\\ (Extended version)
+(Extended version)
 %endif
 }
 
@@ -50,11 +46,11 @@ Efficient Language Recognition
 %else
 
 %% While editing/previewing, use 12pt and tiny margin.
-\documentclass[hidelinks,twoside]{article}  % fleqn,
+\documentclass[hidelinks,twoside,11pt]{article}  % fleqn,
+
+\usepackage[margin=1in]{geometry}  % 0.12in, 0.9in, 1in
 
 %if not anonymous
-
-\usepackage[margin=0.2in]{geometry}  % 0.12in, 0.9in, 1in
 
 %% \geometry{paperwidth=6.5in,paperheight=8in}  % for iPad portrait preview
 %% \geometry{paperwidth=5.2in,paperheight=6.5in}  % same but easier on the eyes
@@ -112,6 +108,10 @@ Target\\[1.5ex]conal@@conal.net
 %endif
 
 \setlength{\blanklineskip}{2ex} % blank lines in code environment
+
+%if short
+\newcommand\citeLong{\citep{Elliott2019-convolution-extended}}
+%endif
 
 \nc\prooflabel[1]{\label{proof:#1}}
 %if long
@@ -316,11 +316,11 @@ Thue's (list) tries appear provide a compelling alternative in simplicity and ef
 Concretely, this paper makes the following contributions:
 \notefoot{Maybe add section references.}
 \begin{itemize}
-\item Generalization of Brzozowski's algorithm from (a) regular expressions representing sets of strings to (b) various representations of |[c] -> b| where |c| is any type and |b| is any semiring, including $n$-ary functions and relations on lists (via currying).
+\item Generalization of Brzozowski's algorithm from regular expressions representing sets of strings, to various representations of |[c] -> b| where |c| is any type and |b| is any semiring, including $n$-ary functions and relations on lists (via currying).
 \item Demonstration that the subtle aspect of Brzozowski's algorithm (matching of concatenated languages) is an instance of generalized convolution.
 \item Specialization of the generalized algorithm to tries (rather than regular expressions), yielding a simple and apparently quite efficient implementation, requiring no construction or manipulation of syntactic representations.
 \item Observation that Brzozowski's key operations on languages generalize to the comonad operations of the standard function-from-monoid comonad and its various representations (including generalized regular expressions).
-      The trie representation is the cofree comonad, which memoizes functions from the free monoid, i.e., lists.
+      The trie representation is the cofree comonad, which memoizes functions from the free monoid (lists).
 \item Application and evaluation of some simple memoization strategies encapsulated in simple and familiar functors, resulting in dramatic speed improvement.
 %if moreApps
 \item Demonstration of a few type specializations that yield correct arithmetic on univariate and multivariate polynomials and power series, requiring no additional implementation effort and working correctly with a variety of representations.
@@ -354,8 +354,11 @@ instance Monoid [a] where
   (<>)    = (++)
 \end{code}
 Natural numbers form a monoid under addition and zero.
-
-These two monoids are related via the function |length :: [a] -> N|, which not only maps lists to natural numbers, but does so in a way that preserves monoid structure:
+These two monoids are related via the function |length :: [a] -> N|, which not only maps lists to natural numbers, but does so in a way that preserves monoid structure%
+%if short
+.
+%else
+:
 \begin{code}
     length mempty
 ==  length []             -- |mempty| on |[a]|
@@ -367,6 +370,7 @@ These two monoids are related via the function |length :: [a] -> N|, which not o
 ==  length u + length v   -- |length| definition and induction
 ==  length u <> length v  -- |(<>)| on |N|
 \end{code}
+%endif
 This pattern is common and useful enough to have a name:
 \begin{definition}\deflabel{monoid homomorphism}
 A function |h| from one monoid to another is called a \emph{monoid homomorphism} when it satisfies the following properties:
@@ -384,7 +388,9 @@ instance Monoid (Endo a) where
   mempty = Endo id
   Endo g <> Endo f = Endo (g . f)
 \end{code}
+%if long
 The identity and associativity monoid laws follow from the identity and associativity category laws, so we can generalize to endomorphisms, i.e., morphisms from an object to itself in any category.
+%endif
 
 A modest generalization of Cayley's theorem states that every monoid is isomorphic to a monoid of endofunctions \citep{Boisseau2018YNK}.
 This embedding is useful for turning quadratic-time algorithms linear \citep{Hughes1986NRL,Voigtlander2008AIC}.
@@ -396,7 +402,11 @@ toEndo a = Endo (\ z -> a <> z)
 fromEndo :: Monoid a => Endo a -> a
 fromEndo (Endo f) = f mempty
 \end{code}
-The embedding of |a| into |Endo a| provides another example of a monoid homomorphism:
+The |toEndo| embedding provides another example of a monoid homomorphism%
+%if short
+~\citeLong.
+%else
+:
 \begin{code}
     toEndo mempty
 ==  Endo (\ z -> mempty <> z)                     -- |toEndo| definition
@@ -410,6 +420,7 @@ The embedding of |a| into |Endo a| provides another example of a monoid homomorp
 ==  Endo (\ z -> a <> z) <> Endo (\ z -> b <> z)  -- |(<>)| on |Endo a|
 ==  toEndo a <> toEndo b                          -- |toEndo| definition (twice)
 \end{code}
+%endif short
 
 \subsectionl{Additive Monoids}
 
@@ -427,7 +438,6 @@ The |Additive| laws as the same as for |Monoid| (translating |mempty| and |(<>)|
 (u + v) + w == u + (v + w)
 zero + v == v
 u + zero == u
-
 u + v == v + u
 \end{code}
 Unlike lists with append, natural numbers form a \emph{additive} monoid.
@@ -459,7 +469,7 @@ Currying and uncurrying are additive monoid homomorphisms.
 The natural numbers form a monoid in two familiar ways: addition and zero, and multiplication and one.
 Moreover, these monoids interact usefully in two ways: multiplication distributes over addition, and multiplication by zero (the additive identity) yields zero (i.e., ``annihilates'').
 Similarly, \emph{linear} endofunctions and their various representations (e.g., square matrices) forms a monoid in via addition and via composition, with composition distributing over addition, and composition with zero yielding zero.
-In both examples, addition commutes; but natural number multiplication commutes, while composition does not.
+In both examples, addition commutes; but while natural number multiplication commutes, composition does not.
 The vocabulary and laws these examples share is called a \emph{semiring} (distinguished from a ring by dropping the requirement of additive inverses):
 \begin{code}
 class Additive b => Semiring b where
@@ -491,7 +501,7 @@ h (u * v) == h u * h v
 
 \noindent
 As mentioned, numbers and various linear endofunction representations form semirings.
-A much simpler example is the semiring of booleans, with disjunction as addition and conjunction as multiplication (though we could reverse roles):
+A simpler example is the semiring of booleans, with disjunction as addition and conjunction as multiplication (though we could reverse roles):
 \begin{code}
 instance Additive Bool where
   zero   = False
@@ -506,7 +516,8 @@ An example of a semiring homomorphism is a positivity test for natural numbers:
 positive :: N -> Bool
 positive n = n > 0
 \end{code}
-Then |positive| is a semiring homomorphism, i.e., the following properties hold for |m,n :: N|:%
+%if long
+As required, the following properties hold for |m,n :: N|:%
 \footnote{\emph{Exercise:} What goes wrong if we replace natural numbers by integers?}
 \begin{spacing}{1.2}
 \begin{code}
@@ -517,6 +528,7 @@ positive (m  *  n) == positive m  &&  positive n == positive m  *  positive n
 \end{code}
 %% \vspace{-4ex}
 \end{spacing}
+%endif
 
 \noindent
 There is a more fundamental example we will have use for later:
@@ -528,9 +540,9 @@ Currying and uncurrying are semiring homomorphisms.
 \subsectionl{Star Semirings}
 
 The semiring operations allow all \emph{finite} combinations of addition, zero, multiplication, and one.
-It's often useful, however, to form infinite combinations, particularly in the form of Stephen Kleene's ``star'' (or ``closure'') operation:
+It's often useful, however, to form infinite combinations, particularly in the form of Kleene's ``star'' (or ``closure'') operation:
 \begin{code}
-star p = bigSum (i>=0) @@ p^i -- where |p^0 = one|, and |pow p (n+1) = p * p^n|.
+star p = bigSum i @@ p^i -- where |p^0 = one|, and |pow p (n+1) = p * p^n|.
 \end{code}
 Another characterization is as a solution to either of the following semiring equations:
 \begin{code}
@@ -544,7 +556,7 @@ class Semiring b => StarSemiring b  where
   star p = one <+> p * star p
 \end{code}
 Sometimes there are more appealing alternative implementations.
-For instance, when subtraction and division are available, we can instead define |star p = inverse (one - p)|.
+For instance, when subtraction and division are available, we can instead define |star p = inverse (one - p)| \citep{Dolan2013FunSemi}.
 
 Predictably, there is a notion of homomorphisms for star semirings:
 \begin{definition} \deflabel{star semiring homomorphism}
@@ -555,7 +567,7 @@ h (star p) = star (h p)
 \end{definition}
 
 \noindent
-One simple example of a star semiring (also known as a ``closed semiring'' \citet{Lehmann77}) is booleans:
+One simple example of a star semiring (also known as a ``closed semiring'' \citep{Lehmann77,Dolan2013FunSemi}) is booleans:
 \begin{code}
 instance StarSemiring Bool where
   star b  = one + b * star b
@@ -564,10 +576,16 @@ instance StarSemiring Bool where
           = one
 \end{code}
 
-A useful property of star semirings is that recursive affine equations have solutions \citep{Dolan2013FunSemi}:
+A useful property of star semirings is that recursive affine equations have solutions
+%if short
+\citep{Dolan2013FunSemi,Elliott2019-convolution-extended}:
+%else
+\citep{Dolan2013FunSemi}:
+%endif
 \begin{lemma}\lemlabel{affine over semiring}
-In a star semiring, the affine equation |p = b + m * p| has solution |p = star m * b|:
+In a star semiring, the affine equation |p = b + m * p| has solution |p = star m * b|.
 \end{lemma}
+%if long
 \begin{proof}~
 \begin{code}
     b + m * (star m * b)
@@ -577,6 +595,7 @@ In a star semiring, the affine equation |p = b + m * p| has solution |p = star m
 ==  star m * b                -- star semiring law
 \end{code}
 \end{proof}
+%endif
 
 \note{Mention tropical semirings, schedule algebra (max-plus), and optimization algebra (min-plus) \citep{Golan2005RecentSemi}. Maybe also polynomials.}
 
@@ -609,8 +628,10 @@ s .> (b + c) == s .> b + s .> c
 one   .> b == b
 zero  .> b == zero
 \end{code}
+%if long
 There is also a corresponding notion of \emph{right} |s|-semimodule (with multiplication on the right by |s| values), which we will not need in this paper.
 (Rings also have left- and right-modules, and in \emph{commutative} rings and semirings (including vector spaces), the left and right variants coincide.)
+%endif
 
 As usual, we have a corresponding notion of homomorphism, which is more commonly referred to as ``linearity'':
 \begin{definition} \deflabel{left semimodule homomorphism}
@@ -620,9 +641,8 @@ h (s .> b) == s .> h b
 \end{code}
 \end{definition}
 
-Familiar |s|-semimodule examples include various containers of |s| values, including single- or multi-dimensional arrays, infinite streams, sets, and multisets.
+Familiar |s|-semimodule examples include various containers of |s| values, including single- or multi-dimensional arrays, lists, infinite streams, sets, multisets, and trees.
 Another, of particular interest in this paper, is functions from any type to any semiring:
-For instance,
 \begin{code}
 instance LeftSemimodule s (a -> s) where
   s .> f = \ a -> s * f a
@@ -636,6 +656,7 @@ When |s == zero|, |s .> p == zero|, so we can discard |p| entirely.
 This optimization applies quite often in practice, for instance with languages, which tend to be sparse.
 Another optimization (though less dramatically helpful) is |one .> p == p|.
 Rather than burden each |LeftSemimodule| instance with these two optimizations, let's define |(.>)| via a more primitive |scale| method:
+%% Shorten the names for the code examples in the paper
 %format DetectableZero = IsZero
 %format DetectableOne  = IsOne
 \begin{code}
@@ -655,12 +676,17 @@ class Additive  b => DetectableZero  b where isZero  :: b -> Bool
 class Semiring  b => DetectableOne   b where isOne   :: b -> Bool
 \end{code}
 
-As with star semirings (\lemref{affine over semiring}), recursive affine equations in semimodules \emph{over} star semirings also have solutions:
+As with star semirings (\lemref{affine over semiring}), recursive affine equations in semimodules \emph{over} star semirings also have solutions%
+%if short
+~\citeLong.
+%else
+:
+%endif
 \begin{lemma}\lemlabel{affine over semimodule}
-In a left semimodule over a star semiring, the affine equation |p == b <+> m .> p| has solution |p = star m .> b|.
+In a left semimodule over a star semiring, the affine equation |p == b <+> m .> p| has solution |p = star m .> b|%
 \end{lemma}
-The proof closely resembles that of \lemref{affine over semiring}, using the left semimodule laws above.
-%if False
+%if long
+The proof closely resembles that of \lemref{affine over semiring}, using the left semimodule laws above:
 \begin{proof}~
 \begin{code}
     star s .> r
@@ -677,7 +703,7 @@ The proof closely resembles that of \lemref{affine over semiring}, using the lef
 Most of the representations used in this paper are functions or are types that behave like functions.
 It will be useful to use a standard vocabulary for the latter.
 An ``indexable'' type |x| with domain |a| and codomain |b| represents |a -> b|:
-We'll need to restrict |b| in some cases.
+Sometimes we will need to restrict |a| or |b|.
 \begin{code}
 class Indexable a b x | x -> a b where
   infixl 9 !
@@ -692,7 +718,7 @@ Probably also that |h| maps |Additive| to |Additive| and that |(!)| is an |Addit
 Hm. It seems I can't even express those laws now that there's no functor.
 }
 
-\secref{Monoids, Semirings and Semimodules} provides a fair amount of vocabulary for combining values.
+\secrefs{Monoids}{Semimodules} provides a fair amount of vocabulary for combining values.
 We'll also want an operation that constructs a ``vector'' (e.g., language or function) with a single nonzero component:
 %format +-> = "\mapsto"
 \begin{code}
@@ -755,9 +781,9 @@ So far, we've started with instance definitions and then noted and proved homomo
 We can instead invert the process, taking homomorphisms as specifications and \emph{calculating} instance definitions that satisfy them.
 This process of calculating instances from homomorphisms is the central guiding principle of this paper, so let's see how it works.
 
-Consider a type of mathematical \emph{sets} of values of some type |a|, which we'll write as ``|Pow a|''.
+Consider a type ``|Pow a|'' of mathematical \emph{sets} of values of some type |a|.
 Are there useful instances of the abstractions from \secref{Monoids, Semirings and Semimodules} for sets?
-Rather than guess at such instances and then trying to prove the required laws, let's consider how sets are related to a type for which we already know instances, namely functions.
+Rather than guessing at such instances and then trying to prove the required laws, let's consider how sets are related to a type for which we already know instances, namely functions.
 
 Sets are closely related to functions-to-booleans (``predicates''):
 %format setPred = pred
@@ -820,7 +846,7 @@ instance Additive (Pow a) where
 Next consider a |LeftSemimodule| instance for sets.
 We might be tempted to define |s .> p| to multiply |s| by each value in |p|, i.e.,
 \begin{code}
-instance LeftSemimodule s (Pow s) where s `scale` p = set (s * t | t <# p)    -- \emph{wrong}
+instance LeftSemimodule s (Pow s) where s `scale` p = set (s * x | x <# p)    -- \emph{wrong}
 \end{code}
 This definition, however, would violate the semimodule law that |zero .> p == zero|, since |zero .> p| would be |set zero|, but |zero| for sets is |emptyset|.
 Both semimodule distributive laws fail as well.
@@ -830,6 +856,9 @@ The necessary homomorphism property:
 \begin{code}
 setPred (s .> p) == s .> setPred p
 \end{code}
+%if short
+Equivalently \citeLong,
+%else
 Equivalently,
 \begin{spacing}{1.2}
 \vspace{-1ex}
@@ -848,6 +877,7 @@ Equivalently,
 \end{spacing}
 \noindent
 Summarizing,
+%endif
 \begin{code}
 instance LeftSemimodule Bool (Pow a) where
   s `scale` p = if s then p else zero
@@ -866,7 +896,7 @@ Conspicuously missing, however, are the usual notions of language concatenation 
 \begin{code}
 U V = set (u <> v | u <# U && v <# V)
 
-star U = bigUnion (i >= 0) @@ U^i -- where |U^0 = one|, and |pow U (n+1) = U @@ U^n|.
+star U = bigUnion i @@ U^i -- where |U^0 = one|, and |pow U (n+1) = U @@ U^n|.
 \end{code}
 Intriguingly, this |star U| definition would satisfy the |StarSemiring| laws if |(*)| were language concatenation.
 A bit of reasoning shows that all of the semiring laws would hold as well:
@@ -886,9 +916,9 @@ instance StarSemiring (Pow a) -- use default |star| definition (\secref{Star Sem
 
 \noindent
 These new instances indeed satisfy the laws for additive monoids, semimodules, semirings, and star semirings.
-They seem to spring from nothing, however, which is a bit disappointing compared with the way the |Additive| and |LeftSemimodule| instances for sets follow inevitably from the requirement that |setPred| be a homomorphism for those classes (\secref{Calculating Instances from Homomorphisms}).
+They seem to spring from nothing, however, which is disappointing compared with the way the |Additive| and |LeftSemimodule| instances for sets follow inevitably from the requirement that |setPred| be a homomorphism for those classes (\secref{Calculating Instances from Homomorphisms}).
 Let's not give up yet, however.
-Perhaps there's a |Semiring| instance for |a -> b| that specializes with |b = Bool| to bear the same relationship to |Pow a| that the |Additive| and |LeftSemimodule| do.
+Perhaps there's a |Semiring| instance for |a -> b| that specializes with |b = Bool| to bear the same relationship to |Pow a| that the |Additive| and |LeftSemimodule| instances bear.
 The least imaginative thing we can try is to require that |setPred| be a \emph{semiring} homomorphism.
 If we apply the same sort of reasoning as in \secref{Calculating Instances from Homomorphisms} and then generalize from |Bool| to an arbitrary semiring, we get the definitions in \figrefdef{monoid semiring}{The monoid semiring}{
 \begin{code}
@@ -901,7 +931,7 @@ instance (Semiring b, Monoid a)  => StarSemiring (a -> b)  -- default |star|
 \end{code}
 \vspace{-4ex}
 }.
-With this instance, |a -> b| type is known as ``the monoid semiring'', and its |(*)| operation as ``convolution'' \citep{Golan2005RecentSemi,Wilding2015LAS}.
+With this instance, |a -> b| type is known as the \emph{monoid semiring}, and its |(*)| operation as \emph{convolution} \citep{Golan2005RecentSemi,Wilding2015LAS}.
 
 \begin{theorem}[\provedIn{theorem:semiring hom ->}]\thmlabel{semiring hom ->}
 Given the instance definitions in \figref{monoid semiring}, |setPred| is a star semiring homomorphism.
@@ -968,7 +998,7 @@ instance (Ord a, Monoid a, Semiring b) => Semiring (Map a b) where
 \end{code}
 \vspace{-4ex}
 }, |(!)| is a homomorphism with respect to each instantiated class.
-(The ``|M|'' module qualifier indicates names coming from the finite map library.)
+(The ``|M|.'' module qualifier indicates names coming from the finite map library.)
 \notefoot{Do I want a theorem and proof here?
 I think so, though I'll have to make a few assumptions about finite maps.
 On the other hand, those assumptions don't differ much from the homomorphism properties I'm claiming to hold.}
@@ -1019,7 +1049,9 @@ so that
 
 > u <# p <=> mempty <# derivs p u
 
-Further, he noted that\footnote{Here, Brzozowski's notation makes for a prettier formulation:
+Further, he noted that%
+%if long
+\footnote{Here, Brzozowski's notation makes for a prettier formulation:
 \begin{code}
 derivs' mempty p    == p
 derivs' (u <> v) p  == derivs' v (derivs' u p)
@@ -1031,6 +1063,7 @@ derivs' (u <> v)  == derivs' v . derivs' u
 \end{code}
 where |id| is the identity function.
 In other words, |derivs'| is a contravariant monoid homomorphism (targeting the monoid of endofunctions).}
+%endif long
 \begin{code}
 derivs p mempty    == p
 derivs p (u <> v)  == derivs (derivs p u) v
@@ -1128,7 +1161,7 @@ deriv (c   :  cs  +-> b) == c +-> cs +-> b
 \end{code}
 \end{spacing}
 
-\note{Consider re-expressing \lemref{deriv [c] -> b} in terms of |(!)|. Maybe even generalize |(<:)| to indexable functors.}
+\note{Consider reexpressing \lemref{deriv [c] -> b} in terms of |(!)|. Maybe even generalize |(<:)| to indexable functors.}
 
 \begin{theorem}[\provedIn{theorem:semiring decomp [c] -> b}]\thmlabel{semiring decomp [c] -> b}
 The following properties hold (in the generalized setting of a functor |h| with |Key h == c|):
@@ -1176,8 +1209,8 @@ instance Semiring b => Semiring (RegExp h b) where
 instance Semiring b => StarSemiring (RegExp h b) where
   star e = Star e
 
-type FR h b =  (  Additive (h (RegExp h b)), HasSingle (Key h) (RegExp h b) (h (RegExp h b))
-               ,  Functor h, DetectableZero b, DetectableOne b )
+type FR h b =  (  HasSingle (Key h) (RegExp h b) (h (RegExp h b))
+               ,  Additive (h (RegExp h b)), Functor h, DetectableZero b, DetectableOne b )
 
 instance (FR h b, StarSemiring b, c ~ Key h, Eq c) => Indexable [c] b (RegExp h b) where
   e ! w = atEps (foldl ((!) . deriv) e w)
@@ -1204,12 +1237,12 @@ deriv  (Star p)       = fmap (\ d -> star (atEps p) .> d <.> Star p) (deriv p)
 } generalizes regular expressions in the same way that |a -> b| generalizes |Pow a|, to yield a value of type |b| (a star semiring).
 The constructor |Value b| generalizes |zero| and |one| to yield a semiring value.
 \begin{theorem}\thmlabel{RegExp}
-Given the definitions in \figref{RegExp} |(!)| is a homomorphism with respect to each instantiated class.
+Given the definitions in \figref{RegExp}, |(!)| is a homomorphism with respect to each instantiated class.
 \end{theorem}
-Note that the definition of |e ! w| in \figref{RegExp} is exactly |atEps (derivs e w)| generalized to indexable |h|, which performs repeated syntactic transformation with respect to successive characters in |w|, successively performing syntactic differentiation, with |atEps| applied to the final resulting regular expression.
 The implementation in \figref{RegExp} generalizes the regular expression matching algorithm of \citet{Brzozowski64}, adding customizable memoization, depending on choice of the indexable functor |h|.
+Note that the definition of |e ! w| is exactly |atEps (derivs e w)| generalized to indexable |h|, performing syntactic differentiation with respect to successive characters in |w| and applying |atEps| to the final resulting regular expression.
 
-As an alternative to successive syntactic differentiation, we can re-interpret the original (syntactic) regular expression in another semiring as follows:
+As an alternative to repeated syntactic differentiation, we can reinterpret the original (syntactic) regular expression in another semiring as follows:
 \begin{code}
 regexp :: (StarSemiring x, HasSingle [Key h] b x, Semiring b) => RegExp h b -> x
 regexp (Char c)      = single [c]
@@ -1218,7 +1251,7 @@ regexp (u  :<+>  v)  = regexp u  <+>  regexp v
 regexp (u  :<.>  v)  = regexp u  <.>  regexp v
 regexp (Star u)      = star (regexp u)
 \end{code}
-Next, we will see one such choice of |f| that eliminates the syntactic overhead of repeatedly transforming syntactic representations.
+Next, we will see a choice of |f| that eliminates the overhead of repeatedly syntactic transformation.
 
 \note{Remark on the |Semiring| instance and its lack of optimizations for |isZero q| or |isOne q|.
 Those optimizations break some recursively defined languages.
@@ -1227,29 +1260,29 @@ In fact, I'd also need the |D0| and |D1| instances for |RegExp h b|, so the figu
 
 \sectionl{Tries}
 
-\secref{Languages and the Monoid Semiring} gave an implementation of language recognition and its generalization to the monoid semiring (|a -> b| for monoid |a| and semiring |b|), packaged as instances of a few common algebraic abstractions (|Additive|, |Semiring| etc).
+\secref{Languages and the Monoid Semiring} provided an implementation of language recognition and its generalization to the monoid semiring (|a -> b| for monoid |a| and semiring |b|), packaged as instances of a few common algebraic abstractions (|Additive|, |Semiring| etc).
 While simple and correct, these implementations are quite inefficient, primarily due to naive backtracking and redundant comparison.
 \secref{Decomposing Functions from Lists} explored the nature of functions on lists, identifying a decomposition principle and its relationship to the vocabulary of semirings and related algebraic abstractions.
 Applying this principle to a generalized form of regular expressions led to Brzozowski's algorithm, generalized from sets to functions in \secref{Regular Expressions}, providing an alternative to naive backtracking but still involving extensive syntactic manipulation as each candidate string is matched.
 Nevertheless, with some syntactic optimizations and memoization, recognition speed with this technique can be fairly good \citep{Might2010YaccID,Adams2016CPP}.
 
-As an alternative to regular expression differentiation, note that the problem of redundant comparison is solved elegantly by the classic trie (``prefix tree'') data structure introduced by Axel Thue in 1912 \citep[Section 6.3]{Knuth1998ACP3}.
+As an alternative to regular expression differentiation, note that the problem of redundant comparison is solved elegantly by the classic trie (``prefix tree'') data structure introduced by Thue in 1912 \citep[Section 6.3]{Knuth1998ACP3}.
 This data structure was later generalized to arbitrary (regular) algebraic data types \citep{Connelly1995GenTrie} and then from sets to functions \citep{Hinze2000GGT}.
 \out{We'll explore the data type generalization later.\notefoot{Add a forward pointer, or remove the promise.}}
-Restricting our attention to functions of lists (``strings'' over some alphabet), we can formulate a simple trie data type along the lines of |(<:)| from \secref{Decomposing Functions from Lists}, with an entry for |mempty| and a sub-trie for each possible character:
+Restricting our attention to functions of \emph{lists} (``strings'' over some alphabet), we can formulate a simple trie data type along the lines of |(<:)| from \secref{Decomposing Functions from Lists}, with an entry for |mempty| and a sub-trie for each possible character:
 %format :< = "\mathrel{\Varid{:\!\!\triangleleft}}"
 \begin{code}
 data LTrie c b = b :< c -> LTrie c b  -- first guess
 \end{code}
 While this definition can work, we can get much better efficiency if we memoize the functions of |c|, e.g., as a generalized trie or a finite map.
-Rather than commit to a particular representation for the subtrie collection, let's replace the type parameter |c| with a functor |h| whose associated key type is |c|.
+Rather than commit to a particular representation for subtrie collections, let's replace the type parameter |c| with a functor |h| whose associated key type is |c|.
 The functor-parametrized list trie is also known as the ``cofree comonad'' \citep{Uustalu2005EDP,Uustalu2008CNC,Uustalu2011RS,Hinze2013USR,Kmett2015MfL,Penner2017RSTT}.
 \begin{code}
 data Cofree h b = b :< h (Cofree h b)
 \end{code}
 
 The similarity between |Cofree h b| and the function decomposition from \secref{Decomposing Functions from Lists} (motivating the constructor name ``|:<|'') makes for easy instance calculation.
-As with |Pow a| and |Map a b|, we can define a trie counterpart to the monoid semiring, here |[c] -> b|.
+As with |Pow a| and |Map a b|, we can define a trie counterpart to the list monoid semiring (|[c] -> b|).
 \begin{theorem}[\provedIn{theorem:Cofree}]\thmlabel{Cofree}
 Given the definitions in \figrefdef{Cofree}{List tries denoting |[c] -> b|}{
 %format :<: = "\mathrel{\Varid{:\!\!\triangleleft\!:}}"
@@ -1268,7 +1301,8 @@ instance (Additive (h (Cofree h b)), Additive b) => Additive (Cofree h b) where
 instance (Functor h, Semiring b) => LeftSemimodule b (Cofree h b) where
   scale s = fmap (s NOP <.>)
 
-instance (Functor h, Additive (h (Cofree h b)), Semiring b, DetectableZero b) => Semiring (Cofree h b) where
+instance  (Functor h, Additive (h (Cofree h b)), Semiring b, DetectableZero b) =>
+          Semiring (Cofree h b) where
   one = one :< zero
   (a :< dp) <.> q = a .> q <+> (zero :< fmap (<.> NOP q) dp)
 
@@ -1294,7 +1328,7 @@ instance  (Functor h, Additive (h (Cofree h b)), DetectableZero b, DetectableZer
 \end{theorem}
 
 Although the |(<:)| decomposition in \secref{Decomposing Functions from Lists} was inspired by wanting to understand the essence of regular expression derivatives, the application to tries is in retrospect more straightforward, since the representation directly mirrors the decomposition.
-Pleasantly, this trie data structure is a classic, though perhaps not in its lazy infinite form for use as a language representation.
+\out{Pleasantly, this trie data structure is a classic, though perhaps not in its lazy infinite form for use as a language representation.}
 Applying the |(<:)| decomposition to tries also appears to be more streamlined than the application to regular expressions.
 During matching, the next character in the candidate string is used to directly index to the relevant derivative (sub-trie), efficiently bypassing all other paths.
 As one might hope,
@@ -1360,8 +1394,9 @@ dyck = star (single "[" <.> dyck <.> single "]")
 
 \end{code}
 } shows the source code for a collection of examples, all polymorphic in the choice of semiring.
-The |letter| example is any single letter from `a' to `z'.
-The examples |anbn| and |dyck| are two classic, non-regular, context-free examples: $a^nb^n$ and the Dyck language of balanced brackets.
+The |letter| language contains single letters from `a' to `z'.
+The examples |anbn| and |dyck| are two classic, non-regular, context-free languages: |set (a^n@@b^n # n <# N)| and the Dyck language of balanced brackets.
+
 \figrefdef{stats}{Running times for examples in \figref{examples}}{
 \begin{center}
 \begin{tabular}{||c||c||c||c||c||}
@@ -1378,11 +1413,12 @@ The examples |anbn| and |dyck| are two classic, non-regular, context-free exampl
 %include test/stats/dyck.txt
 \end{tabular}
 \end{center}
-} gives some running times for these examples measured with the \emph{criterion} library \citep{criterion}, running on a late 2013 MacBook Pro.
-Each examples is run four ways: |RegExp ((->) Char)|, |RegExp (Map Char)|, |Cofree ((->) Char)|, and |Cofree (Map Char)|.
-Each example is tested with a matching input string of length 100 and counts the number of successful matches via choice of the |N| semiring.
+} gives some running times for these examples measured with the \emph{criterion} library \citep{criterion}, on a late 2013 MacBook Pro.
+(Note milliseconds vs microseconds---``ms'' vs ``$\mu{}$s''.)
+Each example is interpreted in four semirings: |RegExp ((->) Char) N|, |RegExp (Map Char) N|, |Cofree ((->) Char N)|, and |Cofree (Map Char) N|.
+Each interpretation of each language is given a matching input string of length 100; and matches are counted, thanks to use of the |N| semiring.
 (The |star a * star a| example matches in 101 ways, while the others match uniquely.)
-As the figure shows memoization via |Map| is only moderately helpful (and sometimes harmful) for |RegExp| but is \emph{extremely} helpful for |Cofree|, which performs terribly without it.
+As the figure shows, memoization (via |Map|) is only moderately helpful (and occasionally harmful) for |RegExp| but is \emph{extremely} helpful for |Cofree|, which performs terribly without it.
 The two recursively defined examples fail to terminate with |RegExp Map|, perhaps because the implementation (\secref{Regular Expressions}) lacks a crucial trick \citep{Might2010YaccID}.
 
 %% \note{Replace the |RegExpM| ns times with \hang.}
@@ -1393,17 +1429,22 @@ Consider again the definition of multiplication in the monoid semiring, on |f,g 
 \begin{code}
 f * g  = bigSum (u,v) u <> v +-> f u <.> g v
 \end{code}
-As in \secref{Languages and the Monoid Semiring}, specializing the \emph{codomain} to |Bool|, we get
-
->   f <.> g = bigOr (u,v) u <> v +-> f u && g v
-
-Using the set/predicate isomorphism from \secref{Calculating Instances from Homomorphisms}, we can translate this definition from predicates to ``languages'' (sets of values in some monoid):
-
->   f <.> g = set (u <> v | u <# f && v <# g)
-
+As in \secref{Languages and the Monoid Semiring}, specializing the \emph{codomain} to |Bool|%
+%if short
+\ and using
+%else
+, we get
+\begin{code}
+f <.> g = bigOr (u,v) u <> v +-> f u && g v
+\end{code}
+Using
+%endif
+the set/predicate isomorphism from \secref{Calculating Instances from Homomorphisms}, we can translate this definition from predicates to ``languages'' (sets of values in some monoid):
+\begin{code}
+f <.> g = set (u <> v | u <# f && v <# g)
+\end{code}
 which is the definition of the concatenation of two languages from  \secref{Languages and the Monoid Semiring}.
-
-By specializing the \emph{domain} of the functions to sequences (from general monoids), we got efficient matching of semiring-generalized ``languages'', as in \secreftwo{Decomposing Functions from Lists}{Tries}, which translated to regular expressions (\secref{Regular Expressions}), generalizing work of \citet{Brzozowski64}.
+Likewise, by specializing the \emph{domain} of the functions to sequences (from general monoids), we got efficient matching of semiring-generalized ``languages'', as in \secreftwo{Decomposing Functions from Lists}{Tries}, which translated to regular expressions (\secref{Regular Expressions}), generalizing work of \citet{Brzozowski64}.
 
 %format R = "\mathbb R"
 %format C = "\mathbb C"
@@ -1452,7 +1493,7 @@ Inlining and simplification during compilation can then eliminate all of the run
 (Failing a ``sufficiently smart compiler'', one could use |Stream =~ Cofree Id| as a specification and optimize manually.)
 
 Just as |Cofree Identity| gives (necessarily infinite) streams, |Cofree Maybe| gives (possibly finite) \emph{nonempty lists} \citep{Uustalu2008CNC, Maguire2016}.
-As with finite maps, we can interpret absence as |zero|%
+As with finite maps, we can interpret absence (|Nothing|) as |zero|%
 %if moreApps
 :
 \begin{code}
@@ -1480,7 +1521,7 @@ Many uses of discrete convolution (including convolutional neural networks \cite
 \notefoot{First suggest finite maps, using instances from \figref{Map}. Then intervals/arrays.}
 In many cases, these domain subsets may be defined by finite \emph{intervals}.
 For instance, such a 2D operation would be given by intervals in each dimension, together specifying lower left and upper right corners of a 2D interval (rectangle) outside of which the functions are guaranteed to be zero.
-The two input intervals needn't have the same size, and the result's interval of support is larger than both inputs, with size equaling the sum of the sizes in each dimension (minus one for the discrete case).
+The two input intervals needn't have the same size, and the result's interval of support is typically larger than both inputs, with size equaling the sum of the sizes in each dimension (minus one for the discrete case).
 \notefoot{Show an example as a picture.}
 Since the result's support size is entirely predictable and based only on the arguments' sizes, it is appealing to track sizes statically via types.
 For instance, a 1D convolution might have the following type:
@@ -1499,7 +1540,7 @@ where now
 \begin{code}
 (+) :: Fin (m+1) -> Fin (n+1) -> Fin (m+n+1)
 \end{code}
-Indices no longer form a monoid under addition, however, simply due to the nonuniformity of types.
+Indices can no longer form a monoid under addition, however, due to the nonuniformity of types.
 
 %format lift0
 %format lift1
@@ -1544,7 +1585,7 @@ lift0 b  = b +-> one
 %format >>== = >>=
 %% %format keys p = p
 \noindent
-The signatures of |lift2|, |lift1|, and |lift0| \emph{almost} generalize to those of |liftA2|, |fmap|, and |pure| from the |Functor| and |Applicative| type classes \citep{McBride2008APE}.
+The signatures of |lift2|, |lift1|, and |lift0| \emph{almost} generalize to those of |liftA2|, |fmap|, and |pure| from the |Functor| and |Applicative| type classes \citep{McBride2008APE,Typeclassopedia}.
 In type systems like Haskell's, however, |a -> s| is the functor |(a ->)| applied to |s|, while we would need it to be |(-> s)| applied to |a|.
 To fix this problem, define a type wrapper that swaps domain and codomain type parameters:
 \begin{code}
@@ -1620,10 +1661,10 @@ instance (Semiring b, Monoid a) => Semiring (b <-- a) where
   one = pure mempty
   (*) = liftA2 (<>)
 \end{code}
-}, along with a the old |a -> b| instance re-assigned to |b <-- a|.
-Just as the |Additive| and |Semiring| instances for |Bool <-- a| give us four important languages operations (union, concatenation and their identities), now the |Semiring (a -> Bool)| gives us two more: the set of all ``strings'' and the \emph{intersection} of languages.
+}, along with a the old |a -> b| instance reexpressed and reassigned to |b <-- a|.
+Just as the |Additive| and |Semiring| instances for |Bool <-- a| give us four important languages operations (union, concatenation and their identities), now the |Semiring (a -> Bool)| gives us two more: the \emph{intersection} of languages and its identity (the set of all ``strings'').
 These two semirings share several instances in common, expressed in \figref{-> and <-- semirings} via GHC-Haskell's \verb|GeneralizedNewtypeDeriving| language extension (present since GHC 6.8.1 and later made safe by \citet{Breitner2016SZC}).
-All six of these operations are also useful in their generalize form (i.e., for |a -> b| and |b <-- a| for semirings |b|).
+All six of these operations are also useful in their generalized form (i.e., for |a -> b| and |b <-- a| for semirings |b|).
 As with |Additive|, this |Semiring (a -> b)| instance implies that curried functions (of any number and type of arguments and with semiring result type) are semirings, with |curry| and |uncurry| being semiring homomorphisms.
 (The proof is very similar to that of \thmref{curry additive}.)
 
@@ -1641,7 +1682,7 @@ The latter property is known as ``the convolution theorem'' \citep[Chapter 6]{Br
 Where there's an applicative, there's often a compatible monad.
 For |b <-- a|, the monad is known as the ``free semimodule monad'' (or sometimes the ``free \emph{vector space} monad'') \citep{Piponi2007MonadVS,Kmett2011FreeModules,Gehrke2017Q}.
 The semimodule's dimension is the cardinality of |a|.
-Basis vectors have the form |single u = u +-> one| for some |u :: a| (mapping |u| to |one| and every other value to |zero| as in \figref{monoid semiring}).
+Basis vectors have the form |single u = u +-> one| for |u :: a| (mapping |u| to |one| and every other value to |zero| as in \figref{monoid semiring}).
 
 The monad instances for |(<--) b| and |Map' b| are defined as follows:\footnote{The |return| method does not appear here, since it is equivalent to |pure| from |Applicative|.}
 \begin{code}
@@ -1851,14 +1892,14 @@ x^3 + 3 * x^2 * y + 3 * x * y^2 + 6 * x * y * z + 3 * x^2 * z + 3 * x * z^2 + y^
 \sectionl{Related Work}
 
 This paper began with a desire to understand regular expression matching via ``derivatives'' by \citet{Brzozowski64} more fundamentally and generally.
-Brzozowski's method spurred much follow-up investigation in recent years, particularly the ``Yacc is Dead'' work of \citet{Might2010YaccID}, which considerably extended expressiveness to context-free grammars (recursively defined regular expressions) as well as addressing some efficiency issues, including memoization, with further performance analysis following from \cite{Adams2016CPP}.
-\citet{Owens2009RE} dusted off regular expression derivatives after many years of neglect with a re-exposition and experience report.
+Brzozowski's method spurred much follow-up investigation in recent years, particularly the ``Yacc is Dead'' work of \citet{Might2010YaccID}, which considerably extended expressiveness to context-free grammars (recursively defined regular expressions) as well as addressing some efficiency issues, including memoization, with further performance analysis given later \citep{Adams2016CPP}.
+\citet{Owens2009RE} dusted off regular expression derivatives after years of neglect with a new exposition and experience report.
 \citet{Fischer2010PRE} also extended regular language membership from boolean to ``weighted'' by an arbitrary semiring, relating them to weighted finite automata.
 \citet{Radanne2018RLG} explored regular expressions extended to include intersection and complement (as did Brzozowski) with an emphasis on testing.
-\citet{Piponi2015PF} investigated regular expressions and their relationship to the semiring of polynomial functors, as well as derivatives and dissections of data types.
+\citet{Piponi2015PF} investigated regular expressions and their relationship to the semiring of polynomial functors, as well as data type derivatives and dissections.
 
 \citet{McIlroy1999PSPS,McIlroy2001MS} formulated and implementation of power series as a small and beautiful collection of operations on infinite coefficient streams, including not only the arithmetic operations, but also inversion and composition, as well as differentiation and integration.
-He also provided transcendental operations by simple recursion and integration, such as |sin = integral cos| and |cos = 1 - integral sin|.
+He also defined transcendental operations by simple recursion and integration, such as |sin = integral cos| and |cos = 1 - integral sin|.
 
 \citet{Dongol2016CUC} investigated convolution in a general algebraic setting that includes formal language concatenation.
 \citet{Kmett2015MfL} observed that Moore machines are a special case of the cofree comonad.

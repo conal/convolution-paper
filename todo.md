@@ -7,11 +7,20 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 
 ### Major
 
+*   Regular expressions:
+    *   Optimizations.
+    *   Try implementing `(!)` by converting to `Cofree` (via `regexp`), and mention how it went.
+        I expect the speed to be nearly indistinguishable from starting with `Cofree`.
+*   Move finite maps inside of another section.
+*   Why homomorphisms matter.
 *   Improve the polynomial section.
 *   Image convolution example
 *   Reduce page count in the ICFP submission. Some strategies:
     *   Remove polynomials (and image convolution)
     *   Move more proofs to the appendix.
+    *   Drop `Splittable` instance examples.
+    *   Drop the explicit enumeration of homomorphism equations in Lemma 10 ({atEps [c] -> b}) and maybe elsewhere.
+    *   Drop the re-formulation of `deriv` between Lemmas 11 and 12.
     *   Rewrite some of my explicit lemmas and theorems as an in-line statement with a proof link.
         Keep the more formal style in the extended version.
         Make this change when I don't need to refer to a lemma/theorem other than from another proof.
@@ -28,6 +37,8 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 
 ### Misc
 
+*   Reference to Brent's monoid paper.
+*   More references to [*Fun with Semirings: A functional pearl on the abuse of linear algebra*].
 *   Probabilistic computation.
 *   Reconsider title after writing the introduction and related work sections.
 *   Wording improvements:

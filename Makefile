@@ -18,7 +18,10 @@ icfp: $(icfp).pdf
 long: $(long).pdf
 long-anon: $(long-anon).pdf
 
-all: icfp long long-anon
+all: icfp long-anon long
+
+all.see: icfp.see long.see long-anon.see
+
 
 # # Doesn't work
 # .PRECIOUS: $(outdir)/%.tex $(outdir)/%.pdf

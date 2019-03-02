@@ -1,5 +1,7 @@
 #! /bin/bash
 
+mkdir -p stats
+
 ./do-bench1 star-a   'star a1'
 ./do-bench1 letters  'star letter'
 ./do-bench1 fishy    'fishy'

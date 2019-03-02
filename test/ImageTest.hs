@@ -9,7 +9,8 @@ module Main where
 import qualified Data.Vector as V
 import Codec.Picture (convertRGB8, readImage, savePngImage)
 import Codec.Picture.Types
-  (DynamicImage(ImageYF), Image(..), PixelF , dynamicMap, pixelAt, promoteImage , extractLumaPlane)
+  ( DynamicImage(ImageYF), Image(..), PixelF , dynamicMap
+  , pixelAt, promoteImage , extractLumaPlane )
 import Data.Vector.Storable (convert)
 
 import Semi hiding ((^))
@@ -45,6 +46,8 @@ edgy = [[-1,-1,-1],[-1,8,-1],[-1,-1,-1]]
     Conversion between [[b]] and DynamicImage (JuicyPixels)
 --------------------------------------------------------------------}
 
+-- TODO: use statically sized vectors.
+
 -- | A 2D array represented as a list of lists
 type Arr b = [[b]]
 
@@ -61,6 +64,7 @@ imgToArr im =
     height = dynamicMap imageHeight im
     dat    = (promoteImage . extractLumaPlane . convertRGB8) im :: Image PixelF
 
+-- Assume arr is rectangular and nonempty.
 arrToImg :: Real a => Arr a -> DynamicImage
 arrToImg arr = ImageYF $ Image
   { imageWidth  = length (head arr)

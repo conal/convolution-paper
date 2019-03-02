@@ -51,11 +51,11 @@
 %if anonymous
 \usepackage[margin=1in]{geometry}  % 0.12in, 0.9in, 1in
 %else
-\usepackage[margin=0.2in]{geometry}  % 0.12in, 0.9in, 1in
+\usepackage[margin=1in]{geometry}  % 0.12in, 0.9in, 1in
 
 %% \geometry{paperwidth=6.5in,paperheight=8in}  % for iPad portrait preview
 %% \geometry{paperwidth=5.2in,paperheight=6.5in}  % same but easier on the eyes
-\geometry{paperheight=9.3in} % for 2-up on big monitor, larger text
+%% \geometry{paperheight=9.3in} % for 2-up on big monitor, larger text
 %% \geometry{paperwidth=10in} % 2-up big monitor, smaller text
 
 %endif
@@ -960,6 +960,15 @@ The |(<.>)| implementation above will try all possible three-way splittings of t
 
 
 \sectionl{Finite maps}
+
+%% Tighten spacing after ``M'' in ``M.''
+%format Mdot = M"\!."
+%format M.keys = Mdot keys
+%format M.findWithDefault = Mdot findWithDefault
+%format M.singleton = Mdot singleton
+%format M.unionWith = Mdot unionWith
+%format M.empty = Mdot empty
+%format M.null = Mdot null
 
 \note{I don't think finite maps need their own section. Look for another home. Maybe with |Cofree| as a suggested functor.}
 

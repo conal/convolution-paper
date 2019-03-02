@@ -40,7 +40,6 @@ default-extensions:
 ghc-options:
   -Wall
   # -O2  # Use when benchmarking
-  # -Wno-type-defaults   # for Poly, since dante doesn't pick up
 
 cpp-options: -DEXAMPLES
 
@@ -53,17 +52,8 @@ library:
     - MemoTrie
     - containers
     - multiset
-    # For Image
-    - vector
     - finite-typelits
     - vector-sized
-    # - JuicyPixels
-    # - total-map
-    # - distributive
-    # - adjunctions
-    # - comonad
-    # - semiring-num
-    # - newtype-generics
   other-modules: []
   include-dirs: src
   install-includes: GenInstances.inc
@@ -77,7 +67,6 @@ library:
     - MMap
     - Poly
     - Examples
-    # - Image
 
 tests:
   test:
@@ -91,8 +80,6 @@ tests:
     - bytestring
     - tasty
     - tasty-golden
-    # - semiring-num
-    # - MemoTrie
     - paper
 
 benchmarks:
@@ -126,12 +113,6 @@ executables:
     - Cabal >= 1.24.0.0
     - JuicyPixels
     - vector
-    # - containers
-    # - bytestring
-    # - tasty
-    # - tasty-golden
-    # - semiring-num
-    # - MemoTrie
     - paper
 
 # In the test directory:

@@ -54,16 +54,9 @@ tests :: forall x b.
 tests group = testGroup group
   [ testGroup "" []
 
-#if 0
-
   , gold "as-eps"                         $ as  # ""
   , gold "as-a"                           $ as  # "a"
 
-  , groupNot ["Function"]                 $
-    testGroup "ass"  
-    [ gold "ass-eps"                        $ ass # ""
-    , gold "ass-a"                          $ ass # "a"
-    ]
   , gold "pp-pi"                          $ pp # "pi"
   , gold "pp-pig"                         $ pp # "pig"
   , gold "pp-pig"                         $ pp # "pig"
@@ -98,8 +91,6 @@ tests group = testGroup group
   , gold "asbas-aabba"  $ asbas # "aabba"
 
   , gold "asas-100" $ asas # replicate 100 'a'
-
-#endif
 
   , groupNot ["RegExpFun","RegExpMap","RegExpIntMap"] $
     testGroup "dyck"

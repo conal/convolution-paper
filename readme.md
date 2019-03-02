@@ -20,11 +20,16 @@ You can find the source code for the paper's functionality and examples in the `
 To try out the Haskell implementation, make sure you have [`stack`](https://docs.haskellstack.org/en/stable/README/) installed, and then
 
 *   Compile: `stack build`
-*   Gold tests: `stack test`
-*   Benchmarks: `stack bench`
-*   If you want to run the image convolution examples, do the following from within the test directory:
+*   Gold tests: `stack test`.
+    These gold tests check that all of the representations yield the same answer.
+*   Benchmarks: `stack bench`.
+    This one takes a while and generates stats.html as well as a lot of textual statistics.
+    You can make it go faster (at the cost of less accurate measurements) by lowing `timeLimit` in test/Benchmark.hs.
+    The examples (`anbn` and `dyck`) that don't terminate with `RegExp (Map Char)` appear to have running times of about 3 ns but really are skipped.
+*   To run the image convolution examples:
 
-        stack build :image-test && stack exec image-test
+        (cd test; stack build :image-test && stack exec image-test)
+
 
 Some of the modules contain comments like the following (in src/Poly.hs):
 

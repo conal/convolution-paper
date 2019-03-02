@@ -6,13 +6,13 @@ icfp = $(outdir)/$(paper)-icfp
 long = $(outdir)/$(paper)-long
 long-anon = $(outdir)/$(paper)-long-anon
 
-# pdf: $(long).pdf
-# pdf: $(icfp).pdf
+pdf: $(icfp).pdf
 pdf: $(long-anon).pdf
+# pdf: $(long).pdf
 
-# see: $(long).see
-# see: $(icfp).see
+see: $(icfp).see
 see: $(long-anon).see
+# see: $(long).see
 
 icfp: $(icfp).pdf
 long: $(long).pdf
@@ -47,7 +47,7 @@ stats: $(stats)
 see-stats:
 	echo $(stats)
 
-%.pdf: %.tex bib.bib Makefile
+%.pdf: %.tex macros.tex bib.bib Makefile
 	$(latex) $*.tex
 	touch $@
 
@@ -82,6 +82,21 @@ clean:
 
 TAGS: *.tex *.lhs *.bib src/*.hs src/*.inc
 	etags $^
+
+supp = supplemental-material
+$(supp): readme.md stack.yaml package.yaml src/*.hs src/*.inc test/*.hs test/gold/*.txt test/wizard.jpg out/convolution-long-anon.pdf
+	mkdir -p $(supp)/{src,test}
+	grep -vi conal package.yaml > $(supp)/package.yaml
+	cp -p stack.yaml readme.md out/convolution-long-anon.pdf $(supp)
+	cp -p src/*.hs src/*.inc $(supp)/src
+	cp -p test/*.hs test/wizard.jpg $(supp)/test
+	cp -rp test/gold $(supp)/test
+
+# Supplemental tarball in progress
+tar: supplemental.tar
+
+supplemental.tar: $(supp)
+	tar -cvf $@ $(supp)
 
 web: web-token
 

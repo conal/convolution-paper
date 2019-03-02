@@ -1832,7 +1832,7 @@ expL = 1 + integralL expL
 \end{code}
 Try it out:
 %format lop (e) = e
-{%
+%{
 %format % = "/"
 \begin{code}
 

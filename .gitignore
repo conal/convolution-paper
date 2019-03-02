@@ -1,3 +1,6 @@
 *.cabal
 test/Benchmarks/*.html
 wizard-*.png
+supplemental-material
+
+supplemental.tar

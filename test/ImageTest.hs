@@ -22,20 +22,18 @@ main = do convolve "original" ident "wizard"
 
 convolve :: String -> Arr Double -> FilePath -> IO ()
 convolve opName kernel origName =
-  do img0 <- fmap (either (error ("couldn't read " ++ file)) id) (readImage file)
-     savePngImage (origName ++ "-" ++ opName ++ ".png") $
-       arrToImg (imgToArr img0 <.> kernel)
- where
-   file = origName ++ ".jpg"
+  do img <- readArr (origName ++ ".jpg")
+     saveArr (origName ++ "-" ++ opName ++ ".png") (img <.> kernel)
+
+{--------------------------------------------------------------------
+    Kernels
+--------------------------------------------------------------------}
 
 ident :: Arr Double
 ident = [[1]]
 
 boxBlur :: Int -> Arr Double
-boxBlur n = (fmap.fmap) (/ n'^(2::Int)) ((replicate n . replicate n) 1)
- where
-   n' :: Double
-   n' = fromIntegral n
+boxBlur n = (fmap.fmap) (/ fromIntegral (n*n)) ((replicate n . replicate n) 1)
 
 sharpen :: Arr Double
 sharpen = [[0,-1,0],[-1,5,-1],[0,-1,0]]
@@ -69,3 +67,11 @@ arrToImg arr = ImageYF $ Image
   , imageHeight = length arr
   , imageData   = (convert . V.fromList . map realToFrac . concat) arr
   }
+
+readArr :: FilePath -> IO (Arr Double)
+readArr path =
+  fmap (either (error ("couldn't read " ++ path)) imgToArr) (readImage path)
+
+-- For now just PNG
+saveArr :: FilePath -> Arr Double -> IO ()
+saveArr path arr = savePngImage path (arrToImg arr)

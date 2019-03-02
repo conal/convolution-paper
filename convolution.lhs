@@ -165,9 +165,9 @@ Target\\[1.5ex]conal@@conal.net
 \maketitle
 %endif
 
-%% %let moreApps = not icfp
+%% %let otherApps = not icfp
 
-%let moreApps = True
+%let otherApps = True
 
 \begin{abstract}
 
@@ -182,10 +182,8 @@ Other representations serve varied uses and performance trade-offs, with impleme
 Of particular interest is Brzozowski's method for regular expression matching.
 Uncovering the method's essence frees it from syntactic manipulations, while generalizing from boolean to weighted membership (such as multisets and probability distributions) and from sets to \emph{n}-ary relations.
 The classic \emph{trie} data structure then provides an elegant and efficient alternative to syntax.
-%if False
 Pleasantly, polynomial arithmetic requires no additional implementation effort, works correctly with a variety of representations, and handles multivariate polynomials and power series with ease.
-Image convolution also falls out as a special case, while shining light on boundary behavior.
-%endif
+Image convolution also falls out as a special case.
 
 %else
 
@@ -1520,12 +1518,13 @@ instance Indexable  () b (Id b) where Id a ! () = a
 instance HasSingle  () b (Id b) where () +-> b = Id b
 \end{code}
 The type |Cofree Identity| is isomorphic to \emph{streams} (infinite-only lists).
-Inlining and simplification during compilation can then eliminate all of the run-time overhead of introducing the identity functor.
-(Failing a ``sufficiently smart compiler'', one could use |Stream =~ Cofree Id| as a specification and optimize manually.)
+Inlining and simplification during compilation might eliminate all of the run-time overhead of introducing the identity functor.
 
 Just as |Cofree Identity| gives (necessarily infinite) streams, |Cofree Maybe| gives (possibly finite) \emph{nonempty lists} \citep{Uustalu2008CNC, Maguire2016}.
 As with finite maps, we can interpret absence (|Nothing|) as |zero|%
-%if moreApps
+%if short
+~\citeLong.
+%else
 :
 \begin{code}
 instance Additive b => Indexable () b (Maybe b) where
@@ -1536,12 +1535,27 @@ instance (DetectableZero b, Additive b) => HasSingle () b (Maybe b) where
   () +-> b  | isZero b   = Nothing
             | otherwise  = Just b
 \end{code}
-As we'll see in \secref{Polynomials}, the introduction of finiteness here enables arithmetic on (finite) polynomials in addition to (infinite) power series.
-\note{Maybe a similar comment about image convolution, though we probably wouldn't really want to use lists.}
-%else
-.
-%endif
 
+%endif
+Alternatively, define instances directly for lists, specified by a denotation of |[b]| as |N -> b|.
+The instances resemble those in \figref{Cofree}, but have an extra case for the empty list and no |fmap|:
+\begin{code}
+instance Additive b => Indexable N b [b] where
+  [] ! _ = zero
+  (b  :  _   ) ! 0  = b
+  (_  :  bs  ) ! n  = bs ! (n-1)
+
+instance Additive b => Additive [b] where
+  zero = []
+  [] <+> bs = bs
+  as <+> [] = as
+  (a : as) <+> (b : bs) = a <+> b : as <+> bs
+
+instance (Semiring b, DetectableZero b, DetectableOne b) => Semiring [b] where
+  one = one : zero
+  []        <.> _  = [] NOP -- |0 * q == 0|
+  (a : dp)  <.> q  = a .> q <+> (zero : dp <.> q)
+\end{code}
 
 \sectionl{Beyond Convolution}
 
@@ -1731,9 +1745,9 @@ liftA2 h p q  = p >>= \ u -> fmap (h u) q
 \end{code}
 \end{theorem}
 
-%if moreApps
+%if otherApps
 
-\sectionl{More Applications}
+\sectionl{Other Applications}
 
 \subsectionl{Polynomials}
 
@@ -1763,7 +1777,7 @@ We'll consider efficient representations below, but let's begin as |b <-- N| alo
 poly1 :: Semiring b => (b <-- N) -> (b -> b)
 poly1 (F f) = \ x -> bigSum i  f i * x^i
 \end{code}
-%if long
+%if True
 Polynomial multiplication via convolution follows from the following property:
 \begin{theorem}[\provedIn{theorem:poly hom}]\thmlabel{poly hom}
 The function |poly1| is a semiring homomorphism when multiplication on |b| commutes.
@@ -1797,13 +1811,8 @@ x^5 + 15 * x^4 + 90 * x^3 + 270 * x^2 + 405 * x + 243
 %}
 %endif
 
-We can also use |[]| in place of |Map N|, where |[b]| has the required instances (|Additive|, |Semiring|, etc) based on a denotation of |[b]| as |N -> b|, as always with absence denoting zero (here in case of sampling off the end of the list)
-%if short
-\citep{Kidney2017CS,Elliott2019-convolution-extended}.
-%else
-\citep{Kidney2017CS}.
+We can also use |[]| in place of |Map N|.
 The example above yields identical results.
-%endif
 Since lists are potentially infinite (unlike finite maps), however, this simple change enables power series%
 %if short
 ~\citep{McIlroy1999PSPS,McIlroy2001MS,Elliott2019-convolution-extended}.
@@ -1815,19 +1824,20 @@ Following \citet{McIlroy1999PSPS,McIlroy2001MS}, define integration and differen
 %format sinL = sin"_{\hspace{-1pt}p}"
 %format cosL = cos"_{\hspace{-1pt}p}"
 %format expL = exp"_{\hspace{-1pt}p}"
+%format bs0
 \begin{code}
 integralL :: Fractional b => Poly1 [b] -> Poly1 [b]
 integralL (Poly1 bs0) = Poly1 (0 : go 1 bs0)
- where
-   go _ []       = []
-   go n (b : d)  = b/n : go (n+1) d
+  where
+    go _ []       = []
+    go n (b : d)  = b/n : go (n+1) d
 
 derivativeL :: (Additive b, Fractional b) => Poly1 [b] -> Poly1 [b]
-derivativeL (Poly1 [])         = zero
-derivativeL (Poly1 (_ : bs0))  = Poly1 (go 1 bs0)
- where
-   go _ []        = []
-   go n (b : bs)  = n * b : go (n+1) bs
+derivativeL (Poly1     []        ) = zero
+derivativeL (Poly1 (_  :   bs0)  ) = Poly1 (go 1 bs0)
+  where
+    go _ []        = []
+    go n (b : bs)  = n * b : go (n+1) bs
 \end{code}
 Then define |sin|, |cos|, and |exp| via simple ordinary differential equations (ODEs):
 \begin{code}
@@ -1994,10 +2004,10 @@ x^3 + 3 * x^2 * y + 3 * x * y^2 + 6 * x * y * z + 3 * x^2 * z + 3 * x * z^2 + y^
 \end{itemize}
 }
 
-\sectionl{Image Convolution}
+\subsectionl{Image Convolution}
 
 \nc\figO[1]{
-\begin{minipage}{0.23\textwidth}
+\begin{minipage}[t]{0.23\textwidth}
 \centering
 \includegraphics[width=\textwidth]{test/wizard-#1.png}
 \\\textit{#1}
@@ -2005,9 +2015,9 @@ x^3 + 3 * x^2 * y + 3 * x * y^2 + 6 * x * y * z + 3 * x^2 * z + 3 * x * z^2 + y^
 }
 
 \figrefdef{wizard}{Image convolution}{
-\figO{original} \figO{blur} \figO{sharpen} \figO{edge-detect}
+\figO{original}\figO{blur}\figO{sharpen}\figO{edge-detect}
 \vspace{-3ex}
-} shows examples of image convolution.
+} shows examples of image convolution with some commonly used kernels \citep{Petrick2016Kernels,Young95FIP}.
 The source image (left) and convolution kernels are all represented as lists of lists of floating point grayscale values.
 Because (semiring) multiplication on |[b]| is derived via multiplication on |b|, one can nest representations arbitrarily.
 Other more efficient representations can work similarly.
@@ -2738,7 +2748,7 @@ Similarly for |liftA2|:
 \end{code}
 \end{spacing}
 
-%if moreApps
+%if otherApps
 
 \subsection{\thmref{poly hom}}\prooflabel{theorem:poly hom}
 
@@ -2823,7 +2833,7 @@ poly (F (\ i -> if i == n then b else zero))          -- |(+->)| on |b <-- a| (d
 ==  pows x p * pows x q                                                          -- |(^^)| definition
 \end{code}
 
-%endif moreApps
+%endif otherApps
 
 %endif long
 

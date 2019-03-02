@@ -7,7 +7,9 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 
 ### Major
 
-*   Fix/finish some proofs.
+*   Conclusions and Future work
+*   Why homomorphisms matter.
+*   Comonad proof
 *   See all of the issues flagged in the non-anonymous draft.
 *   Regular expressions:
     *   Optimizations. [done]
@@ -19,7 +21,6 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
     *   Remove author & copyright info from package.yaml, say via sed.
     *   Check that the README instructions work in isolation.
         Include how to get `stack`.
-*   Why homomorphisms matter.
 *   Polynomials:
     *   Univariate and multivariate. [done]
     *   Power series: represent via list instead of stream. [done]
@@ -44,8 +45,6 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
     *   Drop details for finite maps, leaving a short verbal description and pointer to extended version.
     *   Tighten some spacing environments.
 *   Move finite maps inside of another section.
-*   Comonad proof
-*   Conclusions and Future work
 
 
 ### Misc
@@ -157,6 +156,7 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 
 ## Did
 
+*   Spell out the list semiring, or at least `(<.>)`
 *   Check spacing with summations etc in the ICFP version.
     I made need some version-specific tweaks to `%format` definitions.
 *   Benchmarking results, including recursively defined languages.

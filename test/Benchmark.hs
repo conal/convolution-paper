@@ -18,8 +18,7 @@ import Cofree
 import Examples
 
 main :: IO ()
-main = do
-
+main =
   defaultMainWith config [
       bgroup "" []
 

@@ -1,2 +1,3 @@
 *.cabal
 test/Benchmarks/*.html
+wizard-*.png

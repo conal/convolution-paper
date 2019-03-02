@@ -57,7 +57,7 @@ library:
     - vector
     - finite-typelits
     - vector-sized
-    - JuicyPixels
+    # - JuicyPixels
     # - total-map
     # - distributive
     # - adjunctions
@@ -77,7 +77,7 @@ library:
     - MMap
     - Poly
     - Examples
-    - Image
+    # - Image
 
 tests:
   test:
@@ -113,3 +113,26 @@ benchmarks:
     - paper
 
 # stack bench
+
+executables:
+  image-test:
+    ghc-options:
+      -O2
+    source-dirs:         test
+    main:                ImageTest.hs
+    other-modules: []
+    dependencies:
+    - base
+    - Cabal >= 1.24.0.0
+    - JuicyPixels
+    - vector
+    # - containers
+    # - bytestring
+    # - tasty
+    # - tasty-golden
+    # - semiring-num
+    # - MemoTrie
+    - paper
+
+# In the test directory:
+# stack build :image-test && stack exec image-test

@@ -1729,9 +1729,10 @@ liftA2 h p q  = p >>= \ u -> fmap (h u) q
 \end{theorem}
 
 %if moreApps
-%% \sectionl{More Applications}
 
-\sectionl{Polynomials}
+\sectionl{More Applications}
+
+\subsectionl{Polynomials}
 
 %format N = "\mathbb{N}"
 %format (Sum a) = a
@@ -2001,9 +2002,23 @@ x^3 + 3 * x^2 * y + 3 * x * y^2 + 6 * x * y * z + 3 * x^2 * z + 3 * x * z^2 + y^
 \end{itemize}
 }
 
-%% \sectionl{Image Convolution}
+\sectionl{Image Convolution}
 
-%% If I add image convolution to the paper, restore the ``More Applications'' section, and make Polynomials and Image Convolution be subsections.
+\nc\figO[1]{
+\begin{minipage}{0.23\textwidth}
+\centering
+\includegraphics[width=\textwidth]{test/wizard-#1.png}
+\\\textit{#1}
+\end{minipage}
+}
+
+\figrefdef{wizard}{Image convolution}{
+\figO{original} \figO{blur} \figO{sharpen} \figO{edge-detect}
+\vspace{-3ex}
+} shows examples of image convolution.
+The source image (left) and convolution kernels are all represented as lists of lists of floating point grayscale values.
+Because (semiring) multiplication on |[b]| is derived via multiplication on |b|, one can nest representations arbitrarily.
+Other more efficient representations can work similarly.
 
 %endif
 

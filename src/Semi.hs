@@ -420,7 +420,7 @@ instance (Additive b, DetectableZero b) => HasSingle N b [b] where
 
 -- See Cofree
 instance Additive b => Additive [b] where
-  zero = mempty
+  zero = []
   [] <+> bs = bs
   as <+> [] = as
   (a : as) <+> (b : bs) = a <+> b : as <+> bs

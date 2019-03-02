@@ -398,13 +398,15 @@ The identity and associativity monoid laws follow from the identity and associat
 A modest generalization of Cayley's theorem states that every monoid is isomorphic to a monoid of endofunctions \citep{Boisseau2018YNK}.
 This embedding is useful for turning quadratic-time algorithms linear \citep{Hughes1986NRL,Voigtlander2008AIC}.
 % (The Yoneda embedding generalizes this theorem to categories and endomorphisms.)
+\twocol{0.45}{
 \begin{code}
 toEndo :: Monoid a => a -> Endo a
 toEndo a = Endo (\ z -> a <> z)
-
+\end{code}}{0.45}{
+\begin{code}
 fromEndo :: Monoid a => Endo a -> a
 fromEndo (Endo f) = f mempty
-\end{code}
+\end{code}}
 The |toEndo| embedding provides another example of a monoid homomorphism%
 %if short
 ~\citeLong.
@@ -481,17 +483,19 @@ class Additive b => Semiring b where
   infixl 7 <.>
 \end{code}
 The laws, in addition to those for |Additive| above, include multiplicative monoid, distribution, and annihilation:
+\twocol{0.25}{
 \begin{code}
-(u * v) * w == u * (v * w)
+u * zero == zero
+zero * v == zero
 one * v == v
 u * one == u
+\end{code}}{0.35}{
+\begin{code}
+(u * v) * w == u * (v * w)
 
 p * (q + r) == p * q + p * r
 (p + q) * r == p * r + q * r
-
-u * zero == zero
-zero * v == zero
-\end{code}
+\end{code}}
 
 \noindent
 \begin{definition} \deflabel{semiring homomorphism}
@@ -505,21 +509,26 @@ h (u * v) == h u * h v
 \noindent
 As mentioned, numbers and various linear endofunction representations form semirings.
 A simpler example is the semiring of booleans, with disjunction as addition and conjunction as multiplication (though we could reverse roles):
+\twocol{0.4}{
 \begin{code}
 instance Additive Bool where
   zero   = False
   (<+>)  = (||)
-
+\end{code}}{0.4}{
+\begin{code}
 instance Semiring Bool where
   one    = True
   (<.>)  = (&&)
-\end{code}
-An example of a semiring homomorphism is a positivity test for natural numbers:
+\end{code}}
+An example of a semiring homomorphism is a positivity test for natural numbers%
+%if short
+.
+%else
+:
 \begin{code}
 positive :: N -> Bool
 positive n = n > 0
 \end{code}
-%if long
 As required, the following properties hold for |m,n :: N|:%
 \footnote{\emph{Exercise:} What goes wrong if we replace natural numbers by integers?}
 \begin{spacing}{1.2}
@@ -531,9 +540,9 @@ positive (m  *  n) == positive m  &&  positive n == positive m  *  positive n
 \end{code}
 %% \vspace{-4ex}
 \end{spacing}
-%endif
 
 \noindent
+%endif
 There is a more fundamental example we will have use for later:
 \begin{theorem}[\provedIn{theorem:curry semiring}]\thmlabel{curry semiring}
 Currying and uncurrying are semiring homomorphisms.
@@ -548,10 +557,13 @@ It's often useful, however, to form infinite combinations, particularly in the f
 star p = bigSum i @@ p^i -- where |p^0 = one|, and |pow p (n+1) = p * p^n|.
 \end{code}
 Another characterization is as a solution to either of the following semiring equations:
+\twocol{0.45}{
 \begin{code}
 star p == one + p * star p
+\end{code}}{0.45}{
+\begin{code}
 star p == one + star p * p
-\end{code}
+\end{code}}
 which we will take as a laws for a new abstraction, as well as a default recursive implementation:
 \begin{code}
 class Semiring b => StarSemiring b  where
@@ -563,20 +575,13 @@ For instance, when subtraction and division are available, we can instead define
 
 Predictably, there is a notion of homomorphisms for star semirings:
 \begin{definition} \deflabel{star semiring homomorphism}
-A function |h| from one star semiring to another is a \emph{star semiring homomorphism} if it is a semiring homomorphism (\defref{semiring homomorphism}) and satisfies the following additional property:
-\begin{code}
-h (star p) = star (h p)
-\end{code}
+A function |h| from one star semiring to another is a \emph{star semiring homomorphism} if it is a semiring homomorphism (\defref{semiring homomorphism}) and satisfies the following additional property: |h (star p) = star (h p)|.
 \end{definition}
 
 \noindent
 One simple example of a star semiring (also known as a ``closed semiring'' \citep{Lehmann77,Dolan2013FunSemi}) is booleans:
 \begin{code}
-instance StarSemiring Bool where
-  star b  = one + b * star b
-          = True || (b && star b)
-          = True
-          = one
+instance StarSemiring Bool where star b  = one -- |== one || b && star b|
 \end{code}
 
 A useful property of star semirings is that recursive affine equations have solutions
@@ -623,14 +628,17 @@ class (Semiring s, Additive b) => LeftSemimodule s b | b -> s where
   (.>) :: s -> b -> b
 \end{code}
 In addition to the laws for the additive monoid |b| and the semiring |s|, we have the following laws specific to left semimodules: \citep{Golan2005RecentSemi}:
+\twocol{0.35}{
 \begin{code}
 (s * t) .> b == s .> (t .> b)
 (s + t) .> b == s .> b + t .> b
 s .> (b + c) == s .> b + s .> c
-
+\end{code}
+}{0.25}{
+\begin{code}
 one   .> b == b
 zero  .> b == zero
-\end{code}
+\end{code}}
 %if long
 There is also a corresponding notion of \emph{right} |s|-semimodule (with multiplication on the right by |s| values), which we will not need in this paper.
 (Rings also have left- and right-modules, and in \emph{commutative} rings and semirings (including vector spaces), the left and right variants coincide.)
@@ -638,17 +646,13 @@ There is also a corresponding notion of \emph{right} |s|-semimodule (with multip
 
 As usual, we have a corresponding notion of homomorphism, which is more commonly referred to as ``linearity'':
 \begin{definition} \deflabel{left semimodule homomorphism}
-A function |h| from one left |s|-semimodule to another is a \emph{left |s|-semimodule homomorphism} if it is an additive monoid homomorphism (\defref{additive monoid homomorphism}) and satisfies the following additional property:
-\begin{code}
-h (s .> b) == s .> h b
-\end{code}
+A function |h| from one left |s|-semimodule to another is a \emph{left |s|-semimodule homomorphism} if it is an additive monoid homomorphism (\defref{additive monoid homomorphism}) and satisfies the following additional property: |h (s .> b) == s .> h b|.
 \end{definition}
 
 Familiar |s|-semimodule examples include various containers of |s| values, including single- or multi-dimensional arrays, lists, infinite streams, sets, multisets, and trees.
 Another, of particular interest in this paper, is functions from any type to any semiring:
 \begin{code}
-instance LeftSemimodule s (a -> s) where
-  s .> f = \ a -> s * f a
+instance LeftSemimodule s (a -> s) where s .> f = \ a -> s * f a
 \end{code}
 If we think of |a -> s| as a ``vector'' of |s| values, indexed by |a|, then |s .> f| scales each component of the vector |f| by |s|.
 
@@ -793,13 +797,15 @@ Sets are closely related to functions-to-booleans (``predicates''):
 %% doesn't work
 %format predSet = inverse setPred
 %format predSet = setPred "^{-1}"
+\twocol{0.4}{
 \begin{code}
 setPred :: Pow a -> (a -> Bool)
 setPred as = \ a -> a <# as
-
+\end{code}}{0.4}{
+\begin{code}
 predSet :: (a -> Bool) -> Pow a
 predSet f = set (a | f a)
-\end{code}
+\end{code}}
 This pair of functions forms an isomorphism, i.e., |predSet . setPred == id| and |setPred . predSet == id|, as can be checked by inlining definitions and simplifying.
 Moreover, for sets |p| and |q|, |p == q <=> setPred p == setPred q|, by the \emph{extensionality} axiom of sets and of functions.
 Let's also require that |setPred| be an \emph{additive monoid homomorphism}.
@@ -952,7 +958,11 @@ where |splits w| yields all pairs |(u,v)| such that |u <> v == w|:
 class Monoid t => Splittable t where
   splits   :: t -> [(t,t)]  -- multi-valued inverse of |mappend|
 \end{code}
-Examples of splittable monoids include natural numbers and lists:
+Examples of splittable monoids include natural numbers and lists%
+%if short
+~\citeLong.
+%else
+:
 \begin{code}
 instance Splittable N where
   splits n = [(i, n-i) | i <- [0 .. n]]
@@ -961,6 +971,7 @@ instance Splittable [c] where
   splits []      = [([],[])]
   splits (c:cs)  = ([],c:cs) : [((c:l),r) | (l,r) <- splits cs]
 \end{code}
+%endif
 
 While simple, general, and (assuming |Splittable| domain) computable, the definitions of |(<+>)| and |(<.>)| above for the monoid semiring make for quite inefficient implementations, primarily due to naive backtracking.
 As a simple example, consider the language |single "pickles" + single "pickled"|, and suppose that we want to test the word ``pickling'' for membership.
@@ -1150,6 +1161,7 @@ type instance Key (Map   a) = a
 Generalizing in this way (with functions as a special case) enables convenient memoization, which has been found to be quite useful in practice for derivative-based parsing \citep{Might2010YaccID}.
 A few generalizations to the equations in \lemref{deriv [c] -> b} suffice to generalize from |c -> ([c] -> b)| to |h ([c] -> b)| \seeproof{lemma:deriv [c] -> b}.
 We must assume that |Key h = c| and that |h| is an ``additive functor'', i.e., |forall b. NOP Additive b => Additive (h b)| with |(!)| for |h| being an additive monoid homomorphism.
+%if long
 \begin{spacing}{1.3}
 \begin{code}
 deriv zero         == zero
@@ -1161,6 +1173,7 @@ deriv (s .> p)     == fmap (s NOP .>) (deriv p)
 \end{code}
 \vspace{-4ex}
 \end{spacing}
+%endif
 
 \note{Consider reexpressing \lemref{deriv [c] -> b} in terms of |(!)|. Maybe even generalize |(<:)| to indexable functors.}
 
@@ -1244,23 +1257,17 @@ The implementation in \figref{RegExp} generalizes the regular expression matchin
 Note that the definition of |e ! w| is exactly |atEps (derivs e w)| generalized to indexable |h|, performing syntactic differentiation with respect to successive characters in |w| and applying |atEps| to the final resulting regular expression.
 
 For efficiency, and sometimes even termination (with recursively defined languages), we will need to add some optimizations to the |Additive| and |Semiring| instances for |RegExp| in \figref{RegExp}:
-\\
-\begin{minipage}[b]{0.4\textwidth}
+\twocol{0.4}{
 \begin{code}
   p <+> q  | isZero p   = q
            | isZero q   = p
            | otherwise  = p :<+> q
-\end{code}
-\end{minipage}
-% \begin{minipage}[b]{0ex}{\rule[1ex]{0.5pt}{0.5in}}\end{minipage}
-\begin{minipage}[b]{0.45\textwidth} % \mathindent1em
+\end{code}}{0.45}{
 \begin{code}
   p <.> q  | isZero p   = zero
            | isOne  p   = q
            | otherwise  = p :<.> q
-\end{code}
-\end{minipage}
-\\
+\end{code}}
 For |p <.> q|, we might also check whether |q| is |zero| or |one|, but doing so itself leads to non-termination in right-recursive grammars.
 
 As an alternative to repeated syntactic differentiation, we can reinterpret the original (syntactic) regular expression in another semiring as follows:
@@ -1660,13 +1667,9 @@ Higher-arity liftings can be defined via these three.
 \out{(Exercise.)}
 For |b <-- a|, these definitions are not really executable code, since they involve potentially infinite summations, but they serve as specifications for other representations such as finite maps, regular expressions, and tries.
 \begin{theorem}
-For each instance defined in \figref{FunApp}, the following equalities hold:
+For each instance defined in \figref{FunApp}, |one = pure mempty|, and |(*) = liftA2 (<>)|.
 \notefoot{Probe more into the pattern of |single = pure|, |one = single mempty| and |(*) = liftA2 (<>)|.
 Also the relationship between forward and reverse functions and maps.}
-\begin{code}
-one  = pure mempty
-(*)  = liftA2 (<>)
-\end{code}
 \end{theorem}
 \begin{proof}
 Immediate from the instance definitions.
@@ -1888,39 +1891,28 @@ We can do much better, however, generalizing from two dimensions to |n| dimensio
 %else
 Generalize to |n| dimensions:
 %endif long
-\\
-\begin{minipage}[c]{0.5\textwidth}
+\twocol{0.5}{
 \begin{code}
 poly :: (b <-- N^n) -> (b^n -> b)
 poly (F f) (x :: b^n) = bigSum (p :: N^n)  f p * pows x p
-\end{code}
-\end{minipage}
-% \begin{minipage}[b]{0ex}{\rule[1ex]{0.5pt}{0.5in}}\end{minipage}
-\begin{minipage}[c]{0.45\textwidth} % \mathindent1em
+\end{code}}{0.45}{
 \begin{code}
 infixr 8 NOP ^^
 (^^) :: b^n -> N^n -> b
 pows x p = bigProd (i < n) @@ pow (psub x i) (sub p i)
-\end{code}
-\end{minipage}
-\\
+\end{code}}
 For instance, for |n=3|, |pows (x,y,z) ((i,j,k)) = x^i * y^j * z^k|.
 Generalizing further, rather than taking |n| here to be a natural number, let |n| be any type with countable cardinality, and interpret |b^n| and |N^n| as |n -> b| and |n -> N|:
-\\
-\begin{minipage}[c]{0.5\textwidth}
+\twocol{0.5}{
 \begin{code}
 poly :: (b <-- (n -> N)) -> ((n -> b) -> b)
 poly (F f) (x :: n -> b) = bigSumQ (p :: n -> N)  f p * pows x p
-\end{code}
-\end{minipage}
-% \begin{minipage}[b]{0ex}{\rule[1ex]{0.5pt}{0.5in}}\end{minipage}
-\begin{minipage}[c]{0.45\textwidth} % \mathindent1em
+\end{code}}{0.45}{
 \begin{code}
 infixr 8 NOP ^
 (^^) :: (n -> b) -> (n -> N) -> b
 pows x p = bigProd i @@ pow (x i) ((p i))
-\end{code}
-\end{minipage}
+\end{code}}
 
 %if long
 \begin{lemma}[\provedIn{lemma:pows hom}]\lemlabel{pows hom}

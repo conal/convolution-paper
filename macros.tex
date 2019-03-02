@@ -224,6 +224,18 @@
 \color{codesep}{\rule[1ex]{0.8pt}{#1}}
 \end{minipage}}
 
+\nc\twocol[4]{
+\\
+\begin{minipage}[c]{#1\textwidth}
+#2
+\vspace{-2ex}
+\end{minipage}
+\begin{minipage}[c]{#3\textwidth} % \mathindent1em
+#4
+\vspace{-2ex}
+\end{minipage}
+\\
+}
 
 %% For multiple footnotes at a point. Adapted to recognize \notefoot as well
 %% as \footnote. See https://tex.stackexchange.com/a/71347,
@@ -250,3 +262,4 @@
 
 \usepackage{footnotebackref}
 \usepackage{hyperref}
+

@@ -69,7 +69,7 @@
 %format >=> = "\mathbin{>\!\!=\!\!\!>}"
 
 %format ... = "\ldots"
-%format cdots = "\cdots"
+%format ...^ = "\cdots"
 
 %% Add a thin space after lambda
 %format \ = "\lambda\, "

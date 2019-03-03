@@ -1,4 +1,4 @@
-## Generalized Convolution and Efficient Parsing
+## Generalized Convolution and Efficient Language Recognition
 
 A paper submitted to ICFP 2019
 

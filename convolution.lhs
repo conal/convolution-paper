@@ -1131,7 +1131,7 @@ deriv (p  <.>  q) c  == atEps p .> deriv q c <+> deriv p c <.> q
 deriv (star p) c     == star (atEps p) .> deriv p c * star p
 deriv (s .> p) c     == s .> deriv p c
 
-deriv (     []      +-> b) == \c -> zero
+deriv (     []      +-> b) == \ c -> zero
 deriv (c'   :  cs'  +-> b) == c' +-> cs' +-> b
 \end{code}
 \end{spacing}
@@ -1480,7 +1480,7 @@ f <.> g  == bigSum (u,v) u + v +-> f u <.> g v                              -- \
 \end{spacing}
 \vspace{-3ex}
 \noindent
-This last form is the standard definition of one-dimensional, discrete \emph{convolution} \citep[Chapter 6]{Smith1997SEG}.\footnote{Note that this reasoning applies to \emph{any} group (monoid with inverses)}
+This last form is the standard definition of one-dimensional, discrete \emph{convolution} \citep[Chapter 6]{Smith1997SEG}.\footnote{Note that this reasoning applies to \emph{any} group (monoid with inverses).}
 Therefore, just as monoid semiring multiplication generalizes language concatenation (via the predicate/set isomorphism), it also generalizes the usual notion of discrete convolution.
 Moreover, if the domain is a continuous type such as |R| or |C|, we can reinterpret summation as integration, resulting in \emph{continuous} convolution.
 Additionally, for multi-dimensional (discrete or continuous) convolution, we can simply use tuples of scalar indices for |w| and |u|, defining tuple addition and subtraction componentwise.
@@ -1587,7 +1587,7 @@ Fortunately, this expectation can be dropped by generalizing from monoidal combi
 For now, let's call this more general operation ``|lift2 h|''.
 \begin{code}
 lift2 :: Semiring s => (a -> b -> c) -> (a -> s) -> (b -> s) -> (c -> s)
-lift2 h f g = \ w -> bigSum (u,v) h u v +-> f u <.> g v
+lift2 h f g = bigSum (u,v) h u v +-> f u <.> g v
 \end{code}
 We can similarly lift functions of \emph{any} arity:
 %format a1
@@ -1597,11 +1597,11 @@ We can similarly lift functions of \emph{any} arity:
 %format u1
 %format un = u "_n"
 \begin{code}
-liftn :: Semiring s => (a1 -> ... -> an -> b) -> (a1 -> s) -> ... -> (an -> s) -> (b -> s)
-liftn h f1 ... fn = bigSumQ (u1, ..., un) h u1 cdots un +-> f1 u1 <.> cdots <.> fn un
+liftn :: Semiring s => (a1 -> ...^ -> an -> b) -> (a1 -> s) -> ...^ -> (an -> s) -> (b -> s)
+liftn h f1 ...^ fn = bigSumQ (u1, ..., un) h u1 ...^ un +-> f1 u1 <.> ...^ <.> fn un
 \end{code}
 Here we are summing over the set-valued \emph{preimage} of |w| under |h|.
-Now consider two specific cases of |liftn|:
+Now consider two specific instances of |liftn|:
 \begin{code}
 lift1 :: Semiring s => (a -> b) -> (a -> s) -> (b -> s)
 lift1 h f = bigSum u h u +-> f u
@@ -1846,21 +1846,21 @@ Try it out:
 \begin{code}
 
 >>> lop sinL
-x + (-1) % 6 * x^3 + 1 % 120 * x^5 + (-1) % 5040 * x^7 + 1 % 362880 * x^9 + (-1) % 39916800 * x^11 + 1 ...
+x + (-1) % 6 * x^3 + 1 % 120 * x^5 + (-1) % 5040 * x^7 + 1 % 362880 * x^9 + (-1) % 39916800 * x^11 + 1 ...^
 >>> lop cosL
-1 % 1 + (-1) % 2 * x^2 + 1 % 24 * x^4 + (-1) % 720 * x^6 + 1 % 40320 * x^8 + (-1) % 3628800 * x^10 + 1 ...
+1 % 1 + (-1) % 2 * x^2 + 1 % 24 * x^4 + (-1) % 720 * x^6 + 1 % 40320 * x^8 + (-1) % 3628800 * x^10 + 1 ...^
 >>> lop expL
-1 % 1 + x + 1 % 2 * x^2 + 1 % 6 * x^3 + 1 % 24 * x^4 + 1 % 120 * x^5 + 1 % 720 * x^6 + 1 % 5040 * x^7 ...
+1 % 1 + x + 1 % 2 * x^2 + 1 % 6 * x^3 + 1 % 24 * x^4 + 1 % 120 * x^5 + 1 % 720 * x^6 + 1 % 5040 * x^7 ...^
 \end{code}
 As expected, |derivativeL sinL == cosL|, |derivativeL cosL == - sinL|, and |derivativeL expL == expL|:
 \begin{code}
 
 >>> lop (derivativeL sinL)
-1 % 1 + (-1) % 2 * x^2 + 1 % 24 * x^4 + (-1) % 720 * x^6 + 1 % 40320 * x^8 + (-1) % 3628800 * x^10 + 1 ...
+1 % 1 + (-1) % 2 * x^2 + 1 % 24 * x^4 + (-1) % 720 * x^6 + 1 % 40320 * x^8 + (-1) % 3628800 * x^10 + 1 ...^
 >>> lop (derivativeL cosL)
-(-1) % 1 * x + 1 % 6 * x^3 + (-1) % 120 * x^5 + 1 % 5040 * x^7 + (-1) % 362880 * x^9 + 1 % 39916800 * ...
+(-1) % 1 * x + 1 % 6 * x^3 + (-1) % 120 * x^5 + 1 % 5040 * x^7 + (-1) % 362880 * x^9 + 1 % 39916800 * ...^
 >>> lop (derivativeL expL)
-1 % 1 + x + 1 % 2 * x^2 + 1 % 6 * x^3 + 1 % 24 * x^4 + 1 % 120 * x^5 + 1 % 720 * x^6 + 1 % 5040 * x^7 ...
+1 % 1 + x + 1 % 2 * x^2 + 1 % 6 * x^3 + 1 % 24 * x^4 + 1 % 120 * x^5 + 1 % 720 * x^6 + 1 % 5040 * x^7 ...^
 
 \end{code}
 %}

@@ -37,10 +37,14 @@ boxBlur :: Int -> Arr Double
 boxBlur n = (fmap.fmap) (/ fromIntegral (n*n)) ((replicate n . replicate n) 1)
 
 sharpen :: Arr Double
-sharpen = [[0,-1,0],[-1,5,-1],[0,-1,0]]
+sharpen = [[ 0,-1, 0]
+          ,[-1, 5,-1]
+          ,[ 0,-1, 0]]
 
 edgy :: Arr Double
-edgy = [[-1,-1,-1],[-1,8,-1],[-1,-1,-1]]
+edgy = [[-1,-1,-1]
+       ,[-1, 8,-1]
+       ,[-1,-1,-1]]
 
 {--------------------------------------------------------------------
     Conversion between [[b]] and DynamicImage (JuicyPixels)

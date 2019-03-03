@@ -21,6 +21,9 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
     *   Remove author & copyright info from package.yaml, say via sed.
     *   Check that the README instructions work in isolation.
         Include how to get `stack`.
+    *   I got all the way to a working tar ball but then noticed that it contained my user name in file ownership.
+        There's a way around, but I'm not confident that the committee members will be able to access the files, including the extended pdf.
+        Drop it.
 *   Polynomials:
     *   Univariate and multivariate. [done]
     *   Power series: represent via list instead of stream. [done]

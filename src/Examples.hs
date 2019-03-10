@@ -43,7 +43,7 @@ singles ws = sum [single w | w <- S.elems ws]
 
 infixr 2 *+->
 (*+->) :: (HasSingle a b x, Additive x, Semiring b) => Set a -> b -> x
-ws *+-> b = sum [single w | w <- S.elems ws]
+ws *+-> b = sum [w +-> b | w <- S.elems ws]
 
 -- char, letterL, letterU, letter, digit :: (HasSingle String b x, Semiring x, Semiring b) => x
 -- char    = sumSingle [' ' .. '~']

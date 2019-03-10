@@ -28,6 +28,7 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
     *   Univariate and multivariate. [done]
     *   Power series: represent via list instead of stream. [done]
     *   Prettier negative coefficients
+    *   Correctness theorem and proof for polynomial integration and differentiation.
 *   Image convolution example
 *   Reduce page count in the ICFP submission. Some strategies:
     *   Remove polynomials (and image convolution)

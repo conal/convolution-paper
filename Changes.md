@@ -5,8 +5,7 @@ title: Description of changes
 
 ## Submitted to ICFP (March 1, 2019)
 
-*   Submitted version: [Git commit](https://github.com/conal/convolution-paper/commit/65c5fd3a08172b19e35eddda9f07c56fd2fc2f48) and [PDF](https://github.com/conal/convolution-paper/blob/indexable-type/icfp19-paper46-submitted.pdf).
-    **[TO DO: merge branches, and fix link.]**
+*   Submitted version: [Git commit](https://github.com/conal/convolution-paper/commit/65c5fd3a08172b19e35eddda9f07c56fd2fc2f48) and [PDF](https://github.com/conal/convolution-paper/blob/master/icfp19-paper46-submitted.pdf).
 
 ## Updates
 

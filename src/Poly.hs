@@ -255,6 +255,14 @@ showSum  = showIter 6 " + " isZero
 showProd :: (Show b, DetectableOne b) => Int -> [b] -> ShowS
 showProd = showIter 7 " * " isOne
 
+-- -- Cleverer showSum that uses subtraction for negative coefficients
+-- showSum' :: (Show b, DetectableZero b) => Int -> [b] -> ShowS
+-- showSum' _ [] = showString "0"  -- I don't think we'll get this case
+-- showSum' p (b0:bs0) = showsPrec 6 b0 . compose (term <$> bs0)
+--  where
+--    term | b < 0 = showString (" - ") . showsPrec 6 ..
+
+
 {--------------------------------------------------------------------
     Syntactic representations
 --------------------------------------------------------------------}

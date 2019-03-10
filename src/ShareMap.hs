@@ -31,12 +31,21 @@ instance Ord k => Monoid (ShareMap k v) where
 empty :: ShareMap k v
 empty = SM M.empty M.empty
 
+instance (Ord k, Additive v) => Indexable k v (ShareMap k v) where
+  SM reps m ! k = case M.lookup k reps of
+                    Nothing -> zero
+                    Just k' -> (snd <$> m) ! k'  -- split second map
+
 infixr 2 *->
 (*->) :: Set k -> v -> ShareMap k v
 ks *-> v = case S.minView ks of
              Nothing -> empty
              Just (k,_) -> SM (M.fromDistinctAscList ((,k) <$> S.toAscList ks))
                               (M.singleton k (ks,v))
+
+-- TODO: move (*->) into HasSingle with defaults.
+instance (Ord k, Additive v) => HasSingle k v (ShareMap k v) where
+  k +-> v = S.singleton k *-> v
 
 instance Functor (ShareMap k) where
   fmap f (SM reps m) = SM reps (fmap (second f) m)

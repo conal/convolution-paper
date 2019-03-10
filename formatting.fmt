@@ -22,6 +22,9 @@
 
 %% hack: add missing space, e.g., before "{" in data type decl
 %format SPC = "\ "
+%format SPC2 = SPC SPC
+%format SPC4 = SPC2 SPC2
+%format SPC8 = SPC4 SPC4
 
 %format mempty = "\varepsilon"
 %format <> = " \diamond "
@@ -73,3 +76,8 @@
 
 %% Add a thin space after lambda
 %format \ = "\lambda\, "
+
+%% Treat exists like forall, with following period showing as ".", not "\circ"
+%format exists(x) = "\exists " x "\hsforall "
+%% Add a space following the period used by forall and exists
+%format period_   = ".\:"

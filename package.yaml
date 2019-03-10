@@ -30,6 +30,7 @@ default-extensions:
   - QuantifiedConstraints
   - RankNTypes
   - StandaloneDeriving
+  - TupleSections
   - TypeApplications
   - TypeFamilies
   - TypeOperators

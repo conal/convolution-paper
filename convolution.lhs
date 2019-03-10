@@ -229,10 +229,9 @@ Image convolution also falls out as a special case.
 %format bigunion (lim) (body) = "\bigunion_{" lim "}{" body "}"
 %format `union` = "\cup"
 %format union = (`union`)
-%format `intersection` = "\cap"
-%format intersection = (`intersection`)
+%format `intersect` = "\cap"
+%format intersect = (`intersect`)
 %format star p = "\closure{"p"}"
-%format exists = "\exists"
 
 %format ^ = "^"
 %% Handy alternative for complex exponent
@@ -1147,7 +1146,7 @@ type instance Key (Map   a) = a
 \end{code}
 Generalizing in this way (with functions as a special case) enables convenient memoization, which has been found to be quite useful in practice for derivative-based parsing \citep{Might2010YaccID}.
 A few generalizations to the equations in \lemref{deriv [c] -> b} suffice to generalize from |c -> ([c] -> b)| to |h ([c] -> b)| \seeproof{lemma:deriv [c] -> b}.
-We must assume that |Key h = c| and that |h| is an ``additive functor'', i.e., |forall b. NOP Additive b => Additive (h b)| with |(!)| for |h| being an additive monoid homomorphism.
+We must assume that |Key h = c| and that |h| is an ``additive functor'', i.e., |forall b. Additive b => Additive (h b)| with |(!)| for |h| being an additive monoid homomorphism.
 %if long
 \begin{spacing}{1.3}
 \begin{code}
@@ -1301,8 +1300,7 @@ Given the definitions in \figrefdef{Cofree}{List tries denoting |[c] -> b|}{
 infix 1 :<
 data Cofree h b = b :< h (Cofree h b) deriving Functor
 
-instance Indexable (Cofree h b) h => Indexable b (Cofree h) where
-  type instance Key (Cofree h) = [Key h]
+instance Indexable c (Cofree h b) (h (Cofree h b)) => Indexable [c] b (Cofree h b) where
   (!) (b :< dp) = b <: (!) . (!) dp -- |(b :< dp) ! w = case w of { [] -> b ; c:cs -> dp ! c ! cs }|
 
 instance (Additive (h (Cofree h b)), Additive b) => Additive (Cofree h b) where
@@ -1629,11 +1627,11 @@ newtype s <-- a = F (a -> s)
 The use of |s <-- a| as an alternative to |a -> s| allows us to give instances for both and to stay within Haskell's type system (and ability to infer types via first-order unification).
 
 With this change, we can replace the specialized |liftn| operations with standard ones.
-An enhanced version of the |Functor| and |Applicative| classes (similar to those by \citet{Kidney2017CA}) appear in \figrefdef{FunApp}{|Functor| and |Applicative| classes and some instances}{
+An enhanced version of the |Functor|, |Applicative|, and |Monad| classes (similar to those by \citet{Kidney2017CA}) appear in \figrefdef{FunApp}{|Functor| and |Applicative| classes and some instances}{
 \begin{code}
 class FunctorC f where
   type Ok f a :: Constraint
-  type Ok f a = ()
+  type Ok f a = ()  -- default
   fmapC :: (Ok f a, Ok f b) => (a -> b) -> f a -> f b
 
 class FunctorC f => ApplicativeC f where
@@ -1643,14 +1641,23 @@ class FunctorC f => ApplicativeC f where
 infixl 1 >>==
 class ApplicativeC f => MonadC f where
   (>>==) :: (Ok f a, Ok f b) => f a -> (a -> f b) -> f b
+NOP
 
-instance Semiring b => Functor ((<--) b) where
-  type Ok ((<--) b) a = Eq a
-  fmap h (F f) = bigSum u h u +-> f u
+instance Functor ((->) a) where                instance Semiring b => Functor ((<--) b) where                              
+                                                 type Ok ((<--) b) a = Eq a                                                
+  fmap h f = \ a -> h (f a)                      fmap h (F f)  = bigSum u h u +-> f u                                      
+                                                               = F (\ z -> bigSumQ (u BR h u == z) f u)                    
+                                                                                                                           
+instance Applicative ((->) a) where     SPC8   instance Semiring b => Applicative ((<--) b) where                          
+  pure b = \ a -> b                              pure a = single a                                                         
+  liftA2 h f g = \ a -> h (f a) (g a)            liftA2 h (F f) (F g)  = bigSum (u,v) h u v +-> f u <.> g v                
+                                                                       = F (\ z -> bigSumQ (u,v BR h u v == z) f u <.> g v)
 
-instance Semiring b => Applicative ((<--) b) where
-  pure a = single a
-  liftA2 h (F f) (F g) = bigSum (u,v) h u v +-> f u <.> g v
+instance Monad ((->) a) where
+  m >>= f = \ a -> f (m a) a
+
+instance Ord a => Functor      (Map a) where ...
+instance Ord a => Applicative  (Map a) where ...
 
 newtype Map' b a = M (Map a b)
 
@@ -1662,6 +1669,9 @@ instance DetectableZero b => ApplicativeC (Map' b) where
   pureC a = single a
   liftA2C h (M p) (M q) = bigSumKeys (a <# M.keys p BR b <# M.keys q) h a b +-> (p!a) <.> (q!b)
 \end{code}
+
+  %% f * g  = bigSum (u,v) u <> v +-> f u <.> g v
+  %%        = \ w -> bigSumQ (u,v BR u <> v == w) f u <.> g v
 \vspace{-3ex}
 }, along with instances for functions and finite maps.
 Other representations would need similar reversal of type arguments.
@@ -1679,8 +1689,9 @@ Also the relationship between forward and reverse functions and maps.}
 Immediate from the instance definitions.
 \end{proof}
 
-Given the type distinction between |a -> b| and |b <-- a|, let's now reconsider the |Semiring| instance for functions in \figref{monoid semiring}.
-There is an alternative choice that is in some ways more compelling, as shown in \figrefdef{-> and <-- semirings}{The |a -> b| and |b <-- a| semirings}{
+Given the type distinction between |a -> b| and |b <-- a|, let's now reconsider the |Semiring| instances for functions in \figref{monoid semiring} and for sets in \secref{Languages and the Monoid Semiring}.
+Each has an alternative choice that is in some ways more compelling, as shown in \figrefdef{-> and <-- semirings}{The |a -> b| and |b <-- a| semirings}{
+%format Pow'
 \begin{code}
 instance Semiring b => Semiring (a -> b) where
   one = pure one    -- i.e., |one = \ a -> one|
@@ -1691,7 +1702,18 @@ newtype b <-- a = F (a -> b) deriving (Additive, HasSingle b, LeftSemimodule b, 
 instance (Semiring b, Monoid a) => Semiring (b <-- a) where
   one = pure mempty
   (*) = liftA2 (<>)
+
+instance Semiring (Pow a) where
+  one = set (a | True)
+  (*) = `intersect`
+
+newtype Pow' a = P (Pow a) deriving (Additive, HasSingle b, LeftSemimodule b, Indexable a Bool)
+
+instance Semiring (Pow' a) where
+  one = pure mempty  -- |one = set mempty = single empty = value 1|
+  (*) = liftA2 (<>)  -- |p * q = set (u <> v # u <# p && v <# q)|
 \end{code}
+\vspace{-4ex}
 }, along with a the old |a -> b| instance reexpressed and reassigned to |b <-- a|.
 Just as the |Additive| and |Semiring| instances for |Bool <-- a| give us four important languages operations (union, concatenation and their identities), now the |Semiring (a -> Bool)| gives us two more: the \emph{intersection} of languages and its identity (the set of all ``strings'').
 These two semirings share several instances in common, expressed in \figref{-> and <-- semirings} via GHC-Haskell's \verb|GeneralizedNewtypeDeriving| language extension (present since GHC 6.8.1 and later made safe by \citet{Breitner2016SZC}).
@@ -1707,6 +1729,15 @@ The Fourier transform is a semiring and left semimodule homomorphism from |b <- 
 This theorem is more often expressed by saying that (a) the Fourier transform is linear (i.e., an additive-monoid and left-semimodule homomorphism), and (b) the Fourier transform of a convolution (i.e., |(*)| on |b <-- a|) of two functions is the pointwise product (i.e., |(*)| on |a -> b|) of the Fourier transforms of the two functions.
 The latter property is known as ``the convolution theorem'' \citep[Chapter 6]{Bracewell2000Fourier}.
 
+There is also an important relationship between |a -> b| and |Pow a <-- b|.
+Given a function |f :: a -> b|, the \emph{preimage} under \emph{f} of a codomain value |b| is the set of all values that get mapped to |b|:
+\begin{code}
+pre :: (a -> b) -> (Pow a <-- b)
+pre f = F (\ b -> set (a | f a == b))
+\end{code}
+\begin{theorem}[\provedIn{theorem:pre hom}]\thmlabel{pre hom}
+The |pre| operation is a |Functor| and |Applicative| homomorphism.
+\end{theorem}
 
 \sectionl{The Free Semimodule Monad}
 
@@ -1832,6 +1863,18 @@ derivativeL (Poly1 (_  :   bs0)  ) = Poly1 (go 1 bs0)
     go _ []        = []
     go n (b : bs)  = n * b : go (n+1) bs
 \end{code}
+%if False
+\begin{theorem}
+The |integralL| and |derivativeL| definitions above correctly implement integration and differentiation, i.e.,
+\begin{code}
+poly1 (integralL p) == integral (poly1 p)
+poly1 (derivativeL p) == derivative (poly1 p)
+\end{code}
+\end{theorem}
+\begin{proof}~
+\workingHere
+\end{proof}
+%endif
 Then define |sin|, |cos|, and |exp| via simple ordinary differential equations (ODEs):
 \begin{code}
 sinL, cosL, expL :: Poly1 [Rational]
@@ -2714,6 +2757,43 @@ i.e.,
 ==  \ v -> ds ! c ! (cs' <> v)                                     -- |(!)| on |Cofree h|
 
 \end{code}
+
+\subsection{\thmref{pre hom}}\prooflabel{theorem:pre hom}
+
+\begin{spacing}{1.2}
+\begin{code}
+
+    pre (pure b)
+==  pre (\ a -> b)                                                               -- |pure| on |a -> b|
+==  F (\ b' -> set (a # b == b'))                                                -- |pre| definition
+==  F (\ b' -> if b' == b then set (a # True) else set (a # False))              -- case split
+==  F (\ b' -> if b' == b then one else zero)                                    -- |one| and |zero| for |Pow a| (revised in \figref{-> and <-- semirings})
+==  b +-> 1                                                                      -- |(+->)| definition
+==  pure b                                                                       -- |pure| for |Pow a <-- b|
+
+    pre (fmap h f)
+==  pre (\ a -> h (f a))                                                         -- |fmap| on |a -> b|
+==  F (\ c -> set (a # h (f a) == c))                                            -- |pre| definition
+==  F (\ c -> set (a # exists b. f a == b && h b == c))                          -- intermediate variable
+==  F (\ c -> bigUnion (b BR h b == c) @@ set (a # f a == b))                    -- logic/sets
+==  F (\ c -> bigUnion (b BR h b == c) @@ pre f b)                               -- |pre| definition
+==  F (\ c -> bigSum (b BR h b == c) @@ pre f b)                                 -- |(+)| on |Pow a|
+==  fmap h (pre f)                                                               -- |fmap| on |Pow a <-- b|
+
+    pre (liftA2 h f g)
+==  pre (\ a -> h (f a) (g a))                                                   -- |liftA2| on |a -> b|
+==  \ c -> { a | h (f a) (g a) == c }                                            -- |pre| definition
+==  \ c -> { a | exists x y. x == f a && y == g a && h x y == c }                -- intermediate variables
+==  \ c -> { a | exists x y. a <# pre f x && a <# pre g y && h x y == c }        -- |pre| definition (twice)
+==  \ c -> { a | exists x y. a <# (pre f x `intersect` pre g y) && h x y == c }  -- |`intersect`| definition
+==  bigUnion (x,y) h x y +-> pre f x `intersect` pre g y                         -- logic/sets
+==  bigUnion (x,y) h x y +-> pre f x * pre g y                                   -- |(*)| on |Pow a| (revised in \figref{-> and <-- semirings})
+==  bigSum (x,y) h x y +-> pre f x * pre g y                                     -- |(+)| on |Pow a <-- b|
+==  liftA2 h (pre f) (pre g)
+
+\end{code}
+\end{spacing}
+
 
 \subsection{\thmref{standard FunApp}}\prooflabel{theorem:standard FunApp}
 

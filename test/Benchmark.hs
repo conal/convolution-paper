@@ -14,6 +14,7 @@ import Misc (cats)
 import Semi
 import RegExp
 import Cofree
+import ShareMap
 
 import Examples
 
@@ -52,7 +53,7 @@ main =
  where
    config = defaultConfig
      { 
-       timeLimit = 5 -- 0
+       timeLimit = 1 -- 5
      , reportFile = Just "test/stats.html"
      }
 
@@ -69,7 +70,8 @@ group groupName example omit str =
 
     , style @(Cofree  ((->)   Char) O) "Cofree:Function"
     , style @(Cofree  (Map    Char) O) "Cofree:Map"
-    -- , style @(Cofree  CharMap       O) "Cofree:IntMap"
+    , style @(Cofree  CharMap       O) "Cofree:IntMap"
+    , style @(Cofree  (ShareMap Char) O) "Cofree:ShareMap"
 
     ]
  where

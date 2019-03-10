@@ -229,8 +229,8 @@ Image convolution also falls out as a special case.
 %format bigunion (lim) (body) = "\bigunion_{" lim "}{" body "}"
 %format `union` = "\cup"
 %format union = (`union`)
-%format `intersect` = "\cap"
-%format intersect = (`intersect`)
+%format `intersection` = "\cap"
+%format intersection = (`intersection`)
 %format star p = "\closure{"p"}"
 
 %format ^ = "^"
@@ -1705,7 +1705,7 @@ instance (Semiring b, Monoid a) => Semiring (b <-- a) where
 
 instance Semiring (Pow a) where
   one = set (a | True)
-  (*) = `intersect`
+  (*) = `intersection`
 
 newtype Pow' a = P (Pow a) deriving (Additive, HasSingle b, LeftSemimodule b, Indexable a Bool)
 
@@ -2764,31 +2764,31 @@ i.e.,
 \begin{code}
 
     pre (pure b)
-==  pre (\ a -> b)                                                               -- |pure| on |a -> b|
-==  F (\ b' -> set (a # b == b'))                                                -- |pre| definition
-==  F (\ b' -> if b' == b then set (a # True) else set (a # False))              -- case split
-==  F (\ b' -> if b' == b then one else zero)                                    -- |one| and |zero| for |Pow a| (revised in \figref{-> and <-- semirings})
-==  b +-> 1                                                                      -- |(+->)| definition
-==  pure b                                                                       -- |pure| for |Pow a <-- b|
+==  pre (\ a -> b)                                                                  -- |pure| on |a -> b|
+==  F (\ b' -> set (a # b == b'))                                                   -- |pre| definition
+==  F (\ b' -> if b' == b then set (a # True) else set (a # False))                 -- case split
+==  F (\ b' -> if b' == b then one else zero)                                       -- |one| and |zero| for |Pow a| (revised in \figref{-> and <-- semirings})
+==  b +-> 1                                                                         -- |(+->)| definition
+==  pure b                                                                          -- |pure| for |Pow a <-- b|
 
     pre (fmap h f)
-==  pre (\ a -> h (f a))                                                         -- |fmap| on |a -> b|
-==  F (\ c -> set (a # h (f a) == c))                                            -- |pre| definition
-==  F (\ c -> set (a # exists b. f a == b && h b == c))                          -- intermediate variable
-==  F (\ c -> bigUnion (b BR h b == c) @@ set (a # f a == b))                    -- logic/sets
-==  F (\ c -> bigUnion (b BR h b == c) @@ pre f b)                               -- |pre| definition
-==  F (\ c -> bigSum (b BR h b == c) @@ pre f b)                                 -- |(+)| on |Pow a|
-==  fmap h (pre f)                                                               -- |fmap| on |Pow a <-- b|
+==  pre (\ a -> h (f a))                                                            -- |fmap| on |a -> b|
+==  F (\ c -> set (a # h (f a) == c))                                               -- |pre| definition
+==  F (\ c -> set (a # exists b. f a == b && h b == c))                             -- intermediate variable
+==  F (\ c -> bigUnion (b BR h b == c) @@ set (a # f a == b))                       -- logic/sets
+==  F (\ c -> bigUnion (b BR h b == c) @@ pre f b)                                  -- |pre| definition
+==  F (\ c -> bigSum (b BR h b == c) @@ pre f b)                                    -- |(+)| on |Pow a|
+==  fmap h (pre f)                                                                  -- |fmap| on |Pow a <-- b|
 
     pre (liftA2 h f g)
-==  pre (\ a -> h (f a) (g a))                                                   -- |liftA2| on |a -> b|
-==  \ c -> { a | h (f a) (g a) == c }                                            -- |pre| definition
-==  \ c -> { a | exists x y. x == f a && y == g a && h x y == c }                -- intermediate variables
-==  \ c -> { a | exists x y. a <# pre f x && a <# pre g y && h x y == c }        -- |pre| definition (twice)
-==  \ c -> { a | exists x y. a <# (pre f x `intersect` pre g y) && h x y == c }  -- |`intersect`| definition
-==  bigUnion (x,y) h x y +-> pre f x `intersect` pre g y                         -- logic/sets
-==  bigUnion (x,y) h x y +-> pre f x * pre g y                                   -- |(*)| on |Pow a| (revised in \figref{-> and <-- semirings})
-==  bigSum (x,y) h x y +-> pre f x * pre g y                                     -- |(+)| on |Pow a <-- b|
+==  pre (\ a -> h (f a) (g a))                                                      -- |liftA2| on |a -> b|
+==  \ c -> { a | h (f a) (g a) == c }                                               -- |pre| definition
+==  \ c -> { a | exists x y. x == f a && y == g a && h x y == c }                   -- intermediate variables
+==  \ c -> { a | exists x y. a <# pre f x && a <# pre g y && h x y == c }           -- |pre| definition (twice)
+==  \ c -> { a | exists x y. a <# (pre f x `intersection` pre g y) && h x y == c }  -- |`intersection`| definition
+==  bigUnion (x,y) h x y +-> pre f x `intersection` pre g y                         -- logic/sets
+==  bigUnion (x,y) h x y +-> pre f x * pre g y                                      -- |(*)| on |Pow a| (revised in \figref{-> and <-- semirings})
+==  bigSum (x,y) h x y +-> pre f x * pre g y                                        -- |(+)| on |Pow a <-- b|
 ==  liftA2 h (pre f) (pre g)
 
 \end{code}

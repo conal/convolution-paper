@@ -31,6 +31,8 @@ instance Ord k => Monoid (ShareMap k v) where
 empty :: ShareMap k v
 empty = SM M.empty M.empty
 
+type instance Key (ShareMap k) = k
+
 instance (Ord k, Additive v) => Indexable k v (ShareMap k v) where
   SM reps m ! k = case M.lookup k reps of
                     Nothing -> zero
@@ -56,14 +58,16 @@ type Chunk k v = (Set k, v)
 type Chunks k v = [Chunk k v] -- disjoint k subsets
 
 addChunks :: (Ord k, Additive v) => Chunks k v -> Chunks k v -> Chunks k v
-addChunks p q =
-  [ (f ks, g x)
-  | (ks,x) <- p
-  , (f,g) <- ((S.\\ ksZ), id) : [((`S.intersection` ks'), (<+> y)) | (ks',y) <- q]
-                                -- fmap (S.intersection ks *** (<+>) v) q
-  ]
+addChunks p p' =
+     [ (ks  `S.difference` support', x ) | (ks ,x ) <- p ]
+  ++ [ (ks' `S.difference` support , x') | (ks',x') <- p']
+  ++ [ (ks `S.intersection` ks', x <+> x') | (ks,x) <- p, (ks',x') <- p' ]
  where
-   ksZ = S.unions (fst <$> p)
+   support  = chunksSupport p
+   support' = chunksSupport p'
+
+chunksSupport :: Ord k => Chunks k v -> Set k
+chunksSupport = S.unions . map fst
 
 -- data ShareMap k v = SM (Map k k) (Map k (Set k, v)) deriving Show
 
@@ -80,3 +84,26 @@ shareMap (filter (not . null . fst) -> chunks) = foldMap h (chunks `zip` maxes)
 instance (Ord k, Additive v) => Additive (ShareMap k v) where
   zero = SM M.empty M.empty
   SM _ (M.elems -> p) <+> SM _ (M.elems -> q) = shareMap (p `addChunks` q)
+
+-- >>> let a2 = 'a' +-> 2 :: ShareMap Char Z
+-- >>> a2
+-- SM (fromList [('a','a')]) (fromList [('a',(fromList "a",2))])
+-- >>> let b3 = 'b' +-> 3 :: ShareMap Char Z
+-- >>> b3
+-- SM (fromList [('b','b')]) (fromList [('b',(fromList "b",3))])
+-- >>> a2 <+> b3
+-- SM (fromList []) (fromList [])
+-- >>> a2 <+> a2
+-- SM (fromList [('a','a')]) (fromList [('a',(fromList "a",4))])
+-- >>> b3 <+> b3
+-- SM (fromList [('b','b')]) (fromList [('b',(fromList "b",6))])
+-- 
+-- >>> let a2c = [(S.fromList "a",2)] :: Chunks Char Z
+-- >>> let b3c = [(S.fromList "b",3)] :: Chunks Char Z
+-- >>> (a2c,b3c)
+-- ([(fromList "a",2)],[(fromList "b",3)])
+-- >>> addChunks a2c b3c
+-- [(fromList "",2),(fromList "",5)]
+
+-- TODO: Fix, probably adding missing explicit/implicit pairs
+-- Add support :: ShareMap k v -> Set k

@@ -61,9 +61,7 @@ $(icfp).tex: $(paper).lhs $(texdeps)
 	lhs2tex --set=icfp --set=anonymous -o $*.tex $(paper).lhs
 
 $(long).tex: $(paper).lhs $(texdeps)
-	lhs2tex --set=long -o $*.tex $(paper).lhs
-
-#  --set=draft
+	lhs2tex --set=long --set=draft -o $*.tex $(paper).lhs
 
 $(long-anon).tex: $(paper).lhs $(texdeps)
 	lhs2tex --set=long --set=anonymous -o $*.tex $(paper).lhs

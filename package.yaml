@@ -66,6 +66,7 @@ library:
     - RegExp
     - Cofree
     - MMap
+    - ShareMap
     - Poly
     - Examples
 

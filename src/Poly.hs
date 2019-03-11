@@ -25,12 +25,19 @@ newtype Poly1 z = Poly1 z deriving
   ( Additive, Semiring, Indexable n b, Listable n b, HasSingle n b
   , Num )  -- , Functor
 
-instance ( DetectableZero b, DetectableOne b, Show b, Listable n b z
+instance ( Show b, Ord b, Num b, D01 b, Listable n b z
          , Show n, DetectableZero n, DetectableOne n )
       => Show (Poly1 z) where
   showsPrec d (Poly1 m) = showsPrec d (Terms (term <$> toList m))
    where
      term (i,b) = Term b (Pow (Name "x") i)
+
+-- instance ( DetectableZero b, DetectableOne b, Show b, Listable n b z
+--          , Show n, DetectableZero n, DetectableOne n )
+--       => Show (Poly1 z) where
+--   showsPrec d (Poly1 m) = showsPrec d (Terms (term <$> toList m))
+--    where
+--      term (i,b) = Term b (Pow (Name "x") i)
 
 type P1 b = Poly1 (Map N b)
 
@@ -162,9 +169,12 @@ lop :: Show a => a -> IO ()
 lop = putStrLn . (++ " ...") . take 102 . show
 
 -- >>> lop sinL
--- x + (-1) % 6 * x^3 + 1 % 120 * x^5 + (-1) % 5040 * x^7 + 1 % 362880 * x^9 + (-1) % 39916800 * x^11 + 1 ...
+-- x - 1 % 6 * x^3 + 1 % 120 * x^5 - 1 % 5040 * x^7 + 1 % 362880 * x^9 - 1 % 39916800 * x^11 + 1 % 622702 ...
+
+-- >>> lop sinL
+-- x - 1 % 6 * x^3 + 1 % 120 * x^5 - 1 % 5040 * x^7 + 1 % 362880 * x^9 - 1 % 39916800 * x^11 + 1 % 622702 ...
 -- >>> lop cosL
--- 1 % 1 + (-1) % 2 * x^2 + 1 % 24 * x^4 + (-1) % 720 * x^6 + 1 % 40320 * x^8 + (-1) % 3628800 * x^10 + 1 ...
+-- 1 % 1 - 1 % 2 * x^2 + 1 % 24 * x^4 - 1 % 720 * x^6 + 1 % 40320 * x^8 - 1 % 3628800 * x^10 + 1 % 479001 ...
 -- >>> lop expL
 -- 1 % 1 + x + 1 % 2 * x^2 + 1 % 6 * x^3 + 1 % 24 * x^4 + 1 % 120 * x^5 + 1 % 720 * x^6 + 1 % 5040 * x^7  ...
 
@@ -179,7 +189,7 @@ lop = putStrLn . (++ " ...") . take 102 . show
 -- 2 % 1 + 2 % 1 * x + x^2 + 1 % 3 * x^3 + 1 % 12 * x^4 + 1 % 60 * x^5 + 1 % 360 * x^6 + 1 % 2520 * x^7 + ...
 
 -- >>> lop (sinL * cosL)
--- x + (-2) % 3 * x^3 + 2 % 15 * x^5 + (-4) % 315 * x^7 + 2 % 2835 * x^9 + (-4) % 155925 * x^11 + 4 % 608 ...
+-- x - 2 % 3 * x^3 + 2 % 15 * x^5 - 4 % 315 * x^7 + 2 % 2835 * x^9 - 4 % 155925 * x^11 + 4 % 6081075 * x^ ...
 
 -- TODO: multivariate power series
 -- Can I generalize Poly1 and PolyM?
@@ -192,11 +202,17 @@ lop = putStrLn . (++ " ...") . take 102 . show
 newtype PolyM b = PolyM { unPolyM :: Map (Map Name N) b } deriving
   (Additive, Semiring, Functor, Indexable (Map Name N) b, HasSingle (Map Name N) b)
 
-instance (DetectableZero b, DetectableOne b, Show b) => Show (PolyM b) where
+instance (Show b, Ord b, Num b, D01 b) => Show (PolyM b) where
   showsPrec d (PolyM m) =
     showsPrec d (Terms (term <$> sortOn (M.keys . fst) (M.toDescList m)))
    where
      term (p,b) = Term b (Pows p)
+
+-- instance (DetectableZero b, DetectableOne b, Show b) => Show (PolyM b) where
+--   showsPrec d (PolyM m) =
+--     showsPrec d (Terms (term <$> sortOn (M.keys . fst) (M.toDescList m)))
+--    where
+--      term (p,b) = Term b (Pows p)
 
 -- TODO: improve the sorting criterion
 
@@ -255,12 +271,17 @@ showSum  = showIter 6 " + " isZero
 showProd :: (Show b, DetectableOne b) => Int -> [b] -> ShowS
 showProd = showIter 7 " * " isOne
 
--- -- Cleverer showSum that uses subtraction for negative coefficients
--- showSum' :: (Show b, DetectableZero b) => Int -> [b] -> ShowS
--- showSum' _ [] = showString "0"  -- I don't think we'll get this case
--- showSum' p (b0:bs0) = showsPrec 6 b0 . compose (term <$> bs0)
---  where
---    term | b < 0 = showString (" - ") . showsPrec 6 ..
+-- Cleverer showSum that uses subtraction for negative coefficients
+showSum' :: (Show x, Show b, Ord b, Num b, D01 b, D01 x) 
+         => Int -> [Term b x] -> ShowS
+showSum' p terms = go (filter (not . isZero) terms)
+ where
+   go [] = showString "0"  -- I don't think we'll get this case
+   go (b0:bs0) = showParen (p > 6) $
+                 showsPrec 6 b0 . compose (term <$> bs0)
+    where
+      term (Term b x) | b < 0 = showString (" - ") . showsPrec 6 (Term (-b) x)
+                      | otherwise = showString (" + ") . showsPrec 6 (Term b x)
 
 
 {--------------------------------------------------------------------
@@ -330,5 +351,9 @@ instance (Show b, Show x, DetectableOne x, DetectableZero b, DetectableOne b)
 
 data Terms b = Terms [b]
 
-instance (Show b, DetectableZero b) => Show (Terms b) where
-  showsPrec d (Terms bs) = showSum d bs
+-- instance (Show b, DetectableZero b) => Show (Terms b) where
+--   showsPrec d (Terms bs) = showSum d bs
+
+instance (Show b, Show x, Ord b, Num b, D01 b, D01 x)
+      => Show (Terms (Term b x)) where
+  showsPrec d (Terms bs) = showSum' d bs

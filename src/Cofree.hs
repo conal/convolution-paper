@@ -19,6 +19,7 @@ import Semi
 
 #ifdef EXAMPLES
 import Examples
+import ShareMap (ShareMap)
 #endif
 
 -- #include "GenInstances.inc"
@@ -107,9 +108,9 @@ instance (Functor h, Additive (h (Cofree h b)), DetectableZero b, DetectableZero
   isOne (a :< dp) = isOne a && isZero dp
 
 -- | Trim to a finite depth, for examination.
-trimT :: (Functor h, Additive (h (Cofree h b)), Additive b, DetectableZero b) => Int -> Cofree h b -> Cofree h b
-trimT 0 _ = zero
-trimT n (c :< ts) = c :< fmap (trimT (n-1)) ts
+trim :: (Functor h, Additive (h (Cofree h b)), Additive b, DetectableZero b) => Int -> Cofree h b -> Cofree h b
+trim 0 _ = zero
+trim n (c :< ts) = c :< fmap (trim (n-1)) ts
 
 #ifdef EXAMPLES
 
@@ -117,7 +118,17 @@ trimT n (c :< ts) = c :< fmap (trimT (n-1)) ts
     Examples
 --------------------------------------------------------------------}
 
-type L  = Cofree (Map Char) Bool
+type L = Cofree (Map Char) Bool
+
+type LS = Cofree (ShareMap Char) Bool
+
+-- >>> pig :: LS
+-- False :< [('p',False :< [('i',False :< [('g',True :< [])])])]
+-- >>> pink :: LS
+-- False :< [('p',False :< [('i',False :< [('n',False :< [('k',True :< [])])])])]
+-- >>> pp :: LS
+-- False :< [('p',False :< [('i',False :< [('g',True :< []),('n',False :< [('k',True :< [])])])])]
+
 
 -- >>> pig :: L
 -- False :< [('p',False :< [('i',False :< [('g',True :< [])])])]

@@ -20,6 +20,7 @@ import Misc   (cats)
 import Semi
 import RegExp (RegExp)
 import Cofree  (Cofree)
+import ShareMap (ShareMap)
 
 import Examples
 
@@ -31,15 +32,17 @@ basicTests :: TestTree
 basicTests = testGroup "Various representations"
   [ testGroup "" []
 
-  , tests @(String  ->          N) "Function"
+  -- , tests @(String  ->              N) "Function"
 
-  , tests @(RegExp ((->) Char)  N) "RegExpFun"
-  , tests @(RegExp (Map  Char)  N) "RegExpMap"
-  , tests @(RegExp CharMap      N) "RegExpIntMap"
+  -- , tests @(RegExp ((->) Char)      N) "RegExpFun"
+  -- , tests @(RegExp (Map  Char)      N) "RegExpMap"
+  -- , tests @(RegExp CharMap          N) "RegExpIntMap"
+  -- , tests @(RegExp (ShareMap Char)  N) "RegExpShareMap"
 
-  , tests @(Cofree  ((->) Char) N) "CofreeFun"
-  , tests @(Cofree  (Map  Char) N) "CofreeMap"
-  , tests @(Cofree  CharMap     N) "CofreeIntMap"
+  -- , tests @(Cofree  ((->) Char)     N) "CofreeFun"
+  , tests @(Cofree  (Map  Char)     N) "CofreeMap"
+  -- , tests @(Cofree  CharMap         N) "CofreeIntMap"
+  , tests @(Cofree  (ShareMap Char) N) "CofreeShareMap"
 
   ]
 

@@ -68,9 +68,9 @@ group groupName example omit str =
     , style @(RegExp (Map    Char) O) "RegExp:Map"
     -- , style @(RegExp CharMap       O) "RegExp:IntMap"
 
-    , style @(Cofree  ((->)   Char) O) "Cofree:Function"
-    , style @(Cofree  (Map    Char) O) "Cofree:Map"
-    , style @(Cofree  CharMap       O) "Cofree:IntMap"
+    , style @(Cofree  ((->)     Char) O) "Cofree:Function"
+    , style @(Cofree  (Map      Char) O) "Cofree:Map"
+    , style @(Cofree  CharMap         O) "Cofree:IntMap"
     , style @(Cofree  (ShareMap Char) O) "Cofree:ShareMap"
 
     ]

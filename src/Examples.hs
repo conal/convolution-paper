@@ -34,27 +34,9 @@ fishy = star letter <.> single "fish" <.> star letter
 anbn :: (HasSingle String b x, Semiring x, Semiring b) => x
 anbn = one <+> a1 <.> anbn <.> b1
 
-sumSingle :: (HasSingle [c] b x, Semiring b, Additive x) => [c] -> x
-sumSingle cs = sum [single [c] | c <- cs]
-
--- See journal 2019-03-02. Make a default method for HasSingle.
-singles :: (HasSingle a b x, Semiring b, Additive x) => Set a -> x
-singles ws = sum [single w | w <- S.elems ws]
-
-infixr 2 *+->
-(*+->) :: (HasSingle a b x, Additive x, Semiring b) => Set a -> b -> x
-ws *+-> b = sum [w +-> b | w <- S.elems ws]
-
--- char, letterL, letterU, letter, digit :: (HasSingle String b x, Semiring x, Semiring b) => x
--- char    = sumSingle [' ' .. '~']
--- letterL = sumSingle ['a' .. 'z']
--- letterU = sumSingle ['A' .. 'Z']
--- letter  = letterL <+> letterU
--- digit   = sumSingle ['0' .. '9']
-
 letter :: (HasSingle String b x, Semiring x, Semiring b) => x
--- letter = sumSingle ['a' .. 'z']
-letter = sum [single [c] | c <- ['a' .. 'z']]
+letter = singles (S.fromList [[c] | c <- ['a' .. 'z']])  -- Should be much more efficient for SharedMap
+-- letter = sum [single [c] | c <- ['a' .. 'z']]
 
 -- Balanced brackets <https://en.wikipedia.org/wiki/Dyck_language>
 dyck :: (HasSingle String b x, StarSemiring x, Semiring b) => x

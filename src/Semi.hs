@@ -21,8 +21,8 @@ import Data.Map (Map)
 import qualified Data.Map as M
 import Data.IntMap.Lazy (IntMap)
 import qualified Data.IntMap.Lazy as IntMap
--- import Data.Set (Set)
--- import qualified Data.Set as S
+import Data.Set (Set)
+import qualified Data.Set as S
 import Data.MemoTrie
 
 import Data.Finite (Finite)
@@ -117,11 +117,19 @@ type DetectableOne1  = Con1 DetectableOne
 --------------------------------------------------------------------}
 
 class Indexable a b x => HasSingle a b x where
-  infixr 2 +->
+  infixr 2 +->, *->
   (+->) :: a -> b -> x
+  (*->) :: Set a -> b -> x
+  a +-> b = S.singleton a *-> b
+  default (*->) :: Additive x => Set a -> b -> x
+  as *-> b = sum [a +-> b | a <- S.elems as]
+  {-# MINIMAL (+->) | (*->) #-}
 
 single :: (HasSingle a b x, Semiring b) => a -> x
 single a = a +-> one
+
+singles :: (HasSingle a b x, Semiring b) => Set a -> x
+singles as = as *-> one
 
 value :: (HasSingle a b x, Monoid a) => b -> x
 value b = mempty +-> b
@@ -129,7 +137,7 @@ value b = mempty +-> b
 -- instance HasSingle a Bool [a] where
 --   a +-> b = if b then [a] else []
 
--- instance HasSingle Set where
+-- instance HasSingle a Bool (Set a) where
 --   a +-> b = if b then S.singleton a else S.empty
 
 {--------------------------------------------------------------------
@@ -179,7 +187,8 @@ instance Indexable a b (a -> b) where
   f ! k = f k
 
 instance (Eq a, Additive b) => HasSingle a b (a -> b) where
-  a +-> b = \ a' -> if a == a' then b else zero
+  a +-> b = \ a' -> if a' == a then b else zero
+  -- as *-> b = \ a' -> if a' `S.member` as then b else zero
 
 instance Additive b => Additive (a -> b) where
   zero = pure zero
@@ -233,7 +242,9 @@ instance (Ord a, Additive b) => Indexable a b (Map a b) where
 
 instance (Ord a, Additive b) => Listable a b (Map a b) where toList = M.toList
 
-instance (Ord a, Additive b) => HasSingle a b (Map a b) where (+->) = M.singleton
+instance (Ord a, Additive b) => HasSingle a b (Map a b) where
+  (+->) = M.singleton
+  as *-> b = M.fromList [(a,b) | a <- S.elems as]
 
 -- newtype Identity b = Identity b
 
@@ -245,7 +256,9 @@ instance Indexable () b (Identity b) where Identity a ! () = a
 
 instance Listable () b (Identity b) where toList (Identity b) = [((),b)]
 
-instance HasSingle () b (Identity b) where () +-> b = Identity b
+instance Additive b => HasSingle () b (Identity b) where
+  -- us *-> b = if S.null us then zero else Identity b
+  () +-> b = Identity b
 
 deriving instance Additive b         => Additive (Identity b)
 deriving instance DetectableZero b   => DetectableZero (Identity b)
@@ -412,6 +425,7 @@ instance (Additive b, DetectableZero b) => HasSingle N b [b] where
   0 +-> b | isZero b = zero
           | otherwise = [b] 
   n +-> b = zero : (n-1 +-> b)
+  -- TODO: efficient *->
 
 -- Should I really be using up lists here instead of saving them?
 -- Maybe wrap in a newtype
@@ -465,6 +479,7 @@ instance Additive b => Listable Char b (CharMap b) where
 
 instance Additive b => HasSingle Char b (CharMap b) where
   a +-> b = CharMap (IntMap.singleton (fromEnum a) b)
+  -- TODO: efficient *->
 
 instance Additive b => Additive (CharMap b) where
   zero = CharMap IntMap.empty
@@ -479,6 +494,7 @@ instance HasTrie a => Indexable a b (a :->: b) where
 
 instance (HasTrie a, Eq a, Additive b) => HasSingle a b (a :->: b) where
   a +-> b = trie (a +-> b)
+  -- TODO: efficient *->
 
 instance (HasTrie a, Additive b) => Additive (a :->: b) where
   zero = trie zero
@@ -510,6 +526,7 @@ instance (KnownNat n, DetectableZero b) => Listable (Fin n) b (Vector n b) where
 
 instance (KnownNat n, Additive b) => HasSingle (Fin n) b (Vector n b) where
   Sum i +-> b = V.generate (\ j -> if j == i then b else zero)
+  -- TODO: efficient *->
 
 instance (KnownNat n, Additive b) => Additive (Vector n b) where
   zero = pure zero

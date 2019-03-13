@@ -7,6 +7,7 @@ module ShareMap where
 import Control.Arrow (second,(***))
 import Data.Foldable (foldl')
 import Data.Maybe (fromJust)
+import Data.Functor.Classes (Show1(..),Show2(..))
 
 import Data.Set (Set)
 import qualified Data.Set as S
@@ -17,7 +18,10 @@ import Semi
 
 -- Point each key to a canonical representative, and point each representative
 -- to the equivalence class and the map value.
-data ShareMap k v = SM (Map k k) (Map k (Set k, v)) deriving Show
+data ShareMap k v = SM (Map k k) (Map k (Set k, v)) deriving (Show)
+
+-- instance Show2 ShareMap where
+--   liftShowsPrec2 _ _ _ _ = showsPrec
 
 instance Ord k => Semigroup (ShareMap k v) where
   SM rep m <> SM rep' m' = SM (M.union rep rep') (M.union m m')
@@ -38,16 +42,12 @@ instance (Ord k, Additive v) => Indexable k v (ShareMap k v) where
                     Nothing -> zero
                     Just k' -> (snd <$> m) ! k'  -- split second map
 
-infixr 2 *->
-(*->) :: Set k -> v -> ShareMap k v
-ks *-> v = case S.minView ks of
-             Nothing -> empty
-             Just (k,_) -> SM (M.fromDistinctAscList ((,k) <$> S.toAscList ks))
-                              (M.singleton k (ks,v))
-
 -- TODO: move (*->) into HasSingle with defaults.
 instance (Ord k, Additive v) => HasSingle k v (ShareMap k v) where
-  k +-> v = S.singleton k *-> v
+  ks *-> v = case S.minView ks of
+               Nothing -> empty
+               Just (k,_) -> SM (M.fromDistinctAscList ((,k) <$> S.toAscList ks))
+                                (M.singleton k (ks,v))
 
 instance Functor (ShareMap k) where
   fmap f (SM reps m) = SM reps (fmap (second f) m)
@@ -68,6 +68,8 @@ addChunks p p' =
 
 chunksSupport :: Ord k => Chunks k v -> Set k
 chunksSupport = S.unions . map fst
+
+-- TODO: pull support out of the keys of ShareMap' Map k k. Or even leave it there.
 
 -- data ShareMap k v = SM (Map k k) (Map k (Set k, v)) deriving Show
 
@@ -92,18 +94,20 @@ instance (Ord k, Additive v) => Additive (ShareMap k v) where
 -- >>> b3
 -- SM (fromList [('b','b')]) (fromList [('b',(fromList "b",3))])
 -- >>> a2 <+> b3
--- SM (fromList []) (fromList [])
+-- SM (fromList [('a','a'),('b','b')]) (fromList [('a',(fromList "a",2)),('b',(fromList "b",3))])
 -- >>> a2 <+> a2
 -- SM (fromList [('a','a')]) (fromList [('a',(fromList "a",4))])
 -- >>> b3 <+> b3
 -- SM (fromList [('b','b')]) (fromList [('b',(fromList "b",6))])
+--
+-- >>> (a2 <+> b3) <+> b3
+-- SM (fromList [('a','a'),('b','b')]) (fromList [('a',(fromList "a",2)),('b',(fromList "b",6))])
 -- 
 -- >>> let a2c = [(S.fromList "a",2)] :: Chunks Char Z
 -- >>> let b3c = [(S.fromList "b",3)] :: Chunks Char Z
 -- >>> (a2c,b3c)
 -- ([(fromList "a",2)],[(fromList "b",3)])
 -- >>> addChunks a2c b3c
--- [(fromList "",2),(fromList "",5)]
-
--- TODO: Fix, probably adding missing explicit/implicit pairs
--- Add support :: ShareMap k v -> Set k
+-- [(fromList "a",2),(fromList "b",3),(fromList "",5)]
+-- >>> S.fromList "abcdef" *-> 3 :: ShareMap Char Z
+-- SM (fromList [('a','a'),('b','a'),('c','a'),('d','a'),('e','a'),('f','a')]) (fromList [('a',(fromList "abcdef",3))])

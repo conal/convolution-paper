@@ -1040,7 +1040,8 @@ b <: h = \ NOP case {NOP [] -> b NOP;NOP c:cs  -> h c cs NOP}
 \noindent
 %format derivs = deriv "^{\ast}"
 %format derivs' (w) = derivs "_{" w "}"
-Considering the isomorphism |Pow [c] =~ [c] -> Bool|, this decomposition generalizes the |delta| and |deriv| operations used by \citet{Brzozowski64} mapping languages to languages (as sets of strings), the latter of which he referred to as the ``derivative''.\footnote{Brzozowski wrote ``|derivs' c p|'' instead of ``|deriv p c|'', but the latter will prove more convenient below.}
+%format deriv' (c) = deriv "_{" c "}"
+Considering the isomorphism |Pow [c] =~ [c] -> Bool|, this decomposition generalizes the |delta| and |deriv| operations used by \citet{Brzozowski64} mapping languages to languages (as sets of strings), the latter of which he referred to as the ``derivative''.\footnote{Brzozowski wrote ``|deriv' c p|'' instead of ``|deriv p c|'', but the latter will prove more convenient below.}
 Brzozowski used differentiation with respect to single symbols to implement a more general form of language differentiation with respect to a \emph{string} of symbols, where the \emph{derivative} |derivs u p| of a language |p| with respect to a prefix string |u| is the set of |u|-suffixes of strings in |p|, i.e.,
 
 > derivs p u = set (v | u <> v <# p)
@@ -1889,21 +1890,22 @@ Try it out:
 \begin{code}
 
 >>> lop sinL
-x + (-1) % 6 * x^3 + 1 % 120 * x^5 + (-1) % 5040 * x^7 + 1 % 362880 * x^9 + (-1) % 39916800 * x^11 + 1 ...^
+x - 1 % 6 * x^3 + 1 % 120 * x^5 - 1 % 5040 * x^7 + 1 % 362880 * x^9 - 1 % 39916800 * x^11 + 1 % 6227020800 * x^13 -  ...
 >>> lop cosL
-1 % 1 + (-1) % 2 * x^2 + 1 % 24 * x^4 + (-1) % 720 * x^6 + 1 % 40320 * x^8 + (-1) % 3628800 * x^10 + 1 ...^
+1 % 1 - 1 % 2 * x^2 + 1 % 24 * x^4 - 1 % 720 * x^6 + 1 % 40320 * x^8 - 1 % 3628800 * x^10 + 1 % 479001600 * x^12 - ...
 >>> lop expL
-1 % 1 + x + 1 % 2 * x^2 + 1 % 6 * x^3 + 1 % 24 * x^4 + 1 % 120 * x^5 + 1 % 720 * x^6 + 1 % 5040 * x^7 ...^
+1 % 1 + x + 1 % 2 * x^2 + 1 % 6 * x^3 + 1 % 24 * x^4 + 1 % 120 * x^5 + 1 % 720 * x^6 + 1 % 5040 * x^7 + 1 % 40320 * x^8 ...
+
 \end{code}
 As expected, |derivativeL sinL == cosL|, |derivativeL cosL == - sinL|, and |derivativeL expL == expL|:
 \begin{code}
 
->>> lop (derivativeL sinL)
-1 % 1 + (-1) % 2 * x^2 + 1 % 24 * x^4 + (-1) % 720 * x^6 + 1 % 40320 * x^8 + (-1) % 3628800 * x^10 + 1 ...^
->>> lop (derivativeL cosL)
-(-1) % 1 * x + 1 % 6 * x^3 + (-1) % 120 * x^5 + 1 % 5040 * x^7 + (-1) % 362880 * x^9 + 1 % 39916800 * ...^
->>> lop (derivativeL expL)
-1 % 1 + x + 1 % 2 * x^2 + 1 % 6 * x^3 + 1 % 24 * x^4 + 1 % 120 * x^5 + 1 % 720 * x^6 + 1 % 5040 * x^7 ...^
+>>> lop (derivativeL sinL)  -- |== cosL|
+1 % 1 - 1 % 2 * x^2 + 1 % 24 * x^4 - 1 % 720 * x^6 + 1 % 40320 * x^8 - 1 % 3628800 * x^10 + 1 % 479001600 * x^12 - ...
+>>> lop (derivativeL cosL)  -- |== - sinL|
+(-1) % 1 * x + 1 % 6 * x^3 - 1 % 120 * x^5 + 1 % 5040 * x^7 - 1 % 362880 * x^9 + 1 % 39916800 * x^11 - ...
+>>> lop (derivativeL expL)  -- |== expL|
+1 % 1 + x + 1 % 2 * x^2 + 1 % 6 * x^3 + 1 % 24 * x^4 + 1 % 120 * x^5 + 1 % 720 * x^6 + 1 % 5040 * x^7 + 1 % 40320 * x^8 ...
 
 \end{code}
 %}
@@ -1912,7 +1914,6 @@ In particular, the definition of |integralL| does \emph{not} optimize for |Poly1
 
 \vspace{2ex}
 %endif short
-
 
 What about multivariate polynomials, i.e., polynomial functions over higher-dimensional domains?
 %if long
@@ -2733,15 +2734,15 @@ i.e.,
 \begin{code}
 
     fmap (!) (cojoin (a :< ds)) ! []
-==  fmap (!) ((a :< ds) :< fmap cojoin ds) ! []               -- |cojoin| on |Cofree h|
-==  ((!) (a :< ds) :< fmap (fmap (!)) (fmap cojoin ds)) ! []  -- |fmap| on |Cofree h|
-==  (!) (a :< ds)                                             -- |(!)| on |Cofree h|
+==  fmap (!) ((a :< ds) :< fmap cojoin ds) ! []                    -- |cojoin| on |Cofree h|
+==  ((!) (a :< ds) :< fmap (fmap (!)) (fmap cojoin ds)) ! []       -- |fmap| on |Cofree h|
+==  (!) (a :< ds)                                                  -- |(!)| on |Cofree h|
 
     cojoin ((!) (a :< ds)) []
-==  (\ u -> \ v -> (a :< ds) ! (u <> v)) []  -- |cojoin| on functions
-==  \ v -> (a :< ds) ! (mempty <> v)         -- $\beta$ reduction
-==  \ v -> (a :< ds) ! v                     -- |Monoid| law
-==  (!) (a :< ds)                            -- $\eta$ reduction
+==  (\ u -> \ v -> (a :< ds) ! (u <> v)) []                        -- |cojoin| on functions
+==  \ v -> (a :< ds) ! ([] <> v)                                   -- $\beta$ reduction
+==  \ v -> (a :< ds) ! v                                           -- |Monoid| law (with |mempty = []|)
+==  (!) (a :< ds)                                                  -- $\eta$ reduction
 
 
     fmap (!) (cojoin (a :< ds)) ! (c:cs')
@@ -2749,12 +2750,16 @@ i.e.,
 ==  ((!) (a :< ds) :< fmap (fmap (!)) (fmap cojoin ds)) ! (c:cs')  -- |fmap| on |Cofree h|
 ==  fmap (fmap (!)) (fmap cojoin ds) ! c ! cs'                     -- |(!)| on |Cofree h|
 ==  fmap (fmap (!) . cojoin) ds ! c ! cs'                          -- |Functor| law
-==  ...                                                            -- \note{working here}
-==  cojoin ((!) (a :< ds)) (c:cs')
-==  (\ u -> \ v -> (a :< ds) ! (u <> v)) (c:cs')                   -- |cojoin| on functions
-==  \ v -> (a :< ds) ! ((c:cs') <> v)                              -- $\beta$ reduction
-==  \ v -> (a :< ds) ! (c : (cs' <> v))                            -- |(<>)| on |[c]|
-==  \ v -> ds ! c ! (cs' <> v)                                     -- |(!)| on |Cofree h|
+==  (fmap (!) . cojoin) ((!) ds) c ! cs'                           -- Naturality of |(!)|
+==  fmap (!) (cojoin ((!) ds) c) ! cs'                             -- |(.)| definition
+==  cojoin ((!) (ds ! c)) cs'                                      -- coinduction
+==  \ v -> cojoin ((!) (ds ! c)) cs' v                             -- $\eta$ expansion
+==  \ v -> (!) (ds ! c) (cs' <> v)                                 -- |cojoin| for functions
+==  \ v -> ds ! c ! (cs' <> v)                                     -- infix |(!)|
+==  \ v -> (a :< ds) ! (c : (cs' <> v))                            -- |(!)| on |Cofree h|  
+==  \ v -> (a :< ds) ! ((c:cs') <> v)                              -- |(<>)| on |[c]|      
+==  (\ u -> \ v -> (a :< ds) ! (u <> v)) (c:cs')                   -- $\beta$ reduction    
+==  cojoin ((!) (a :< ds)) (c:cs')                                 -- |cojoin| on functions
 
 \end{code}
 

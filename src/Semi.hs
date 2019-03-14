@@ -73,6 +73,10 @@ class Additive b => Semiring b where
   (<.>) :: b -> b -> b
   infixr 7 <.>
 
+fromBool :: Semiring b => Bool -> b
+fromBool False = zero
+fromBool True  = one
+
 class {- Semiring b => -} DetectableOne b where
   isOne :: b -> Bool
 
@@ -211,6 +215,10 @@ instance (Monoid a, Eq a, Splittable a, Semiring b, D01 b) => Semiring (a -> b) 
 
 instance (Monoid a, Eq a, Splittable a, Semiring b, D01 b) => StarSemiring (a -> b)
 
+instance Ord a => Additive (Set a) where
+  zero = S.empty
+  (<+>) = S.union
+
 instance (Ord a, Additive b) => Additive (Map a b) where
   zero = M.empty
   (<+>) = M.unionWith (<+>)
@@ -245,6 +253,22 @@ instance (Ord a, Additive b) => Listable a b (Map a b) where toList = M.toList
 instance (Ord a, Additive b) => HasSingle a b (Map a b) where
   (+->) = M.singleton
   as *-> b = M.fromList [(a,b) | a <- S.elems as]
+
+-- type instance Key (Set a) = a
+
+-- instance Keyed (Set a) where mapWithKey = M.mapWithKey
+
+instance Ord a => Indexable a Bool (Set a) where
+  m ! a = a `S.member` m
+
+instance Ord a => Listable a Bool (Set a) where
+  toList = fmap (,True) . S.toList
+
+instance Ord a => HasSingle a Bool (Set a) where
+  _ +-> False = S.empty
+  a +-> True  = S.singleton a
+  _  *-> False = S.empty
+  as *-> True  = as
 
 -- newtype Identity b = Identity b
 

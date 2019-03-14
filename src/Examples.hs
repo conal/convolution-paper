@@ -34,8 +34,12 @@ fishy = star letter <.> single "fish" <.> star letter
 anbn :: (HasSingle String b x, Semiring x, Semiring b) => x
 anbn = one <+> a1 <.> anbn <.> b1
 
+singleChar :: (Ord c, HasSingle [c] b x, Semiring b) => [c] -> x
+singleChar cs = singles (S.fromList [[c] | c <- cs])
+
 letter :: (HasSingle String b x, Semiring x, Semiring b) => x
-letter = singles (S.fromList [[c] | c <- ['a' .. 'z']])  -- Should be much more efficient for SharedMap
+letter = singleChar ['a' .. 'z']
+-- letter = singles (S.fromList [[c] | c <- ['a' .. 'z']])  -- Should be much more efficient for SharedMap
 -- letter = sum [single [c] | c <- ['a' .. 'z']]
 
 -- Balanced brackets <https://en.wikipedia.org/wiki/Dyck_language>

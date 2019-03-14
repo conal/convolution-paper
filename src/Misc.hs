@@ -6,6 +6,7 @@ module Misc where
 
 import GHC.TypeLits (KnownNat,natVal)
 import Data.Typeable (Proxy(..))
+import GHC.Exts (Constraint)
 
 infixl 6 :+
 
@@ -36,6 +37,10 @@ int :: forall n. KnownNat n => Int
 int = fromIntegral (nat @n)
 {-# INLINE int #-}
 
+type ConF con f = (forall a. con a => con (f a) :: Constraint)
+
+-- type ShowF f = (forall a. Show a => Show (f a) :: Constraint)
+-- type ShowF f = ConF Show f
 
 {--------------------------------------------------------------------
     Invertible monoids

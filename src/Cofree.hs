@@ -20,6 +20,8 @@ import Semi
 #ifdef EXAMPLES
 import Examples
 import ShareMap (ShareMap)
+import Data.Set (Set)
+import qualified Data.Set as S
 #endif
 
 -- #include "GenInstances.inc"
@@ -43,6 +45,7 @@ b <: h = \ case { [] -> b ; c:cs  -> h c cs }
 infix 1 :<
 data Cofree h b = b :< h (Cofree h b) deriving Functor
 
+#if 0
 -- Swiped from Control.Comonad.Cofree
 instance (Show1 f, Show a) => Show (Cofree f a) where showsPrec = showsPrec1
 instance Show1 f => Show1 (Cofree f) where
@@ -51,6 +54,11 @@ instance Show1 f => Show1 (Cofree f) where
       goList = liftShowList sp sl
       go d (a :< ds) = showParen (d > 5) $
         sp 6 a . showString " :< " . liftShowsPrec go goList 5 ds
+#else
+instance (ConF Show h, Show b) => Show (Cofree h b) where
+  showsPrec p (a :< ds) = showParen (p > 5) $
+    showsPrec 1 a . showString " :< " . showsPrec 1 ds
+#endif
 
 
 -- instance Functor h => Functor (Cofree h) where
@@ -96,8 +104,30 @@ instance (Functor h, Additive (h (Cofree h b)), Semiring b, DetectableZero b, De
 instance (Functor h, Additive (h (Cofree h b)), StarSemiring b, DetectableZero b, DetectableOne b) => StarSemiring (Cofree h b) where
   star (a :< dp) = q where q = star a .> (one :< fmap (<.> q) dp)
 
-instance (HasSingle c (Cofree h b) (h (Cofree h b)), Additive (h (Cofree h b)), Additive b) => HasSingle [c] b (Cofree h b) where
+instance ( HasSingle c (Cofree h b) (h (Cofree h b)), Additive (h (Cofree h b))
+         , Ord c, Semiring b )
+      => HasSingle [c] b (Cofree h b) where
   w +-> b = foldr (\ c t -> zero :< c +-> t) (b :< zero) w
+#if 0
+  ws *-> b = fromBool eps
+             <+> zero :< sum [ c +-> ws' *-> b | (c,ws') <- M.toList ders]
+   where
+     (eps,ders) = unconsSet ws
+#else
+  ws *-> b =
+    fromBool eps <+>
+    zero :< sum [ prefixes *-> suffix +-> b | (suffix,prefixes) <- M.toList ders']
+   where
+     (eps,ders') = unconsSet' ws
+#endif
+
+-- preimageM :: (Ord a, Ord b) => Map a b -> Map b (Set a)
+-- preimageM m = sum [M.singleton b (S.singleton a) | (a,b) <- M.toList m]
+
+-- unconsSet :: Ord c => Set [c] -> Bool :* Map c (Set [c])
+
+-- unconsSet' :: Ord c => Set [c] -> Bool :* Map [c] (Set c)
+
 
 instance (Additive (h (Cofree h b)), DetectableZero (h (Cofree h b)), DetectableZero b)
       => DetectableZero (Cofree h b) where
@@ -112,6 +142,36 @@ trim :: (Functor h, Additive (h (Cofree h b)), Additive b, DetectableZero b) => 
 trim 0 _ = zero
 trim n (c :< ts) = c :< fmap (trim (n-1)) ts
 
+-- To remove
+unconsSet :: Ord c => Set [c] -> Bool :* Map c (Set [c])
+unconsSet s =
+  ( [] `S.member` s
+  , sum [M.singleton c (S.singleton cs) | (c:cs) <- S.toList s]
+  )
+
+-- >>> unconsSet (S.fromList ["a","b","c","d"])
+-- (False,fromList [('a',fromList [""]),('b',fromList [""]),('c',fromList [""]),('d',fromList [""])])
+
+-- >>> unconsSet (S.fromList ["act","art","cat","car","","cart"])
+-- (True,fromList [('a',fromList ["ct","rt"]),('c',fromList ["ar","art","at"])])
+
+preimageM :: (Ord a, Ord b) => Map a b -> Map b (Set a)
+preimageM m = sum [M.singleton b (S.singleton a) | (a,b) <- M.toList m]
+
+-- Similar to Brzozowski's derivative-based decomposition, but with inverted
+-- derivatives.
+unconsSet' :: Ord c => Set [c] -> Bool :* Map [c] (Set c)
+#if 0
+unconsSet' s = ( [] `S.member` s
+               , sum [M.singleton cs (S.singleton c) | (c:cs) <- S.toList s] )
+#else
+unconsSet' s = ( [] `S.member` s
+               , preimageM (M.fromList [(c,cs) | c:cs <- S.toList s]) )
+#endif
+
+-- >>> preimageM
+
+
 #ifdef EXAMPLES
 
 {--------------------------------------------------------------------
@@ -122,13 +182,18 @@ type L = Cofree (Map Char) Bool
 
 type LS = Cofree (ShareMap Char) Bool
 
--- >>> pig :: LS
--- False :< [('p',False :< [('i',False :< [('g',True :< [])])])]
--- >>> pink :: LS
--- False :< [('p',False :< [('i',False :< [('n',False :< [('k',True :< [])])])])]
--- >>> pp :: LS
--- False :< [('p',False :< [('i',False :< [('g',True :< []),('n',False :< [('k',True :< [])])])])]
+-- >>> singleChar "abcd" :: LS
+-- False :< SM (fromList [('a','d'),('b','d'),('c','d'),('d','d')]) (fromList [('d',(fromList "abcd",True :< SM (fromList []) (fromList [])))])
 
+-- >>> letter :: LS
+-- False :< SM (fromList [('a','z'),('b','z'),('c','z'),('d','z'),('e','z'),('f','z'),('g','z'),('h','z'),('i','z'),('j','z'),('k','z'),('l','z'),('m','z'),('n','z'),('o','z'),('p','z'),('q','z'),('r','z'),('s','z'),('t','z'),('u','z'),('v','z'),('w','z'),('x','z'),('y','z'),('z','z')]) (fromList [('z',(fromList "abcdefghijklmnopqrstuvwxyz",True :< SM (fromList []) (fromList [])))])
+
+-- >>> pig :: LS
+-- False :< SM (fromList [('p','p')]) (fromList [('p',(fromList "p",False :< SM (fromList [('i','i')]) (fromList [('i',(fromList "i",False :< SM (fromList [('g','g')]) (fromList [('g',(fromList "g",True :< SM (fromList []) (fromList [])))])))])))])
+-- >>> pink :: LS
+-- False :< SM (fromList [('p','p')]) (fromList [('p',(fromList "p",False :< SM (fromList [('i','i')]) (fromList [('i',(fromList "i",False :< SM (fromList [('n','n')]) (fromList [('n',(fromList "n",False :< SM (fromList [('k','k')]) (fromList [('k',(fromList "k",True :< SM (fromList []) (fromList [])))])))])))])))])
+-- >>> pp :: LS
+-- False :< SM (fromList [('p','p')]) (fromList [('p',(fromList "p",False :< SM (fromList [('i','i')]) (fromList [('i',(fromList "i",False :< SM (fromList [('g','g'),('n','n')]) (fromList [('g',(fromList "g",True :< SM (fromList []) (fromList []))),('n',(fromList "n",False :< SM (fromList [('k','k')]) (fromList [('k',(fromList "k",True :< SM (fromList []) (fromList [])))])))])))])))])
 
 -- >>> pig :: L
 -- False :< [('p',False :< [('i',False :< [('g',True :< [])])])]

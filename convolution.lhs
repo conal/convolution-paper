@@ -870,8 +870,7 @@ instance LeftSemimodule Bool (Pow a) where
 While perhaps obscure at first, this alternative will prove useful later on.
 
 Note that the left |s|-semimodule laws specialized to |s=Bool| require |True| (|one|) to preserve and |False| (|zero|) to annihilate the second |(.>)| argument.
-\emph{Every} left |Bool|-semimodule instance must therefore agree with this definition.
-\out{Also note that |forall a. (a <# s .> p) <=> (s && a <# p)|, which resembles the |LeftSemimodule (a -> b)| instance given above.}
+\emph{Every} left |Bool|-semimodule instance must therefore agree with this definition.\out{ Also note that |forall a. (a <# s .> p) <=> (s && a <# p)|, which resembles the |LeftSemimodule (a -> b)| instance given above.}
 
 \note{Demonstrate that homomorphic specifications also guarantee that laws hold, assuming that equality is consistent with homomorphism.}
 
@@ -1278,8 +1277,7 @@ Applying this principle to a generalized form of regular expressions led to Brzo
 Nevertheless, with some syntactic optimizations and memoization, recognition speed with this technique can be fairly good \citep{Might2010YaccID,Adams2016CPP}.
 
 As an alternative to regular expression differentiation, note that the problem of redundant comparison is solved elegantly by the classic trie (``prefix tree'') data structure introduced by Thue in 1912 \citep[Section 6.3]{Knuth1998ACP3}.
-This data structure was later generalized to arbitrary (regular) algebraic data types \citep{Connelly1995GenTrie} and then from sets to functions \citep{Hinze2000GGT}.
-\out{We'll explore the data type generalization later.\notefoot{Add a forward pointer, or remove the promise.}}
+This data structure was later generalized to arbitrary (regular) algebraic data types \citep{Connelly1995GenTrie} and then from sets to functions \citep{Hinze2000GGT}.\out{ We'll explore the data type generalization later.\notefoot{Add a forward pointer, or remove the promise.}}
 Restricting our attention to functions of \emph{lists} (``strings'' over some alphabet), we can formulate a simple trie data type along the lines of |(<:)| from \secref{Decomposing Functions from Lists}, with an entry for |mempty| and a sub-trie for each possible character:
 %format :< = "\mathrel{\Varid{:\!\!\triangleleft}}"
 \begin{code}
@@ -1337,8 +1335,7 @@ instance  (Functor h, Additive (h (Cofree h b)), DetectableZero b, DetectableZer
 }, |(!)| is a homomorphism with respect to each instantiated class.
 \end{theorem}
 
-Although the |(<:)| decomposition in \secref{Decomposing Functions from Lists} was inspired by wanting to understand the essence of regular expression derivatives, the application to tries is in retrospect more straightforward, since the representation directly mirrors the decomposition.
-\out{Pleasantly, this trie data structure is a classic, though perhaps not in its lazy infinite form for use as a language representation.}
+Although the |(<:)| decomposition in \secref{Decomposing Functions from Lists} was inspired by wanting to understand the essence of regular expression derivatives, the application to tries is in retrospect more straightforward, since the representation directly mirrors the decomposition.\out{ Pleasantly, this trie data structure is a classic, though perhaps not in its lazy infinite form for use as a language representation.}
 Applying the |(<:)| decomposition to tries also appears to be more streamlined than the application to regular expressions.
 During matching, the next character in the candidate string is used to directly index to the relevant derivative (sub-trie), efficiently bypassing all other paths.
 As one might hope,
@@ -1678,8 +1675,7 @@ instance DetectableZero b => ApplicativeC (Map' b) where
 Other representations would need similar reversal of type arguments.
 \footnote{The enhancement is the associated constraint \citep{Bolingbroke2011CK} |Ok|, limiting the types that the class methods must support. The line ``|type Ok f a = ()|'' means that the constraint on |a| defaults to |()|, which holds vacuously for all |a|.}%
 \footnote{Originally, |Applicative| had a |(<*>)| method from which one can easily define |liftA2|. Since the base library version 4.10, |liftA2| was added as a method (along with a default definition of |(<*>)|) to allow for more efficient implementation \citep[Section 3.2.2]{GHC821}.}
-Higher-arity liftings can be defined via these three.
-\out{(Exercise.)}
+Higher-arity liftings can be defined via these three.\out{ (Exercise.)}
 For |b <-- a|, these definitions are not really executable code, since they involve potentially infinite summations, but they serve as specifications for other representations such as finite maps, regular expressions, and tries.
 \begin{theorem}
 For each instance defined in \figref{FunApp}, |one = pure mempty|, and |(*) = liftA2 (<>)|.

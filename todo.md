@@ -148,6 +148,7 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
     *   [*Moore for Less*] ([reddit discussion](https://www.reddit.com/r/haskell/comments/37lqxf/edward_kmett_moore_for_less/))
     *   [*Radix Sort, Trie Trees, And Maps From Representable Functors*]
 *   Polynomials and power series:
+    *   [*In Praise of Sequence (Co-)Algebra and its implementation in Haskell*]
     *   Doug McIlroy's work
 *   Other:
     *   [*Convolution as a Unifying Concept: Applications in Separation Logic, Interval Calculi, and Concurrency*]
@@ -298,3 +299,5 @@ Thomas Wilke (2010)"
 [*Moore for Less*]: https://www.schoolofhaskell.com/user/edwardk/moore/for-less "Blog post by Edward Kmett (2015)"
 
 [*Radix Sort, Trie Trees, And Maps From Representable Functors*]: https://chrispenner.ca/posts/representable-discrimination "blog post by Chris Penner (2017)"
+
+[*In Praise of Sequence (Co-)Algebra and its implementation in Haskell*]: https://arxiv.org/abs/1812.05878 "paper by Kieran Clenaghan (2018)"

@@ -710,7 +710,7 @@ class Indexable a b x => HasSingle a b x where
   (+->) :: a -> b -> x
 
 instance (Eq a, Additive b) => HasSingle a b (a -> b) where
-  a +-> b = \ a' -> if a == a' then b else zero
+  a +-> b = \ a' -> if a' == a then b else zero
 \end{code}
 Two specializations of |a +-> b| will come in handy: one for |a = mempty|, and the other for |b = one|.
 \begin{code}
@@ -2630,9 +2630,18 @@ A few details:
 
 %if True
 
-Similarly for the other
+%% Similarly for the other homomorphism properties.
 
 %else
+
+\begin{code}
+    (!) one 
+==  (!) (one :< zero)      -- |one| for |Cofree c b|
+==  one <: (!) . (!) zero  -- |(!)| for |Cofree c b|
+==  one <: (!) . zero      -- Additive functor assumption
+==  one <: zero            -- coinduction
+==  one                    -- \thmref{semiring decomp [c] -> b}
+\end{code}
 
 
 \note{Fill in from journal notes of 2019-02-14. It's a straightforward application of \thmref{semiring decomp [c] -> b}.}

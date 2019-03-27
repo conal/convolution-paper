@@ -2,5 +2,7 @@
 test/Benchmarks/*.html
 wizard-*.png
 supplemental-material
+convolution*.tex
+*.zip
 
 supplemental.tar

@@ -88,8 +88,12 @@ long.zip: $(long).tex $(long).bbl macros.tex $(pics)
 
 SHELL = bash
 
+# clean:
+# 	rm -f ${outdir}/*
+
 clean:
-	rm -f ${outdir}/*
+	rm -f {$(icfp),$(long),$(long-anon)}.{tex,pdf,aux,nav,snm,ptb,log,out,toc,bbl,blg,fdb_latexmk,fls}
+
 
 TAGS: *.tex *.lhs *.bib src/*.hs src/*.inc
 	etags $^

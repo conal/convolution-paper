@@ -1,6 +1,8 @@
 paper = convolution
 
-outdir=out
+# # breaks arXiv upload
+# outdir=out
+outdir=.
 
 icfp = $(outdir)/$(paper)-icfp
 long = $(outdir)/$(paper)-long
@@ -18,7 +20,9 @@ long: $(long).pdf
 icfp: $(icfp).pdf
 long-anon: $(long-anon).pdf
 
-all: icfp long-anon long
+all: icfp
+all: long
+# all: long-anon
 
 all.see: icfp.see long.see long-anon.see
 
@@ -76,6 +80,11 @@ showpdf=skim
 icfp.see: $(icfp).see
 long.see: $(long).see
 long-anon.see: $(long-anon).see
+
+pics = $(wildcard test/*.png)
+
+long.zip: $(long).tex $(long).bbl macros.tex $(pics)
+	zip $@ $^
 
 SHELL = bash
 

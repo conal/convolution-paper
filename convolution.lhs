@@ -1346,7 +1346,7 @@ As one might hope,
 \begin{theorem}[\provedIn{theorem:Cofree hom}]\thmlabel{Cofree hom}
 Given the definitions in \figreftwo{Cofree}{Cofree hom}, if |(!)| on |h| behaves like\notefoot{Come up with a better phrasing of this condition, and use it consistently} |(->) (Key h)|, then |Cofree h| is a comonad homomorphism from |Cofree h| to |(->) (Key h)|.
 \end{theorem}
-\figdef{Cofree hom}{|Comonad| and instances}{
+\figdef{Cofree hom}{|Comonad| class and instances}{
 \begin{code}
 instance Functor w => Comonad w where
   coreturn  :: w b -> b
@@ -2780,6 +2780,7 @@ i.e.,
 ==  F (\ b' -> if b' == b then one else zero)                                       -- |one| and |zero| for |Pow a| (revised in \figref{-> and <-- semirings})
 ==  b +-> 1                                                                         -- |(+->)| definition
 ==  pure b                                                                          -- |pure| for |Pow a <-- b|
+NOP
 
     pre (fmap h f)
 ==  pre (\ a -> h (f a))                                                            -- |fmap| on |a -> b|
@@ -2789,6 +2790,7 @@ i.e.,
 ==  F (\ c -> bigUnion (b BR h b == c) @@ pre f b)                                  -- |pre| definition
 ==  F (\ c -> bigSum (b BR h b == c) @@ pre f b)                                    -- |(+)| on |Pow a|
 ==  fmap h (pre f)                                                                  -- |fmap| on |Pow a <-- b|
+NOP
 
     pre (liftA2 h f g)
 ==  pre (\ a -> h (f a) (g a))                                                      -- |liftA2| on |a -> b|

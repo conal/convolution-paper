@@ -27,7 +27,7 @@ substMap: [("<+>","+"),("<.>","∗"),(".>","·"),("+->","↦"),("<--","←")]
 *   Polynomials:
     *   Univariate and multivariate. [done]
     *   Power series: represent via list instead of stream. [done]
-    *   Prettier negative coefficients
+    *   Prettier negative coefficients. [done]
     *   Correctness theorem and proof for polynomial integration and differentiation.
         See commented-out start.
 *   Image convolution example

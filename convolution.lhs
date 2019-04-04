@@ -196,6 +196,14 @@ Image convolution also falls out as a special case.
 \maketitle
 %endif
 
+%if False
+%if long
+\newpage
+\tableofcontents
+\newpage
+%endif
+%endif
+
 %format <+> = +
 %format <.> = *
 %format zero = 0
@@ -544,7 +552,7 @@ star p == one + star p * p
 which we will take as a laws for a new abstraction, as well as a default recursive implementation:
 \begin{code}
 class Semiring b => StarSemiring b  where
-  star :: b -> b
+  star :: NOP b -> b
   star p = one <+> p * star p
 \end{code}
 Sometimes there are more appealing alternative implementations.
@@ -1199,7 +1207,7 @@ instance Additive b => Additive (RegExp h b) where
   zero = Value zero
   (<+>) = (:<+>)
 
-instance Semiring b => Semiring (RegExp h b) where
+instance Semiring b => LeftSemimodule (RegExp h b) where
   scale b = fmap (b NOP <.>)
 
 instance Semiring b => Semiring (RegExp h b) where
@@ -1422,7 +1430,7 @@ The examples |anbn| and |dyck| are two classic, non-regular, context-free langua
 \end{center}
 } gives some execution times for these examples measured with the \emph{criterion} library \citep{criterion}, compiled with GHC 8.6.3, and running on a late 2013 MacBook Pro.
 (Note milliseconds vs microseconds---``ms'' vs ``$\mu{}$s''.)
-Each example is interpreted in four semirings: |RegExp ((->) Char) N|, |RegExp (Map Char) N|, |Cofree ((->) Char N)|, and |Cofree (Map Char) N|.
+Each example is interpreted in four semirings: |RegExp ((->) Char) N|, |RegExp (Map Char) N|, |Cofree ((->) Char) N|, and |Cofree (Map Char) N|.
 Each interpretation of each language is given a matching input string of length 100; and matches are counted, thanks to use of the |N| semiring.
 (The |star a * star a| example matches in 101 ways, while the others match uniquely.)
 As the figure shows, memoization (via |Map|) is only moderately helpful (and occasionally harmful) for |RegExp|.

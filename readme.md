@@ -1,6 +1,6 @@
 ## Generalized Convolution and Efficient Language Recognition
 
-A paper submitted to ICFP 2019
+This repo contains a [paper](http://conal.net/papers/convolution/) submitted to ICFP 2019, along with the source code appearing in the paper.
 
 
 ### Abstract

@@ -99,6 +99,8 @@ class {- (Semiring s, Additive b) => -} LeftSemimodule s b | b -> s where
 -- TODO: Add the Semiring superclass, and remove redundant constraints
 -- elsewhere. Search for occurrences of LeftSemimodule.
 
+instance Semiring s => LeftSemimodule s (a -> s) where s `scale` f = \ a -> s <.> f a
+
 -- | 'scale' optimized for zero or one scalar
 infixr 7 .>
 (.>) :: (Additive b, LeftSemimodule s b, DetectableZero s, DetectableOne s) => s -> b -> b

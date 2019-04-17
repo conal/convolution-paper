@@ -308,7 +308,7 @@ Concretely, this paper makes the following contributions:
 \item Generalization of Brzozowski's algorithm from regular expressions representing sets of strings, to various representations of |[c] -> b| where |c| is any type and |b| is any semiring, including $n$-ary functions and relations on lists (via currying).
 \item Demonstration that the subtle aspect of Brzozowski's algorithm (matching of concatenated languages) is an instance of generalized convolution.
 \item Specialization of the generalized algorithm to tries (rather than regular expressions), yielding a simple and apparently quite efficient implementation, requiring no construction or manipulation of syntactic representations.
-\item Observation that Brzozowski's key operations on languages generalize to the comonad operations of the standard function-from-monoid comonad and its various representations (including generalized regular expressions).
+\item Observation that Brzozowski's two key operations on languages (emptiness and differentiation) generalize to the comonad operations (|coreturn| and |cojoin|) of the standard function-from-monoid comonad and various representations of those functions (including generalized regular expressions).
       The trie representation is the cofree comonad, which memoizes functions from the free monoid (lists).
 \item Application and evaluation of a simple memoization strategy encapsulated in a familiar functor, resulting in dramatic speed improvement.
 %if False
@@ -448,7 +448,7 @@ h (u + v) == h u + h v
 \end{code}
 \end{definition}
 \noindent
-Curried function types of \emph{any number} of arguments (and additive result type) are additive, thanks to repeated application of this instance.
+Curried function types of \emph{any number} of arguments (and additive result type) are additive, thanks to repeated application of the |Additive (a -> b)| instance above.
 In fact,
 \begin{theorem}[\provedIn{theorem:curry additive}]\thmlabel{curry additive}
 Currying and uncurrying are additive monoid homomorphisms.
@@ -604,7 +604,7 @@ One serious catch, however: when I introduce |b <-- a|, I'll no longer have a fu
 %% and introduce (.>).
 
 As fields are to vector spaces, rings are to modules, and semirings are to \emph{semimodules}.
-For any semiring |s|, a \emph{left |s|-semimodule} |b| is a additive monoid whose values can be multiplied by |s| values on the left.
+For any semiring |s|, a \emph{left |s|-semimodule} |b| is an additive monoid whose values can be multiplied by |s| values on the left.
 Here, |s| plays the role of ``scalars'', while |b| plays the role of ``vectors''.
 \notefoot{Perhaps say just ``semimodule'', and add a remark that I really mean ``left semimodule'' throughout.
 Or start out with ``left'', then make the remark, and then perhaps add an occasional ``(left)''.}
@@ -637,7 +637,7 @@ A function |h| from one left |s|-semimodule to another is a \emph{left |s|-semim
 Familiar |s|-semimodule examples include various containers of |s| values, including single- or multi-dimensional arrays, lists, infinite streams, sets, multisets, and trees.
 Another, of particular interest in this paper, is functions from any type to any semiring:
 \begin{code}
-instance LeftSemimodule s (a -> s) where s .> f = \ a -> s * f a
+instance Semiring s => LeftSemimodule s (a -> s) where s .> f = \ a -> s * f a
 \end{code}
 If we think of |a -> s| as a ``vector'' of |s| values, indexed by |a|, then |s .> f| scales each component of the vector |f| by |s|.
 
@@ -742,15 +742,15 @@ f == bigSum a a +-> f a
 For the uses in this paper, |f| is often ``sparse'', i.e., nonzero on a relatively small (e.g., finite or at least countable) subset of its domain.
 
 Singletons also curry handily and provide another useful homomorphism:
-\begin{lemma}[\provedIn{lemma:curry +->}]\lemlabel{curry +->}~
+\begin{lemma}[\provedIn{lemma:curry +->}]\lemlabel{curry +->} For functions,
 \begin{code}
 (a +-> b +-> c) == curry ((a,b) +-> c)
 \end{code}
 \vspace{-4ex}
 \end{lemma}
 \begin{lemma} \lemlabel{+-> homomorphism}
-For |(->) a|, partial applications |(a +->)| are left semi-module (and hence additive) homomorphisms.
-Moreover, |single == (mempty +->)| is a semiring homomorphism.
+For |(->) a|, partial applications |(a +->)| are left semi-module (and hence additive) homomorphisms (given the |LeftSemimodule s (a -> s)| instance in \secref{Semimodules}).
+Moreover, |value == (mempty +->)| is a semiring homomorphism.
 \end{lemma}
 \begin{proof}
 Straightforward from the definition of |(+->)|.
@@ -900,7 +900,7 @@ A bit of reasoning shows that all of the semiring laws would hold as well:
 \end{itemize}
 All we needed from strings is that they form a monoid, so we may as well generalize:
 \begin{code}
-instance Monoid a => Semiring (P a) where
+instance Monoid a => Semiring (Pow a) where
   one = set mempty -- |== mempty +-> one == single mempty == value one| (\secref{Function-like Types and Singletons})
   p * q = set (u <> v # u <# p && v <# q)
 
@@ -978,7 +978,7 @@ The |(<.>)| implementation above will try all possible three-way splittings of t
 
 \note{I don't think finite maps need their own section. Look for another home. Maybe with |Cofree| as a suggested functor.}
 
-One representation of \emph{partial} functions is the type of finite maps, |Map a b| from keys of type |a| to values of type |b|, represented is a key-ordered balanced tree \citep{Adams1993Sets,Straka2012ATR,Nievergelt1973BST}.
+One representation of \emph{partial} functions is the type of finite maps, |Map a b| from keys of type |a| to values of type |b|, represented as a key-ordered balanced tree \citep{Adams1993Sets,Straka2012ATR,Nievergelt1973BST}.
 To model \emph{total} functions instead, we can treat unassigned keys as denoting zero.
 Conversely, merging two finite maps can yield a key collision, which can be resolved by addition.
 Both interpretations require |b| to be an additive monoid.
@@ -1273,7 +1273,7 @@ regexp (u  :<+>  v)  = regexp u  <+>  regexp v
 regexp (u  :<.>  v)  = regexp u  <.>  regexp v
 regexp (Star u)      = star (regexp u)
 \end{code}
-Next, we will see a choice of |f| that eliminates the syntactic overhead.
+Next, we will see a choice of |h| that eliminates the syntactic overhead.
 
 
 \sectionl{Tries}
@@ -1289,7 +1289,7 @@ This data structure was later generalized to arbitrary (regular) algebraic data 
 Restricting our attention to functions of \emph{lists} (``strings'' over some alphabet), we can formulate a simple trie data type along the lines of |(<:)| from \secref{Decomposing Functions from Lists}, with an entry for |mempty| and a sub-trie for each possible character:
 %format :< = "\mathrel{\Varid{:\!\!\triangleleft}}"
 \begin{code}
-data LTrie c b = b :< c -> LTrie c b  -- first guess
+data LTrie c b = b :< (c -> LTrie c b)  -- first guess
 \end{code}
 While this definition would work, we can get much better efficiency if we memoize the functions of |c|, e.g., as a generalized trie or a finite map.
 Rather than commit to a particular representation for subtrie collections, let's replace the type parameter |c| with a functor |h| whose associated key type is |c|.
@@ -1436,7 +1436,7 @@ Each interpretation of each language is given a matching input string of length 
 As the figure shows, memoization (via |Map|) is only moderately helpful (and occasionally harmful) for |RegExp|.
 |Cofree|, on the other hand, performs terribly without memoization and (in these examples) 2K to 230K times faster with memoization.
 Here, memoized |Cofree| performs between 8.5 and 485 times faster than memoized |RegExp| and between 11.5 and 1075 times faster than nonmemoized |RegExp|.
-The two recursively defined examples fail to terminate with |RegExp Map|, perhaps because the implementation (\secref{Regular Expressions}) lacks one more crucial tricks \citep{Might2010YaccID}.
+The two recursively defined examples fail to terminate with |RegExp Map|, perhaps because the implementation (\secref{Regular Expressions}) lacks one or more crucial tricks \citep{Might2010YaccID}.
 Other |RegExp| improvements \citep{Might2010YaccID,Adams2016CPP} might narrow the gap further, and careful study and optimization of the |Cofree| implementation (\figref{Cofree}) might widen it.
 
 %% \note{Replace the |RegExpM| ns times with \hang.}
@@ -1531,7 +1531,7 @@ instance (DetectableZero b, Additive b) => HasSingle () b (Maybe b) where
 
 %endif
 Alternatively, define instances directly for lists, specified by a denotation of |[b]| as |N -> b|.
-The instances resemble those in \figref{Cofree}, but have an extra case for the empty list and no |fmap|:
+The instances resemble those in \figref{Cofree}, but have an extra case for the empty list\out{ and no |fmap|}:
 \begin{code}
 instance Additive b => Indexable N b [b] where
   [] ! _ = zero

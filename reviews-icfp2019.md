@@ -1,3 +1,5 @@
+% Reviews for "Generalized Convolution and Efficient Language Recognition"
+
 ICFP 2019 Paper #46 Reviews and Comments
 ===========================================================================
 Paper #46 Generalized Convolution and Efficient Language Recognition
@@ -44,6 +46,7 @@ unclear.
   is achieved by both "repeated syntactic differentiation" and this
   "alternative", there is no demonstration of "the syntactic overhead",
   and it is unclear what "f" means in "a choice of f".
+  *[Conal: "f" should be "h".]*
 
 This paper lacks
 
@@ -82,31 +85,43 @@ Minor comments:
 *   Line 75 "the second and seventh decades of the twentieth century": just
     name the decades or years (1910s? etc.) to avoid off-by-one confusion.
 *   Lines 87-90: This (4th) bullet point is unclear.  What "key operations"?
-    What "comonad operations"?  What "various representations"?  Each bullet
+    What "comonad operations"? What "various representations"?  Each bullet
     point should name the specific section of the paper that makes that
     contribution.
-*   Line 171 "this instance" referent unclear (too far from line 160)
+    *[Conal: Added detail: "Observation that Brzozowski's two key operations on languages (emptiness and differentiation) generalize to the comonad operations (*coreturn* and *cojoin*) of the standard function-from-monoid comonad and various representations of those functions (including generalized regular expressions)."]*
+*   Line 171 "this instance" referent unclear (too far from line 160).
+    *[Conal: "... the `Additive (a -> b)` instance above"]*
 *   Line 222: Clarify whether these two equations are equivalent.
-*   Line 243 "a additive" -> "an additive"
+*   Line 243 "a additive" -> "an additive" *[Conal: fixed]*
 *   Line 265: Isn't this instance missing some context such as `Semiring s =>`?
+    *[Conal: fixed.]*
     And why not generalize `(a -> s)` to `(a -> s')`?
+    *[Conal: Because the type of multiplication requires that its arguments have the same type.]*
 *   Line 329: $\sum$ is undefined, and what if $f$ maps an infinite number
     of $a$s to nonzero $b$s?
 *   Lemma 6 seems to hold only for the instance on line 315.
+    *[Conal: Yes, because of the use of curry. Clarified by adding "For functions,".]*
 *   Lemma 7 seems unused in the rest of the paper.
+    *[Conal: Yes. It's part of the theory developed here, though unused in this paper.]*
 *   Line 339 `(->) a` needs to refer more explicitly to the instance on line 265.
+    *[Conal: Added "(given the LeftSemimodule s (a → s) instance in Section 2.5)".*]
 *   Line 340 "homomorphisms" needs an `instance LeftSemimodule s s`.
-*   Line 340 `single` seems like it should be `value`
+*   Line 340 `single` seems like it should be `value`.
+    *[Conal: Indeed. Fixed.]*
 *   Line 340 "semiring homomorphism" between which instances?
 *   Lines 436 and 440 typeset `P` inconsistently (as $P$ and $\mathcal{P}$)
+    *[Conal: Fixed.]*
 *   Lines 460-461 "apply the same sort of reasoning as in Section 3 and then
     generalize from Bool to an arbitrary semiring" needs more details.
 *   Line 489 "represented is" -> "represented as"
-*   Line 501 `M.null` -> `all isZero . M.elems`
+    *[Conal: Fixed.]*
+*   Line 501 `M.null` -> `all isZero . M.elems`.
 *   Line 583 is only proven for finite p, so it is not proven.
 *   Line 742: Please parenthesize `c -> LTrie c b`
+    *[Conal: Fixed.]*
 *   Line 766 "sanity check" -> "smoke test"
 *   Line 781 "one more crucial tricks" -> "one more crucial trick"
+    *[Conal: fixed to "one or more crucial trick".]*
 *   Line 782 "might" and line 783 "might" are not informative.
 *   Figure 6:  All time measurements should be given in the same unit (μs
     for example) (lines 771-772), and all decimal points in each column
@@ -114,12 +129,15 @@ Minor comments:
     nontermination in theory or running out of time in practice should be
     ascertained (lines 780-781).
 *   Line 901 "no fmap" is unclear.
-*   Line 1047 "a the" -> "the"
+    *[Conal: removed "and no fmap". I don't remember what I was trying to say there.]*
+*   Line ~~1047~~ 1062 "a the" -> "the"
+    *[Conal: fixed.]*
 *   Switching `Semiring` instances in Figure 8 is confusing.  Instead, just
-    define `<-` early and use it in Figure 1.
+    define `<-` early and use it in Figure 1. 
 *   Theorem 16 is meaningless because the Fourier transform is not defined
     for generic types `a` and `b`.
 *   Line 1118: How does this `Show` instance enumerate the support of z?
+    *[Conal: Via a type-check I elided from the paper.]*
 
 
 

@@ -11,8 +11,8 @@ import GHC.Exts (Constraint)
 infixl 7 :*
 infixl 6 :+
 
-type (:*)  = (,)
-type (:+)  = Either
+type (:*) = (,)
+type (:+) = Either
 
 type Unop a = a -> a
 

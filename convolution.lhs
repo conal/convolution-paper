@@ -16,7 +16,7 @@
 \newcommand\auth{Conal Elliott}
 %endif
 
-%if icfp
+%if conf
 
 \documentclass[acmsmall=true,screen
 %,authorversion
@@ -65,7 +65,7 @@
 
 \author{\auth \\[1.5ex]
 %if anonymous
-(supplement to ICFP 2019 submission)
+(supplement to conference submission)
 %else
 Target\\[1.5ex]conal@@conal.net
 %endif
@@ -112,6 +112,8 @@ Target\\[1.5ex]conal@@conal.net
 \title\tit
 %if draft
 \date{Draft of \today{} \currenttime}
+%else if long
+\date{March, 2019 (revised \today{} \currenttime)}
 %endif
 
 \setlength{\blanklineskip}{2ex} % blank lines in code environment
@@ -167,11 +169,11 @@ Target\\[1.5ex]conal@@conal.net
 
 \begin{document}
 
-%if not icfp
+%if not conf
 \maketitle
 %endif
 
-%% %let otherApps = not icfp
+%% %let otherApps = not conf
 
 %let otherApps = True
 
@@ -192,7 +194,7 @@ Image convolution also falls out as a special case.
 
 \end{abstract}
 
-%if icfp
+%if conf
 \maketitle
 %endif
 
@@ -1467,7 +1469,7 @@ Likewise, by specializing the \emph{domain} of the functions to sequences (from 
 %format R = "\mathbb R"
 %format C = "\mathbb C"
 
-%if icfp
+%if conf
 %format bigSumPlus (lim) = "\bigOp\sum{" lim "}{0.7}"
 %else
 %format bigSumPlus (lim) = "\bigOp\sum{" lim "}{1.4}"

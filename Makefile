@@ -4,27 +4,27 @@ paper = convolution
 # outdir=out
 outdir=.
 
-icfp = $(outdir)/$(paper)-icfp
+conf = $(outdir)/$(paper)-conf
 long = $(outdir)/$(paper)-long
 long-anon = $(outdir)/$(paper)-long-anon
 
 pdf: $(long).pdf
-# pdf: $(icfp).pdf
-# pdf: $(long-anon).pdf
+pdf: $(conf).pdf
+pdf: $(long-anon).pdf
 
 see: $(long).see
-# see: $(icfp).see
+# see: $(conf).see
 # see: $(long-anon).see
 
 long: $(long).pdf
-icfp: $(icfp).pdf
+conf: $(conf).pdf
 long-anon: $(long-anon).pdf
 
-all: icfp
+all: conf
 all: long
 # all: long-anon
 
-all.see: icfp.see long.see long-anon.see
+all.see: conf.see long.see long-anon.see
 
 
 # # Doesn't work
@@ -34,7 +34,7 @@ all.see: icfp.see long.see long-anon.see
 .PRECIOUS: out/was1.tex out/was1.pdf
 .PRECIOUS: out/was2.tex out/was2.pdf
 .PRECIOUS: out/was3.tex out/was3.pdf
-.PRECIOUS: $(icfp).tex $(icfp).pdf
+.PRECIOUS: $(conf).tex $(conf).pdf
 .PRECIOUS: $(long).tex $(long).pdf
 .PRECIOUS: $(long-anon).tex $(long-anon).pdf
 
@@ -61,8 +61,8 @@ see-stats:
 
 texdeps = formatting.fmt Makefile $(stats)
 
-$(icfp).tex: $(paper).lhs $(texdeps)
-	lhs2tex --set=icfp --set=anonymous -o $*.tex $(paper).lhs
+$(conf).tex: $(paper).lhs $(texdeps)
+	lhs2tex --set=conf --set=anonymous -o $*.tex $(paper).lhs
 
 $(long).tex: $(paper).lhs $(texdeps)
 	lhs2tex --set=long -o $*.tex $(paper).lhs
@@ -77,7 +77,7 @@ showpdf=skim
 %.see: %.pdf
 	${showpdf} $<
 
-icfp.see: $(icfp).see
+conf.see: $(conf).see
 long.see: $(long).see
 long-anon.see: $(long-anon).see
 
@@ -92,7 +92,7 @@ SHELL = bash
 # 	rm -f ${outdir}/*
 
 clean:
-	rm -f {$(icfp),$(long),$(long-anon)}.{tex,pdf,aux,nav,snm,ptb,log,out,toc,bbl,blg,fdb_latexmk,fls}
+	rm -f {$(conf),$(long),$(long-anon)}.{tex,pdf,aux,nav,snm,ptb,log,out,toc,bbl,blg,fdb_latexmk,fls}
 
 
 TAGS: *.tex *.lhs *.bib src/*.hs src/*.inc
@@ -115,6 +115,6 @@ supplemental.tar: $(supp)
 
 web: web-token
 
-web-token: $(short).pdf $(long).pdf
+web-token: $(long).pdf
 	scp $< conal@conal.net:/home/conal/domains/conal/htdocs/papers/$(paper)
 	touch web-token

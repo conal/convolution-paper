@@ -253,7 +253,7 @@ Detailed comments:
 
 In general, I thought that the paper lacks a proper structure that is easy to understand. In the first sections, it was never clear to me whether the authors summarize preliminaries or whether there are novel ideas in here. I was always waiting impatiently for the "meat" of the paper to begin. I think you should at least give the reader some kind of roadmap about how you present the material, especially since it takes a very long time before you return to the issues mentioned in the introduction.
 
-l. 479ff: Here I was rather puzzled that you suddenly talk about "testing for membership" but without demonstrating how one does test for membership. I would have appreciated if you had shown the full code here and illustrated which type class instances are derived and needed for that example to go through.
+l.479ff: Here I was rather puzzled that you suddenly talk about "testing for membership" but without demonstrating how one does test for membership. I would have appreciated if you had shown the full code here and illustrated which type class instances are derived and needed for that example to go through.
 
 In section 6, I began to feel completely lost. All that code in Lemma 9 with no guidance about what it does.
 

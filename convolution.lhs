@@ -12,8 +12,10 @@
 %% Used in bib.bib
 %if anonymous
 \newcommand\auth{Anonymous}
+\newcommand\extendedRef{Elliott2019-convolution-extended-anon}
 %else
 \newcommand\auth{Conal Elliott}
+\newcommand\extendedRef{Elliott2019-convolution-extended}
 %endif
 
 %if conf
@@ -113,13 +115,15 @@ Target\\[1.5ex]conal@@conal.net
 %if draft
 \date{Draft of \today{} \currenttime}
 %else if long
-\date{March, 2019 (revised \today{} \currenttime)}
+% \date{March, 2019 (revised \today{} \currenttime)}
+\date{July, 2019}
 %endif
 
 \setlength{\blanklineskip}{2ex} % blank lines in code environment
 
 %if short
-\newcommand\citeLong{\citep{Elliott2019-convolution-extended}}
+%% \newcommand\citeLong{\citep{Elliott2019-convolution-extended}}
+\newcommand\citeLong{\citep{\extendedRef}}
 %endif
 
 \nc\prooflabel[1]{\label{proof:#1}}
@@ -127,7 +131,7 @@ Target\\[1.5ex]conal@@conal.net
 \nc\proofref[1]{Appendix \ref{proof:#1}}
 \nc\seeproof[1]{(details in \proofref{#1})}
 %else
-\nc\proofref[1]{\citep[Appendix A]{Elliott2019-convolution-extended}}
+\nc\proofref[1]{\citep[Appendix A]{\extendedRef}}
 \nc\seeproof[1]{\proofref{#1}}
 %endif
 \nc\provedIn[1]{\textnormal{Proved in \proofref{#1}}}
@@ -573,7 +577,7 @@ instance StarSemiring Bool where star b  = one -- |== one |||| (b && star b)|
 
 A useful property of star semirings is that recursive affine equations have solutions
 %if short
-\citep{Dolan2013FunSemi,Elliott2019-convolution-extended}:
+\citep{Dolan2013FunSemi,\extendedRef}:
 %else
 \citep{Dolan2013FunSemi}:
 %endif
@@ -1377,6 +1381,7 @@ instance Functor h => Comonad (Cofree h) where
 %endif
 
 
+%if long
 \sectionl{Performance}
 
 %format a1 = a
@@ -1442,6 +1447,8 @@ The two recursively defined examples fail to terminate with |RegExp Map|, perhap
 Other |RegExp| improvements \citep{Might2010YaccID,Adams2016CPP} might narrow the gap further, and careful study and optimization of the |Cofree| implementation (\figref{Cofree}) might widen it.
 
 %% \note{Replace the |RegExpM| ns times with \hang.}
+
+%endif
 
 \sectionl{Convolution}
 
@@ -1846,7 +1853,7 @@ We can also use |[]| in place of |Map N|.
 The example above yields identical results.
 Since lists are potentially infinite (unlike finite maps), however, this simple change enables power series%
 %if short
-~\citep{McIlroy1999PSPS,McIlroy2001MS,Elliott2019-convolution-extended}.
+~\citep{McIlroy1999PSPS,McIlroy2001MS,\extendedRef}.
 %else
 .
 Following \citet{McIlroy1999PSPS,McIlroy2001MS}, define integration and differentiation as follows:
